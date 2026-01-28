@@ -40,7 +40,34 @@ import { NodeContextMenu } from './NodeContextMenu';
 import { SearchDialog } from './SearchDialog';
 import { NodeType } from '../../constants/OctaneTypes';
 import { EditCommands } from '../../commands/EditCommands';
+import { getPinIconInfo } from '../../constants/PinTypes';
 import Logger from '../../utils/Logger';
+
+/**
+ * Get pin color with proper fallback logic:
+ * 1. Use pinInfo.pinColor if available (from Octane gRPC API)
+ * 2. Fall back to local color mapping by pin type (from C++ source in PinTypes.ts)
+ * 3. Fall back to default amber if neither is available
+ */
+function getPinColor(pinInfo: any): string {
+  // Check for direct pin color from Octane (handles 0 as valid black color)
+  if (pinInfo?.pinColor !== undefined && pinInfo?.pinColor !== null) {
+    return formatColorValue(pinInfo.pinColor);
+  }
+  
+  // Fall back to local color mapping by type (from PinTypes.ts - C++ source colors)
+  if (pinInfo?.type) {
+    try {
+      const pinIconInfo = getPinIconInfo(pinInfo.type);
+      return pinIconInfo.color;
+    } catch (e) {
+      // Type not found in mapping, continue to default
+    }
+  }
+  
+  // Final fallback to amber
+  return '#ffc107';
+}
 
 interface NodeGraphEditorProps {
   sceneTree: SceneNode[];
@@ -234,10 +261,8 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           
           // Only create edge if BOTH nodes are in our top-level nodeMap
           if (nodeMap.has(sourceHandle) && nodeMap.has(targetHandle)) {
-            // FIX: Check pinColor !== undefined to handle black (0) correctly
-            const edgeColor = (childNode.pinInfo?.pinColor !== undefined && childNode.pinInfo?.pinColor !== null)
-              ? formatColorValue(childNode.pinInfo.pinColor)
-              : '#ffc107';
+            // Get edge color with proper fallback (Octane → local mapping → default)
+            const edgeColor = getPinColor(childNode.pinInfo);
             
             const edge: Edge = {
               id: `e${sourceHandle}-${targetHandle}-${inputIndex}`,
@@ -756,19 +781,13 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       // Get handle color based on type (source = output, target = input)
       let handleColor = '#ffc107'; // Default color
       
-      // FIX: Check pinColor !== undefined to handle black (0) correctly
+      // Get color with proper fallback (Octane → local mapping → default)
       if (handleType === 'source' && nodeData.output?.pinInfo) {
-        const pinColor = nodeData.output.pinInfo.pinColor;
-        if (pinColor !== undefined && pinColor !== null) {
-          handleColor = formatColorValue(pinColor);
-        }
+        handleColor = getPinColor(nodeData.output.pinInfo);
       } else if (handleType === 'target' && nodeData.inputs) {
         const input = nodeData.inputs.find(i => i.id === handleId);
         if (input?.pinInfo) {
-          const pinColor = input.pinInfo.pinColor;
-          if (pinColor !== undefined && pinColor !== null) {
-            handleColor = formatColorValue(pinColor);
-          }
+          handleColor = getPinColor(input.pinInfo);
         }
       }
 
@@ -1066,11 +1085,8 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           return;
         }
 
-        // FIX: Read edge color from actual pin info, not stale connectionLineColor state
-        const pinColor = child.pinInfo.pinColor;
-        const edgeColor = (pinColor !== undefined && pinColor !== null)
-          ? formatColorValue(pinColor)
-          : '#ffc107';
+        // Get edge color with proper fallback (Octane → local mapping → default)
+        const edgeColor = getPinColor(child.pinInfo);
 
         // Connect pin in Octane
         await client.connectPinByIndex(targetHandle, pinIdx, sourceHandle, true);

@@ -7,8 +7,34 @@ import { Logger } from '../../utils/Logger';
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { SceneNode } from '../../services/OctaneClient';
-import { getIconForType } from '../../constants/PinTypes';
+import { getIconForType, getPinIconInfo } from '../../constants/PinTypes';
 import { formatColorValue } from '../../utils/ColorUtils';
+
+/**
+ * Get pin color with proper fallback logic:
+ * 1. Use pinInfo.pinColor if available (from Octane gRPC API)
+ * 2. Fall back to local color mapping by pin type (from C++ source in PinTypes.ts)
+ * 3. Fall back to default light pink if neither is available
+ */
+function getPinColor(pinInfo: any): string {
+  // Check for direct pin color from Octane (handles 0 as valid black color)
+  if (pinInfo?.pinColor !== undefined && pinInfo?.pinColor !== null) {
+    return formatColorValue(pinInfo.pinColor);
+  }
+  
+  // Fall back to local color mapping by type (from PinTypes.ts - C++ source colors)
+  if (pinInfo?.type) {
+    try {
+      const pinIconInfo = getPinIconInfo(pinInfo.type);
+      return pinIconInfo.color;
+    } catch (e) {
+      // Type not found in mapping, continue to default
+    }
+  }
+  
+  // Final fallback to light pink
+  return '#f3dcde';
+}
 
 /**
  * Convert hex color to HSL
@@ -209,9 +235,8 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
       
       {/* Input handles on top */}
       {inputs.map((input: any, index: number) => {
-        const rawSocketColor = input.pinInfo?.pinColor !== undefined
-          ? formatColorValue(input.pinInfo.pinColor)
-          : '#f3dcde';
+        // Get socket color with proper fallback (Octane → local mapping → default)
+        const rawSocketColor = getPinColor(input.pinInfo);
         const socketColor = saturateColor(rawSocketColor); // Fully saturated for vibrant pins
         
         const inputSpacing = calculatedWidth / (inputs.length + 1);
@@ -309,9 +334,8 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
 
       {/* Output handle on bottom */}
       {output && (() => {
-        const rawOutputColor = sceneNode.nodeInfo?.nodeColor !== undefined
-          ? formatColorValue(sceneNode.nodeInfo.nodeColor)
-          : '#f3dcde';
+        // Get output socket color with proper fallback (Octane → local mapping → default)
+        const rawOutputColor = getPinColor(output.pinInfo);
         const outputColor = saturateColor(rawOutputColor); // Fully saturated for vibrant pins
         
         // Build enhanced output tooltip

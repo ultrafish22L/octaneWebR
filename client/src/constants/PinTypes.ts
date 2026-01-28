@@ -13,6 +13,9 @@ import { hasIconMapping, getNodeIconPath } from './NodeTypes';
 /**
  * Pin icon and color mapping for all PT_ types
  * Maps pin type to icon path and connection color
+ * 
+ * Colors are ported from Octane C++ source (JUCE float RGBA → hex RGB)
+ * The 0.7 alpha from C++ is applied separately via CSS edge opacity
  */
 export interface PinIconInfo {
   icon: string;
@@ -20,18 +23,18 @@ export interface PinIconInfo {
 }
 
 export const pinIconMapping: Record<string, PinIconInfo> = {
-  // Value types
+  // Value types (colors from Octane C++ source)
   'PT_BOOL': {
     icon: '/icons/VALUE BOOL node.png',
-    color: '#FF4444'
+    color: '#DEA9D4' // rgba(0.870, 0.662, 0.831, 0.7)
   },
   'PT_FLOAT': {
     icon: '/icons/VALUE FLOAT node.png',
-    color: '#4444FF'
+    color: '#80B3E6' // rgba(0.5, 0.7, 0.9, 0.7)
   },
   'PT_INT': {
     icon: '/icons/VALUE INT node.png',
-    color: '#44FF44'
+    color: '#FFD52B' // rgba(1.0, 0.835, 0.168, 0.7)
   },
   'PT_STRING': {
     icon: '/icons/VALUE STRING node.png',
@@ -45,51 +48,51 @@ export const pinIconMapping: Record<string, PinIconInfo> = {
   // Color/texture types
   'PT_RGB': {
     icon: '/icons/TEXTURE_SPECTRUM node.png',
-    color: '#FF88FF'
+    color: '#FF88FF' // No C++ mapping, keep custom
   },
   'PT_TEXTURE': {
     icon: '/icons/TEXTURE_BITMAP node.png',
-    color: '#FFA500'
+    color: '#BFFFDE' // rgba(0.75, 1.0, 0.87, 0.7)
   },
   'PT_NTYPE': {
     icon: '/icons/TEXTURE_BITMAP node.png',
-    color: '#FFA500'
+    color: '#BFFFDE' // Same as PT_TEXTURE
   },
   
   // Transform/geometry types
   'PT_TRANSFORM': {
     icon: '/icons/TRANSFORM_IN node.png',
-    color: '#00FFFF'
+    color: '#BFDEFF' // rgba(0.75, 0.87, 1.0, 0.7)
   },
   'PT_GEOMETRY': {
     icon: '/icons/MESH node.png',
-    color: '#32CD32'
+    color: '#FFBDF2' // rgba(1.0, 0.74, 0.95, 0.7)
   },
   'PT_MESH': {
     icon: '/icons/MESH node.png',
-    color: '#32CD32'
+    color: '#FFBDF2' // Same as PT_GEOMETRY
   },
   'PT_PROJECTION': {
     icon: '/icons/PROJECTION_IN node.png',
-    color: '#8888FF'
+    color: '#8888FF' // No C++ mapping, keep custom
   },
   'PT_DISPLACEMENT': {
     icon: '/icons/DISPLACEMENT_SWITCH node.png',
-    color: '#FF6B35'
+    color: '#FF6B35' // No C++ mapping, keep custom
   },
   
   // Material/shading types
   'PT_MATERIAL': {
     icon: '/icons/CATEGORY_MATERIAL node.png',
-    color: '#FF6600'
+    color: '#FFF2BD' // rgba(1.0, 0.95, 0.74, 0.7)
   },
   'PT_EMISSION': {
     icon: '/icons/CATEGORY_EMITTER node.png',
-    color: '#FFD700'
+    color: '#FFD700' // No C++ mapping, keep custom
   },
   'PT_MEDIUM': {
     icon: '/icons/MEDIUM_SWITCH node.png',
-    color: '#4488FF'
+    color: '#FFF2BD' // rgba(1.0, 0.95, 0.74, 0.7) - same as PT_MATERIAL in C++
   },
   'PT_PHASEFUNCTION': {
     icon: '/icons/PHASEFUNCTION_SWITCH node.png',
@@ -107,33 +110,33 @@ export const pinIconMapping: Record<string, PinIconInfo> = {
   // Environment/lighting types
   'PT_ENVIRONMENT': {
     icon: '/icons/ENVIRONMENT node.png',
-    color: '#87CEEB'
+    color: '#8080FF' // rgba(0.5, 0.5, 1.0, 0.7)
   },
   'PT_LIGHT': {
     icon: '/icons/CATEGORY_EMITTER node.png',
-    color: '#FFD700'
+    color: '#FFD700' // No C++ mapping, keep custom
   },
   
   // Render/camera types
   'PT_CAMERA': {
     icon: '/icons/CAMERA node.png',
-    color: '#8B4513'
+    color: '#80FFFF' // rgba(0.5, 1.0, 1.0, 0.7)
   },
   'PT_RENDERTARGET': {
     icon: '/icons/RENDER TARGET node.png',
-    color: '#FF0000'
+    color: '#E6E6E6' // rgba(0.9, 0.9, 0.9, 0.7)
   },
   'PT_KERNEL': {
     icon: '/icons/RENDER KERNEL node.png',
-    color: '#FF4488'
+    color: '#FFCC80' // rgba(1.0, 0.8, 0.5, 0.7)
   },
   'PT_IMAGER': {
     icon: '/icons/IMAGER node.png',
-    color: '#44FFFF'
+    color: '#80FF80' // rgba(0.5, 1.0, 0.5, 0.7)
   },
   'PT_POSTPROCESSING': {
     icon: '/icons/POSTPROC node.png',
-    color: '#FF88FF'
+    color: '#FF4DFF' // rgba(1.0, 0.3, 1.0, 0.7)
   },
   'PT_FILM_SETTINGS': {
     icon: '/icons/FILM node.png',
@@ -143,11 +146,11 @@ export const pinIconMapping: Record<string, PinIconInfo> = {
   // AOV/render passes types
   'PT_RENDER_PASSES': {
     icon: '/icons/render_passes.png',
-    color: '#8888FF'
+    color: '#8888FF' // No C++ mapping, keep custom
   },
   'PT_RENDER_LAYER': {
     icon: '/icons/render_layer.png',
-    color: '#FF8888'
+    color: '#E68000' // rgba(0.9, 0.5, 0.0, 0.7)
   },
   'PT_OUTPUT_AOV_GROUP': {
     icon: '/icons/aov-output-group.png',
@@ -197,7 +200,7 @@ export const pinIconMapping: Record<string, PinIconInfo> = {
   },
   'PT_POST_VOLUME': {
     icon: '/icons/POST_VOLUME_IN node.png',
-    color: '#88AAFF'
+    color: '#CC3DCC' // rgba(0.8, 0.24, 0.8, 0.7)
   },
   'PT_TEX_COMPOSITE_LAYER': {
     icon: '/icons/TEX_COMPOSITE_LAYER_IN node.png',
@@ -244,32 +247,32 @@ export interface PinTypeInfo {
 }
 
 export const OCTANE_PIN_TYPES: Record<string, PinTypeInfo> = {
-  'PT_UNKNOWN': { name: 'Unknown', color: '#666666', icon: '/icons/CATEGORY.png' },
-  'PT_BOOL': { name: 'Bool', color: '#FF4444', icon: '/icons/VALUE BOOL node.png' },
-  'PT_FLOAT': { name: 'Float', color: '#4444FF', icon: '/icons/VALUE FLOAT node.png' },
-  'PT_INT': { name: 'Int', color: '#44FF44', icon: '/icons/VALUE INT node.png' },
-  'PT_TRANSFORM': { name: 'Transform', color: '#00FFFF', icon: '/icons/TRANSFORM_IN node.png' },
-  'PT_TEXTURE': { name: 'Texture', color: '#FFA500', icon: '/icons/TEXTURE_BITMAP node.png' },
+  'PT_UNKNOWN': { name: 'Unknown', color: '#FFFFFF', icon: '/icons/CATEGORY.png' },
+  'PT_BOOL': { name: 'Bool', color: '#DEA9D4', icon: '/icons/VALUE BOOL node.png' },
+  'PT_FLOAT': { name: 'Float', color: '#80B3E6', icon: '/icons/VALUE FLOAT node.png' },
+  'PT_INT': { name: 'Int', color: '#FFD52B', icon: '/icons/VALUE INT node.png' },
+  'PT_TRANSFORM': { name: 'Transform', color: '#BFDEFF', icon: '/icons/TRANSFORM_IN node.png' },
+  'PT_TEXTURE': { name: 'Texture', color: '#BFFFDE', icon: '/icons/TEXTURE_BITMAP node.png' },
   'PT_EMISSION': { name: 'Emission', color: '#FFD700', icon: '/icons/CATEGORY_EMITTER node.png' },
-  'PT_MATERIAL': { name: 'Material', color: '#FF6600', icon: '/icons/CATEGORY_MATERIAL node.png' },
-  'PT_CAMERA': { name: 'Camera', color: '#8B4513', icon: '/icons/CAMERA node.png' },
-  'PT_ENVIRONMENT': { name: 'Environment', color: '#87CEEB', icon: '/icons/ENVIRONMENT node.png' },
-  'PT_IMAGER': { name: 'Imager', color: '#44FFFF', icon: '/icons/IMAGER node.png' },
-  'PT_KERNEL': { name: 'Kernel', color: '#FF4488', icon: '/icons/RENDER KERNEL node.png' },
-  'PT_GEOMETRY': { name: 'Geometry', color: '#32CD32', icon: '/icons/MESH node.png' },
-  'PT_MEDIUM': { name: 'Medium', color: '#4488FF', icon: '/icons/MEDIUM_SWITCH node.png' },
+  'PT_MATERIAL': { name: 'Material', color: '#FFF2BD', icon: '/icons/CATEGORY_MATERIAL node.png' },
+  'PT_CAMERA': { name: 'Camera', color: '#80FFFF', icon: '/icons/CAMERA node.png' },
+  'PT_ENVIRONMENT': { name: 'Environment', color: '#8080FF', icon: '/icons/ENVIRONMENT node.png' },
+  'PT_IMAGER': { name: 'Imager', color: '#80FF80', icon: '/icons/IMAGER node.png' },
+  'PT_KERNEL': { name: 'Kernel', color: '#FFCC80', icon: '/icons/RENDER KERNEL node.png' },
+  'PT_GEOMETRY': { name: 'Geometry', color: '#FFBDF2', icon: '/icons/MESH node.png' },
+  'PT_MEDIUM': { name: 'Medium', color: '#FFF2BD', icon: '/icons/MEDIUM_SWITCH node.png' },
   'PT_PHASEFUNCTION': { name: 'Phase Function', color: '#8844FF', icon: '/icons/PHASEFUNCTION_SWITCH node.png' },
   'PT_FILM_SETTINGS': { name: 'Film Settings', color: '#888888', icon: '/icons/FILM node.png' },
   'PT_ENUM': { name: 'Enum', color: '#88FF44', icon: '/icons/VALUE INT node.png' },
   'PT_OBJECTLAYER': { name: 'Object Layer', color: '#44FF88', icon: '/icons/OBJECTLAYER_SWITCH node.png' },
-  'PT_POSTPROCESSING': { name: 'Post Processing', color: '#FF88FF', icon: '/icons/POSTPROC node.png' },
-  'PT_RENDERTARGET': { name: 'Render Target', color: '#FF0000', icon: '/icons/RENDER TARGET node.png' },
+  'PT_POSTPROCESSING': { name: 'Post Processing', color: '#FF4DFF', icon: '/icons/POSTPROC node.png' },
+  'PT_RENDERTARGET': { name: 'Render Target', color: '#E6E6E6', icon: '/icons/RENDER TARGET node.png' },
   'PT_WORK_PANE': { name: 'Work Pane', color: '#666666', icon: '/icons/CATEGORY.png' },
   'PT_PROJECTION': { name: 'Projection', color: '#8888FF', icon: '/icons/PROJECTION_IN node.png' },
   'PT_DISPLACEMENT': { name: 'Displacement', color: '#FF6B35', icon: '/icons/DISPLACEMENT_SWITCH node.png' },
   'PT_STRING': { name: 'String', color: '#FFFF44', icon: '/icons/VALUE STRING node.png' },
   'PT_RENDER_PASSES': { name: 'Render Passes', color: '#8888FF', icon: '/icons/render_passes.png' },
-  'PT_RENDER_LAYER': { name: 'Render Layer', color: '#FF8888', icon: '/icons/render_layer.png' },
+  'PT_RENDER_LAYER': { name: 'Render Layer', color: '#E68000', icon: '/icons/render_layer.png' },
   'PT_VOLUME_RAMP': { name: 'Volume Ramp', color: '#44AAFF', icon: '/icons/VOLUME_RAMP_IN node.png' },
   'PT_ANIMATION_SETTINGS': { name: 'Animation Settings', color: '#FF4444', icon: '/icons/animation_settings_node.png' },
   'PT_LUT': { name: 'LUT', color: '#8844FF', icon: '/icons/LUT_SWITCH node.png' },
@@ -286,7 +289,7 @@ export const OCTANE_PIN_TYPES: Record<string, PinTypeInfo> = {
   'PT_TEX_COMPOSITE_LAYER': { name: 'Texture Composite Layer', color: '#FFAAFF', icon: '/icons/TEX_COMPOSITE_LAYER_IN node.png' },
   'PT_OUTPUT_AOV_LAYER': { name: 'Output AOV Layer', color: '#FFFF88', icon: '/icons/OUTPUT_AOV_LAYER_SWITCH node.png' },
   'PT_BLENDING_SETTINGS': { name: 'Blending Settings', color: '#FFAA88', icon: '/icons/BLENDING_SETTINGS_SWITCH node.png' },
-  'PT_POST_VOLUME': { name: 'Post Volume', color: '#88AAFF', icon: '/icons/POST_VOLUME_IN node.png' },
+  'PT_POST_VOLUME': { name: 'Post Volume', color: '#CC3DCC', icon: '/icons/POST_VOLUME_IN node.png' },
   'PT_TRACE_SET_VISIBILITY_RULE_GROUP': { name: 'Trace Set Visibility Rule Group', color: '#AAFFFF', icon: '/icons/TRACE_SET_VISIBILITY_RULE_GROUP_IN node.png' },
   'PT_TRACE_SET_VISIBILITY_RULE': { name: 'Trace Set Visibility Rule', color: '#AAFFAA', icon: '/icons/TRACE_SET_VISIBILITY_RULE_IN node.png' }
 };
