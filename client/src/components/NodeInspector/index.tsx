@@ -22,6 +22,7 @@ import { USE_ALPHA5_API } from '../../config/apiVersionConfig';
 import { formatColorValue, formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
+import { getPinTypeInfo } from '../../constants/PinTypes';
 
 /**
  * Format float value to maximum 6 decimal places
@@ -93,9 +94,14 @@ function NodeParameter({
   const nodeId = `node-${node.handle}`;
   const typeStr = String(node.type || node.outType || 'unknown');
   const icon = node.icon || getIconForType(typeStr, node.name);
-  const color = node.nodeInfo?.nodeColor ? formatNodeColor(node.nodeInfo.nodeColor) : '#666';
   const name = node.pinInfo?.staticLabel || node.name;
-  
+  var color = node.nodeInfo?.nodeColor ? formatNodeColor(node.nodeInfo.nodeColor) : '#666';
+  if (node.pinInfo) {
+    const info = getPinTypeInfo((node.pinInfo.type as string));
+    if (info) {
+      color = info.color;
+    }
+  } 
   // Determine if we should show dropdown (non-end nodes with a valid pin type)
   // Show dropdown for any non-end node (nodes with children, not value attributes)
   const pinType = typeStr.startsWith('PT_') ? typeStr : null;
