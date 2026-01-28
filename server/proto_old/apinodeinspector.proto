@@ -1,0 +1,43 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiNodeInspector' class from 'apinodeinspector.h'
+message ApiNodeInspector
+{
+    // Request packet corresponding to '[in] parameters in ApiNodeInspector::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeInspector::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeInspector::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiNodeInspector' from 'apinodeinspector.h'
+service ApiNodeInspectorService
+{
+    rpc destroy(ApiNodeInspector.destroyRequest) returns (google.protobuf.Empty);
+    rpc create(ApiNodeInspector.createRequest) returns (ApiNodeInspector.createResponse);
+}

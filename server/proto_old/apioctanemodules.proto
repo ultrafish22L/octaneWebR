@@ -1,0 +1,111 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+
+ // GRPC proto definitions for 'ApiOctaneModules' class from 'apioctanemodules.h'
+message ApiOctaneModules
+{
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::setDirectory'
+    message setDirectoryRequest
+    {
+        // The new modules directory
+        string newPath = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::setDirectory'
+    message setDirectoryResponse
+    {
+        //     Return TRUE if the directory is set successfully. Otherwise FALSE.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::getDirectory'
+    message getDirectoryRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::getDirectory'
+    message getDirectoryResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::getModuleInfo'
+    message getModuleInfoRequest
+    {
+        ModuleIdT moduleId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::getModuleInfo'
+    message getModuleInfoResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::getNodegraphModules'
+    message getNodegraphModulesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::getNodegraphModules'
+    message getNodegraphModulesResponse
+    {
+        
+        ApiArrayModuleIdT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::getCommandModules'
+    message getCommandModulesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::getCommandModules'
+    message getCommandModulesResponse
+    {
+        
+        ApiArrayModuleIdT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOctaneModules::runCommandModule'
+    message runCommandModuleRequest
+    {
+        ModuleIdT moduleId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOctaneModules::runCommandModule'
+    message runCommandModuleResponse
+    {
+        //     Returns TRUE if the command was successfully executed.
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiOctaneModules' from 'apioctanemodules.h'
+service ApiOctaneModulesService
+{
+    /// A directory from which modules will be loaded
+    rpc setDirectory(ApiOctaneModules.setDirectoryRequest) returns (ApiOctaneModules.setDirectoryResponse);
+    /// The current directory where the octane loads modules from
+    rpc getDirectory(ApiOctaneModules.getDirectoryRequest) returns (ApiOctaneModules.getDirectoryResponse);
+    /// Returns module information for the moduleId
+    rpc getModuleInfo(ApiOctaneModules.getModuleInfoRequest) returns (ApiOctaneModules.getModuleInfoResponse);
+    /// Return list of all available ids of node graph modules
+    /// Note: To create a module nodegraph pass the module id
+    /// to the ApiNodeGraph::Create function
+    rpc getNodegraphModules(ApiOctaneModules.getNodegraphModulesRequest) returns (ApiOctaneModules.getNodegraphModulesResponse);
+    /// Return list of all available ids of command modules
+    rpc getCommandModules(ApiOctaneModules.getCommandModulesRequest) returns (ApiOctaneModules.getCommandModulesResponse);
+    /// Execute a command module
+    rpc runCommandModule(ApiOctaneModules.runCommandModuleRequest) returns (ApiOctaneModules.runCommandModuleResponse);
+}

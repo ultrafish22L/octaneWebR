@@ -1,0 +1,112 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "octaneenums.proto";
+import "octanetime.proto";
+
+ // GRPC proto definitions for 'ApiAnimationTimeTransform' class from 'apianimationtimetransform.h'
+message ApiAnimationTimeTransform
+{
+    // Request packet corresponding to '[in] parameters in ApiAnimationTimeTransform::type'
+    message typeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiAnimationTimeTransform::type'
+    message typeResponse
+    {
+        
+        AnimationTimeTransformType result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiLinearTimeTransform' class from 'apianimationtimetransform.h'
+message ApiLinearTimeTransform
+{
+    // Request packet corresponding to '[in] parameters in ApiLinearTimeTransform::delay'
+    message delayRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLinearTimeTransform::delay'
+    message delayResponse
+    {
+        
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLinearTimeTransform::speedUp'
+    message speedUpRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLinearTimeTransform::speedUp'
+    message speedUpResponse
+    {
+        
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLinearTimeTransform::customIntervalEnabled'
+    message customIntervalEnabledRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLinearTimeTransform::customIntervalEnabled'
+    message customIntervalEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLinearTimeTransform::customInterval'
+    message customIntervalRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLinearTimeTransform::customInterval'
+    message customIntervalResponse
+    {
+        
+        TimeSpanT result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiAnimationTimeTransform' from 'apianimationtimetransform.h'
+service ApiAnimationTimeTransformService
+{
+    /// Returns the type of this time transform
+    rpc type(ApiAnimationTimeTransform.typeRequest) returns (ApiAnimationTimeTransform.typeResponse);
+}
+
+// GRPC interface definition for class 'ApiLinearTimeTransform' from 'apianimationtimetransform.h'
+service ApiLinearTimeTransformService
+{
+    /// The delay of the animation start time in seconds
+    rpc delay(ApiLinearTimeTransform.delayRequest) returns (ApiLinearTimeTransform.delayResponse);
+    /// The scale of the animation playback speed (default is 1)
+    rpc speedUp(ApiLinearTimeTransform.speedUpRequest) returns (ApiLinearTimeTransform.speedUpResponse);
+    /// Returns TRUE when custom interval is enabled
+    rpc customIntervalEnabled(ApiLinearTimeTransform.customIntervalEnabledRequest) returns (ApiLinearTimeTransform.customIntervalEnabledResponse);
+    /// Returns interval of the animation that should be played
+    rpc customInterval(ApiLinearTimeTransform.customIntervalRequest) returns (ApiLinearTimeTransform.customIntervalResponse);
+}

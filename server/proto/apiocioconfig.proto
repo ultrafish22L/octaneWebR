@@ -1,0 +1,292 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiOcioConfig' class from 'apiocioconfig.h'
+message ApiOcioConfig
+{
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::create'
+    message createRequest
+    {
+        // The filename of the config file to load, or null to use the OCIO environment variable.
+        string filename = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::create'
+    message createResponse
+    {
+        //     The loaded config (must be destroyed with destroy()), or null if loading failed.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::clone'
+    message cloneRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::clone'
+    message cloneResponse
+    {
+        //     The cloned OCIO config (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getRoleCount'
+    message getRoleCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getRoleCount'
+    message getRoleCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getRoleName'
+    message getRoleNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the role. Must be less than getRoleCount().
+        uint32 roleIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getRoleName'
+    message getRoleNameResponse
+    {
+        //     The name of the role. Will not be null. This pointer remains valid until this object is
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getRoleColorSpaceName'
+    message getRoleColorSpaceNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the role. Must be less than getRoleCount().
+        uint32 roleIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getRoleColorSpaceName'
+    message getRoleColorSpaceNameResponse
+    {
+        //     The name of the color space for which the role is an alias. Will not be null. This
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getColorSpaceCount'
+    message getColorSpaceCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getColorSpaceCount'
+    message getColorSpaceCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getColorSpaceName'
+    message getColorSpaceNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the color space. Must be less than getColorSpaceCount().
+        uint32 colorSpaceIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getColorSpaceName'
+    message getColorSpaceNameResponse
+    {
+        //     The name of the color space. Will not be null. This pointer remains valid until this
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getColorSpaceFamilyComponentCount'
+    message getColorSpaceFamilyComponentCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the color space. Must be less than getColorSpaceCount().
+        uint32 colorSpaceIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getColorSpaceFamilyComponentCount'
+    message getColorSpaceFamilyComponentCountResponse
+    {
+        //     The number of components the family of the color space has.
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getColorSpaceFamilyComponent'
+    message getColorSpaceFamilyComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the color space. Must be less than getColorSpaceCount().
+        uint32 colorSpaceIndex = 2;
+        // The index of the family component. Must be less than
+        uint32 familyComponentIndex = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getColorSpaceFamilyComponent'
+    message getColorSpaceFamilyComponentResponse
+    {
+        //     The family component. Will not be null. This pointer remains valid until this object is
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getDisplayCount'
+    message getDisplayCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getDisplayCount'
+    message getDisplayCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getDisplayName'
+    message getDisplayNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the display. Must be less than getDisplayCount().
+        uint32 displayIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getDisplayName'
+    message getDisplayNameResponse
+    {
+        //     The name of the display. Will not be null. This pointer remains valid until this object
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getDisplayViewCount'
+    message getDisplayViewCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the display. Must be less than getDisplayCount().
+        uint32 displayIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getDisplayViewCount'
+    message getDisplayViewCountResponse
+    {
+        //     The number of views the display has.
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getDisplayViewName'
+    message getDisplayViewNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the display. Must be less than getDisplayCount().
+        uint32 displayIndex = 2;
+        // The index of the view. Must be less than getDisplayViewCount(displayIndex).
+        uint32 viewIndex = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getDisplayViewName'
+    message getDisplayViewNameResponse
+    {
+        //     The name of the view. Will not be null. This pointer remains valid until this object is
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getLookCount'
+    message getLookCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getLookCount'
+    message getLookCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfig::getLookName'
+    message getLookNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the look. Must be less than getLookCount().
+        uint32 lookIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfig::getLookName'
+    message getLookNameResponse
+    {
+        //     The name of the look. Will not be null. This pointer remains valid until this object is
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiOcioConfig' from 'apiocioconfig.h'
+service ApiOcioConfigService
+{
+    /// Loads an OCIO config
+    rpc create(ApiOcioConfig.createRequest) returns (ApiOcioConfig.createResponse);
+    rpc destroy(ApiOcioConfig.destroyRequest) returns (google.protobuf.Empty);
+    /// 
+    rpc clone(ApiOcioConfig.cloneRequest) returns (ApiOcioConfig.cloneResponse);
+    /// Gets the number of roles in the config
+    rpc getRoleCount(ApiOcioConfig.getRoleCountRequest) returns (ApiOcioConfig.getRoleCountResponse);
+    /// Gets the name of a role
+    rpc getRoleName(ApiOcioConfig.getRoleNameRequest) returns (ApiOcioConfig.getRoleNameResponse);
+    /// Gets the name of the color space for which a role is an alias
+    rpc getRoleColorSpaceName(ApiOcioConfig.getRoleColorSpaceNameRequest) returns (ApiOcioConfig.getRoleColorSpaceNameResponse);
+    /// Gets the number of color spaces in the config
+    rpc getColorSpaceCount(ApiOcioConfig.getColorSpaceCountRequest) returns (ApiOcioConfig.getColorSpaceCountResponse);
+    /// Gets the name of a color space
+    rpc getColorSpaceName(ApiOcioConfig.getColorSpaceNameRequest) returns (ApiOcioConfig.getColorSpaceNameResponse);
+    /// Gets the number of components the family of a color space has
+    rpc getColorSpaceFamilyComponentCount(ApiOcioConfig.getColorSpaceFamilyComponentCountRequest) returns (ApiOcioConfig.getColorSpaceFamilyComponentCountResponse);
+    /// Gets a component of the family of a color space
+    rpc getColorSpaceFamilyComponent(ApiOcioConfig.getColorSpaceFamilyComponentRequest) returns (ApiOcioConfig.getColorSpaceFamilyComponentResponse);
+    /// Gets the number of displays in the config
+    rpc getDisplayCount(ApiOcioConfig.getDisplayCountRequest) returns (ApiOcioConfig.getDisplayCountResponse);
+    /// Gets the name of a display
+    rpc getDisplayName(ApiOcioConfig.getDisplayNameRequest) returns (ApiOcioConfig.getDisplayNameResponse);
+    /// Gets the number of views a display has
+    rpc getDisplayViewCount(ApiOcioConfig.getDisplayViewCountRequest) returns (ApiOcioConfig.getDisplayViewCountResponse);
+    /// Gets the name of a view
+    rpc getDisplayViewName(ApiOcioConfig.getDisplayViewNameRequest) returns (ApiOcioConfig.getDisplayViewNameResponse);
+    /// Gets the number of looks in the config
+    rpc getLookCount(ApiOcioConfig.getLookCountRequest) returns (ApiOcioConfig.getLookCountResponse);
+    /// Gets the name of a look
+    rpc getLookName(ApiOcioConfig.getLookNameRequest) returns (ApiOcioConfig.getLookNameResponse);
+}

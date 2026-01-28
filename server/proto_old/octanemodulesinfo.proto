@@ -1,0 +1,26 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiOctaneModuleInfo' class from 'octanemodulesinfo.h'
+message ApiOctaneModuleInfo
+{
+    ModuleIdT moduleId = 1;
+    ModuleType type = 2;
+    uint32 maxInstances = 3;
+    uint32 versionNumber = 4;
+    string shortName = 5;
+    string description = 6;
+    bool canDisplayInMenu = 7;
+}
+
+
+// GRPC interface definition for class 'ApiOctaneModuleInfo' from 'octanemodulesinfo.h'

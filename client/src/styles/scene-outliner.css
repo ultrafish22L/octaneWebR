@@ -1,0 +1,712 @@
+/**
+ * Scene Outliner Styles
+ * Part of octaneWebR CSS reorganization
+ */
+
+/* Scene Tree Styling - Updated for Octane UI */
+.scene-tree {
+    font-family: var(--font-family);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-tight);
+    color: var(--octane-text-primary);
+    /* Added from octane-theme.css: */
+    background-color: var(--octane-bg-secondary);
+    contain: layout style;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    max-height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Scene node structural styles - see layout.css:327 */
+/* .scene-node */
+/* .scene-node:hover */
+/* .scene-node.selected */
+
+/* Disable pseudo-element symbols for database tree nodes (they have HTML symbols) */
+.scene-tab-content .node-toggle::before,
+.scene-tab-content .node-toggle::after {
+    content: "" !important;
+    display: none !important;
+}
+
+/* Scene Outliner Error States */
+.scene-error, .scene-success {
+    padding: 20px;
+    text-align: center;
+    border-radius: var(--border-radius);
+    margin: 10px;
+}
+
+.scene-error {
+    background-color: var(--octane-error-bg-alpha);
+    border: 1px solid var(--octane-error-border-alpha);
+    color: var(--octane-text-primary);
+}
+
+.scene-success {
+    background-color: var(--octane-success-bg-alpha);
+    border: 1px solid var(--octane-success-border-alpha);
+    color: var(--octane-text-primary);
+}
+
+
+
+
+.error-message code {
+    background-color: var(--octane-bg-secondary);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-md);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-small);
+    color: var(--octane-accent-blue);
+}
+
+.error-actions {
+    margin-top: 12px;
+}
+
+
+
+/* Connection Controls */
+.connection-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xl);
+    margin-right: 15px;
+}
+
+.connection-controls input[type="text"] {
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    padding: 4px 8px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius);
+    width: 180px;
+}
+
+.connection-controls input[type="text"]:focus {
+    outline: none;
+    border-color: var(--octane-accent-blue);
+}
+
+.connection-controls input[type="text"]::placeholder {
+    color: var(--octane-text-muted);
+}
+
+
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: var(--opacity-invisible);
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    transition: .3s;
+    border-radius: var(--border-radius-3xl);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--octane-text-secondary);
+    transition: .3s;
+    border-radius: var(--border-radius-circle);
+}
+
+input:checked + .slider {
+    background-color: var(--octane-accent-blue);
+    border-color: var(--octane-accent-blue);
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+    background-color: var(--octane-bg-primary);
+}
+
+.slider:hover {
+    opacity: var(--opacity-heavy);
+}
+
+/* Scene Outliner Button Bar - Official OTOY Always-Visible Button Bar Above Tabs */
+.scene-outliner-button-bar {
+    display: flex;
+    background: var(--octane-bg-primary);
+    border-bottom: 1px solid var(--octane-border);
+    padding: 2px 4px;
+    gap: var(--spacing-xxs);
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.outliner-btn {
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-small);
+    width: 24px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.outliner-btn:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+    border-color: var(--octane-accent-blue);
+}
+
+.outliner-btn:active {
+    background: var(--octane-accent-blue);
+    color: white;
+}
+
+.outliner-btn.active {
+    background: var(--octane-accent-red);
+    color: white;
+    border-color: var(--octane-accent-red);
+}
+
+.outliner-btn.disabled {
+    background: var(--octane-bg-secondary);
+    color: var(--octane-text-disabled);
+    border-color: var(--octane-border);
+    cursor: not-allowed;
+    opacity: var(--opacity-medium);
+}
+
+.outliner-btn.disabled:hover {
+    background: var(--octane-bg-secondary);
+    color: var(--octane-text-disabled);
+    border-color: var(--octane-border);
+}
+
+/* Scene Outliner Tabs - Official OTOY Three-Tab System */
+.scene-outliner-tabs {
+    display: flex;
+    background: var(--octane-bg-primary);
+    border-bottom: 1px solid var(--octane-border);
+    padding: 3px 3px 0 3px;
+    gap: 0;
+    align-items: stretch;
+    position: relative;
+}
+
+.scene-tab {
+    background: var(--octane-bg-lighter);
+    border: 1px solid #000;
+    border-bottom: none;
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    padding: 6px 18px 6px 12px;
+    font-size: var(--font-size-small);
+    transition: all 0.15s ease;
+    flex: 1;
+    text-align: center;
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+    margin-right: -10px;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
+}
+
+/* Z-index stacking: left tabs on top, right tabs underneath */
+.scene-tab:nth-child(1) { z-index: 3; }
+.scene-tab:nth-child(2) { z-index: 2; }
+.scene-tab:nth-child(3) { z-index: 1; }
+
+.scene-tab:last-child {
+    margin-right: 0;
+}
+
+.scene-tab:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+    z-index: 10 !important;
+}
+
+.scene-tab.active {
+    background: var(--octane-bg-secondary);
+    color: var(--octane-text-primary);
+    z-index: 20 !important;
+    font-weight: var(--font-weight-header);
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
+
+.refresh-btn {
+    background: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-small);
+    width: 20px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    margin-left: 4px;
+}
+
+.refresh-btn:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+    border-color: var(--octane-accent-blue);
+}
+
+.refresh-btn:active {
+    background: var(--octane-accent-blue);
+    color: white;
+}
+
+/* Scene Tab Content Areas */
+.scene-tab-content {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    border-top: none; /* Connect to tabs above */
+    border-radius: 0 0 var(--border-radius-base) var(--border-radius-base); /* Rounded bottom corners */
+}
+
+.scene-tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.db-content {
+    padding: 20px;
+    text-align: center;
+    color: var(--octane-text-muted);
+    font-size: var(--font-size-small);
+    font-style: italic;
+}
+
+/* Database Tree Content Styling - Official OTOY Tree Structure */
+.scene-tab-content .scene-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.scene-tab-content .tree-node {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    padding: 1px 6px;
+    margin: 0;
+    height: 18px;
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+}
+
+.scene-tab-content .tree-node:hover {
+    background-color: var(--octane-bg-hover);
+}
+
+.scene-tab-content .tree-node.selected {
+    background-color: var(--octane-accent-blue);
+    color: white;
+}
+
+/* LocalDB package item styling */
+.scene-tab-content .tree-node.package-item {
+    cursor: pointer;
+}
+
+.scene-tab-content .tree-node.package-item:hover {
+    background-color: var(--octane-accent-blue-dim);
+}
+
+.scene-tab-content .tree-node.package-item:active {
+    background-color: var(--octane-accent-blue);
+}
+
+/* Database-specific node styling */
+.scene-tab-content .node-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    width: 100%;
+}
+
+.scene-tab-content .node-toggle {
+    width: 12px;
+    text-align: center;
+    font-size: var(--font-size-small);
+    cursor: pointer;
+    color: var(--octane-text-secondary);
+}
+
+.scene-tab-content .node-icon {
+    font-size: var(--font-size-small);
+    width: 14px;
+    text-align: center;
+}
+
+.scene-tab-content .node-label {
+    flex: 1;
+    font-size: var(--font-size-small);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.db-loading {
+    padding: 8px;
+    text-align: center;
+    color: var(--octane-text-muted);
+    font-size: var(--font-size-small);
+    font-style: italic;
+}
+
+/* Spin animation for refresh button */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Scene Tree Loading States */
+.scene-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--octane-text-muted);
+    font-style: italic;
+    font-size: var(--font-size-small);
+}
+
+/* ===== NODE PALETTE ===== */
+.node-palette {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 180px;
+    background: var(--octane-bg-semi-transparent);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius-base);
+    padding: 10px;
+    z-index: var(--z-dropdown);
+    /* Added from octane-theme.css: */
+    background-color: var(--octane-bg-secondary);
+    left: 8px;
+}
+
+
+.node-type-selector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.node-type-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.node-type-label {
+    color: var(--octane-text-secondary);
+    font-size: var(--font-size-small);
+    flex: 1;
+}
+
+/* ===== SLIDER SWITCH ===== */
+.slider-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.slider-switch input {
+    opacity: var(--opacity-invisible);
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--octane-bg-header);
+    border: 1px solid var(--octane-text-disabled);
+    border-radius: var(--border-radius-2xl);
+    transition: all 0.2s ease;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    top: 1px;
+    background-color: var(--octane-connection-line);
+    border-radius: var(--border-radius-circle);
+    transition: all 0.2s ease;
+}
+
+.slider-switch input:checked + .slider {
+    background-color: var(--octane-accent);
+    border-color: var(--octane-accent);
+}
+
+.slider-switch input:checked + .slider:before {
+    transform: translateX(16px);
+    background-color: var(--octane-bg-primary);
+}
+
+.slider-switch:hover .slider {
+    border-color: var(--octane-border-light);
+}
+
+.slider-switch input:checked:hover + .slider {
+    border-color: var(--octane-accent-hover);
+}
+/* ===== EXTRACTED FROM octane-theme.css ===== */
+
+/* Left Panel - Scene Outliner */
+.left-panel {
+    background-color: var(--octane-bg-secondary);
+    border-right: none; /* No border - splitter acts as boundary */
+    overflow: hidden; /* Critical: prevent any overflow */
+    display: flex;
+    flex-direction: column;
+    min-width: var(--left-panel-min-width);
+}
+
+.scene-outliner {
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%; /* Ensure it never exceeds container height */
+    overflow: hidden; /* Prevent content from overflowing the container */
+    position: relative; /* Establish positioning context */
+}
+
+/* Scene Outliner Tree Styles */
+.scene-outliner-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    padding: 8px;
+    background-color: var(--octane-bg-secondary);
+    border-bottom: 1px solid var(--octane-border);
+}
+
+.scene-outliner-search {
+    flex: 1;
+    padding: 4px 8px;
+    background-color: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius); /* Standardized to 2px */
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+}
+
+.scene-outliner-search:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+}
+
+.scene-tree {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--octane-bg-secondary);
+    min-height: 0; /* Allow flex item to shrink below content size */
+    max-height: 100%; /* Prevent tree from exceeding container */
+    position: relative; /* Establish positioning context */
+    contain: layout style; /* CSS containment for performance and boundaries */
+    display: flex;
+    flex-direction: column; /* Stack tree nodes vertically */
+}
+
+.tree-node {
+    display: flex;
+    align-items: center;
+    min-height: 16px;
+    cursor: pointer;
+    user-select: none;
+    font-size: var(--font-size-small);
+    font-family: var(--font-family);
+    color: var(--octane-text-secondary);
+    padding: 1px 0;
+}
+
+.tree-node:hover {
+    background-color: var(--octane-bg-header);
+}
+
+.tree-node.selected {
+    background-color: var(--octane-selection-highlight) !important; /* Subtle dark orange matching Octane SE */
+    color: var(--octane-text-primary) !important; /* Keep text white for readability */
+}
+
+/* Scene node content layout */
+.node-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 4px;
+}
+
+.node-toggle {
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-tiny);
+    color: var(--octane-connection-line);
+    cursor: pointer;
+    margin-right: 2px;
+}
+
+.node-toggle.expanded::before {
+    content: '−';
+    font-weight: var(--font-weight-bold7);
+}
+
+.node-toggle.collapsed::before {
+    content: '+';
+    font-weight: var(--font-weight-bold7);
+}
+
+.node-toggle:hover {
+    border-radius: var(--border-radius);
+}
+
+.node-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-large); /* 14px */
+}
+
+.node-name {
+    flex: 1;
+    font-size: var(--font-size-small);
+    color: inherit;
+}
+
+.node-handle {
+    font-size: var(--font-size-xs);
+    color: var(--octane-connection-line);
+    margin-left: 4px;
+}
+
+.node-visibility {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    color: var(--octane-connection-line);
+    cursor: pointer;
+    margin-left: auto;
+}
+
+.node-spacer {
+    width: 14px;
+}
+
+/* Tree indentation levels */
+.tree-node.level-0 .node-content {
+    padding-left: 4px;
+}
+
+.tree-node.level-1 .node-content {
+    padding-left: 18px;
+}
+
+.tree-node.level-2 .node-content {
+    padding-left: 32px;
+}
+
+.tree-node.level-3 .node-content {
+    padding-left: 46px;
+}
+
+.tree-node.level-4 .node-content {
+    padding-left: 60px;
+}
+
+.tree-node.level-5 .node-content {
+    padding-left: 74px;
+}
+
+.tree-node.level-6 .node-content {
+    padding-left: 88px;
+}
+
+
+
+
+.tree-toggle {
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    color: var(--octane-text-muted);
+    cursor: pointer;
+}
+
+.tree-toggle.has-children:hover {
+    color: var(--octane-text-primary);
+}
+
+/* Toolbar icon spin animation for refresh button */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+

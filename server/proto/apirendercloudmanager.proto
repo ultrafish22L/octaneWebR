@@ -1,0 +1,113 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+
+ // GRPC proto definitions for 'ApiRenderCloudManager' class from 'apirendercloudmanager.h'
+message ApiRenderCloudManager
+{
+     // GRPC proto definitions for 'SubscriptionInfo' class from 'apirendercloudmanager.h'
+    message ApiRenderCloudManager_SubscriptionInfo
+    {
+        bool subscribed = 1;
+        float availableCreditBalance = 2;
+        float availableRndrBalance = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRenderCloudManager::userSubscriptionInfo'
+    message userSubscriptionInfoRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderCloudManager::userSubscriptionInfo'
+    message userSubscriptionInfoResponse
+    {
+        //     TRUE if the subscription information could be fetch successfully, FALSE
+        bool result = 1;
+        // The user's subscription info. Just meaningful if the method returns TRUE.
+        ApiRenderCloudManager_SubscriptionInfo subscriptionInfo = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderCloudManager::uploadCurrentProject'
+    message uploadCurrentProjectRequest
+    {
+        // Scene's root version GUID on the server (this will be ignored if the project
+        GuidT rootGuid = 1;
+        // Upload progress update callback. It will receive the name of the asset
+        UpdateCallbackT onUpdate = 2;
+        // Upon the upload has finished (or failed) this will be called,
+        FinishCallbackT onFinish = 3;
+        // Optional data passed by the caller that is passed back to the callback functions.
+        uint64 callbackData = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderCloudManager::uploadCurrentProject'
+    message uploadCurrentProjectResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+        // Id of second callback function
+        uint32 callbackId2 = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderCloudManager::uploadRootNodeGraph'
+    message uploadRootNodeGraphRequest
+    {
+        // The root node graph to upload. The name of the root node graph will be used as project
+        ObjectRef rootNodeGraph = 1;
+        // Scene's root version GUID on the server (this will be ignored if the project settings
+        GuidT rootGuid = 2;
+        // Upload progress update callback. It will receive the name of the asset
+        UpdateCallbackT onUpdate = 3;
+        // Upon the upload has finished (or failed) this will be called,
+        FinishCallbackT onFinish = 4;
+        // Optional data passed by the caller that is passed back to the callback functions.
+        uint64 callbackData = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderCloudManager::uploadRootNodeGraph'
+    message uploadRootNodeGraphResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+        // Id of second callback function
+        uint32 callbackId2 = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderCloudManager::newRenderTask'
+    message newRenderTaskRequest
+    {
+        // GUID of the scene to be rendered
+        GuidT sceneGuid = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderCloudManager::newRenderTask'
+    message newRenderTaskResponse
+    {
+        //     TRUE if the UI could be open
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiRenderCloudManager' from 'apirendercloudmanager.h'
+service ApiRenderCloudManagerService
+{
+    /// Populates the provided struct with the information for the current user's
+    /// subscription
+    rpc userSubscriptionInfo(ApiRenderCloudManager.userSubscriptionInfoRequest) returns (ApiRenderCloudManager.userSubscriptionInfoResponse);
+    /// Uploads the current project to the server
+    rpc uploadCurrentProject(ApiRenderCloudManager.uploadCurrentProjectRequest) returns (ApiRenderCloudManager.uploadCurrentProjectResponse);
+    /// Uploads a root node graph together with the current project settings to the server
+    rpc uploadRootNodeGraph(ApiRenderCloudManager.uploadRootNodeGraphRequest) returns (ApiRenderCloudManager.uploadRootNodeGraphResponse);
+    /// Opens a Web UI for creating a new render task
+    rpc newRenderTask(ApiRenderCloudManager.newRenderTaskRequest) returns (ApiRenderCloudManager.newRenderTaskResponse);
+}
+
+// GRPC interface definition for class 'ApiRenderCloudManager_SubscriptionInfo' from 'apirendercloudmanager.h'

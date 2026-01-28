@@ -1,0 +1,2171 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+
+message ApiArrayRenderPassId
+{
+    repeated RenderPassId data = 1;
+}
+
+message ApiArrayImageTypeT
+{
+    repeated ImageType data = 1;
+}
+
+    enum ActivationResult 
+    {
+        ACTIVATION_OK = 0;
+        ACTIVATION_STANDALONE_LICENSE_INVALID = 1;
+        ACTIVATION_PLUGIN_LICENSE_INVALID = 2;
+        ACTIVATION_CONNECTION_FAILED = 3;
+        ACTIVATION_LOCK_ACQUIRE_FAILED = 4;
+        ACTIVATION_CANCELLED = 5;
+    }
+
+    enum AnimationTimeTransformType 
+    {
+        AnimationTimeTransformType_UNSPECIFIED = 0;
+        ANIMATION_TIME_TRANSFORM_LINEAR = 1;
+    }
+
+    enum AsPixelGroupMode 
+    {
+        AsPixelGroupMode_UNSPECIFIED = 0;
+        AS_PIXEL_GROUP_NONE = 1;
+        AS_PIXEL_GROUP_2X2 = 2;
+        AS_PIXEL_GROUP_4X4 = 4;
+    }
+
+    enum AnalyticLightType 
+    {
+        ANALYTIC_LIGHT_QUAD = 0;
+        ANALYTIC_LIGHT_DISK = 1;
+        ANALYTIC_LIGHT_DIRECTIONAL = 2;
+        ANALYTIC_LIGHT_SPHERE = 3;
+        ANALYTIC_LIGHT_TUBE = 4;
+    }
+
+    enum AnimationType 
+    {
+        AnimationType_UNSPECIFIED = 0;
+        ANIMATION_LOOP = 1;
+        ANIMATION_PINGPONG = 2;
+        ANIMATION_ONCE = 3;
+    }
+
+    enum BakingTextureType 
+    {
+        BAKING_TEXTURE_TYPE_LDR = 0;
+        BAKING_TEXTURE_TYPE_HDR = 2;
+    }
+
+    enum BinaryOperation 
+    {
+        BINARY_OP_ADD = 0;
+        BINARY_OP_ATAN2 = 1;
+        BINARY_OP_CROSS = 2;
+        BINARY_OP_DIVIDE = 3;
+        BINARY_OP_DOT = 4;
+        BINARY_OP_FMOD = 5;
+        BINARY_OP_LOG_BASE = 6;
+        BINARY_OP_MAX = 7;
+        BINARY_OP_MIN = 8;
+        BINARY_OP_MOD = 9;
+        BINARY_OP_MULTIPLY = 10;
+        BINARY_OP_POW = 11;
+        BINARY_OP_SUBTRACT = 12;
+    }
+
+    enum BorderMode 
+    {
+        BORDER_MODE_WRAP = 0;
+        BORDER_MODE_BLACK = 1;
+        BORDER_MODE_WHITE = 2;
+        BORDER_MODE_CLAMP = 3;
+        BORDER_MODE_MIRROR = 4;
+    }
+
+    enum BlendRegionMask 
+    {
+        BLEND_REGION_MASK_NOTHING = 0;
+        BLEND_REGION_MASK_BACKGROUND_ONLY = 1;
+        BLEND_REGION_MASK_FOREGROUND_ONLY = 2;
+        BLEND_REGION_MASK_XOR = 3;
+        BLEND_REGION_MASK_INTERSECTION = 4;
+        BLEND_REGION_MASK_BACKGROUND_AND_INTERSECTION = 5;
+        BLEND_REGION_MASK_FOREGROUND_AND_INTERSECTION = 6;
+        BLEND_REGION_MASK_ALL = 7;
+    }
+
+    enum ComponentPickerOperation 
+    {
+        COMPONENT_PICKER_X = 0;
+        COMPONENT_PICKER_Y = 1;
+        COMPONENT_PICKER_Z = 2;
+        COMPONENT_PICKER_MAX = 3;
+        COMPONENT_PICKER_MED = 4;
+        COMPONENT_PICKER_MIN = 5;
+    }
+
+    enum CompositeOperation 
+    {
+        COMPOSITE_OPERATION_SRC = 0;
+        COMPOSITE_OPERATION_SRC_OVER = 1;
+        COMPOSITE_OPERATION_SRC_OVER_CONJOINT = 2;
+        COMPOSITE_OPERATION_SRC_OVER_DISJOINT = 3;
+        COMPOSITE_OPERATION_SRC_IN = 4;
+        COMPOSITE_OPERATION_SRC_OUT = 5;
+        COMPOSITE_OPERATION_SRC_ATOP = 6;
+        COMPOSITE_OPERATION_DST = 7;
+        COMPOSITE_OPERATION_DST_OVER = 8;
+        COMPOSITE_OPERATION_DST_IN = 9;
+        COMPOSITE_OPERATION_DST_OUT = 10;
+        COMPOSITE_OPERATION_DST_ATOP = 11;
+        COMPOSITE_OPERATION_CLEAR = 12;
+        COMPOSITE_OPERATION_XOR = 13;
+        COMPOSITE_OPERATION_DISSOLVE = 14;
+        COMPOSITE_OPERATION_PLUS = 15;
+        COMPOSITE_OPERATION_MATTE = 16;
+    }
+
+    enum BlendMode 
+    {
+        option allow_alias = true;
+        BLEND_MODE_ADD = 0;
+        BLEND_MODE_AVERAGE = 1;
+        BLEND_MODE_COLOR_BURN = 2;
+        BLEND_MODE_COLOR_DODGE = 3;
+        BLEND_MODE_DARKEN = 4;
+        BLEND_MODE_DIFFERENCE = 5;
+        BLEND_MODE_EXCLUDE = 6;
+        BLEND_MODE_GLOW = 7;
+        BLEND_MODE_HARD_LIGHT = 8;
+        BLEND_MODE_HARD_MIX = 9;
+        BLEND_MODE_LIGHTEN = 10;
+        BLEND_MODE_LINEAR_BURN = 11;
+        BLEND_MODE_LINEAR_DODGE = 12;
+        BLEND_MODE_LINEAR_LIGHT = 13;
+        BLEND_MODE_MULTIPLY = 14;
+        BLEND_MODE_NEGATE = 15;
+        BLEND_MODE_NORMAL = 16;
+        BLEND_MODE_OVERLAY = 17;
+        BLEND_MODE_PHOENIX = 18;
+        BLEND_MODE_PIN_LIGHT = 19;
+        BLEND_MODE_REFLECT = 20;
+        BLEND_MODE_SCREEN = 21;
+        BLEND_MODE_SOFT_LIGHT = 22;
+        BLEND_MODE_SUBTRACT = 23;
+        BLEND_MODE_VIVID_LIGHT = 24;
+        BLEND_MODE_GEOMETRIC = 25;
+        BLEND_MODE_HYPOTENUSE = 26;
+        BLEND_MODE_SPOTLIGHT = 27;
+        BLEND_MODE_SPOTLIGHT_BLEND = 28;
+        BLEND_MODE_SUBTRACT_INVERSE = 29;
+        BLEND_MODE_DIVIDE = 30;
+        BLEND_MODE_DIVIDE_INVERSE = 31;
+        BLEND_MODE_HUE = 32;
+        BLEND_MODE_SATURATION = 33;
+        BLEND_MODE_COLOR = 34;
+        BLEND_MODE_LUMINOSITY = 35;
+        BLEND_MODE_DARKER_COLOR = 36;
+        BLEND_MODE_LIGHTER_COLOR = 37;
+        BLEND_MODE_DARKER_COLOR_LUMINANCE = 38;
+        BLEND_MODE_LIGHTER_COLOR_LUMINANCE = 39;
+        BLEND_MODE_VALUE = 40;
+        BLEND_MODE_CHROMATICITY = 41;
+        BLEND_MODE_RED = 42;
+        BLEND_MODE_GREEN = 43;
+        BLEND_MODE_BLUE = 44;
+        BLEND_MODE_FREEZE = 45;
+        BLEND_MODE_LEVR = 46;
+        BLEND_MODE_HEAT = 47;
+        BLEND_MODE_GRAIN_EXTRACT = 48;
+        BLEND_MODE_GRAIN_MERGE = 49;
+        BLEND_MODE_STAMP = 50;
+        BLEND_MODE_REORIENTED_NORMAL = 51;
+        BLEND_MODE_RATIO = 52;
+        BLEND_MODE_COMPOSITE_OFFSET = 1000;
+        BLEND_MODE_SRC = 1000;
+        BLEND_MODE_SRC_OVER = 1001;
+        BLEND_MODE_SRC_OVER_CONJOINT = 1002;
+        BLEND_MODE_SRC_OVER_DISJOINT = 1003;
+        BLEND_MODE_SRC_IN = 1004;
+        BLEND_MODE_SRC_OUT = 1005;
+        BLEND_MODE_SRC_ATOP = 1006;
+        BLEND_MODE_DST = 1007;
+        BLEND_MODE_DST_OVER = 1008;
+        BLEND_MODE_DST_IN = 1009;
+        BLEND_MODE_DST_OUT = 1010;
+        BLEND_MODE_DST_ATOP = 1011;
+        BLEND_MODE_CLEAR = 1012;
+        BLEND_MODE_XOR = 1013;
+        BLEND_MODE_DISSOLVE = 1014;
+        BLEND_MODE_PLUS = 1015;
+        BLEND_MODE_MATTE = 1016;
+        BLEND_MODE_SDR_OFFSET = 2000;
+        BLEND_MODE_REVERSE_OFFSET = 4000;
+    }
+
+    enum BrdfModel 
+    {
+        BRDF_OCTANE = 0;
+        BRDF_BECKMANN = 1;
+        BRDF_GGX = 2;
+        BRDF_WARD = 3;
+    }
+
+    enum BxDFDiffuseModel 
+    {
+        BxDF_DIFFUSE_OCTANE = 0;
+        BxDF_DIFFUSE_LAMBERTIAN = 1;
+        BxDF_DIFFUSE_OREN_NAYAR = 2;
+        BxDF_DIFFUSE_EON = 3;
+    }
+
+    enum BxDFSpecularModel 
+    {
+        BxDF_SPECULAR_OCTANE = 0;
+        BxDF_SPECULAR_BECKMANN = 1;
+        BxDF_SPECULAR_GGX = 2;
+        BxDF_SPECULAR_WARD = 3;
+        BxDF_SPECULAR_ENERGY_PRESERVED_GGX = 6;
+        BxDF_SPECULAR_STD = 7;
+    }
+
+    enum BxDFSheenModel 
+    {
+        BxDFSheenModel_UNSPECIFIED = 0;
+        BxDF_SHEEN = 10;
+        BxDF_FUZZ = 19;
+    }
+
+    enum BxDFTranmissionType 
+    {
+        BxDF_TRANSMISSION_TYPE_SPECULAR = 0;
+        BxDF_TRANSMISSION_TYPE_DIFFUSE = 1;
+        BxDF_TRANSMISSION_TYPE_THINWALL = 2;
+        BxDF_TRANSMISSION_TYPE_THINWALL_DIFFUSE = 3;
+    }
+
+    enum BxDFUniversalModel 
+    {
+        BxDF_UNIVERSAL_OCTANE = 0;
+        BxDF_UNIVERSAL_BECKMANN = 1;
+        BxDF_UNIVERSAL_GGX = 2;
+        BxDF_UNIVERSAL_WARD = 3;
+        BxDF_UNIVERSAL_LAMBERTIAN = 5;
+        BxDF_UNIVERSAL_ENERGY_PRESERVED_GGX = 6;
+        BxDF_UNIVERSAL_STD = 7;
+    }
+
+    enum ChangeEventType 
+    {
+        ChangeEventType_UNSPECIFIED = 0;
+        ITEM_ADDED = 1;
+        ITEM_DELETE = 2;
+        CONNECTION_CHANGED = 4;
+        DESTINATION_ADDED = 8;
+        PINS_CHANGED = 16;
+        ITEM_VALUE_CHANGED = 32;
+        ITEM_INPUT_CHANGED = 64;
+        ITEM_NAME_CHANGED = 128;
+        ITEM_MOVED = 256;
+        LINKER_ORDER_CHANGED = 512;
+        ITEM_UI_OPERATION_FLAG_CHANGED = 1024;
+        TIME_TRANSFORM_CHANGED = 2048;
+    }
+
+    enum ChannelGroups 
+    {
+        CHANNEL_GROUP_RGBA = 0;
+        CHANNEL_GROUP_RGB = 1;
+        CHANNEL_GROUP_ALPHA = 2;
+    }
+
+    enum ChannelMapping 
+    {
+        CHANNEL_MAPPING_RED = 0;
+        CHANNEL_MAPPING_GREEN = 1;
+        CHANNEL_MAPPING_BLUE = 2;
+        CHANNEL_MAPPING_RED_INVERSE = 3;
+        CHANNEL_MAPPING_GREEN_INVERSE = 4;
+        CHANNEL_MAPPING_BLUE_INVERSE = 5;
+        CHANNEL_MAPPING_LUMINANCE = 6;
+        CHANNEL_MAPPING_LUMINANCE_INVERSE = 7;
+        CHANNEL_MAPPING_ZERO = 8;
+        CHANNEL_MAPPING_ONE = 9;
+    }
+
+    enum Cinema4dNoiseType 
+    {
+        C4D_NOISE_TYPE_BOX_NOISE = 0;
+        C4D_NOISE_TYPE_BLIST_TURB = 1;
+        C4D_NOISE_TYPE_BUYA = 2;
+        C4D_NOISE_TYPE_CELL_NOISE = 3;
+        C4D_NOISE_TYPE_CRANAL = 4;
+        C4D_NOISE_TYPE_DENTS = 5;
+        C4D_NOISE_TYPE_DISPL_TURB = 6;
+        C4D_NOISE_TYPE_FBM = 7;
+        C4D_NOISE_TYPE_HAMA = 8;
+        C4D_NOISE_TYPE_LUKA = 9;
+        C4D_NOISE_TYPE_MOD_NOISE = 10;
+        C4D_NOISE_TYPE_NAKI = 11;
+        C4D_NOISE_TYPE_NOISE = 12;
+        C4D_NOISE_TYPE_NUTOUS = 13;
+        C4D_NOISE_TYPE_OBER = 14;
+        C4D_NOISE_TYPE_PEZO = 15;
+        C4D_NOISE_TYPE_POXO = 16;
+        C4D_NOISE_TYPE_SEMA = 17;
+        C4D_NOISE_TYPE_STUPL = 18;
+        C4D_NOISE_TYPE_TURBULENCE = 19;
+        C4D_NOISE_TYPE_VL_NOISE = 20;
+        C4D_NOISE_TYPE_WAVY_TURB = 21;
+        C4D_NOISE_TYPE_CELL_VORONOI = 22;
+        C4D_NOISE_TYPE_DISPL_VORONOI = 23;
+        C4D_NOISE_TYPE_VORONOI1 = 24;
+        C4D_NOISE_TYPE_VORONOI2 = 25;
+        C4D_NOISE_TYPE_VORONOI3 = 26;
+        C4D_NOISE_TYPE_ZADA = 27;
+        C4D_NOISE_TYPE_FIRE = 28;
+        C4D_NOISE_TYPE_ELECTRIC = 29;
+        C4D_NOISE_TYPE_GASEOUS = 30;
+        C4D_NOISE_TYPE_RIDGEDMULTI = 31;
+    }
+
+    enum ClayMode 
+    {
+        CLAY_MODE_NONE = 0;
+        CLAY_MODE_GREY = 1;
+        CLAY_MODE_COLOR = 2;
+    }
+
+    enum ColorChannelType 
+    {
+        COLOR_CHANNEL_R = 0;
+        COLOR_CHANNEL_G = 1;
+        COLOR_CHANNEL_B = 2;
+    }
+
+    enum ColorPickerSpace 
+    {
+        ColorPickerSpace_UNSPECIFIED = 0;
+        COLOR_PICKER_SPACE_LINEAR_SRGB = 1;
+        COLOR_PICKER_SPACE_SRGB = 2;
+    }
+
+    enum ColorSpaceConversion 
+    {
+        COLOR_SPACE_CONVERSION_NONE = 0;
+        COLOR_SPACE_CONVERSION_LINEAR_SRGB_TO_HSV = 1;
+        COLOR_SPACE_CONVERSION_HSV_TO_LINEAR_SRGB = 2;
+        COLOR_SPACE_CONVERSION_LINEAR_SRGB_TO_HSL = 3;
+        COLOR_SPACE_CONVERSION_HSL_TO_LINEAR_SRGB = 4;
+        COLOR_SPACE_CONVERSION_LINEAR_SRGB_TO_SRGB = 5;
+        COLOR_SPACE_CONVERSION_SRGB_TO_LINEAR_SRGB = 6;
+        COLOR_SPACE_CONVERSION_LINEAR_SRGB_TO_XY_Y = 7;
+        COLOR_SPACE_CONVERSION_XY_Y_TO_LINEAR_SRGB = 8;
+        COLOR_SPACE_CONVERSION_LINEAR_SRGB_TO_XYZ = 9;
+        COLOR_SPACE_CONVERSION_XYZ_TO_LINEAR_SRGB = 10;
+    }
+
+    enum ColorSpaceCurveType 
+    {
+        COLOR_SPACE_CURVE_TYPE_LINEAR = 0;
+        COLOR_SPACE_CURVE_TYPE_UNIFORM = 1;
+        COLOR_SPACE_CURVE_TYPE_OTHER = 2;
+    }
+
+    enum ComparisonOperation 
+    {
+        COMPARISON_OPERATION_LESS = 0;
+        COMPARISON_OPERATION_GREATER = 1;
+        COMPARISON_OPERATION_EQUAL = 2;
+        COMPARISON_OPERATION_NOT_EQUAL = 3;
+        COMPARISON_OPERATION_LESS_OR_EQUAL = 4;
+        COMPARISON_OPERATION_GREATER_OR_EQUAL = 5;
+    }
+
+    enum CompilationResult 
+    {
+        COMPILE_NONE = 0;
+        COMPILE_SUCCESS = 1;
+        COMPILE_FAILED = 2;
+        COMPILE_FORCE = 3;
+    }
+
+    enum CompositeAlphaOperation 
+    {
+        COMPOSITE_ALPHA_OPERATION_BLEND_MODE = 0;
+        COMPOSITE_ALPHA_OPERATION_ALPHA_COMPOSITING = 1;
+        COMPOSITE_ALPHA_OPERATION_BACKGROUND = 2;
+        COMPOSITE_ALPHA_OPERATION_FOREGROUND = 3;
+        COMPOSITE_ALPHA_OPERATION_ONE = 4;
+        COMPOSITE_ALPHA_OPERATION_ZERO = 5;
+        COMPOSITE_ALPHA_OPERATION_BLEND_MODE_LEGACY = 6;
+    }
+
+    enum CoordinateAxis 
+    {
+        COORDINATE_AXIS_X = 0;
+        COORDINATE_AXIS_Y = 1;
+        COORDINATE_AXIS_Z = 2;
+    }
+
+    enum CoordinateSystem 
+    {
+        COORDINATE_SYSTEM_WORLD = 0;
+        COORDINATE_SYSTEM_CAMERA = 1;
+        COORDINATE_SYSTEM_OBJECT = 2;
+        COORDINATE_SYSTEM_TANGENT = 3;
+    }
+
+    enum CryptomatteType 
+    {
+        CRYPTOMATTE_MATERIAL_NODE = 0;
+        CRYPTOMATTE_MATERIAL_NODE_NAME = 1;
+        CRYPTOMATTE_MATERIAL_PIN_NAME = 2;
+        CRYPTOMATTE_OBJECT_NODE = 3;
+        CRYPTOMATTE_OBJECT_NODE_NAME = 4;
+        CRYPTOMATTE_OBJECT_PIN_NAME = 5;
+        CRYPTOMATTE_INSTANCE = 6;
+        CRYPTOMATTE_GEOMETRY_NODE_NAME = 7;
+        CRYPTOMATTE_RENDER_LAYER = 8;
+        CRYPTOMATTE_USER_INSTANCE_ID = 9;
+    }
+
+    enum CurvatureModes 
+    {
+        CurvatureModes_UNSPECIFIED = 0;
+        CURVATURE_MODE_CONCAVITY = 1;
+        CURVATURE_MODE_CONVEXITY = 2;
+        CURVATURE_MODE_ALL = 3;
+    }
+
+    enum CustomAov 
+    {
+        CUSTOM_AOV_1 = 0;
+        CUSTOM_AOV_2 = 1;
+        CUSTOM_AOV_3 = 2;
+        CUSTOM_AOV_4 = 3;
+        CUSTOM_AOV_5 = 4;
+        CUSTOM_AOV_6 = 5;
+        CUSTOM_AOV_7 = 6;
+        CUSTOM_AOV_8 = 7;
+        CUSTOM_AOV_9 = 8;
+        CUSTOM_AOV_10 = 9;
+        CUSTOM_AOV_11 = 10;
+        CUSTOM_AOV_12 = 11;
+        CUSTOM_AOV_13 = 12;
+        CUSTOM_AOV_14 = 13;
+        CUSTOM_AOV_15 = 14;
+        CUSTOM_AOV_16 = 15;
+        CUSTOM_AOV_17 = 16;
+        CUSTOM_AOV_18 = 17;
+        CUSTOM_AOV_19 = 18;
+        CUSTOM_AOV_20 = 19;
+        CUSTOM_AOV_COUNT = 20;
+        INVALID_CUSTOM_AOV = 4096;
+    }
+
+    enum CustomAovChannel 
+    {
+        CUSTOM_AOV_CHANNEL_ALL = 0;
+        CUSTOM_AOV_CHANNEL_RED = 1;
+        CUSTOM_AOV_CHANNEL_GREEN = 2;
+        CUSTOM_AOV_CHANNEL_BLUE = 3;
+    }
+
+    enum CustomAovSecondaryRayVisibility 
+    {
+        CUSTOM_AOV_PRIMARY_RAYS_ONLY = 0;
+        CUSTOM_AOV_ALLOW_REFLECTIONS = 1;
+        CUSTOM_AOV_ALLOW_REFRACTIONS = 2;
+        CUSTOM_AOV_ALLOW_REFLECTIONS_REFRACTIONS = 3;
+    }
+
+    enum CustomCurveMode 
+    {
+        CUSTOM_CURVE_MODE_ALL_CHANNELS = 0;
+        CUSTOM_CURVE_MODE_LUMINANCE = 1;
+        CUSTOM_CURVE_MODE_MAX_CHANNEL = 2;
+        CUSTOM_CURVE_MODE_MAX_CHANNEL_SMOOTH = 3;
+        CUSTOM_CURVE_MODE_MAX_AND_MIN_CHANNELS = 4;
+        CUSTOM_CURVE_MODE_MAX_AND_MIN_CHANNELS_SMOOTH = 5;
+    }
+
+    enum CacheStatus 
+    {
+        CACHE_NONE = 0;
+        CACHE_ERROR = 1;
+        CACHE_BUILDING = 2;
+        CACHE_FINISHED = 3;
+    }
+
+    enum DaylightModel 
+    {
+        DAYLIGHTMODEL_PREETHAM = 0;
+        DAYLIGHTMODEL_OCTANE = 1;
+        DAYLIGHTMODEL_NISHITA = 2;
+        DAYLIGHTMODEL_HOSEK = 3;
+    }
+
+    enum DenoiserType 
+    {
+        DENOISER_OCTANE_AI = 0;
+        DENOISER_OPEN_IMAGE_DENOISE = 1;
+    }
+
+    enum DenoiserQuality 
+    {
+        DENOISER_QUALITY_FAST = 0;
+        DENOISER_QUALITY_BALANCED = 1;
+        DENOISER_QUALITY_HIGH = 2;
+        DENOISER_QUALITY_DEFAULT = 3;
+    }
+
+    enum DecalTextureIndex 
+    {
+        DECAL_TEXTURE_INDEX_NORMAL = 0;
+        DECAL_TEXTURE_INDEX_1 = 1;
+        DECAL_TEXTURE_INDEX_2 = 2;
+        DECAL_TEXTURE_INDEX_3 = 3;
+        DECAL_TEXTURE_INDEX_4 = 4;
+        DECAL_TEXTURE_INDEX_5 = 5;
+        DECAL_TEXTURE_INDEX_6 = 6;
+        DECAL_TEXTURE_INDEX_7 = 7;
+        DECAL_TEXTURE_INDEX_8 = 8;
+        DECAL_TEXTURE_INDEX_9 = 9;
+    }
+
+    enum DirectLightMode 
+    {
+        DL_GI_NONE = 0;
+        _DL_GI_AMBIENT = 1;
+        _DL_GI_SAMPLE_AMBIENT = 2;
+        DL_GI_AMBIENT_OCCLUSION = 3;
+        DL_GI_DIFFUSE = 4;
+    }
+
+    enum DispersionModel 
+    {
+        DispersionModel_UNSPECIFIED = 0;
+        DISPERSION_ABBE = 1;
+        DISPERSION_CAUCHY = 2;
+    }
+
+    enum DisplacementLod 
+    {
+        DisplacementLod_UNSPECIFIED = 0;
+        DISPLACEMENT_LEVEL_256 = 8;
+        DISPLACEMENT_LEVEL_512 = 9;
+        DISPLACEMENT_LEVEL_1024 = 10;
+        DISPLACEMENT_LEVEL_2048 = 11;
+        DISPLACEMENT_LEVEL_4096 = 12;
+        DISPLACEMENT_LEVEL_8192 = 13;
+        DISPLACEMENT_LEVEL_16384 = 14;
+    }
+
+    enum DisplacementQuality 
+    {
+        DISPLACEMENT_QUALITY_NORMAL = 0;
+        DISPLACEMENT_QUALITY_HIGH = 1;
+    }
+
+    enum DisplacementDirection 
+    {
+        DisplacementDirection_UNSPECIFIED = 0;
+        DISPLACEMENT_VERTEX_NORMAL = 1;
+        DISPLACEMENT_GEOMETRIC_NORMAL = 2;
+        DISPLACEMENT_SMOOTH_NORMAL = 3;
+    }
+
+    enum DisplacementTextureSpace 
+    {
+        DISPLACEMENT_TEXTURE_SPACE_OBJECT = 0;
+        DISPLACEMENT_TEXTURE_SPACE_TANGENT = 1;
+    }
+
+    enum DisplacementMapType 
+    {
+        DISPLACEMENT_MAP_TYPE_VECTOR = 0;
+        DISPLACEMENT_MAP_TYPE_HEIGHT = 1;
+    }
+
+    enum DisplacementTextureAxes 
+    {
+        DISPLACEMENT_MAP_AXES_POSITIVE_XYZ = 0;
+        DISPLACEMENT_MAP_AXES_POSITIVE_XZY = 1;
+        DISPLACEMENT_MAP_AXES_POSITIVE_XY_NEG_Z = 2;
+    }
+
+    enum DistanceMode 
+    {
+        DISTANCE_MODE_NORMAL = 0;
+        DISTANCE_MODE_OFFSET_X = 1;
+        DISTANCE_MODE_OFFSET_Y = 2;
+        DISTANCE_MODE_OFFSET_Z = 3;
+    }
+
+    enum ExpandContractRgbMode 
+    {
+        EXPAND_CONTRACT_RGB_MODE_COLOR = 0;
+        EXPAND_CONTRACT_RGB_MODE_MASKS = 1;
+    }
+
+    enum ExportState 
+    {
+        EXPORT_NOT_STARTED = 0;
+        EXPORTING = 1;
+        EXPORTING_WITH_ERRORS = 2;
+        EXPORT_FAILED = 3;
+        EXPORT_FINISHED = 4;
+    }
+
+    enum ExrCompressionType 
+    {
+        ExrCompressionType_UNSPECIFIED = 0;
+        EXR_COMPRESSION_NO_COMPRESSION = 1;
+        EXR_COMPRESSION_RLE = 2;
+        EXR_COMPRESSION_ZIPS = 3;
+        EXR_COMPRESSION_ZIP = 4;
+        EXR_COMPRESSION_PIZ = 5;
+        EXR_COMPRESSION_PXR24 = 6;
+        EXR_COMPRESSION_B44 = 7;
+        EXR_COMPRESSION_B44A = 8;
+        EXR_COMPRESSION_DWAA = 9;
+        EXR_COMPRESSION_DWAB = 10;
+    }
+
+    enum FaceCullingMode 
+    {
+        FACE_CULLING_RENDER_ALL = 0;
+        FACE_CULLING_RENDER_BACK = 1;
+        FACE_CULLING_RENDER_FRONT = 2;
+        FACE_CULLING_RENDER_NONE = 3;
+    }
+
+    enum FalloffTextureMode 
+    {
+        FALLOFF_NORMAL_VS_EYE_RAY = 0;
+        FALLOFF_NORMAL_VS_VECTOR_90DEG = 1;
+        FALLOFF_NORMAL_VS_VECTOR_180DEG = 2;
+    }
+
+    enum FilterType 
+    {
+        FILTER_TYPE_NONE = 0;
+        FILTER_TYPE_BOX = 1;
+        FILTER_TYPE_GAUSSIAN = 2;
+    }
+
+    enum FractalNoiseMode 
+    {
+        FRACTAL_NOISE_MODE_SCALAR = 0;
+        FRACTAL_NOISE_MODE_VECTOR = 1;
+    }
+
+    enum GaussianSplatClipMode 
+    {
+        GAUSSIAN_SPLAT_CLIP_MODE_NONE = 0;
+        GAUSSIAN_SPLAT_CLIP_MODE_BOX = 1;
+        GAUSSIAN_SPLAT_CLIP_MODE_ELLIPSOID = 2;
+    }
+
+    enum GaussianSplatLightingMode 
+    {
+        GAUSSIAN_SPLAT_LIGHTING_MODE_NONE = 0;
+        GAUSSIAN_SPLAT_LIGHTING_MODE_POWER = 1;
+        GAUSSIAN_SPLAT_LIGHTING_MODE_POWER_AND_COLOR = 2;
+    }
+
+    enum GeometryExportFormat 
+    {
+        GeometryExportFormat_UNSPECIFIED = 0;
+        GEOMETRY_FORMAT_ALEMBIC = 1;
+        GEOMETRY_FORMAT_FBX = 2;
+    }
+
+    enum GeometryImportObjectLayers 
+    {
+        GeometryImportObjectLayers_UNSPECIFIED = 0;
+        GEOIMP_HIDE_OBJECT_LAYERS = 1;
+        GEOIMP_LOAD_AS_ONE_OBJECT_LAYER = 2;
+        GEOIMP_LOAD_ALL_OBJECT_LAYERS = 3;
+    }
+
+    enum GeometryImportScale 
+    {
+        GeometryImportScale_UNSPECIFIED = 0;
+        GEOIMP_UNIT_MILLIMETERS = 1;
+        GEOIMP_UNIT_CENTIMETERS = 2;
+        GEOIMP_UNIT_DECIMETERS = 3;
+        GEOIMP_UNIT_METERS = 4;
+        GEOIMP_UNIT_DECAMETERS = 5;
+        GEOIMP_UNIT_HECTOMETERS = 6;
+        GEOIMP_UNIT_KILOMETERS = 7;
+        GEOIMP_UNIT_INCHES = 8;
+        GEOIMP_UNIT_FEET = 9;
+        GEOIMP_UNIT_YARDS = 10;
+        GEOIMP_UNIT_FURLONGS = 11;
+        GEOIMP_UNIT_MILES = 12;
+        GEOIMP_UNIT_8FOOT_DAZ = 13;
+        GEOIMP_UNIT_86FOOT_POSER = 14;
+    }
+
+    enum GlobalLightIdMaskAction 
+    {
+        GLOBAL_LIGHT_ID_MASK_ACTION_ENABLE = 0;
+        GLOBAL_LIGHT_ID_MASK_ACTION_DISABLE = 1;
+    }
+
+    enum GlobalTexAvo 
+    {
+        GLOBAL_TEX_AOV_1 = 0;
+        GLOBAL_TEX_AOV_2 = 1;
+        GLOBAL_TEX_AOV_3 = 2;
+        GLOBAL_TEX_AOV_4 = 3;
+        GLOBAL_TEX_AOV_5 = 4;
+        GLOBAL_TEX_AOV_6 = 5;
+        GLOBAL_TEX_AOV_7 = 6;
+        GLOBAL_TEX_AOV_8 = 7;
+        GLOBAL_TEX_AOV_9 = 8;
+        GLOBAL_TEX_AOV_10 = 9;
+        GLOBAL_TEX_AOV_11 = 10;
+        GLOBAL_TEX_AOV_12 = 11;
+        GLOBAL_TEX_AOV_13 = 12;
+        GLOBAL_TEX_AOV_14 = 13;
+        GLOBAL_TEX_AOV_15 = 14;
+        GLOBAL_TEX_AOV_16 = 15;
+        GLOBAL_TEX_AOV_17 = 16;
+        GLOBAL_TEX_AOV_18 = 17;
+        GLOBAL_TEX_AOV_19 = 18;
+        GLOBAL_TEX_AOV_20 = 19;
+        GLOBAL_TEX_AOV_COUNT = 20;
+    }
+
+    enum GradientGeneratorType 
+    {
+        GRADIENT_GENERATOR_TYPE_LINEAR = 0;
+        GRADIENT_GENERATOR_TYPE_RADIAL = 1;
+        GRADIENT_GENERATOR_TYPE_ANGULAR = 2;
+        GRADIENT_GENERATOR_TYPE_POLYGONAL = 3;
+        GRADIENT_GENERATOR_TYPE_SPIRAL = 4;
+    }
+
+    enum GradientInterpColorSpace 
+    {
+        GRADIENT_INTERP_COLOR_SPACE_LINEAR = 0;
+        GRADIENT_INTERP_COLOR_SPACE_OKLAB = 1;
+    }
+
+    enum GradientInterpType 
+    {
+        GRADIENT_INTERP_NONE = 0;
+        GRADIENT_INTERP_CONSTANT = 1;
+        GRADIENT_INTERP_LINEAR = 2;
+        GRADIENT_INTERP_CUBIC = 3;
+        GRADIENT_INTERP_CARDINAL = 4;
+    }
+
+    enum HairInterpolationType 
+    {
+        option allow_alias = true;
+        HAIR_INTERP_LENGTH = 0;
+        HAIR_INTERP_DEFAULT = 0;
+        HAIR_INTERP_SEGMENTS = 1;
+    }
+
+    enum HairMaterialBaseColorMode 
+    {
+        option allow_alias = true;
+        HAIR_MATERIAL_BASE_COLOR_ALBEDO = 0;
+        HAIR_MATERIAL_BASE_COLOR = 0;
+        HAIR_MATERIAL_BASE_COLOR_MELANIN_PLUS_PHEOMELANIN = 1;
+    }
+
+    enum IesPhotometryMode 
+    {
+        IesPhotometryMode_UNSPECIFIED = 0;
+        IES_MAX_1 = 1;
+        IES_COMPENSATE_LUMINANCE = 2;
+        IES_CANDELA_ABSOLUTE = 3;
+    }
+
+    enum ImageChannelType 
+    {
+        IMAGE_CHANNEL_UINT8 = 0;
+        IMAGE_CHANNEL_AUTO = -1;
+        IMAGE_CHANNEL_FLOAT = 1;
+        IMAGE_CHANNEL_HALF = 2;
+        IMAGE_CHANNEL_BC1_UNORM = 3;
+        IMAGE_CHANNEL_BC3_UNORM = 4;
+        IMAGE_CHANNEL_BC4_SNORM = 5;
+        IMAGE_CHANNEL_BC4_UNORM = 6;
+        IMAGE_CHANNEL_BC6_SF = 7;
+        IMAGE_CHANNEL_BC6_UF = 8;
+        IMAGE_CHANNEL_BC7_UNORM = 9;
+    }
+
+    enum ImageColorType 
+    {
+        IMAGE_COLOR_KEEP_SOURCE = 0;
+        IMAGE_COLOR_RGBA = 1;
+        IMAGE_COLOR_GREYSCALE = 2;
+        IMAGE_COLOR_ALPHA = 3;
+    }
+
+    enum ImageFilterType 
+    {
+        IMAGE_FILTER_NEAREST_NEIGHBOR = 0;
+        IMAGE_FILTER_BILINEAR = 1;
+    }
+
+    enum ImageMaskSource 
+    {
+        option allow_alias = true;
+        IMAGE_MASK_SOURCE_R = 0;
+        IMAGE_MASK_SOURCE_G = 1;
+        IMAGE_MASK_SOURCE_B = 2;
+        IMAGE_MASK_SOURCE_A = 3;
+        IMAGE_MASK_SOURCE_INVERSE_BIT = 4;
+        IMAGE_MASK_SOURCE_INVERSE_R = 4;
+        IMAGE_MASK_SOURCE_INVERSE_G = 5;
+        IMAGE_MASK_SOURCE_INVERSE_B = 6;
+        IMAGE_MASK_SOURCE_INVERSE_A = 7;
+        IMAGE_MASK_SOURCE_LUMINANCE = 8;
+        IMAGE_MASK_SOURCE_INVERSE_LUMINANCE = 12;
+        IMAGE_MASK_SOURCE_NO_MASK = 256;
+    }
+
+    enum ImageSaveFormat 
+    {
+        IMAGE_SAVE_FORMAT_PNG_8 = 0;
+        IMAGE_SAVE_FORMAT_PNG_16 = 1;
+        IMAGE_SAVE_FORMAT_EXR_16 = 2;
+        IMAGE_SAVE_FORMAT_EXR_32 = 3;
+        IMAGE_SAVE_FORMAT_TIFF_8 = 4;
+        IMAGE_SAVE_FORMAT_TIFF_16 = 5;
+        IMAGE_SAVE_FORMAT_JPEG = 6;
+    }
+
+    enum ImageType 
+    {
+        IMAGE_TYPE_LDR_RGBA = 0;
+        IMAGE_TYPE_LDR_MONO = 1;
+        IMAGE_TYPE_HDR_RGBA = 2;
+        IMAGE_TYPE_HDR_MONO = 3;
+        IMAGE_TYPE_LDR_MONO_ALPHA = 4;
+        IMAGE_TYPE_HDR_MONO_ALPHA = 5;
+        IMAGE_TYPE_HALF_RGBA = 6;
+        IMAGE_TYPE_HALF_MONO = 7;
+        IMAGE_TYPE_HALF_MONO_ALPHA = 8;
+        IMAGE_TYPE_BC1_UNORM = 9;
+        IMAGE_TYPE_BC3_UNORM = 10;
+        IMAGE_TYPE_BC4_SNORM = 11;
+        IMAGE_TYPE_BC4_UNORM = 12;
+        IMAGE_TYPE_BC6_SHF = 13;
+        IMAGE_TYPE_BC6_UHF = 14;
+        IMAGE_TYPE_BC7_UNORM = 15;
+    }
+
+    enum ImportRestAttributesMode 
+    {
+        ImportRestAttributesMode_UNSPECIFIED = 0;
+        IMPORT_REST_ATTRIBUTES_MODE_DISABLED = 1;
+        IMPORT_REST_ATTRIBUTES_MODE_FROM_FILE = 2;
+        IMPORT_REST_ATTRIBUTES_MODE_FROM_ANIMATION_TIME = 3;
+        IMPORT_REST_ATTRIBUTES_MODE_FROM_BIND_POSE = 4;
+    }
+
+    enum InfoChannelType 
+    {
+        option allow_alias = true;
+        IC_TYPE_GEOMETRIC_NORMAL = 0;
+        IC_TYPE_SHADING_NORMAL = 1;
+        IC_TYPE_POSITION = 2;
+        IC_TYPE_Z_DEPTH = 3;
+        IC_TYPE_MATERIAL_ID = 4;
+        IC_TYPE_UV_COORD = 5;
+        IC_TYPE_TANGENT_U = 6;
+        IC_TYPE_WIREFRAME = 7;
+        IC_TYPE_SMOOTH_NORMAL = 8;
+        IC_TYPE_VERTEX_NORMAL = 8;
+        IC_TYPE_OBJECT_ID = 9;
+        IC_TYPE_AMBIENT_OCCLUSION = 10;
+        IC_TYPE_MOTION_VECTOR = 11;
+        IC_TYPE_RENDER_LAYER_ID = 12;
+        IC_TYPE_RENDER_LAYER_MASK = 13;
+        IC_TYPE_LIGHT_PASS_ID = 14;
+        IC_TYPE_TANGENT_NORMAL = 15;
+        IC_TYPE_OPACITY = 16;
+        IC_TYPE_BAKING_GROUP_ID = 17;
+        IC_TYPE_ROUGHNESS = 18;
+        IC_TYPE_IOR = 19;
+        IC_TYPE_DIFFUSE_FILTER = 20;
+        IC_TYPE_REFLECTION_FILTER = 21;
+        IC_TYPE_REFRACTION_FILTER = 22;
+        IC_TYPE_TRANSMISSION_FILTER = 23;
+        IC_TYPE_OBJECT_LAYER_COLOR = 24;
+        IC_TYPE_GAUSSIAN_SPLAT = 25;
+        IC_TYPE_TRACE_CLOCK = 26;
+        IC_TYPE_PRIMITIVE_TYPE = 27;
+    }
+
+    enum InfoChannelSamplingMode 
+    {
+        IC_SAMPLING_MODE_DISTRIBUTED = 0;
+        IC_SAMPLING_MODE_PIXEL_FILTERING_ENABLED = 1;
+        IC_SAMPLING_MODE_PIXEL_FILTERING_DISABLED = 2;
+    }
+
+    enum InputAction 
+    {
+        INPUT_ACTION_NONE = 0;
+        INPUT_ACTION_INSERT = 1;
+        INPUT_ACTION_DELETE = 2;
+        INPUT_ACTION_MOVE_UP = 3;
+        INPUT_ACTION_MOVE_DOWN = 4;
+    }
+
+    enum InterpolationType 
+    {
+        INTERPOLATION_TYPE_LINEAR = 0;
+        INTERPOLATION_TYPE_LINEAR_STEP = 1;
+        INTERPOLATION_TYPE_SMOOTH_STEP = 2;
+        INTERPOLATION_TYPE_SMOOTHER_STEP = 3;
+        INTERPOLATION_TYPE_POSTERIZE = 4;
+    }
+
+    enum ItemDbOrigin 
+    {
+        ORIGIN_LIVEDB = 0;
+        ORIGIN_LOCALDB = 1;
+    }
+
+    enum LightAov 
+    {
+        LIGHT_AOV_SUN = 0;
+        LIGHT_AOV_AMBIENT = 1;
+        LIGHT_AOV_1 = 2;
+        LIGHT_AOV_2 = 3;
+        LIGHT_AOV_3 = 4;
+        LIGHT_AOV_4 = 5;
+        LIGHT_AOV_5 = 6;
+        LIGHT_AOV_6 = 7;
+        LIGHT_AOV_7 = 8;
+        LIGHT_AOV_8 = 9;
+        LIGHT_AOV_9 = 10;
+        LIGHT_AOV_10 = 11;
+        LIGHT_AOV_11 = 12;
+        LIGHT_AOV_12 = 13;
+        LIGHT_AOV_13 = 14;
+        LIGHT_AOV_14 = 15;
+        LIGHT_AOV_15 = 16;
+        LIGHT_AOV_16 = 17;
+        LIGHT_AOV_17 = 18;
+        LIGHT_AOV_18 = 19;
+        LIGHT_AOV_19 = 20;
+        LIGHT_AOV_20 = 21;
+    }
+
+    enum LightPassMask 
+    {
+        LightPassMask_UNSPECIFIED = 0;
+        LIGHT_PASS_MASK_SUN = 1;
+        LIGHT_PASS_MASK_ENVIRONMENT = 2;
+        LIGHT_PASS_MASK_EMIT_FIRST = 4;
+        LIGHT_PASS_MASK_EMIT_LAST = 2097152;
+        LIGHT_PASS_MASK_EMIT_ALL = 4194300;
+        LIGHT_PASS_MASK_ALL = 4194303;
+    }
+
+    enum LightSampler 
+    {
+        LIGHT_SAMPLER_POWER = 0;
+        LIGHT_SAMPLER_AILIGHT = 1;
+        LIGHT_SAMPLER_LIGHTBVH = 2;
+    }
+
+    enum LiveDbThumbnailView 
+    {
+        DB_VIEW_FULL = 0;
+        DB_VIEW_COMBINED = -1;
+        DB_VIEW_CORNER = 1;
+        DB_VIEW_BOTTOM = 2;
+        DB_VIEW_COUNT = 3;
+    }
+
+    enum LogicalOperator 
+    {
+        LOGICAL_OPERATOR_AND = 0;
+        LOGICAL_OPERATOR_OR = 1;
+        LOGICAL_OPERATOR_XOR = 2;
+        LOGICAL_OPERATOR_NOT = 3;
+    }
+
+    enum LuaScriptType 
+    {
+        SCRIPT_TYPE_STANDALONE = 0;
+        SCRIPT_TYPE_GRAPH = 1;
+    }
+
+    enum MemoryLocation 
+    {
+        MEMORY_LOCATION_DEVICE = 0;
+        MEMORY_LOCATION_OUT_OF_CORE = 1;
+        MEMORY_LOCATION_PEER_TO_PEER = 2;
+    }
+
+    enum MetallicReflectionMode 
+    {
+        METALLIC_ARTISTIC = 0;
+        METALLIC_IOR = 1;
+        METALLIC_RGB_IOR = 2;
+        METALLIC_ARTISTIC_N_K = 3;
+    }
+
+    enum ModuleType 
+    {
+        MODULE_TYPE_INVALID = 0;
+        MODULE_TYPE_COMMAND = 1;
+        MODULE_TYPE_WORK_PANE = 2;
+        MODULE_TYPE_NODE_GRAPH = 3;
+    }
+
+    enum MoireMosaicShape 
+    {
+        MOIRE_MOSAIC_SHAPE_RECTANGLE = 0;
+        MOIRE_MOSAIC_SHAPE_CIRCLE = 1;
+        MOIRE_MOSAIC_SHAPE_RING = 2;
+        MOIRE_MOSAIC_SHAPE_FRAME = 3;
+    }
+
+    enum MovableInputFormat 
+    {
+        MOVABLE_INPUT_FORMAT_NONE = 0;
+        MOVABLE_INPUT_FORMAT_OUTPUT_AOV = 1;
+        MOVABLE_INPUT_FORMAT_OUTPUT_AOV_LAYER = 2;
+        MOVABLE_INPUT_FORMAT_COMPOSITE_TEXTURE_LAYER = 3;
+        MOVABLE_INPUT_FORMAT_COMPOSITE_MATERIAL_INPUT = 4;
+        MOVABLE_INPUT_FORMAT_GEOMETRY = 5;
+        MOVABLE_INPUT_FORMAT_MATERIAL_LAYER = 6;
+        MOVABLE_INPUT_FORMAT_RENDER_PASSES = 7;
+        MOVABLE_INPUT_FORMAT_VERTEX_DISPLACEMENT_MIXER_INPUT = 8;
+        MOVABLE_INPUT_FORMAT_GRADIENT_TEXTURE_CONTROL_POINT = 9;
+        MOVABLE_INPUT_FORMAT_VOLUME_RAMP_CONTROL_POINT = 10;
+        MOVABLE_INPUT_FORMAT_TOON_RAMP_CONTROL_POINT = 11;
+        MOVABLE_INPUT_FORMAT_RENDER_JOB = 12;
+        MOVABLE_INPUT_FORMAT_TRACE_SET_VISIBILITY_RULE = 13;
+    }
+
+    enum NamedColorSpace 
+    {
+        NAMED_COLOR_SPACE_OTHER = 0;
+        NAMED_COLOR_SPACE_SRGB = 1;
+        NAMED_COLOR_SPACE_LINEAR_SRGB = 2;
+        NAMED_COLOR_SPACE_ACES2065_1 = 3;
+        NAMED_COLOR_SPACE_ACESCG = 4;
+        NAMED_COLOR_SPACE_XYZ_E = 5;
+        NAMED_COLOR_SPACE_OCIO = 1000;
+    }
+
+    enum NoiseType 
+    {
+        NOISE_TYPE_PERLIN = 0;
+        NOISE_TYPE_TURBULENCE = 1;
+        NOISE_TYPE_CIRCULAR = 2;
+        NOISE_TYPE_CHIPS = 3;
+        NOISE_TYPE_VORONOI = 4;
+    }
+
+    enum NoiseTypeOsl 
+    {
+        NOISE_TYPE_OSL_PERLIN = 0;
+        NOISE_TYPE_OSL_UPERLIN = 1;
+        NOISE_TYPE_OSL_CELL = 2;
+        NOISE_TYPE_OSL_HASH = 3;
+    }
+
+    enum NormalType 
+    {
+        NORMAL_TYPE_GEOMETRIC = 0;
+        NORMAL_TYPE_SMOOTH = 1;
+        NORMAL_TYPE_SHADING = 2;
+    }
+
+    enum ObjectIncludeMode 
+    {
+        OBJECT_INCLUDE_ALL = 0;
+        OBJECT_INCLUDE_SELF = 1;
+        OBJECT_INCLUDE_OTHERS = 2;
+    }
+
+    enum ObjImportColorSpace 
+    {
+        OBJIMP_RGB_LINEAR_SRGB = 0;
+        OBJIMP_RGB_SRGB = 1;
+    }
+
+    enum OctaneLiveCategory 
+    {
+        OLCAT_UNDEFINED = 0;
+        OLCAT_ROOT = 1;
+        OLCAT_MATERIALS = 2;
+        OLCAT_TEXTURES = 3;
+        OLCAT_EMISSIONS = 4;
+    }
+
+    enum TextureValueType 
+    {
+        TEXTURE_VALUE_TYPE_UNKNOWN = 0;
+        TEXTURE_VALUE_TYPE_INT = 1;
+        TEXTURE_VALUE_TYPE_FLOAT = 2;
+        TEXTURE_VALUE_TYPE_VECTOR2 = 4;
+        TEXTURE_VALUE_TYPE_VECTOR3 = 8;
+        TEXTURE_VALUE_TYPE_VECTOR4 = 16;
+        TEXTURE_VALUE_TYPE_COLOR4 = 32;
+        TEXTURE_VALUE_TYPE_COLOR3 = 64;
+        TEXTURE_VALUE_TYPE_POINT = 128;
+        TEXTURE_VALUE_TYPE_NORMAL = 256;
+        TEXTURE_VALUE_TYPE_MATRIX = 512;
+        TEXTURE_VALUE_TYPE_MATRIX3 = 1024;
+        TEXTURE_VALUE_TYPE_STRING = 2048;
+        TEXTURE_VALUE_TYPE_BOOL = 4096;
+    }
+
+    enum TextureNodeTypeMode 
+    {
+        TEXTURE_NODE_VALUE_TYPE_MODE_NONE = 0;
+        TEXTURE_NODE_VALUE_TYPE_MODE_STATIC = 1;
+        TEXTURE_NODE_VALUE_TYPE_MODE_SETTABLE = 2;
+        TEXTURE_NODE_VALUE_TYPE_MODE_DERIVED = 3;
+    }
+
+    enum TexturePinValueTypeMode 
+    {
+        TEXTURE_PIN_VALUE_TYPE_MODE_NONE = 0;
+        TEXTURE_PIN_VALUE_TYPE_MODE_STATIC = 1;
+        TEXTURE_PIN_VALUE_TYPE_MODE_SPECIFIC_AND_CAN_BE_TOGGLED = 2;
+        TEXTURE_PIN_VALUE_TYPE_MODE_DERIVED_AND_MAY_BE_TOGGLED = 3;
+    }
+
+    enum UnblendExtractMode 
+    {
+        UNBLEND_EXTRACT_MODE_FOREGROUND = 0;
+        UNBLEND_EXTRACT_MODE_BACKGROUND = 1;
+    }
+
+    enum UnblendOutputColorRange 
+    {
+        UNBLEND_OUTPUT_COLOR_RANGE_HDR_UNLIMITED = 0;
+        UNBLEND_OUTPUT_COLOR_RANGE_HDR_ACESCG_GAMUT = 1;
+        UNBLEND_OUTPUT_COLOR_RANGE_HDR_SRGB_GAMUT = 2;
+        UNBLEND_OUTPUT_COLOR_RANGE_SDR_SRGB = 3;
+    }
+
+    enum PanoramicCameraMode 
+    {
+        SPHERICAL_CAMERA = 0;
+        CYLINDRICAL_CAMERA = 1;
+        CUBE_MAPPED_CAMERA = 2;
+        CUBE_MAPPED_CAMERA_PX = 3;
+        CUBE_MAPPED_CAMERA_MX = 4;
+        CUBE_MAPPED_CAMERA_PY = 5;
+        CUBE_MAPPED_CAMERA_MY = 6;
+        CUBE_MAPPED_CAMERA_PZ = 7;
+        CUBE_MAPPED_CAMERA_MZ = 8;
+    }
+
+    enum PhotonTypes 
+    {
+        PhotonTypes_UNSPECIFIED = 0;
+        PHOTONS_EVERYTHING = 1;
+        PHOTONS_INDIRECT = 2;
+        PHOTONS_CAUSTIC = 3;
+    }
+
+    enum PositionType 
+    {
+        PositionType_UNSPECIFIED = 0;
+        POSITION_GLOBAL = 1;
+        POSITION_OBJECT = 3;
+        POSITION_NORMAL = 4;
+    }
+
+    enum PreferencesTabId 
+    {
+        PREFERENCES_TAB_ID_UNKNOWN = 0;
+        PREFERENCES_TAB_ID_APPLICATION = 1;
+        PREFERENCES_TAB_ID_COLOR_MANAGEMENT = 2;
+        PREFERENCES_TAB_ID_CONTROLS = 3;
+        PREFERENCES_TAB_ID_DEVICES = 4;
+        PREFERENCES_TAB_ID_OUT_OF_CORE = 5;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT = 6;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT_OBJ = 7;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT_ALEMBIC = 8;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT_FBX = 9;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT_USD = 10;
+        PREFERENCES_TAB_ID_GEOMETRY_IMPORT_VDB = 11;
+        PREFERENCES_TAB_ID_IMAGE_IMPORT = 12;
+        PREFERENCES_TAB_ID_EXPORT = 13;
+        PREFERENCES_TAB_ID_NETWORK_RENDERING = 14;
+        PREFERENCES_TAB_ID_KEYBOARD_SHORTCUTS = 15;
+        PREFERENCES_TAB_ID_MODULES = 16;
+        PREFERENCES_TAB_ID_MATERIALX_IMPORT = 17;
+        PREFERENCES_TAB_ID_FILESYSTEM_CACHING = 18;
+    }
+
+    enum PremultipliedAlphaType 
+    {
+        PREMULTIPLIED_ALPHA_TYPE_NONE = 0;
+        PREMULTIPLIED_ALPHA_TYPE_LINEARIZED = 1;
+        PREMULTIPLIED_ALPHA_TYPE_ENCODED = 2;
+    }
+
+    enum PrePassType 
+    {
+        PrePassType_UNSPECIFIED = 0;
+        PRE_PASS_TYPE_NRC_SAMPLE_GENERATION = 1;
+        PRE_PASS_TYPE_INVALID = 2;
+    }
+
+    enum PreviewType 
+    {
+        PreviewType_UNSPECIFIED = 0;
+        PREVIEW_PLANE = 1;
+        PREVIEW_SPHERE = 2;
+        PREVIEW_PLANE_WITH_ALPHA = 3;
+    }
+
+    enum PrimitiveType 
+    {
+        option allow_alias = true;
+        PRIMITIVE_TRIANGLE = 0;
+        PRIMITIVE_OLD_DISPLACEMENT_TRIANGLE = 1;
+        PRIMITIVE_DISPLACEMENT_TRIANGLE = 2;
+        PRIMITIVE_HAIR = 3;
+        PRIMITIVE_SPHERE = 4;
+        PRIMITIVE_QUAD = 5;
+        PRIMITIVE_DISK = 6;
+        PRIMITIVE_TUBE = 7;
+        PRIMITIVE_PLANE = 8;
+        PRIMITIVE_INSTANCE = 9;
+        PRIMITIVE_VOLUME = 10;
+        PRIMITIVE_GS_CLOUD = 11;
+        PRIMITIVE_VECTRON = 12;
+        PRIMITIVE_TYPE_COUNT = 13;
+        PRIMITIVE_INVALID = 13;
+    }
+
+    enum ProceduralEffectType 
+    {
+        PROCEDURAL_EFFECT_COMBUSTIBLE_VORONOI = 0;
+        PROCEDURAL_EFFECT_FRACTAL = 1;
+        PROCEDURAL_EFFECT_KALEIDOSCOPE = 2;
+        PROCEDURAL_EFFECT_NEON_STRIPES = 3;
+        PROCEDURAL_EFFECT_PAINT_COLORS = 4;
+        PROCEDURAL_EFFECT_PARTICLES = 5;
+        PROCEDURAL_EFFECT_STAR_SCROLLER = 6;
+        PROCEDURAL_EFFECT_WAVEY_COLORS = 7;
+        PROCEDURAL_EFFECT_FIRE_EMITTER = 8;
+        PROCEDURAL_EFFECT_MIST = 9;
+        PROCEDURAL_EFFECT_TUNNEL = 10;
+        PROCEDURAL_EFFECT_BLASCHKE_PRODUCT = 11;
+        PROCEDURAL_EFFECT_FRACTAL3 = 12;
+        PROCEDURAL_EFFECT_SKINNER = 13;
+        PROCEDURAL_EFFECT_SUN_SURFACE = 14;
+        PROCEDURAL_EFFECT_PAINT_COLORS2 = 15;
+        PROCEDURAL_EFFECT_SPIRAL = 16;
+        PROCEDURAL_EFFECT_NOISE_SMOKE_FLOW = 17;
+        PROCEDURAL_EFFECT_FRACTAL2 = 18;
+        PROCEDURAL_EFFECT_PORTAL = 19;
+        PROCEDURAL_EFFECT_CANDLE_FLAME = 20;
+    }
+
+    enum ReferenceAABBDisplay 
+    {
+        ReferenceAABBDisplay_UNSPECIFIED = 0;
+        REFERENCE_AABB_DISPLAY_NEVER = 1;
+        REFERENCE_AABB_DISPLAY_WHEN_UNLOADED = 2;
+        REFERENCE_AABB_DISPLAY_ALWAYS = 3;
+    }
+
+    enum RenderDeviceState 
+    {
+        RENDER_DEVICE_STATE_UNKNOWN = 0;
+        RENDER_DEVICE_STATE_NOT_SUPPORTED = 1;
+        RENDER_DEVICE_STATE_DISABLED = 2;
+        RENDER_DEVICE_STATE_ENABLED = 3;
+        RENDER_DEVICE_STATE_ACTIVE_OK = 4;
+        RENDER_DEVICE_STATE_ACTIVE_FAILED = 5;
+    }
+
+    enum RenderError 
+    {
+        RENDER_ERROR_NONE = 0;
+        RENDER_ERROR_NOT_ENOUGH_DEVICE_MEMORY = 1;
+        RENDER_ERROR_NOT_ENOUGH_HOST_MEMORY = 2;
+        RENDER_ERROR_KERNEL_FAILED = 3;
+        RENDER_ERROR_ACTIVATION_REQUIRED = 4;
+        RENDER_ERROR_DEVICE_UNSUPPORTED = 5;
+        RENDER_ERROR_PEER_CONNECTION_CLOSED = 6;
+        RENDER_ERROR_MODULE_LOAD_FAILED = 7;
+        RENDER_ERROR_OSL = 8;
+        RENDER_ERROR_OSL_INTERNAL = 9;
+        RENDER_ERROR_LOD_DATA = 10;
+        RENDER_ERROR_UNSPECIFIED = 11;
+    }
+
+    enum RenderJobAction 
+    {
+        RENDER_JOB_ACTION_NONE = 0;
+        RENDER_JOB_ACTION_START_ITERATION = 1;
+        RENDER_JOB_ACTION_FINISH_ITERATION = 2;
+        RENDER_JOB_ACTION_RENDER = 3;
+    }
+
+    enum RenderJobStatus 
+    {
+        RENDER_JOB_STATUS_NONE = 0;
+        RENDER_JOB_STATUS_COMPLETED = 2;
+        RENDER_JOB_STATUS_RENDER_ERROR = 3;
+        RENDER_JOB_STATUS_SAVE_ERROR = 4;
+        RENDER_JOB_STATUS_SKIPPED = 5;
+        RENDER_JOB_STATUS_SCRIPT_ERROR = 6;
+    }
+
+    enum RenderLayerMode 
+    {
+        RENDER_LAYER_MODE_NORMAL = 0;
+        RENDER_LAYER_MODE_HIDE_INACTIVE_LAYERs = 1;
+        RENDER_LAYER_MODE_ONLY_SIDE_EFFECTS = 2;
+        RENDER_LAYER_MODE_HIDE_FROM_CAMERA = 3;
+    }
+
+    enum RenderPassGroupId 
+    {
+        option allow_alias = true;
+        RENDER_PASS_GROUP_NONE = 0;
+        RENDER_PASS_GROUP_DEFAULT = 0;
+        RENDER_PASS_GROUP_BEAUTY = 1;
+        RENDER_PASS_GROUP_LAYER = 2;
+        RENDER_PASS_GROUP_POST_PROC = 3;
+        RENDER_PASS_GROUP_LIGHT = 4;
+        RENDER_PASS_GROUP_INFO = 5;
+        RENDER_PASS_GROUP_MATERIAL = 6;
+        RENDER_PASS_GROUP_DENOISER = 7;
+        RENDER_PASS_GROUP_CRYPTOMATTE = 8;
+        RENDER_PASS_GROUP_CUSTOM = 9;
+        RENDER_PASS_GROUP_GLOBAL_TEX = 10;
+    }
+
+    enum RenderPassId 
+    {
+        option allow_alias = true;
+        RENDER_PASS_BEAUTY = 0;
+        RENDER_PASS_EMIT = 1;
+        RENDER_PASS_ENVIRONMENT = 2;
+        RENDER_PASS_DIFFUSE = 3;
+        RENDER_PASS_DIFFUSE_DIRECT = 4;
+        RENDER_PASS_DIFFUSE_INDIRECT = 5;
+        RENDER_PASS_DIFFUSE_FILTER = 6;
+        RENDER_PASS_REFLECTION = 7;
+        RENDER_PASS_REFLECTION_DIRECT = 8;
+        RENDER_PASS_REFLECTION_INDIRECT = 9;
+        RENDER_PASS_REFLECTION_FILTER = 10;
+        RENDER_PASS_REFRACTION = 11;
+        RENDER_PASS_REFRACTION_FILTER = 12;
+        RENDER_PASS_TRANSMISSION = 13;
+        RENDER_PASS_TRANSMISSION_FILTER = 14;
+        RENDER_PASS_SSS = 15;
+        RENDER_PASS_POST_PROC = 16;
+        RENDER_PASS_LAYER_SHADOWS = 17;
+        RENDER_PASS_LAYER_BLACK_SHADOWS = 18;
+        RENDER_PASS_LAYER_REFLECTIONS = 20;
+        RENDER_PASS_AMBIENT_LIGHT = 21;
+        RENDER_PASS_SUNLIGHT = 22;
+        RENDER_PASS_LIGHT_1 = 23;
+        RENDER_PASS_LIGHT_2 = 24;
+        RENDER_PASS_LIGHT_3 = 25;
+        RENDER_PASS_LIGHT_4 = 26;
+        RENDER_PASS_LIGHT_5 = 27;
+        RENDER_PASS_LIGHT_6 = 28;
+        RENDER_PASS_LIGHT_7 = 29;
+        RENDER_PASS_LIGHT_8 = 30;
+        RENDER_PASS_NOISE_BEAUTY = 31;
+        RENDER_PASS_SHADOW = 32;
+        RENDER_PASS_IRRADIANCE = 33;
+        RENDER_PASS_LIGHT_DIRECTION = 34;
+        RENDER_PASS_VOLUME = 35;
+        RENDER_PASS_VOLUME_MASK = 36;
+        RENDER_PASS_VOLUME_EMISSION = 37;
+        RENDER_PASS_VOLUME_Z_DEPTH_FRONT = 38;
+        RENDER_PASS_VOLUME_Z_DEPTH_BACK = 39;
+        RENDER_PASS_DENOISE_NORMAL = 40;
+        RENDER_PASS_DENOISE_HIT_DISTANCE = 41;
+        RENDER_PASS_DENOISE_ROUGHNESS = 42;
+        RENDER_PASS_BEAUTY_DENOISER_OUTPUT = 43;
+        RENDER_PASS_DIFFUSE_DIRECT_DENOISER_OUTPUT = 44;
+        RENDER_PASS_DIFFUSE_INDIRECT_DENOISER_OUTPUT = 45;
+        RENDER_PASS_REFLECTION_DIRECT_DENOISER_OUTPUT = 46;
+        RENDER_PASS_REFLECTION_INDIRECT_DENOISER_OUTPUT = 47;
+        RENDER_PASS_REMAINDER_DENOISER_OUTPUT = 49;
+        RENDER_PASS_NOISE_DIFFUSE_DIRECT = 50;
+        RENDER_PASS_NOISE_DIFFUSE_INDIRECT = 51;
+        RENDER_PASS_NOISE_REFLECTION_DIRECT = 52;
+        RENDER_PASS_NOISE_REFLECTION_INDIRECT = 53;
+        RENDER_PASS_AMBIENT_LIGHT_DIRECT = 54;
+        RENDER_PASS_AMBIENT_LIGHT_INDIRECT = 55;
+        RENDER_PASS_SUNLIGHT_DIRECT = 56;
+        RENDER_PASS_SUNLIGHT_INDIRECT = 57;
+        RENDER_PASS_LIGHT_1_DIRECT = 58;
+        RENDER_PASS_LIGHT_2_DIRECT = 59;
+        RENDER_PASS_LIGHT_3_DIRECT = 60;
+        RENDER_PASS_LIGHT_4_DIRECT = 61;
+        RENDER_PASS_LIGHT_5_DIRECT = 62;
+        RENDER_PASS_LIGHT_6_DIRECT = 63;
+        RENDER_PASS_LIGHT_7_DIRECT = 64;
+        RENDER_PASS_LIGHT_8_DIRECT = 65;
+        RENDER_PASS_LIGHT_1_INDIRECT = 66;
+        RENDER_PASS_LIGHT_2_INDIRECT = 67;
+        RENDER_PASS_LIGHT_3_INDIRECT = 68;
+        RENDER_PASS_LIGHT_4_INDIRECT = 69;
+        RENDER_PASS_LIGHT_5_INDIRECT = 70;
+        RENDER_PASS_LIGHT_6_INDIRECT = 71;
+        RENDER_PASS_LIGHT_7_INDIRECT = 72;
+        RENDER_PASS_LIGHT_8_INDIRECT = 73;
+        RENDER_PASS_VOLUME_DENOISER_OUTPUT = 74;
+        RENDER_PASS_VOLUME_EMISSION_DENOISER_OUTPUT = 75;
+        RENDER_PASS_EMISSION_DENOISER_OUTPUT = 76;
+        RENDER_PASS_POSTFX_MEDIA = 84;
+        RENDER_PASS_LIGHT_9 = 85;
+        RENDER_PASS_LIGHT_10 = 86;
+        RENDER_PASS_LIGHT_11 = 87;
+        RENDER_PASS_LIGHT_12 = 88;
+        RENDER_PASS_LIGHT_13 = 89;
+        RENDER_PASS_LIGHT_14 = 90;
+        RENDER_PASS_LIGHT_15 = 91;
+        RENDER_PASS_LIGHT_16 = 92;
+        RENDER_PASS_LIGHT_17 = 93;
+        RENDER_PASS_LIGHT_18 = 94;
+        RENDER_PASS_LIGHT_19 = 95;
+        RENDER_PASS_LIGHT_20 = 96;
+        RENDER_PASS_LIGHT_9_DIRECT = 97;
+        RENDER_PASS_LIGHT_10_DIRECT = 98;
+        RENDER_PASS_LIGHT_11_DIRECT = 99;
+        RENDER_PASS_LIGHT_12_DIRECT = 100;
+        RENDER_PASS_LIGHT_13_DIRECT = 101;
+        RENDER_PASS_LIGHT_14_DIRECT = 102;
+        RENDER_PASS_LIGHT_15_DIRECT = 103;
+        RENDER_PASS_LIGHT_16_DIRECT = 104;
+        RENDER_PASS_LIGHT_17_DIRECT = 105;
+        RENDER_PASS_LIGHT_18_DIRECT = 106;
+        RENDER_PASS_LIGHT_19_DIRECT = 107;
+        RENDER_PASS_LIGHT_20_DIRECT = 108;
+        RENDER_PASS_LIGHT_9_INDIRECT = 109;
+        RENDER_PASS_LIGHT_10_INDIRECT = 110;
+        RENDER_PASS_LIGHT_11_INDIRECT = 111;
+        RENDER_PASS_LIGHT_12_INDIRECT = 112;
+        RENDER_PASS_LIGHT_13_INDIRECT = 113;
+        RENDER_PASS_LIGHT_14_INDIRECT = 114;
+        RENDER_PASS_LIGHT_15_INDIRECT = 115;
+        RENDER_PASS_LIGHT_16_INDIRECT = 116;
+        RENDER_PASS_LIGHT_17_INDIRECT = 117;
+        RENDER_PASS_LIGHT_18_INDIRECT = 118;
+        RENDER_PASS_LIGHT_19_INDIRECT = 119;
+        RENDER_PASS_LIGHT_20_INDIRECT = 120;
+        RENDER_PASS_DENOISE_ALBEDO = 123;
+        RENDER_PASS_MIST = 124;
+        RENDER_PASS_CAMERA_MASK = 125;
+        RENDER_PASS_ALPHA = 126;
+        RENDER_PASS_GAUSSIAN_SPLAT = 127;
+        RENDER_PASS_POSTFX_MEDIA_MASK = 128;
+        RENDER_PASS_ENVIRONMENT_UNOCCLUDED = 129;
+        RENDER_PASS_CUSTOM_OFFSET = 500;
+        RENDER_PASS_CUSTOM_1 = 501;
+        RENDER_PASS_CUSTOM_2 = 502;
+        RENDER_PASS_CUSTOM_3 = 503;
+        RENDER_PASS_CUSTOM_4 = 504;
+        RENDER_PASS_CUSTOM_5 = 505;
+        RENDER_PASS_CUSTOM_6 = 506;
+        RENDER_PASS_CUSTOM_7 = 507;
+        RENDER_PASS_CUSTOM_8 = 508;
+        RENDER_PASS_CUSTOM_9 = 509;
+        RENDER_PASS_CUSTOM_10 = 510;
+        RENDER_PASS_CUSTOM_11 = 511;
+        RENDER_PASS_CUSTOM_12 = 512;
+        RENDER_PASS_CUSTOM_13 = 513;
+        RENDER_PASS_CUSTOM_14 = 514;
+        RENDER_PASS_CUSTOM_15 = 515;
+        RENDER_PASS_CUSTOM_16 = 516;
+        RENDER_PASS_CUSTOM_17 = 517;
+        RENDER_PASS_CUSTOM_18 = 518;
+        RENDER_PASS_CUSTOM_19 = 519;
+        RENDER_PASS_CUSTOM_LAST = 520;
+        RENDER_PASS_CUSTOM_20 = 520;
+        RENDER_PASS_INFO_OFFSET = 1000;
+        RENDER_PASS_GEOMETRIC_NORMAL = 1000;
+        RENDER_PASS_SHADING_NORMAL = 1001;
+        RENDER_PASS_POSITION = 1002;
+        RENDER_PASS_Z_DEPTH = 1003;
+        RENDER_PASS_MATERIAL_ID = 1004;
+        RENDER_PASS_UV_COORD = 1005;
+        RENDER_PASS_TANGENT_U = 1006;
+        RENDER_PASS_WIREFRAME = 1007;
+        RENDER_PASS_SMOOTH_NORMAL = 1008;
+        RENDER_PASS_VERTEX_NORMAL = 1008;
+        RENDER_PASS_OBJECT_ID = 1009;
+        RENDER_PASS_AMBIENT_OCCLUSION = 1010;
+        RENDER_PASS_MOTION_VECTOR = 1011;
+        RENDER_PASS_RENDER_LAYER_ID = 1012;
+        RENDER_PASS_RENDER_LAYER_MASK = 1013;
+        RENDER_PASS_LIGHT_PASS_ID = 1014;
+        RENDER_PASS_TANGENT_NORMAL = 1015;
+        RENDER_PASS_OPACITY = 1016;
+        RENDER_PASS_BAKING_GROUP_ID = 1017;
+        RENDER_PASS_ROUGHNESS = 1018;
+        RENDER_PASS_IOR = 1019;
+        RENDER_PASS_DIFFUSE_FILTER_INFO = 1020;
+        RENDER_PASS_REFLECTION_FILTER_INFO = 1021;
+        RENDER_PASS_REFRACTION_FILTER_INFO = 1022;
+        RENDER_PASS_TRANSMISSION_FILTER_INFO = 1023;
+        RENDER_PASS_OBJECT_LAYER_COLOR = 1024;
+        RENDER_PASS_GAUSSIAN_SPLAT_INFO = 1025;
+        RENDER_PASS_TRACE_CLOCK = 1026;
+        RENDER_PASS_PRIMITIVE_TYPE = 1027;
+        RENDER_PASS_GLOBAL_TEX_OFFSET = 1100;
+        RENDER_PASS_GLOBAL_TEX_1 = 1101;
+        RENDER_PASS_GLOBAL_TEX_2 = 1102;
+        RENDER_PASS_GLOBAL_TEX_3 = 1103;
+        RENDER_PASS_GLOBAL_TEX_4 = 1104;
+        RENDER_PASS_GLOBAL_TEX_5 = 1105;
+        RENDER_PASS_GLOBAL_TEX_6 = 1106;
+        RENDER_PASS_GLOBAL_TEX_7 = 1107;
+        RENDER_PASS_GLOBAL_TEX_8 = 1108;
+        RENDER_PASS_GLOBAL_TEX_9 = 1109;
+        RENDER_PASS_GLOBAL_TEX_10 = 1110;
+        RENDER_PASS_GLOBAL_TEX_11 = 1111;
+        RENDER_PASS_GLOBAL_TEX_12 = 1112;
+        RENDER_PASS_GLOBAL_TEX_13 = 1113;
+        RENDER_PASS_GLOBAL_TEX_14 = 1114;
+        RENDER_PASS_GLOBAL_TEX_15 = 1115;
+        RENDER_PASS_GLOBAL_TEX_16 = 1116;
+        RENDER_PASS_GLOBAL_TEX_17 = 1117;
+        RENDER_PASS_GLOBAL_TEX_18 = 1118;
+        RENDER_PASS_GLOBAL_TEX_19 = 1119;
+        RENDER_PASS_GLOBAL_TEX_20 = 1120;
+        RENDER_PASS_GLOBAL_TEX_LAST = 1120;
+        RENDER_PASS_CRYPTOMATTE_OFFSET = 2000;
+        RENDER_PASS_CRYPTOMATTE_MATERIAL_NODE_NAME = 2001;
+        RENDER_PASS_CRYPTOMATTE_MATERIAL_PIN_NAME = 2002;
+        RENDER_PASS_CRYPTOMATTE_OBJECT_NODE_NAME = 2003;
+        RENDER_PASS_CRYPTOMATTE_OBJECT_NODE = 2004;
+        RENDER_PASS_CRYPTOMATTE_INSTANCE = 2005;
+        RENDER_PASS_CRYPTOMATTE_MATERIAL_NODE = 2006;
+        RENDER_PASS_CRYPTOMATTE_OBJECT_PIN_NAME = 2007;
+        RENDER_PASS_CRYPTOMATTE_GEOMETRY_NODE_NAME = 2008;
+        RENDER_PASS_CRYPTOMATTE_RENDER_LAYER = 2009;
+        RENDER_PASS_CRYPTOMATTE_USER_INSTANCE_ID = 2010;
+        RENDER_PASS_CRYPTOMATTE_LAST = 4999;
+        RENDER_PASS_UNKNOWN = 5000;
+        RENDER_PASS_OUTPUT_AOV_IDS_OFFSET = 10000;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL1 = 11000;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL2 = 11001;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL3 = 11002;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL4 = 11003;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL5 = 11004;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL6 = 11005;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL7 = 11006;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL8 = 11007;
+        RENDER_PASS_OUTPUT_AOV_IDS_INTERNAL9 = 11008;
+    }
+
+    enum RenderState 
+    {
+        RSTATE_STOPPED = 0;
+        RSTATE_WAITING_FOR_DATA = 1;
+        RSTATE_RENDERING = 2;
+        RSTATE_PAUSED = 3;
+        RSTATE_FINISHED = 4;
+    }
+
+    enum ResourceCategory 
+    {
+        option allow_alias = true;
+        RESOURCE_CATEGORY_GEOMETRY = 0;
+        RESOURCE_CATEGORY_IMAGES = 1;
+        RESOURCE_CATEGORY_RUN_TIME = 2;
+        RESOURCE_CATEGORY_NODE_SYSTEM = 3;
+        RESOURCE_CATEGORY_FILM_BUFFER = 4;
+        RESOURCE_CATEGORY_COMPOSITOR = 5;
+        RESOURCE_CATEGORY_COUNT = 6;
+        RESOURCE_CATEGORY_UNKNOWN = 6;
+    }
+
+    enum ResponseCurveId 
+    {
+        ResponseCurveId_UNSPECIFIED = 0;
+        CURVE_AGFACOLOR_FUTURA_100CD = 99;
+        CURVE_AGFACOLOR_FUTURA_200CD = 100;
+        CURVE_AGFACOLOR_FUTURA_400CD = 101;
+        CURVE_AGFACOLOR_FUTURA_II_100CD = 102;
+        CURVE_AGFACOLOR_FUTURA_II_200CD = 103;
+        CURVE_AGFACOLOR_FUTURA_II_400CD = 104;
+        CURVE_AGFACOLOR_HDC_100_PLUSCD = 105;
+        CURVE_AGFACOLOR_HDC_200_PLUSCD = 106;
+        CURVE_AGFACOLOR_HDC_400_PLUSCD = 107;
+        CURVE_AGFACOLOR_OPTIMA_II_100CD = 108;
+        CURVE_AGFACOLOR_OPTIMA_II_200CD = 109;
+        CURVE_AGFACOLOR_ULTRA_050CD = 110;
+        CURVE_AGFACOLOR_VISTA_100CD = 111;
+        CURVE_AGFACOLOR_VISTA_200CD = 112;
+        CURVE_AGFACOLOR_VISTA_400CD = 113;
+        CURVE_AGFACOLOR_VISTA_800CD = 114;
+        CURVE_AGFACHROME_CT_PRECISA_100CD = 115;
+        CURVE_AGFACHROME_CT_PRECISA_200CD = 116;
+        CURVE_AGFACHROME_RSX2_050CD = 117;
+        CURVE_AGFACHROME_RSX2_100CD = 118;
+        CURVE_AGFACHROME_RSX2_200CD = 119;
+        CURVE_ADVANTIX_100CD = 201;
+        CURVE_ADVANTIX_200CD = 202;
+        CURVE_ADVANTIX_400CD = 203;
+        CURVE_GOLD_100CD = 204;
+        CURVE_GOLD_200CD = 205;
+        CURVE_MAX_ZOOM_800CD = 206;
+        CURVE_PORTRA_100TCD = 207;
+        CURVE_PORTRA_160NCCD = 208;
+        CURVE_PORTRA_160VCCD = 209;
+        CURVE_PORTRA_800CD = 210;
+        CURVE_PORTRA_400VCCD = 211;
+        CURVE_PORTRA_400NCCD = 212;
+        CURVE_EKTACHROME_100_PLUSCD = 213;
+        CURVE_EKTACHROME_320TCD = 214;
+        CURVE_EKTACHROME_400XCD = 215;
+        CURVE_EKTACHROME_64CD = 216;
+        CURVE_EKTACHROME_64TCD = 217;
+        CURVE_EKTACHROME_E100SCD = 218;
+        CURVE_EKTACHROME_100CD = 219;
+        CURVE_KODACHROME_200CD = 220;
+        CURVE_KODACHROME_25 = 221;
+        CURVE_KODACHROME_64CD = 222;
+        CURVE_F125CD = 301;
+        CURVE_F250CD = 302;
+        CURVE_F400CD = 303;
+        CURVE_FCICD = 304;
+        CURVE_DSCS315_1 = 305;
+        CURVE_DSCS315_2 = 306;
+        CURVE_DSCS315_3 = 307;
+        CURVE_DSCS315_4 = 308;
+        CURVE_DSCS315_5 = 309;
+        CURVE_DSCS315_6 = 310;
+        CURVE_FP2900Z = 311;
+        CURVE_LINEAR = 400;
+        CURVE_SRGB = 401;
+        CURVE_GAMMA1_8 = 402;
+        CURVE_GAMMA2_2 = 403;
+    }
+
+    enum RoundEdgesMode 
+    {
+        ROUND_EDGES_MODE_OFF = 0;
+        ROUND_EDGES_MODE_FAST = 1;
+        ROUND_EDGES_MODE_ACCURATE = 2;
+        ROUND_EDGES_MODE_ACCURATE_CONVEX = 3;
+        ROUND_EDGES_MODE_ACCURATE_CONCAVE = 4;
+    }
+
+    enum RoundingMode 
+    {
+        ROUNDING_MODE_ROUND = 0;
+        ROUNDING_MODE_FLOOR = 1;
+        ROUNDING_MODE_CEIL = 2;
+        ROUNDING_MODE_TRUNC = 3;
+    }
+
+    enum SamplerType 
+    {
+        SAMPLER_QMC = 0;
+        SAMPLER_BEST_CANDIDATE = 1;
+    }
+
+    enum ScriptExecuteType 
+    {
+        SCRIPT_EX_NONE = 0;
+        SCRIPT_EX_EVAL = 1;
+        SCRIPT_EX_INIT = 2;
+        SCRIPT_EX_TRIGGER = 3;
+    }
+
+    enum SharedSurfaceType 
+    {
+        SHARED_SURFACE_TYPE_NONE = 0;
+        SHARED_SURFACE_TYPE_D3D11 = 1;
+    }
+
+    enum ShutterIntervalAlignment 
+    {
+        ShutterIntervalAlignment_UNSPECIFIED = 0;
+        SHUTTER_INTERVAL_BEFORE = 1;
+        SHUTTER_INTERVAL_SYMMETRIC = 2;
+        SHUTTER_INTERVAL_AFTER = 3;
+    }
+
+    enum SimulatedLens 
+    {
+        SimulatedLens_UNSPECIFIED = 0;
+        LENS_SIMPLE_100MM = 1;
+        LENS_FILM_100MM = 2;
+        LENS_PORTRAIT_58MM = 3;
+        LENS_PETZVAL_100MM = 4;
+        LENS_WIDE_28MM = 5;
+        LENS_FISHEYE_14MM = 6;
+        LENS_PETZVAL_85MM = 7;
+        LENS_FILM_40MM = 8;
+        LENS_LENS_50MM_F125 = 9;
+        LENS_GAUSS_58MM = 10;
+        LENS_LENS_50MM_F140 = 11;
+        LENS_LENS_50MM_F200 = 12;
+        LENS_RETROFOCUS_35MM = 13;
+        LENS_FISHEYE_16MM = 14;
+        LENS_LENS_35MM_F180 = 15;
+        LENS_ANASTIGMATIC_31MM = 16;
+    }
+
+    enum SpotlightOrientation 
+    {
+        SpotlightOrientation_UNSPECIFIED = 0;
+        SPOTLIGHT_NORMAL = 1;
+        SPOTLIGHT_DIRECTION = 2;
+        SPOTLIGHT_DIRECTION_OBJECT = 3;
+        SPOTLIGHT_TARGET = 4;
+        SPOTLIGHT_TARGET_OBJECT = 5;
+    }
+
+    enum StereoMode 
+    {
+        StereoMode_UNSPECIFIED = 0;
+        STEREO_MODE_OFF_AXIS = 1;
+        STEREO_MODE_PARALLEL = 2;
+    }
+
+    enum StereoOutput 
+    {
+        STEREO_OUTPUT_DISABLED = 0;
+        STEREO_OUTPUT_LEFT_EYE = 1;
+        STEREO_OUTPUT_RIGHT_EYE = 2;
+        STEREO_OUTPUT_SIDE_BY_SIDE = 3;
+        STEREO_OUTPUT_ANAGLYPHIC = 4;
+        STEREO_OUTPUT_OVER_UNDER = 5;
+    }
+
+    enum SubDivSchemeType 
+    {
+        SubDivSchemeType_UNSPECIFIED = 0;
+        SUBDIV_CATMARK = 1;
+        SUBDIV_LOOP = 2;
+        SUBDIV_BILINEAR = 3;
+        SUBDIV_CATMARK_SMOOTH = 4;
+    }
+
+    enum SubDivInterpolateBoundary 
+    {
+        SubDivInterpolateBoundary_UNSPECIFIED = 0;
+        SUBDIV_BOUNDARY_NONE = 1;
+        SUBDIV_BOUNDARY_EDGEONLY = 2;
+        SUBDIV_BOUNDARY_EDGEANDCORNER = 3;
+        SUBDIV_BOUNDARY_ALWAYSSHARP = 4;
+    }
+
+    enum SubDivFVarInterpolateBoundary 
+    {
+        SubDivFVarInterpolateBoundary_UNSPECIFIED = 0;
+        SUBDIV_FVAR_LINEAR_ALL = 1;
+        SUBDIV_FVAR_LINEAR_NONE = 2;
+        SUBDIV_FVAR_LINEAR_CORNERS_PLUS = 3;
+        SUBDIV_FVAR_LINEAR_BOUNDARIES = 4;
+        SUBDIV_FVAR_LINEAR_CORNERS_ONLY = 5;
+    }
+
+    enum SubSampleMode 
+    {
+        SubSampleMode_UNSPECIFIED = 0;
+        SUBSAMPLEMODE_NONE = 1;
+        SUBSAMPLEMODE_2X2 = 2;
+        SUBSAMPLEMODE_4X4 = 4;
+    }
+
+    enum TexelType 
+    {
+        TEXEL_TYPE_IMAGE = 0;
+        TEXEL_TYPE_FLOAT = 1;
+        TEXEL_TYPE_FLOAT4 = 2;
+    }
+
+    enum TiffCompressionType 
+    {
+        TiffCompressionType_UNSPECIFIED = 0;
+        TIFF_COMPRESSION_NO_COMPRESSION = 1;
+        TIFF_COMPRESSION_DEFLATE = 2;
+        TIFF_COMPRESSION_LZW = 3;
+        TIFF_COMPRESSION_PACK_BITS = 4;
+    }
+
+    enum TilePatternType 
+    {
+        TILE_PATTERN_BRICKS = 0;
+        TILE_PATTERN_FANCY_TILES = 1;
+        TILE_PATTERN_HEXAGONS = 2;
+        TILE_PATTERN_SCALES = 3;
+        TILE_PATTERN_TRIANGLES = 4;
+        TILE_PATTERN_VORONOI = 5;
+    }
+
+    enum TimeEventType 
+    {
+        GRAPH_TIME_CHANGED = 0;
+        GRAPH_INTERVAL_CHANGED = 1;
+        FRAME_RATE_CHANGED = 2;
+    }
+
+    enum TonemapOrder 
+    {
+        TM_ORDER_RESPONSE_GAMMA_LUT = 0;
+        TM_ORDER_GAMMA_RESPONSE_LUT = 1;
+        TM_ORDER_LUT_RESPONSE_GAMMA = 2;
+        TM_ORDER_LUT_GAMMA_RESPONSE = 3;
+        TM_ORDER_RESPONSE_LUT_GAMMA = 4;
+        TM_ORDER_GAMMA_LUT_RESPONSE = 5;
+    }
+
+    enum TonemapBufferType 
+    {
+        TONEMAP_BUFFER_TYPE_LDR = 0;
+        TONEMAP_BUFFER_TYPE_HDR_FLOAT = 1;
+        TONEMAP_BUFFER_TYPE_HDR_HALF = 2;
+        TONEMAP_BUFFER_TYPE_COUNT = 3;
+    }
+
+    enum ToonLightMode 
+    {
+        TOON_LIGHT_SOURCES = 0;
+        TOON_LIGHT_CAMERA = 1;
+    }
+
+    enum TraceSetBounceType 
+    {
+        TRACE_SET_BOUNCE_TYPE_REFLECTION = 0;
+        TRACE_SET_BOUNCE_TYPE_REFRACTION = 1;
+        TRACE_SET_BOUNCE_TYPE_DIFFUSE = 2;
+        TRACE_SET_BOUNCE_TYPE_SHADOW = 3;
+        TRACE_SET_BOUNCE_TYPE_COUNT = 4;
+    }
+
+    enum TraceSetFutureHits 
+    {
+        TRACE_SET_FUTURE_HITS_NEXT_HIT = 0;
+        TRACE_SET_FUTURE_HITS_HITS_AFTER_NEXT_HIT = 1;
+        TRACE_SET_FUTURE_HITS_COUNT = 2;
+    }
+
+    enum UIOperationsFlag 
+    {
+        UIOperationsFlag_UNSPECIFIED = 0;
+        UI_OPERATION_DELETABLE = 1;
+        UI_OPERATION_RENAMABLE = 4;
+        UI_OPERATION_ALL = 5;
+    }
+
+    enum UnaryOperation 
+    {
+        UNARY_OP_ABS = 0;
+        UNARY_OP_ACOS = 1;
+        UNARY_OP_ASIN = 2;
+        UNARY_OP_ATAN = 3;
+        UNARY_OP_CEIL = 4;
+        UNARY_OP_COS = 5;
+        UNARY_OP_COSH = 6;
+        UNARY_OP_DEGREES = 7;
+        UNARY_OP_EXP = 8;
+        UNARY_OP_EXP2 = 9;
+        UNARY_OP_EXPM1 = 10;
+        UNARY_OP_FLOOR = 11;
+        UNARY_OP_FRAC = 12;
+        UNARY_OP_INVERSE_SQRT = 13;
+        UNARY_OP_INVERT = 14;
+        UNARY_OP_LOG = 15;
+        UNARY_OP_LOG2 = 16;
+        UNARY_OP_LOG10 = 17;
+        UNARY_OP_LOGB = 18;
+        UNARY_OP_NEGATE = 19;
+        UNARY_OP_RADIANS = 20;
+        UNARY_OP_RECIPROCAL = 21;
+        UNARY_OP_ROUND = 22;
+        UNARY_OP_SIGN = 23;
+        UNARY_OP_SIN = 24;
+        UNARY_OP_SINH = 25;
+        UNARY_OP_SQRT = 26;
+        UNARY_OP_TAN = 27;
+        UNARY_OP_TANH = 28;
+        UNARY_OP_TRUNC = 29;
+        UNARY_OP_LENGTH = 30;
+        UNARY_OP_NORMALIZE = 31;
+    }
+
+    enum UniversalCamApertureShape 
+    {
+        UniversalCamApertureShape_UNSPECIFIED = 0;
+        UNIVERSAL_CAM_APERTURE_CIRCULAR = 1;
+        UNIVERSAL_CAM_APERTURE_POLYGONAL = 2;
+        UNIVERSAL_CAM_APERTURE_NOTCHED = 3;
+        UNIVERSAL_CAM_APERTURE_CUSTOM = 4;
+    }
+
+    enum UniversalCamCubemapLayout 
+    {
+        UniversalCamCubemapLayout_UNSPECIFIED = 0;
+        UNIVERSAL_CAM_CUBEMAP_6X1 = 1;
+        UNIVERSAL_CAM_CUBEMAP_3X2 = 2;
+        UNIVERSAL_CAM_CUBEMAP_2X3 = 3;
+        UNIVERSAL_CAM_CUBEMAP_1X6 = 4;
+    }
+
+    enum UniversalCamFisheyeProjection 
+    {
+        UniversalCamFisheyeProjection_UNSPECIFIED = 0;
+        UNIVERSAL_CAM_FISHEYE_STEREOGRAPHIC = 1;
+        UNIVERSAL_CAM_FISHEYE_EQUIDISTANT = 2;
+        UNIVERSAL_CAM_FISHEYE_EQUISOLID = 3;
+        UNIVERSAL_CAM_FISHEYE_ORTHOGRAPHIC = 4;
+    }
+
+    enum UniversalCamFisheyeType 
+    {
+        UniversalCamFisheyeType_UNSPECIFIED = 0;
+        UNIVERSAL_CAM_FISHEYE_CIRCULAR = 1;
+        UNIVERSAL_CAM_FISHEYE_FULL_FRAME = 2;
+    }
+
+    enum UniversalCamMode 
+    {
+        UniversalCamMode_UNSPECIFIED = 0;
+        UNIVERSAL_CAM_THINLENS = 1;
+        UNIVERSAL_CAM_ORTHOGRAPHIC = 2;
+        UNIVERSAL_CAM_FISHEYE = 3;
+        UNIVERSAL_CAM_EQUIRECTANGULAR = 4;
+        UNIVERSAL_CAM_CUBEMAP = 5;
+    }
+
+    enum UpSampleMode 
+    {
+        UpSampleMode_UNSPECIFIED = 0;
+        UPSAMPLEMODE_NONE = 1;
+        UPSAMPLEMODE_2X2 = 2;
+        UPSAMPLEMODE_4X4 = 4;
+    }
+
+    enum UpSamplerType 
+    {
+        UPSAMPLER_NONE = 0;
+        UPSAMPLER_LINEAR = 1;
+        UPSAMPLER_LEGACY_AI = 2;
+        UPSAMPLER_DLSS = 3;
+        UPSAMPLER_DLSS_RR = 4;
+        UPSAMPLER_FSR = 5;
+    }
+
+    enum UpSampleSourcePercentage 
+    {
+        UPSAMPLE_SOURCE_PERCENTAGE_100 = 0;
+        UPSAMPLE_SOURCE_PERCENTAGE_66 = 1;
+        UPSAMPLE_SOURCE_PERCENTAGE_50 = 2;
+        UPSAMPLE_SOURCE_PERCENTAGE_33 = 3;
+        UPSAMPLE_SOURCE_PERCENTAGE_25 = 4;
+    }
+
+    enum UsdDisplayPurpose 
+    {
+        UsdDisplayPurpose_UNSPECIFIED = 0;
+        USD_DISPLAY_PURPOSE_RENDER = 1;
+        USD_DISPLAY_PURPOSE_PROXY = 2;
+        USD_DISPLAY_PURPOSE_GUIDE = 4;
+    }
+
+    enum VdbGridIds 
+    {
+        VDB_GRID_USE_NAME = 0;
+        VDB_GRID_SCATTER = 1;
+        VDB_GRID_ABSORPTION = 2;
+        VDB_GRID_EMISSION = 3;
+        VDB_GRID_VELOCITY_X = 4;
+        VDB_GRID_VELOCITY_Y = 5;
+        VDB_GRID_VELOCITY_Z = 6;
+        VDB_GRID_VELOCITY = 7;
+    }
+
+    enum VectronCircleType 
+    {
+        CIRCLE_TYPE_CIRCLE = 0;
+        CIRCLE_TYPE_SLICE = 1;
+        CIRCLE_TYPE_SEGMENT = 2;
+        CIRCLE_TYPE_ARC = 3;
+    }
+
+    enum VectronEdgeType 
+    {
+        EDGE_TYPE_SHARP = 0;
+        EDGE_TYPE_FILLET = 1;
+        EDGE_TYPE_CHAMFER = 2;
+    }
+
+    enum VirtualTexturingMode 
+    {
+        VIRTUAL_TEX_OFF = 0;
+        VIRTUAL_TEX_ALBEDO = 1;
+        VIRTUAL_TEX_NORMALS = 2;
+    }
+
+    enum VolumeEmissionType 
+    {
+        VOLUME_EMISSION_NONE = 0;
+        VOLUME_EMISSION_CHANNEL = 1;
+        VOLUME_EMISSION_DENSITY = 2;
+        VOLUME_EMISSION_BLACK_BODY = 3;
+    }
+
+    enum VolumeInterpolationType 
+    {
+        VOLUME_INTERPOLATION_CLOSEST = 0;
+        VOLUME_INTERPOLATION_TRILINEAR = 1;
+        VOLUME_INTERPOLATION_TRICUBIC = 2;
+    }
+
+    enum VolumeSampling 
+    {
+        VOLUME_SAMPLING_LEGACY = 0;
+        VOLUME_SAMPLING_2018 = 1;
+        VOLUME_SAMPLING_IMPROVED = 2;
+    }
+
+    enum Waveform 
+    {
+        WAVEFORM_SINE = 0;
+        WAVEFORM_SQUARE = 1;
+        WAVEFORM_SAW = 2;
+    }
+
+    enum WCoordinateBorderMode 
+    {
+        W_COORDINATE_BORDER_MODE_NONE = 0;
+        W_COORDINATE_BORDER_MODE_WRAP = 1;
+        W_COORDINATE_BORDER_MODE_MIRROR = 2;
+        W_COORDINATE_BORDER_MODE_CLAMP = 3;
+    }
+
+    enum WhiteLightSpectrum 
+    {
+        WHITE_LIGHT_SPECTRUM_FLAT = 0;
+        WHITE_LIGHT_SPECTRUM_D65 = 1;
+    }
+
+    enum WindingOrder 
+    {
+        WindingOrder_UNSPECIFIED = 0;
+        WINDING_COUNTERCLOCKWISE = 1;
+        WINDING_CLOCKWISE = 2;
+        WINDING_AUTO = 3;
+    }
+
+    enum ScatterSurfacePolygonMode 
+    {
+        SCATTER_SURFACE_POLYGON_MODE_VERTICES = 0;
+        SCATTER_SURFACE_POLYGON_MODE_CENTERS = 1;
+        SCATTER_SURFACE_POLYGON_MODE_BYAREA = 2;
+        SCATTER_SURFACE_POLYGON_MODE_BYDENSITYMAP = 3;
+        SCATTER_SURFACE_POLYGON_MODE_EDGEPOSITION = 4;
+        SCATTER_SURFACE_POLYGON_MODE_EDGESPACING = 5;
+        SCATTER_SURFACE_POLYGON_MODE_DISABLED = 6;
+    }
+
+    enum ScatterSurfaceParticleMode 
+    {
+        SCATTER_SURFACE_PARTICLE_MODE_CENTERS = 0;
+        SCATTER_SURFACE_PARTICLE_MODE_DISABLED = 1;
+    }
+
+    enum ScatterSurfaceHairMode 
+    {
+        SCATTER_SURFACE_HAIR_MODE_VERTICES = 0;
+        SCATTER_SURFACE_HAIR_MODE_POSITION = 1;
+        SCATTER_SURFACE_HAIR_MODE_SPACING = 2;
+        SCATTER_SURFACE_HAIR_MODE_DISABLED = 3;
+    }
+
+    enum ScatterSurfaceSelectionMode 
+    {
+        SCATTER_SURFACE_SELECTION_MODE_SEQUENTIAL = 0;
+        SCATTER_SURFACE_SELECTION_MODE_RANDOM = 1;
+        SCATTER_SURFACE_SELECTION_MODE_MAP = 2;
+    }
+
+    enum ScatterSurfaceOrientationPriority 
+    {
+        SCATTER_SURFACE_ORIENTATION_PRIORITY_UP = 0;
+        SCATTER_SURFACE_ORIENTATION_PRIORITY_FRONT = 1;
+    }
+
+    enum ScatterSurfaceReferenceType 
+    {
+        SCATTER_SURFACE_REFERENCE_TYPE_DIRECTION = 0;
+        SCATTER_SURFACE_REFERENCE_TYPE_POINT = 1;
+    }
+
+    enum ScatterSurfaceTransformType 
+    {
+        SCATTER_SURFACE_TRANSFORM_TYPE_FIXED = 0;
+        SCATTER_SURFACE_TRANSFORM_TYPE_RANDOM_INDEPENDENT = 1;
+        SCATTER_SURFACE_TRANSFORM_TYPE_RANDOM_COUPLED = 2;
+        SCATTER_SURFACE_TRANSFORM_TYPE_MAP = 3;
+    }
+
+    enum ScatterVolumeSelectionMode 
+    {
+        SCATTER_VOLUME_SELECTION_MODE_SEQUENTIAL = 0;
+        SCATTER_VOLUME_SELECTION_MODE_RANDOM = 1;
+        SCATTER_VOLUME_SELECTION_MODE_MAP = 2;
+    }
+
+    enum ScatterVolumeShape 
+    {
+        SCATTER_VOLUME_SHAPE_BOX = 0;
+        SCATTER_VOLUME_SHAPE_SPHERE = 1;
+        SCATTER_VOLUME_SHAPE_CYLINDER = 2;
+        SCATTER_VOLUME_SHAPE_CONE = 3;
+    }
+
+    enum ScatterVolumeOrientationPriority 
+    {
+        SCATTER_VOLUME_ORIENTATION_PRIORITY_UP = 0;
+        SCATTER_VOLUME_ORIENTATION_PRIORITY_FRONT = 1;
+    }
+
+    enum ScatterVolumeReferenceType 
+    {
+        SCATTER_VOLUME_REFERENCE_TYPE_DIRECTION = 0;
+        SCATTER_VOLUME_REFERENCE_TYPE_POINT = 1;
+    }
+
+    enum ScatterVolumeTransformType 
+    {
+        SCATTER_VOLUME_TRANSFORM_TYPE_FIXED = 0;
+        SCATTER_VOLUME_TRANSFORM_TYPE_RANDOM_INDEPENDENT = 1;
+        SCATTER_VOLUME_TRANSFORM_TYPE_RANDOM_COUPLED = 2;
+        SCATTER_VOLUME_TRANSFORM_TYPE_MAP = 3;
+    }
+
+

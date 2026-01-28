@@ -1,0 +1,260 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "octaneenums.proto";
+import "octaneids.proto";
+import "octaneinfos.proto";
+
+
+message ApiArrayNodeTypeT
+{
+    repeated NodeType data = 1;
+}
+
+
+message ApiArrayMxInputT
+{
+    repeated MxInput data = 1;
+}
+
+ // GRPC proto definitions for 'MxInput' class from 'apimaterialx.h'
+message MxInput
+{
+    string mxInputName = 1;
+    PinId pinId = 2;
+    uint32 pinIndex = 3;
+}
+ // GRPC proto definitions for 'ApiMaterialXGlobal' class from ''
+message ApiMaterialXGlobal
+{
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::importMaterialXFile'
+    message importMaterialXFileRequest
+    {
+        string materialXFilePath = 1;
+        ObjectRef parentNodeGraph = 2;
+        bool useNativeMaterialXNodes = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::importMaterialXFile'
+    message importMaterialXFileResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getAllMxNodeCategories'
+    message getAllMxNodeCategoriesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getAllMxNodeCategories'
+    message getAllMxNodeCategoriesResponse
+    {
+        
+        StringArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getMxNodeCategory'
+    message getMxNodeCategoryRequest
+    {
+        NodeType nodeType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getMxNodeCategory'
+    message getMxNodeCategoryResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getMxNodeCategory1'
+    message getMxNodeCategory1Request
+    {
+        NodeGraphType nodeGraphType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getMxNodeCategory1'
+    message getMxNodeCategory1Response
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getMxValueType'
+    message getMxValueTypeRequest
+    {
+        TextureValueType textureValueType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getMxValueType'
+    message getMxValueTypeResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getTextureValueType'
+    message getTextureValueTypeRequest
+    {
+        string mxValueTypeName = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getTextureValueType'
+    message getTextureValueTypeResponse
+    {
+        
+        TextureValueType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getMxColorSpace'
+    message getMxColorSpaceRequest
+    {
+        NamedColorSpace colorSpace = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getMxColorSpace'
+    message getMxColorSpaceResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getNamedColorSpace'
+    message getNamedColorSpaceRequest
+    {
+        string mxColorSpace = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getNamedColorSpace'
+    message getNamedColorSpaceResponse
+    {
+        
+        NamedColorSpace result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getNodeTypes'
+    message getNodeTypesRequest
+    {
+        string mxNodeCategory = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getNodeTypes'
+    message getNodeTypesResponse
+    {
+        
+        NodeTypeArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getGraphType'
+    message getGraphTypeRequest
+    {
+        string mxNodeCategory = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getGraphType'
+    message getGraphTypeResponse
+    {
+        
+        NodeGraphType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getMxInputNamesAndPinIds'
+    message getMxInputNamesAndPinIdsRequest
+    {
+        NodeType nodeType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getMxInputNamesAndPinIds'
+    message getMxInputNamesAndPinIdsResponse
+    {
+        
+        ApiArrayMxInputT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getGraphMxInputNames'
+    message getGraphMxInputNamesRequest
+    {
+        NodeGraphType nodeGraphType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getGraphMxInputNames'
+    message getGraphMxInputNamesResponse
+    {
+        
+        StringArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::getGraphMxOutputNames'
+    message getGraphMxOutputNamesRequest
+    {
+        NodeGraphType nodeGraphType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::getGraphMxOutputNames'
+    message getGraphMxOutputNamesResponse
+    {
+        
+        StringArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::findConfiguration'
+    message findConfigurationRequest
+    {
+        string mxNodeCategory = 1;
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration.ApiTextureNodeTypeInfo_Configuration_Interface configurationInterface = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::findConfiguration'
+    message findConfigurationResponse
+    {
+        
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMaterialXGlobal::findConfiguration1'
+    message findConfiguration1Request
+    {
+        string mxNodeCategory = 1;
+        string mxOutputValueType = 2;
+        StringArrayT mxInputNames = 3;
+        StringArrayT mxInputValueTypes = 4;
+        uint32 mxInputCount = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMaterialXGlobal::findConfiguration1'
+    message findConfiguration1Response
+    {
+        
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiMaterialXGlobal' from 'apimaterialx.h'
+service ApiMaterialXGlobalService
+{
+    rpc importMaterialXFile(ApiMaterialXGlobal.importMaterialXFileRequest) returns (ApiMaterialXGlobal.importMaterialXFileResponse);
+    rpc getAllMxNodeCategories(ApiMaterialXGlobal.getAllMxNodeCategoriesRequest) returns (ApiMaterialXGlobal.getAllMxNodeCategoriesResponse);
+    rpc getMxNodeCategory(ApiMaterialXGlobal.getMxNodeCategoryRequest) returns (ApiMaterialXGlobal.getMxNodeCategoryResponse);
+    rpc getMxNodeCategory1(ApiMaterialXGlobal.getMxNodeCategory1Request) returns (ApiMaterialXGlobal.getMxNodeCategory1Response);
+    rpc getMxValueType(ApiMaterialXGlobal.getMxValueTypeRequest) returns (ApiMaterialXGlobal.getMxValueTypeResponse);
+    rpc getTextureValueType(ApiMaterialXGlobal.getTextureValueTypeRequest) returns (ApiMaterialXGlobal.getTextureValueTypeResponse);
+    rpc getMxColorSpace(ApiMaterialXGlobal.getMxColorSpaceRequest) returns (ApiMaterialXGlobal.getMxColorSpaceResponse);
+    rpc getNamedColorSpace(ApiMaterialXGlobal.getNamedColorSpaceRequest) returns (ApiMaterialXGlobal.getNamedColorSpaceResponse);
+    rpc getNodeTypes(ApiMaterialXGlobal.getNodeTypesRequest) returns (ApiMaterialXGlobal.getNodeTypesResponse);
+    rpc getGraphType(ApiMaterialXGlobal.getGraphTypeRequest) returns (ApiMaterialXGlobal.getGraphTypeResponse);
+    rpc getMxInputNamesAndPinIds(ApiMaterialXGlobal.getMxInputNamesAndPinIdsRequest) returns (ApiMaterialXGlobal.getMxInputNamesAndPinIdsResponse);
+    rpc getGraphMxInputNames(ApiMaterialXGlobal.getGraphMxInputNamesRequest) returns (ApiMaterialXGlobal.getGraphMxInputNamesResponse);
+    rpc getGraphMxOutputNames(ApiMaterialXGlobal.getGraphMxOutputNamesRequest) returns (ApiMaterialXGlobal.getGraphMxOutputNamesResponse);
+    rpc findConfiguration1(ApiMaterialXGlobal.findConfiguration1Request) returns (ApiMaterialXGlobal.findConfiguration1Response);
+}
+
+// GRPC interface definition for class 'MxInput' from 'apimaterialx.h'

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option optimize_for = CODE_SIZE;
+
+package octaneapi;
+
+message ApiControl
+{
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::startBlockingOperation'
+    message StartBlockingRequest
+    {
+        string uniqueModuleId = 1;
+        string message = 2;
+    }
+
+    message ApiLogRequest
+    {
+        bool saveToTextFile = 1;
+        string filePath = 2;
+    }
+
+    message ControlResponse
+    {
+        bool success = 1;
+    }
+
+}
+
+// GRPC interface definition for class 'ApiWindow' from 'apiwindow.h'
+service ApiControlService
+{
+    /// Method to block UI so thaty multiple RPC calls can be made by the module without the suer interfering
+    rpc startBlockingOperation(ApiControl.StartBlockingRequest) returns (ApiControl.ControlResponse);
+    /// Method to istnruct ApiLog class  (used by GRPC calls) to save to a text file
+    rpc setApiLogFilePath(ApiControl.ApiLogRequest) returns (ApiControl.ControlResponse);
+}

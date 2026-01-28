@@ -1,0 +1,198 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiTable' class from 'apitable.h'
+message ApiTable
+{
+    // Request packet corresponding to '[in] parameters in ApiTable::create'
+    message createRequest
+    {
+        // Array of strings, each string is a header for a column. There will be as many columns
+        StringArrayT columnHeaders = 1;
+        // Length of the columnHeadersLength array.
+        uint32 columnHeadersLength = 2;
+        // TRUE to make the table header visible.
+        bool headerVisible = 3;
+        // This callback must return how many rows there are currently in the table.
+        NumRowsCallbackT numRowsCallback = 4;
+        // This should return the string content for a cell.
+        ContentCallbackT contentForCellCallback = 5;
+        // Called when the user changes the row selection.
+        SelectionChangedCallbackT selectionChangedCallback = 6;
+        // Private module data, passed back untouched in the callbacks.
+        uint64 privateData = 7;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTable::create'
+    message createResponse
+    {
+        //     Pointer to the newly created table. Do not delete this pointer but use destroy.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+        // Id of second callback function
+        uint32 callbackId2 = 3;
+        // Id of third callback function
+        uint32 callbackId3 = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::updateContent'
+    message updateContentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::selectRow'
+    message selectRowRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The row to select.
+        int32 rowNumber = 2;
+        // Iff true, the list's position won't change; if false and the selected row is
+        bool dontScrollToShowThisRow = 3;
+        // If true and there are multiple selections, these will first be deselected before this
+        bool deselectOthersFirst = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::selectRangeOfRows'
+    message selectRangeOfRowsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The first row to select (inclusive).
+        int32 firstRow = 2;
+        // The last row to select (inclusive).
+        int32 lastRow = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::deselectRow'
+    message deselectRowRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 rowNumber = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::deselectAllRows'
+    message deselectAllRowsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::flipRowSelection'
+    message flipRowSelectionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 rowNumber = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::isRowSelected'
+    message isRowSelectedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 rowNumber = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTable::isRowSelected'
+    message isRowSelectedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::numSelectedRows'
+    message numSelectedRowsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTable::numSelectedRows'
+    message numSelectedRowsResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::selectedRow'
+    message selectedRowRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the index of the selected row to return, (from 0 to getNumSelectedRows() - 1)
+        int32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTable::selectedRow'
+    message selectedRowResponse
+    {
+        //     the row number, or -1 if the index was out of range or if there aren't any rows
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTable::lastRowSelected'
+    message lastRowSelectedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTable::lastRowSelected'
+    message lastRowSelectedResponse
+    {
+        
+        int32 result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiTable' from 'apitable.h'
+service ApiTableService
+{
+    /// Creates a new table
+    rpc create(ApiTable.createRequest) returns (ApiTable.createResponse);
+    /// Destroys this table
+    rpc destroy(ApiTable.destroyRequest) returns (google.protobuf.Empty);
+    /// Updates the content of the table
+    rpc updateContent(ApiTable.updateContentRequest) returns (google.protobuf.Empty);
+    /// Selects a row
+    rpc selectRow(ApiTable.selectRowRequest) returns (google.protobuf.Empty);
+    /// Selects a set of rows
+    rpc selectRangeOfRows(ApiTable.selectRangeOfRowsRequest) returns (google.protobuf.Empty);
+    /// Deselects a row
+    rpc deselectRow(ApiTable.deselectRowRequest) returns (google.protobuf.Empty);
+    /// Deselects any currently selected rows
+    rpc deselectAllRows(ApiTable.deselectAllRowsRequest) returns (google.protobuf.Empty);
+    /// Selects or deselects a row
+    rpc flipRowSelection(ApiTable.flipRowSelectionRequest) returns (google.protobuf.Empty);
+    /// Checks whether a row is selected
+    rpc isRowSelected(ApiTable.isRowSelectedRequest) returns (ApiTable.isRowSelectedResponse);
+    /// Returns the number of rows that are currently selected
+    rpc numSelectedRows(ApiTable.numSelectedRowsRequest) returns (ApiTable.numSelectedRowsResponse);
+    /// Returns the row number of a selected row
+    rpc selectedRow(ApiTable.selectedRowRequest) returns (ApiTable.selectedRowResponse);
+    /// Returns the last row that the user selected
+    rpc lastRowSelected(ApiTable.lastRowSelectedRequest) returns (ApiTable.lastRowSelectedResponse);
+}

@@ -1,0 +1,116 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+    enum ApiMouseEventType 
+    {
+        API_MOUSE_EVENT_TYPE_MOUSE_MOVE = 0;
+        API_MOUSE_EVENT_TYPE_MOUSE_ENTER = 1;
+        API_MOUSE_EVENT_TYPE_MOUSE_EXIT = 2;
+        API_MOUSE_EVENT_TYPE_MOUSE_DOWN = 3;
+        API_MOUSE_EVENT_TYPE_MOUSE_DRAG = 4;
+        API_MOUSE_EVENT_TYPE_MOUSE_UP = 5;
+        API_MOUSE_EVENT_TYPE_MOUSE_DOUBLE_CLICK = 6;
+        API_MOUSE_EVENT_TYPE_MOUSE_WHEEL_MOVE = 7;
+    }
+
+ // GRPC proto definitions for 'ApiMouseEvent' class from 'apimouselistener.h'
+message ApiMouseEvent
+{
+    float positionX = 1;
+    float positionY = 2;
+    ObjectRef eventComponent = 3;
+    ObjectRef originator = 4;
+    float mouseDownPosX = 5;
+    float mouseDownPosY = 6;
+    int32 numberOfClicks = 7;
+    // Request packet corresponding to '[in] parameters in ApiMouseEvent::make'
+    message makeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMouseEvent::make'
+    message makeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiMouseWheelDetails' class from 'apimouselistener.h'
+message ApiMouseWheelDetails
+{
+    float deltaX = 1;
+    float deltaY = 2;
+    bool isReversed = 3;
+    bool isSmooth = 4;
+    bool isInertial = 5;
+    // Request packet corresponding to '[in] parameters in ApiMouseWheelDetails::make'
+    message makeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMouseWheelDetails::make'
+    message makeResponse
+    {
+        
+        ApiMouseWheelDetails result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiMouseListener' class from 'apimouselistener.h'
+message ApiMouseListener
+{
+    // Request packet corresponding to '[in] parameters in ApiMouseListener::create'
+    message createRequest
+    {
+        MouseEventCallbackT mouseEventsCallback = 1;
+        uint64 privateData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMouseListener::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMouseListener::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiMouseEvent' from 'apimouselistener.h'
+service ApiMouseEventService
+{
+    rpc make(ApiMouseEvent.makeRequest) returns (ApiMouseEvent.makeResponse);
+}
+
+// GRPC interface definition for class 'ApiMouseListener' from 'apimouselistener.h'
+service ApiMouseListenerService
+{
+    rpc create(ApiMouseListener.createRequest) returns (ApiMouseListener.createResponse);
+    /// Destroys the listener created with create(
+    rpc destroy(ApiMouseListener.destroyRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiMouseWheelDetails' from 'apimouselistener.h'
+service ApiMouseWheelDetailsService
+{
+    rpc make1(ApiMouseWheelDetails.makeRequest) returns (ApiMouseWheelDetails.makeResponse);
+}

@@ -1,0 +1,359 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiImage' class from 'apiimage.h'
+message ApiImage
+{
+    enum PixelFormat 
+    {
+        PIXEL_FORMAT_INVALID = 0;
+        PIXEL_FORMAT_BGR = 1;
+        PIXEL_FORMAT_ABGR = 2;
+        PIXEL_FORMAT_SINGLE = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::create'
+    message createRequest
+    {
+        // Pixel format.
+        PixelFormat pixelFormat = 1;
+        // Width of the image in pixels.
+        int32 width = 2;
+        // Height of the image in pixels.
+        int32 height = 3;
+        // TRUE to clear all the values to 0. FALSE leaves them unitialized.
+        bool clear = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::create'
+    message createResponse
+    {
+        //     Pointer to the newly created image.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::create1'
+    message create1Request
+    {
+        // Pixel format.
+        PixelFormat pixelFormat = 1;
+        // Width of the image in pixels.
+        int32 width = 2;
+        // Height of the image in pixels.
+        int32 height = 3;
+        // Pointer to the data the image will be initialized with. If NULL, the image will be
+        uint64 data = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::create1'
+    message create1Response
+    {
+        //     Pointer to the newly created image.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::saveToFile'
+    message saveToFileRequest
+    {
+        // Full path to the output file.
+        string fullPath = 1;
+        // TRUE if the alpha channel should be saved
+        bool destHasAlpha = 2;
+        // Width of the image in pixels.
+        int32 width = 3;
+        // Height of the image in pixels.
+        int32 height = 4;
+        // Raw data buffer containing all image data using the given pixel format
+        Buffer buffer = 5;
+        // Pixel data format in the buffer.
+        ImageType pixelFormat = 6;
+        // Set to TRUE if the image data represents an image going from bottom to top and to FALSE
+        bool isYPointUp = 7;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::saveToFile'
+    message saveToFileResponse
+    {
+        //     TRUE if the operation was successful, FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::loadFromFile'
+    message loadFromFileRequest
+    {
+        // Full path to the file on disk.
+        string fullPath = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::loadFromFile'
+    message loadFromFileResponse
+    {
+        //     Pointer to the image or NULL if the image could not be loaded.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::loadFromMemory'
+    message loadFromMemoryRequest
+    {
+        // Pointer to the in-memory data.
+        Buffer imageData = 1;
+        // Size of the data in bytes.
+        uint32 sizeInBytes = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::loadFromMemory'
+    message loadFromMemoryResponse
+    {
+        //     Pointer to the image or NULL if the image could not be loaded.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::width'
+    message widthRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::width'
+    message widthResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::height'
+    message heightRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::height'
+    message heightResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::pixelFormat'
+    message pixelFormatRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::pixelFormat'
+    message pixelFormatResponse
+    {
+        
+        PixelFormat result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::isARGB'
+    message isARGBRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::isARGB'
+    message isARGBResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::isRGB'
+    message isRGBRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::isRGB'
+    message isRGBResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::isSingleChannel'
+    message isSingleChannelRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::isSingleChannel'
+    message isSingleChannelResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::hasAlphaChannel'
+    message hasAlphaChannelRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::hasAlphaChannel'
+    message hasAlphaChannelResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 x = 2;
+        int32 y = 3;
+        int32 width = 4;
+        int32 height = 5;
+        ApiColorLdr color = 6;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::updateTo'
+    message updateToRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Pointer to the image data buffer that needs to be large enough to fit an image of the
+        Buffer imageData = 2;
+        int32 imageDataSize = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::pixelAt'
+    message pixelAtRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 x = 2;
+        int32 y = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImage::pixelAt'
+    message pixelAtResponse
+    {
+        
+        ApiColorLdr result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::setPixelAt'
+    message setPixelAtRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 x = 2;
+        int32 y = 3;
+        ApiColorLdr color = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::multiplyAlphaAt'
+    message multiplyAlphaAtRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 x = 2;
+        int32 y = 3;
+        float multiplier = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::multiplyAllAlphas'
+    message multiplyAllAlphasRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        float amountToMultiplyBy = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::desaturate'
+    message desaturateRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImage::resize'
+    message resizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 newWidth = 2;
+        int32 newHeight = 3;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiImage' from 'apiimage.h'
+service ApiImageService
+{
+    /// Creates a new image
+    rpc create(ApiImage.createRequest) returns (ApiImage.createResponse);
+    /// Creates a new image and initializes it with the provided data
+    rpc create1(ApiImage.create1Request) returns (ApiImage.create1Response);
+    /// Writes this ApiImage into a file
+    rpc saveToFile(ApiImage.saveToFileRequest) returns (ApiImage.saveToFileResponse);
+    /// Loads an image from a file, which needs to be of one of the following formats:
+    /// GIF, JPEG, PNG
+    ///
+    /// 
+    rpc loadFromFile(ApiImage.loadFromFileRequest) returns (ApiImage.loadFromFileResponse);
+    /// Loads an image from an in-memory image file, i
+    rpc loadFromMemory(ApiImage.loadFromMemoryRequest) returns (ApiImage.loadFromMemoryResponse);
+    /// Destroys the image created by create
+    rpc destroy(ApiImage.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the width of this image
+    rpc width(ApiImage.widthRequest) returns (ApiImage.widthResponse);
+    /// Returns the height of this image
+    rpc height(ApiImage.heightRequest) returns (ApiImage.heightResponse);
+    /// Returns this image's pixel format
+    rpc pixelFormat(ApiImage.pixelFormatRequest) returns (ApiImage.pixelFormatResponse);
+    /// TRUE if the image's format is ARGB
+    rpc isARGB(ApiImage.isARGBRequest) returns (ApiImage.isARGBResponse);
+    /// True if the image's format is RGB
+    rpc isRGB(ApiImage.isRGBRequest) returns (ApiImage.isRGBResponse);
+    /// TRUE if the image's format is a single-channel alpha map
+    rpc isSingleChannel(ApiImage.isSingleChannelRequest) returns (ApiImage.isSingleChannelResponse);
+    /// TRUE if the image contains an alpha-channel
+    rpc hasAlphaChannel(ApiImage.hasAlphaChannelRequest) returns (ApiImage.hasAlphaChannelResponse);
+    /// Clears a section of the image with a given color
+    rpc clear(ApiImage.clearRequest) returns (google.protobuf.Empty);
+    /// Updates the content of the instance
+    rpc updateTo(ApiImage.updateToRequest) returns (google.protobuf.Empty);
+    /// Returns the color of one of the pixels in the image
+    rpc pixelAt(ApiImage.pixelAtRequest) returns (ApiImage.pixelAtResponse);
+    /// Sets the color of one of the image's pixels
+    rpc setPixelAt(ApiImage.setPixelAtRequest) returns (google.protobuf.Empty);
+    /// Changes the opacity of a pixel
+    rpc multiplyAlphaAt(ApiImage.multiplyAlphaAtRequest) returns (google.protobuf.Empty);
+    /// Changes the overall opacity of the image
+    rpc multiplyAllAlphas(ApiImage.multiplyAllAlphasRequest) returns (google.protobuf.Empty);
+    /// Changes all the colors to be shades of grey, based on their current luminosity
+    rpc desaturate(ApiImage.desaturateRequest) returns (google.protobuf.Empty);
+    /// Resize this image
+    rpc resize(ApiImage.resizeRequest) returns (google.protobuf.Empty);
+}

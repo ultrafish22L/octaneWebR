@@ -1,0 +1,201 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiGuiComponent' class from 'apiguicomponent.h'
+message ApiGuiComponent
+{
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::addChildComponent'
+    message addChildComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef child = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::removeChildComponent'
+    message removeChildComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef child = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::setSize'
+    message setSizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 width = 2;
+        int32 height = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::width'
+    message widthRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::width'
+    message widthResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::height'
+    message heightRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::height'
+    message heightResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::setTopLeftPosition'
+    message setTopLeftPositionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 x = 2;
+        int32 y = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::xPosition'
+    message xPositionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::xPosition'
+    message xPositionResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::yPosition'
+    message yPositionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::yPosition'
+    message yPositionResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::setEnabled'
+    message setEnabledRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        bool enabled = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::isEnabled'
+    message isEnabledRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::isEnabled'
+    message isEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::setTooltip'
+    message setTooltipRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string tooltip = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::tooltip'
+    message tooltipRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGuiComponent::tooltip'
+    message tooltipResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::addMouseListener'
+    message addMouseListenerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef newListener = 2;
+        bool wantsEventsForAllNestedChildComponents = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGuiComponent::removeMouseListener'
+    message removeMouseListenerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef listenerToRemove = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiGuiComponent' from 'apiguicomponent.h'
+service ApiGuiComponentService
+{
+    /// Adds a component as a child component
+    rpc addChildComponent(ApiGuiComponent.addChildComponentRequest) returns (google.protobuf.Empty);
+    /// Removes the passed in component as child component
+    rpc removeChildComponent(ApiGuiComponent.removeChildComponentRequest) returns (google.protobuf.Empty);
+    /// Sets the size of this component in pixel
+    rpc setSize(ApiGuiComponent.setSizeRequest) returns (google.protobuf.Empty);
+    /// Returns the width of this component in pixels
+    rpc width(ApiGuiComponent.widthRequest) returns (ApiGuiComponent.widthResponse);
+    /// Returns the height of this component in pixels
+    rpc height(ApiGuiComponent.heightRequest) returns (ApiGuiComponent.heightResponse);
+    /// Sets the position of the top-left corner relative to the bounds of the parent component
+    rpc setTopLeftPosition(ApiGuiComponent.setTopLeftPositionRequest) returns (google.protobuf.Empty);
+    /// Returns the x-position of this component
+    rpc xPosition(ApiGuiComponent.xPositionRequest) returns (ApiGuiComponent.xPositionResponse);
+    /// Returns the y-position of this component
+    rpc yPosition(ApiGuiComponent.yPositionRequest) returns (ApiGuiComponent.yPositionResponse);
+    /// Enables/disables this component
+    rpc setEnabled(ApiGuiComponent.setEnabledRequest) returns (google.protobuf.Empty);
+    /// Checks if this component is enabled/disabled
+    rpc isEnabled(ApiGuiComponent.isEnabledRequest) returns (ApiGuiComponent.isEnabledResponse);
+    /// Sets the tooltip for this component
+    rpc setTooltip(ApiGuiComponent.setTooltipRequest) returns (google.protobuf.Empty);
+    /// Returns the tooltip
+    rpc tooltip(ApiGuiComponent.tooltipRequest) returns (ApiGuiComponent.tooltipResponse);
+    /// Add a mouse listener to this component
+    rpc addMouseListener(ApiGuiComponent.addMouseListenerRequest) returns (google.protobuf.Empty);
+    /// Remove a mouse listener from this component
+    rpc removeMouseListener(ApiGuiComponent.removeMouseListenerRequest) returns (google.protobuf.Empty);
+}

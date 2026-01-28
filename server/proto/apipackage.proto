@@ -1,0 +1,154 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiPackage' class from 'apipackage.h'
+message ApiPackage
+{
+    // Request packet corresponding to '[in] parameters in ApiPackage::freeBuffer'
+    message freeBufferRequest
+    {
+        ByteArrayT buffer = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::freeArray'
+    message freeArrayRequest
+    {
+        StringArrayT stringArray = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::open'
+    message openRequest
+    {
+        string packagePath = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::open'
+    message openResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::close'
+    message closeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::getFileList'
+    message getFileListRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // A regular expression pattern to search for, The regular expression is compared only againt
+        string regExpr = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::getFileList'
+    message getFileListResponse
+    {
+        // Will receive the files stored in the package.
+        StringArrayT fileList = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::fileExists'
+    message fileExistsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  The path to the child file, must be a relative path.
+        string path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::fileExists'
+    message fileExistsResponse
+    {
+        //      TRUE if the file exists, FALSE otherwise.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::fileExists1'
+    message fileExists1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  The path to the child file, must be a relative path.
+        ObjectRef path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::fileExists1'
+    message fileExists1Response
+    {
+        //      TRUE if the file exists, FALSE otherwise.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::readFile'
+    message readFileRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  A relative path of the file in a package specified as C string.
+        string path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::readFile'
+    message readFileResponse
+    {
+        //     TRUE if successful, FALSE if path is not a relative path or if the file doesn't exist,
+        bool result = 1;
+        //  The contents of the file, which needs to be deallocated via freeBuffer() after use.
+        ByteArrayT data = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiPackage::readFile1'
+    message readFile1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  A relative path of the file in a package.
+        ObjectRef path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiPackage::readFile1'
+    message readFile1Response
+    {
+        // TRUE if successful.
+        bool result = 1;
+        //  file data, This should deleted via freeString().
+        ByteArrayT data = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiPackage' from 'apipackage.h'
+service ApiPackageService
+{
+    /// Deallocates a string array that 
+    rpc freeArray(ApiPackage.freeArrayRequest) returns (google.protobuf.Empty);
+    /// Open a package for reading files
+    rpc open(ApiPackage.openRequest) returns (ApiPackage.openResponse);
+    /// Closes a package
+    rpc close(ApiPackage.closeRequest) returns (google.protobuf.Empty);
+    /// Creates a list of all files stored in the ORBX package
+    rpc getFileList(ApiPackage.getFileListRequest) returns (ApiPackage.getFileListResponse);
+    /// Checks if a file exists in the package
+    rpc fileExists(ApiPackage.fileExistsRequest) returns (ApiPackage.fileExistsResponse);
+    /// Checks if a file exists in the package
+    rpc fileExists1(ApiPackage.fileExists1Request) returns (ApiPackage.fileExists1Response);
+    /// Reads a file from the package
+    rpc readFile(ApiPackage.readFileRequest) returns (ApiPackage.readFileResponse);
+    /// Reads data from the package as a cstring
+    rpc readFile1(ApiPackage.readFile1Request) returns (ApiPackage.readFile1Response);
+}

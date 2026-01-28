@@ -1,0 +1,57 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiImageComponent' class from 'apiimagecomponent.h'
+message ApiImageComponent
+{
+    // Request packet corresponding to '[in] parameters in ApiImageComponent::create'
+    message createRequest
+    {
+        // Image to place in the component. The image should stay alive until this image
+        ObjectRef image = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageComponent::create'
+    message createResponse
+    {
+        //     Pointer to the newly created image component.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageComponent::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageComponent::updateTo'
+    message updateToRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef image = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiImageComponent' from 'apiimagecomponent.h'
+service ApiImageComponentService
+{
+    /// Creates an image component
+    rpc create(ApiImageComponent.createRequest) returns (ApiImageComponent.createResponse);
+    /// Destroys this image component
+    rpc destroy(ApiImageComponent.destroyRequest) returns (google.protobuf.Empty);
+    /// Assigns a new image to the component
+    rpc updateTo(ApiImageComponent.updateToRequest) returns (google.protobuf.Empty);
+}

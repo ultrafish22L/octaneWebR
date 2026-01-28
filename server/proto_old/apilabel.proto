@@ -1,0 +1,76 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiLabel' class from 'apilabel.h'
+message ApiLabel
+{
+    // Request packet corresponding to '[in] parameters in ApiLabel::create'
+    message createRequest
+    {
+        // Text to display on the label.
+        string text = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLabel::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLabel::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLabel::text'
+    message textRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLabel::text'
+    message textResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLabel::setText'
+    message setTextRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // New text to set in the label.
+        string newText = 2;
+        // TRUE to notify the label listeners.
+        bool sendEvent = 3;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiLabel' from 'apilabel.h'
+service ApiLabelService
+{
+    /// Creates a new label
+    rpc create(ApiLabel.createRequest) returns (ApiLabel.createResponse);
+    /// Destroys this label created by create(
+    rpc destroy(ApiLabel.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the text on the label
+    rpc text(ApiLabel.textRequest) returns (ApiLabel.textResponse);
+    /// Changes the label text
+    rpc setText(ApiLabel.setTextRequest) returns (google.protobuf.Empty);
+}

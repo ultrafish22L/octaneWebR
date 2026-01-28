@@ -1,0 +1,147 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiModalDialog' class from 'apimodaldialog.h'
+message ApiModalDialog
+{
+    enum DialogResult 
+    {
+        DIALOG_RESULT_YES = 0;
+        DIALOG_RESULT_NO = 1;
+        DIALOG_RESULT_CANCEL = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::create'
+    message createRequest
+    {
+        // Text shown in the title bar of the dialog.
+        string dialogTitle = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModalDialog::create'
+    message createResponse
+    {
+        //     Dialog that should be destroyed with destroy().
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::addContentComponent'
+    message addContentComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Content component that is displayed in the window. The window doesn't take ownership
+        ObjectRef contentComponent = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::show'
+    message showRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModalDialog::show'
+    message showResponse
+    {
+        //     Value passed into the close call.
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::close'
+    message closeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Return value, returned by the show call.
+        int32 retValue = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::showInfoMessageDialog'
+    message showInfoMessageDialogRequest
+    {
+        string dialogTitle = 1;
+        string infoMessage = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::showErrorMessageDialog'
+    message showErrorMessageDialogRequest
+    {
+        string dialogTitle = 1;
+        string errorMessage = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::showOkCancelDialog'
+    message showOkCancelDialogRequest
+    {
+        string dialogTitle = 1;
+        string message = 2;
+        string okButtonText = 3;
+        string cancelButtonText = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModalDialog::showOkCancelDialog'
+    message showOkCancelDialogResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModalDialog::showYesNoCancelDialog'
+    message showYesNoCancelDialogRequest
+    {
+        string dialogTitle = 1;
+        string message = 2;
+        string yesButtonText = 3;
+        string noButtonText = 4;
+        string cancelButtonText = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModalDialog::showYesNoCancelDialog'
+    message showYesNoCancelDialogResponse
+    {
+        
+        DialogResult result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiModalDialog' from 'apimodaldialog.h'
+service ApiModalDialogService
+{
+    /// Creates a new modal dialog
+    rpc create(ApiModalDialog.createRequest) returns (ApiModalDialog.createResponse);
+    /// Destroys the dialog created with create()
+    rpc destroy(ApiModalDialog.destroyRequest) returns (google.protobuf.Empty);
+    /// Windows only have a single content component
+    rpc addContentComponent(ApiModalDialog.addContentComponentRequest) returns (google.protobuf.Empty);
+    /// Shows this dialog
+    rpc show(ApiModalDialog.showRequest) returns (ApiModalDialog.showResponse);
+    /// Closes the dialog
+    rpc close(ApiModalDialog.closeRequest) returns (google.protobuf.Empty);
+    /// Displays an information message in a popup
+    rpc showInfoMessageDialog(ApiModalDialog.showInfoMessageDialogRequest) returns (google.protobuf.Empty);
+    /// Displays an error message in a popup
+    rpc showErrorMessageDialog(ApiModalDialog.showErrorMessageDialogRequest) returns (google.protobuf.Empty);
+    /// Displays a 2-button dialog with an ok and cancel button
+    rpc showOkCancelDialog(ApiModalDialog.showOkCancelDialogRequest) returns (ApiModalDialog.showOkCancelDialogResponse);
+    /// Displays a 3-button dialog with a yes, no and cancel buttons
+    rpc showYesNoCancelDialog(ApiModalDialog.showYesNoCancelDialogRequest) returns (ApiModalDialog.showYesNoCancelDialogResponse);
+}

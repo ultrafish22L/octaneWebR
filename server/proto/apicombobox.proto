@@ -1,0 +1,109 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiComboBoxItem' class from 'apicombobox.h'
+message ApiComboBoxItem
+{
+    int32 id = 1;
+    string text = 2;
+}
+ // GRPC proto definitions for 'ApiComboBox' class from 'apicombobox.h'
+message ApiComboBox
+{
+    // Request packet corresponding to '[in] parameters in ApiComboBox::create'
+    message createRequest
+    {
+        // Array of items that populate the combo box.
+        ComboItemArrayT items = 1;
+        // The number of items in the items array.
+        uint32 nbOfItems = 2;
+        // Callback function, called when the user changes the selected item in the combo box.
+        ComboBoxChangedCallbackT callback = 3;
+        // Private data passed back into the callback.
+        uint64 privateData = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiComboBox::create'
+    message createResponse
+    {
+        //     Pointer to the combo box.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiComboBox::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiComboBox::setSelectedId'
+    message setSelectedIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the new item to select
+        int32 newItemId = 2;
+        // TRUE to send a change event for this combo box.
+        bool sendEvent = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiComboBox::selectedId'
+    message selectedIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiComboBox::selectedId'
+    message selectedIdResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiComboBox::text'
+    message textRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiComboBox::text'
+    message textResponse
+    {
+        
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiComboBox' from 'apicombobox.h'
+service ApiComboBoxService
+{
+    /// Creates a new combo box
+    rpc create(ApiComboBox.createRequest) returns (ApiComboBox.createResponse);
+    /// Destroys this combo box
+    rpc destroy(ApiComboBox.destroyRequest) returns (google.protobuf.Empty);
+    /// Sets one of the items to be the current selection
+    rpc setSelectedId(ApiComboBox.setSelectedIdRequest) returns (google.protobuf.Empty);
+    /// Returns the ID of the item that's currently shown in the box
+    rpc selectedId(ApiComboBox.selectedIdRequest) returns (ApiComboBox.selectedIdResponse);
+    /// Returns the text of the item currently selected in the combo box or an empty string if
+    /// nothing is selected
+    rpc text(ApiComboBox.textRequest) returns (ApiComboBox.textResponse);
+}
+
+// GRPC interface definition for class 'ApiComboBoxItem' from 'apicombobox.h'

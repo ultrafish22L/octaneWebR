@@ -1,0 +1,844 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiImageBuffer' class from 'apiimagebuffer.h'
+message ApiImageBuffer
+{
+    enum ImageCompressType 
+    {
+        ImageCompressType_UNSPECIFIED = 0;
+        BC1_UNORM = 9;
+        BC3_UNORM = 10;
+        BC4_SNORM = 11;
+        BC4_UNORM = 12;
+        BC6_SHF = 13;
+        BC6_UHF = 14;
+        BC7_UNORM = 15;
+    }
+
+     // GRPC proto definitions for 'MetaData' class from 'apiimagebuffer.h'
+    message ApiImageBuffer_MetaData
+    {
+        string key = 1;
+        string value = 2;
+    }
+     // GRPC proto definitions for 'MetaDataList' class from 'apiimagebuffer.h'
+    message ApiImageBuffer_MetaDataList
+    {
+        uint32 dataSize = 1;
+        ObjectRef data = 2;
+    }
+     // GRPC proto definitions for 'RegionRect' class from 'apiimagebuffer.h'
+    message ApiImageBuffer_RegionRect
+    {
+        uint32_2 origin = 1;
+        uint32_2 size = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::create'
+    message createRequest
+    {
+        // The image size in pixels
+        uint32_2 size = 1;
+        // The image buffer type
+        ImageType type = 2;
+        // Set to false if we definitely know the opacity of the entire image is 100%. Ignored
+        bool containsAlpha = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::create1'
+    message create1Request
+    {
+        // The data buffer
+        Buffer buffer = 1;
+        // The number of bytes stored in the above data buffer
+        uint32 bufferSize = 2;
+        // The image size in pixels
+        uint32_2 imgDim = 3;
+        // The image buffer type.
+        ImageType type = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::create1'
+    message create1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::load'
+    message loadRequest
+    {
+        // File to load
+        string fileName = 1;
+        // Indicate what is the type of the image data will be loaded in before conversion and
+        ImageColorType loadType = 2;
+        // Indicate which channel format to be used after conversion and compression:
+        ImageChannelType targType = 3;
+        // The name of the image layer (could be empty).
+        string layerName = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::load'
+    message loadResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::load1'
+    message load1Request
+    {
+        uint64 data = 1;
+        uint32 length = 2;
+        ImageColorType loadType = 3;
+        ImageChannelType targType = 4;
+        string layerName = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::load1'
+    message load1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::convertTo'
+    message convertToRequest
+    {
+        // The source image buffer instance
+        ObjectRef srcImg = 1;
+        // The type this image will be converted to
+        ImageType destType = 2;
+        // If true, a copy is returned even if the type is the same. If false and the
+        bool forceCopy = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::convertTo'
+    message convertToResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::bytesPerPixel'
+    message bytesPerPixelRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::bytesPerPixel'
+    message bytesPerPixelResponse
+    {
+        //     The number of bytes of a pixel
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::bytesPerChannel'
+    message bytesPerChannelRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::bytesPerChannel'
+    message bytesPerChannelResponse
+    {
+        
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::channelCount'
+    message channelCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::channelCount'
+    message channelCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::size'
+    message sizeResponse
+    {
+        
+        uint32_2 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::sizeInBytes'
+    message sizeInBytesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::sizeInBytes'
+    message sizeInBytesResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::type'
+    message typeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::type'
+    message typeResponse
+    {
+        
+        ImageType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::sourceInfo'
+    message sourceInfoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::sourceInfo'
+    message sourceInfoResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::canWrapX'
+    message canWrapXRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::canWrapX'
+    message canWrapXResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::canWrapY'
+    message canWrapYRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::canWrapY'
+    message canWrapYResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::needsFlip'
+    message needsFlipRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::needsFlip'
+    message needsFlipResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::hasAlpha'
+    message hasAlphaRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::hasAlpha'
+    message hasAlphaResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::hasColor'
+    message hasColorRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::hasColor'
+    message hasColorResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isCompressed'
+    message isCompressedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isCompressed'
+    message isCompressedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isHalf'
+    message isHalfRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isHalf'
+    message isHalfResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isHdr'
+    message isHdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isHdr'
+    message isHdrResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isMono'
+    message isMonoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isMono'
+    message isMonoResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::isPixelValid'
+    message isPixelValidRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::isPixelValid'
+    message isPixelValidResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::getPixelLdr'
+    message getPixelLdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::getPixelLdr'
+    message getPixelLdrResponse
+    {
+        //     the pointer to the first component of a pixel value, if the image is Ldr and
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::getPixelHalf'
+    message getPixelHalfRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::getPixelHalf'
+    message getPixelHalfResponse
+    {
+        //     the pointer to the first component of a pixel value, if the image is 16bits Hdr and
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::getPixelHdr'
+    message getPixelHdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::getPixelHdr'
+    message getPixelHdrResponse
+    {
+        //     the pointer to the first component of a pixel value, if the image is 32bits Hdr and
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::buffer'
+    message bufferRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::buffer'
+    message bufferResponse
+    {
+        
+        Buffer result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::buffer1'
+    message buffer1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::buffer1'
+    message buffer1Response
+    {
+        
+        Buffer result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::compress'
+    message compressRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The type, to which we want this image buffer to be compressed
+        ImageCompressType compressType = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::setPixelLdr'
+    message setPixelLdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+        // the pointer to the first component of a Ldr pixel value
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::setPixelHalf'
+    message setPixelHalfRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+        // the pointer to the first component of a 16bits Hdr pixel value
+        float value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::setPixelHdr'
+    message setPixelHdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the pixel coordinate
+        uint32_2 pos = 2;
+        // the pointer to the first component of a 32bits Hdr pixel value
+        float value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::fill'
+    message fillRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the origin and size of the region
+        ApiImageBuffer_RegionRect regionRect = 2;
+        // the pointer to the first component of the color value
+        Buffer value = 3;
+        // if true, the color is composited using alpha blending. if false, the region is
+        bool blend = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::fill'
+    message fillResponse
+    {
+        //     TRUE:  if fill succeeded
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::copyRegion'
+    message copyRegionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the source image to copy
+        ObjectRef srcImg = 2;
+        // the origin and size of the region to copy (in the source image)
+        ApiImageBuffer_RegionRect regionRect = 3;
+        // the topleft corner in this image where the image is to be copied
+        uint32_2 destPos = 4;
+        // if true, the image is composited using alpha blending. if false, the data (including
+        bool blend = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::copyRegion'
+    message copyRegionResponse
+    {
+        //     TRUE:  if the region copy succeeded
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::compositeOnBlack'
+    message compositeOnBlackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::flipVertical'
+    message flipVerticalRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::convert'
+    message convertRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The type this image will be converted to
+        ImageType destType = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::applyGaussianFilter'
+    message applyGaussianFilterRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The number of nearest pixels to use for this filtering
+        uint32 radius = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::applyBoxFilter'
+    message applyBoxFilterRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The number of nearest pixels to use for this filtering
+        uint32 radius = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::applyLevels'
+    message applyLevelsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The Gamma factor
+        float gamma = 2;
+        // The interval where the input value range (0, 1) will be mapped
+        float_2 levels = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::compareValues'
+    message compareValuesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The other image, which must have the same type and size as this one
+        ObjectRef otherImg = 2;
+        // TRUE telling the alpha channel will be compared
+        bool compareAlpha = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::calculateMeanSquareError'
+    message calculateMeanSquareErrorRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The other image, which must have the same type and size as this one
+        ObjectRef otherImg = 2;
+        // If set to TRUE, the channel values will be clamped at 1.
+        bool clampValues = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::calculateMeanSquareError'
+    message calculateMeanSquareErrorResponse
+    {
+        //     TRUE:  if the calculation is successful
+        bool result = 1;
+        // The mean square error
+        double error = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::save'
+    message saveRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The full path of the file into which the image shall be stored
+        string fileName = 2;
+        ApiImageBuffer_MetaDataList metaData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::save'
+    message saveResponse
+    {
+        //     TRUE if the image was saved successfully, FALSE if not
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::saveAsync'
+    message saveAsyncRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The full path of the file into which the image shall be stored
+        string fileName = 2;
+        ApiImageBuffer_MetaDataList metaData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::saveAsync'
+    message saveAsyncResponse
+    {
+        //     TRUE if the saving job started successfully, FALSE if not
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::pixelAddr'
+    message pixelAddrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::pixelAddr'
+    message pixelAddrResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiImageBuffer::pixelAddr1'
+    message pixelAddr1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32_2 pos = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiImageBuffer::pixelAddr1'
+    message pixelAddr1Response
+    {
+        
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiImageBuffer' from 'apiimagebuffer.h'
+service ApiImageBufferService
+{
+    /// Creates an empty image buffer
+        /// 
+    rpc create(ApiImageBuffer.createRequest) returns (ApiImageBuffer.createResponse);
+    /// Creates an image buffer using the given data
+        ///
+        /// 
+    rpc create1(ApiImageBuffer.create1Request) returns (ApiImageBuffer.create1Response);
+    /// Loads an image from file
+        /// 
+    rpc load(ApiImageBuffer.loadRequest) returns (ApiImageBuffer.loadResponse);
+    /// Loads an image from encoded data(for instance, from a memory block of a png file)
+    rpc load1(ApiImageBuffer.load1Request) returns (ApiImageBuffer.load1Response);
+    /// Convert the source image buffer to another one using the destination type
+        /// NOTE: Only works for uncompressed images
+        /// Meta data (like wrapping and alpha flags) are copied to the returned image
+        ///
+        /// 
+    rpc convertTo(ApiImageBuffer.convertToRequest) returns (ApiImageBuffer.convertToResponse);
+    /// Destroys the ApiImageBuffer object created by create()
+    rpc destroy(ApiImageBuffer.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the bytes per pixel
+        ///
+        /// 
+    rpc bytesPerPixel(ApiImageBuffer.bytesPerPixelRequest) returns (ApiImageBuffer.bytesPerPixelResponse);
+    /// Returns the bytes per pixel channel
+    rpc bytesPerChannel(ApiImageBuffer.bytesPerChannelRequest) returns (ApiImageBuffer.bytesPerChannelResponse);
+    /// Returns the number of channels of a pixel
+    rpc channelCount(ApiImageBuffer.channelCountRequest) returns (ApiImageBuffer.channelCountResponse);
+    /// Returns the dimensions of the image in pixels
+    rpc size(ApiImageBuffer.sizeRequest) returns (ApiImageBuffer.sizeResponse);
+    /// Returns the size in bytes of the image data
+    rpc sizeInBytes(ApiImageBuffer.sizeInBytesRequest) returns (ApiImageBuffer.sizeInBytesResponse);
+    /// Returns the image buffer's type
+    rpc type(ApiImageBuffer.typeRequest) returns (ApiImageBuffer.typeResponse);
+    /// Returns the image source information string
+    rpc sourceInfo(ApiImageBuffer.sourceInfoRequest) returns (ApiImageBuffer.sourceInfoResponse);
+    /// TRUE if the image can wrap in horizontal direction
+    rpc canWrapX(ApiImageBuffer.canWrapXRequest) returns (ApiImageBuffer.canWrapXResponse);
+    /// TRUE if the image can wrap in vertical direction
+    rpc canWrapY(ApiImageBuffer.canWrapYRequest) returns (ApiImageBuffer.canWrapYResponse);
+    /// TRUE if the image has Y down (currently only for BC compressed images)
+    rpc needsFlip(ApiImageBuffer.needsFlipRequest) returns (ApiImageBuffer.needsFlipResponse);
+    /// TRUE for a transparent image
+    rpc hasAlpha(ApiImageBuffer.hasAlphaRequest) returns (ApiImageBuffer.hasAlphaResponse);
+    /// TRUE for a chormatic image
+    rpc hasColor(ApiImageBuffer.hasColorRequest) returns (ApiImageBuffer.hasColorResponse);
+    /// TRUE for a compressed image
+    rpc isCompressed(ApiImageBuffer.isCompressedRequest) returns (ApiImageBuffer.isCompressedResponse);
+    /// Checks if this image has data
+    rpc isEmpty(ApiImageBuffer.isEmptyRequest) returns (ApiImageBuffer.isEmptyResponse);
+    /// TRUE for a 16bits Hdr image
+    rpc isHalf(ApiImageBuffer.isHalfRequest) returns (ApiImageBuffer.isHalfResponse);
+    /// TRUE for a Hdr image
+    rpc isHdr(ApiImageBuffer.isHdrRequest) returns (ApiImageBuffer.isHdrResponse);
+    /// TRUE for a single channel image
+    rpc isMono(ApiImageBuffer.isMonoRequest) returns (ApiImageBuffer.isMonoResponse);
+    /// TRUE is the given pixel location is valid
+    rpc isPixelValid(ApiImageBuffer.isPixelValidRequest) returns (ApiImageBuffer.isPixelValidResponse);
+    /// Compresses this image buffer
+        /// NOTE: Only works for uncompressed images
+        ///
+        /// 
+    rpc compress(ApiImageBuffer.compressRequest) returns (google.protobuf.Empty);
+    /// Modifies a pixel in a Ldr image buffer
+        /// NOTE: This assumes that the buffer represents a un-compressed Ldr image and
+        ///       image that goes bottom-to-top (y points down)
+        ///
+        /// 
+    rpc setPixelLdr(ApiImageBuffer.setPixelLdrRequest) returns (google.protobuf.Empty);
+    /// Modifies a pixel in a 16bits Hdr image buffer
+        /// NOTE: This assumes that the buffer represents a 16bits un-compressed Hdr image and
+        ///       image that goes bottom-to-top (y points down)
+        ///
+        /// 
+    rpc setPixelHalf(ApiImageBuffer.setPixelHalfRequest) returns (google.protobuf.Empty);
+    /// Modifies a pixel in a 326bits Hdr image buffer
+        /// NOTE: This assumes that the buffer represents a 32bits un-compressed Hdr image and
+        ///       image that goes bottom-to-top (y points down)
+        ///
+        /// 
+    rpc setPixelHdr(ApiImageBuffer.setPixelHdrRequest) returns (google.protobuf.Empty);
+    /// Copies a region from another ImageBuffer
+    rpc copyRegion(ApiImageBuffer.copyRegionRequest) returns (ApiImageBuffer.copyRegionResponse);
+    /// eliminates the alpha channel by multiplying the color channels by the alpha channel, and
+        /// setting the alpha channel to 1
+    rpc compositeOnBlack(ApiImageBuffer.compositeOnBlackRequest) returns (google.protobuf.Empty);
+    /// vertical flip (in place)
+    rpc flipVertical(ApiImageBuffer.flipVerticalRequest) returns (google.protobuf.Empty);
+    /// Convert the current image bufer to another type
+        /// NOTE: Only works for uncompressed images
+        ///
+        /// 
+    rpc convert(ApiImageBuffer.convertRequest) returns (google.protobuf.Empty);
+    /// Applies gaussian filter to the image
+        /// NOTE: Only works for uncompressed images
+        ///
+        /// 
+    rpc applyGaussianFilter(ApiImageBuffer.applyGaussianFilterRequest) returns (google.protobuf.Empty);
+    /// Applies Box filter to the image
+    rpc applyBoxFilter(ApiImageBuffer.applyBoxFilterRequest) returns (google.protobuf.Empty);
+    /// Applies level correction to the image
+        /// NOTE: the image must be un-compressed image and have float channels
+        ///
+        /// 
+    rpc applyLevels(ApiImageBuffer.applyLevelsRequest) returns (google.protobuf.Empty);
+    /// Compares this image to another image, and puts the difference in this image
+        ///
+        /// 
+    rpc compareValues(ApiImageBuffer.compareValuesRequest) returns (google.protobuf.Empty);
+    /// Compares this image to another image, and returns the mean square error for it
+        ///
+        /// 
+    rpc calculateMeanSquareError(ApiImageBuffer.calculateMeanSquareErrorRequest) returns (ApiImageBuffer.calculateMeanSquareErrorResponse);
+    /// Saves an image to disk
+    rpc save(ApiImageBuffer.saveRequest) returns (ApiImageBuffer.saveResponse);
+    /// Starts saving an image to disk on a background thread
+        /// Compressed images are saved as DDS, HDR images are saved as EXR and LDR images are saved as PNG
+        /// NOTE:  The correct extension is added to the path (if it didn't exist yet)
+        ///
+        /// 
+    rpc saveAsync(ApiImageBuffer.saveAsyncRequest) returns (ApiImageBuffer.saveAsyncResponse);
+    /// Gets the constant reference to the memory location of a pixel
+    rpc pixelAddr(ApiImageBuffer.pixelAddrRequest) returns (ApiImageBuffer.pixelAddrResponse);
+    /// Gets the mutable reference to the memory location of a pixel
+    rpc pixelAddr1(ApiImageBuffer.pixelAddr1Request) returns (ApiImageBuffer.pixelAddr1Response);
+}
+
+// GRPC interface definition for class 'ApiImageBuffer_MetaData' from 'apiimagebuffer.h'
+
+// GRPC interface definition for class 'ApiImageBuffer_MetaDataList' from 'apiimagebuffer.h'
+
+// GRPC interface definition for class 'ApiImageBuffer_RegionRect' from 'apiimagebuffer.h'

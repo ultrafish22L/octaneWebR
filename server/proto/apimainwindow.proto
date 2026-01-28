@@ -1,0 +1,164 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiMainWindow' class from 'apimainwindow.h'
+message ApiMainWindow
+{
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::fetchOrCreateInstance'
+    message fetchOrCreateInstanceRequest
+    {
+        // A function ptr that will be called when this window is closed. Keep in mind that when
+        OnMainWindowCloseCallbackT callback = 1;
+        // Private void ptr that will be passed to the callback above when the window is closed.
+        uint64 callbackPrivateData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMainWindow::fetchOrCreateInstance'
+    message fetchOrCreateInstanceResponse
+    {
+        //     Pointer to the MainWindow created. This pointer will still be owned by Octane, do not
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::runDispatchLoopUntil'
+    message runDispatchLoopUntilRequest
+    {
+        int32 millis = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::setDpi'
+    message setDpiRequest
+    {
+        uint32 dpi = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::addContentComponent'
+    message addContentComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Content component that is displayed in the window. The window doesn't take ownership
+        ObjectRef contentComponent = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::projectWorkspace'
+    message projectWorkspaceRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMainWindow::projectWorkspace'
+    message projectWorkspaceResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::projectWorkspace1'
+    message projectWorkspace1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMainWindow::projectWorkspace1'
+    message projectWorkspace1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::show'
+    message showRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Whether to show the window maximized. If false, the window will pop up in the center of
+        bool maximized = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::hide'
+    message hideRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::visible'
+    message visibleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMainWindow::visible'
+    message visibleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::setDefaultGraph'
+    message setDefaultGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The node graph that should be set as the default node graph of the workspace. If NULL,
+        ObjectRef graph = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiMainWindow::defaultGraph'
+    message defaultGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiMainWindow::defaultGraph'
+    message defaultGraphResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiMainWindow' from 'apimainwindow.h'
+service ApiMainWindowService
+{
+    /// Fetches or creates a new ApiMainWindow
+    rpc fetchOrCreateInstance(ApiMainWindow.fetchOrCreateInstanceRequest) returns (ApiMainWindow.fetchOrCreateInstanceResponse);
+    /// Yields to perform some UI tasks
+    rpc runDispatchLoopUntil(ApiMainWindow.runDispatchLoopUntilRequest) returns (google.protobuf.Empty);
+    /// Sets the DPI of the UI
+    rpc setDpi(ApiMainWindow.setDpiRequest) returns (google.protobuf.Empty);
+    /// Windows only have a single content component
+    rpc addContentComponent(ApiMainWindow.addContentComponentRequest) returns (google.protobuf.Empty);
+    /// Returns the ProjectWorkspace of this MainWindow
+    rpc projectWorkspace(ApiMainWindow.projectWorkspaceRequest) returns (ApiMainWindow.projectWorkspaceResponse);
+    /// Returns the ProjectWorkspace of this MainWindow
+    rpc projectWorkspace1(ApiMainWindow.projectWorkspace1Request) returns (ApiMainWindow.projectWorkspace1Response);
+    /// Shows this window
+    rpc show(ApiMainWindow.showRequest) returns (google.protobuf.Empty);
+    /// Hides this window again
+    rpc hide(ApiMainWindow.hideRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this window is visible
+    rpc visible(ApiMainWindow.visibleRequest) returns (ApiMainWindow.visibleResponse);
+    /// Sets default ApiNodeGraph to be shown by any ApiNodeGraphEditors created by the user
+    rpc setDefaultGraph(ApiMainWindow.setDefaultGraphRequest) returns (google.protobuf.Empty);
+    /// Gets the default ApiNodeGraph to be shown by any ApiNodeGraphEditors created by the user
+    rpc defaultGraph(ApiMainWindow.defaultGraphRequest) returns (ApiMainWindow.defaultGraphResponse);
+}

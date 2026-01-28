@@ -1,0 +1,148 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiOutputColorSpaceInfo' class from 'apioutputcolorspaceinfo.h'
+message ApiOutputColorSpaceInfo
+{
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::createKnownColorSpace'
+    message createKnownColorSpaceRequest
+    {
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 1;
+        // Whether to apply Octane's built-in tone mapping if colorSpace is not
+        bool forceToneMapping = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::createKnownColorSpace'
+    message createKnownColorSpaceResponse
+    {
+        //     The created info (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::createOcioColorSpace'
+    message createOcioColorSpaceRequest
+    {
+        // The name of the OCIO color space or role to use. Must not be null.
+        string colorSpaceName = 1;
+        // The name of the OCIO look to apply, or empty or null to apply no look.
+        string lookName = 2;
+        // Whether to apply Octane's built-in tone mapping (before applying any OCIO look(s)). This
+        bool forceToneMapping = 3;
+        // The curve type that the color space should be considered to have. For beauty passes,
+        ColorSpaceCurveType curveType = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::createOcioColorSpace'
+    message createOcioColorSpaceResponse
+    {
+        //     The created info (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::createOcioView'
+    message createOcioViewRequest
+    {
+        // The name of the OCIO display containing the view to use. Must not be null.
+        string displayName = 1;
+        // The name of the OCIO view to use. Must not be null.
+        string viewName = 2;
+        // Whether to use the view's default look(s) instead of the look specified by lookName.
+        bool useViewLook = 3;
+        // If useViewLook is true, this value is ignored. Otherwise, the name of the OCIO look to
+        string lookName = 4;
+        // Whether to apply Octane's built-in tone mapping (before applying any OCIO look(s)). This
+        bool forceToneMapping = 5;
+        // The curve type that the color space should be considered to have. For beauty passes,
+        ColorSpaceCurveType curveType = 6;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::createOcioView'
+    message createOcioViewResponse
+    {
+        //     The created info (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::createUseImagerSettings'
+    message createUseImagerSettingsRequest
+    {
+        // The known color space to use if the imager node isn't set to use an OCIO view. Must not
+        NamedColorSpace nonOcioColorSpace = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::createUseImagerSettings'
+    message createUseImagerSettingsResponse
+    {
+        //     The created info (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::clone'
+    message cloneRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::clone'
+    message cloneResponse
+    {
+        //     The cloned info (must be destroyed with destroy()). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOutputColorSpaceInfo::equals'
+    message equalsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The instance to compare against, or null to always return false.
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOutputColorSpaceInfo::equals'
+    message equalsResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiOutputColorSpaceInfo' from 'apioutputcolorspaceinfo.h'
+service ApiOutputColorSpaceInfoService
+{
+    /// Makes an info to produce output in a known color space
+    rpc createKnownColorSpace(ApiOutputColorSpaceInfo.createKnownColorSpaceRequest) returns (ApiOutputColorSpaceInfo.createKnownColorSpaceResponse);
+    /// Makes an info to produce output in an OCIO color space
+    rpc createOcioColorSpace(ApiOutputColorSpaceInfo.createOcioColorSpaceRequest) returns (ApiOutputColorSpaceInfo.createOcioColorSpaceResponse);
+    /// Makes an info to produce output using an OCIO view
+    rpc createOcioView(ApiOutputColorSpaceInfo.createOcioViewRequest) returns (ApiOutputColorSpaceInfo.createOcioViewResponse);
+    /// Makes an info to produce output in whatever is specified in the imager node of the render
+    /// target being rendered
+    rpc createUseImagerSettings(ApiOutputColorSpaceInfo.createUseImagerSettingsRequest) returns (ApiOutputColorSpaceInfo.createUseImagerSettingsResponse);
+    rpc destroy(ApiOutputColorSpaceInfo.destroyRequest) returns (google.protobuf.Empty);
+    /// 
+    rpc clone(ApiOutputColorSpaceInfo.cloneRequest) returns (ApiOutputColorSpaceInfo.cloneResponse);
+    /// Returns whether two ApiOutputColorSpaceInfo instances are equivalent
+    rpc equals(ApiOutputColorSpaceInfo.equalsRequest) returns (ApiOutputColorSpaceInfo.equalsResponse);
+}

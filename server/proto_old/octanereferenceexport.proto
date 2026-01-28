@@ -1,0 +1,26 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "octanetime.proto";
+
+ // GRPC proto definitions for 'ReferencePackageExportSettings' class from 'octanereferenceexport.h'
+message ReferencePackageExportSettings
+{
+    bool mergeScatterInstances = 1;
+    float includeInstancePercentage = 2;
+    float ignoreSmallObjectPercentage = 3;
+    bool exportAnimation = 4;
+    float animationFramerate = 5;
+    bool enableCustomAnimationTimespan = 6;
+    TimeSpanT customAnimationTimespan = 7;
+    bool exportNestedReferenceGraphs = 8;
+}
+
+
+// GRPC interface definition for class 'ReferencePackageExportSettings' from 'octanereferenceexport.h'

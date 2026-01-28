@@ -1,0 +1,480 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiFileName' class from 'apifilename.h'
+message ApiFileName
+{
+    // Request packet corresponding to '[in] parameters in ApiFileName::create'
+    message createRequest
+    {
+        // String representing a path name. Leaving this NULL will create an empty file name.
+        string path = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::create'
+    message createResponse
+    {
+        //     Pointer to the newly created file name. Don't call delete on this pointer but use
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::set'
+    message setRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string newPath = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::isAbsolute'
+    message isAbsoluteRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::isAbsolute'
+    message isAbsoluteResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::isRelative'
+    message isRelativeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::isRelative'
+    message isRelativeResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getParent'
+    message getParentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getParent'
+    message getParentResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getFileOnly'
+    message getFileOnlyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getFileOnly'
+    message getFileOnlyResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getFullString'
+    message getFullStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getFullString'
+    message getFullStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getRootString'
+    message getRootStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getRootString'
+    message getRootStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getParentString'
+    message getParentStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getParentString'
+    message getParentStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getFileString'
+    message getFileStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getFileString'
+    message getFileStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getSuffix'
+    message getSuffixRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If set to TRUE the suffix characters will be converted to lower case.
+        bool toLowerCase = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getSuffix'
+    message getSuffixResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::setSuffix'
+    message setSuffixRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The suffix that will be set. MUST be either empty or start with a '.'.
+        string suffix = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::withSuffix'
+    message withSuffixRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string suffix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::withSuffix'
+    message withSuffixResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::makeRelativeTo'
+    message makeRelativeToRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The path relative to which this path will be afterwards.
+        ObjectRef base = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::makeRelativeTo'
+    message makeRelativeToResponse
+    {
+        //     FALSE if it was not possible to make this file name relative to the other, otherwise
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::getConcat'
+    message getConcatRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::getConcat'
+    message getConcatResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::concat'
+    message concatRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::equals'
+    message equalsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::equals'
+    message equalsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::notEquals'
+    message notEqualsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::notEquals'
+    message notEqualsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::lessThan'
+    message lessThanRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::lessThan'
+    message lessThanResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::exactlyEquals'
+    message exactlyEqualsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::exactlyEquals'
+    message exactlyEqualsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::exactlyLessThan'
+    message exactlyLessThanRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::exactlyLessThan'
+    message exactlyLessThanResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::appendToFileName'
+    message appendToFileNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string text = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::exists'
+    message existsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::exists'
+    message existsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::existsAsFile'
+    message existsAsFileRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::existsAsFile'
+    message existsAsFileResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::existsAsDirectory'
+    message existsAsDirectoryRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::existsAsDirectory'
+    message existsAsDirectoryResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::hasWriteAccess'
+    message hasWriteAccessRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::hasWriteAccess'
+    message hasWriteAccessResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileName::createDirectory'
+    message createDirectoryRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileName::createDirectory'
+    message createDirectoryResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiFileName' from 'apifilename.h'
+service ApiFileNameService
+{
+    /// Creates a new ApiFileName instance
+    rpc create(ApiFileName.createRequest) returns (ApiFileName.createResponse);
+    /// Destroys the ApiFileName object created by create() and other getters below
+    rpc destroy(ApiFileName.destroyRequest) returns (google.protobuf.Empty);
+    /// Assigns a new file name path to this instance
+    rpc set(ApiFileName.setRequest) returns (google.protobuf.Empty);
+    /// Clears the instance
+    rpc clear(ApiFileName.clearRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this is an empty instance, i
+    rpc isEmpty(ApiFileName.isEmptyRequest) returns (ApiFileName.isEmptyResponse);
+    /// Returns TRUE if the stored file name is absolute, i
+    rpc isAbsolute(ApiFileName.isAbsoluteRequest) returns (ApiFileName.isAbsoluteResponse);
+    /// Returns TRUE if the stored file name is relative
+    rpc isRelative(ApiFileName.isRelativeRequest) returns (ApiFileName.isRelativeResponse);
+    /// Returns the parent directory of the file name (including any root, like drive/server)
+    rpc getParent(ApiFileName.getParentRequest) returns (ApiFileName.getParentResponse);
+    /// Returns a file name of the file part (without root and directory)
+    rpc getFileOnly(ApiFileName.getFileOnlyRequest) returns (ApiFileName.getFileOnlyResponse);
+    /// Returns the full file name as string
+    rpc getFullString(ApiFileName.getFullStringRequest) returns (ApiFileName.getFullStringResponse);
+    /// Returns the root of the file name as string (only != "" on Windows)
+    rpc getRootString(ApiFileName.getRootStringRequest) returns (ApiFileName.getRootStringResponse);
+    /// Returns the directory part of the file name as string (including the root part on Windows)
+    rpc getParentString(ApiFileName.getParentStringRequest) returns (ApiFileName.getParentStringResponse);
+    /// Returns the file part of the instance as string
+    rpc getFileString(ApiFileName.getFileStringRequest) returns (ApiFileName.getFileStringResponse);
+    /// Returns the suffix of the last token (i
+    rpc getSuffix(ApiFileName.getSuffixRequest) returns (ApiFileName.getSuffixResponse);
+    /// Sets the suffix of the last token (i
+    rpc setSuffix(ApiFileName.setSuffixRequest) returns (google.protobuf.Empty);
+    /// Similar to setSuffix(), but returning a new FileName instead
+    rpc withSuffix(ApiFileName.withSuffixRequest) returns (ApiFileName.withSuffixResponse);
+    /// Makes this file name relative to the specified file name
+    rpc makeRelativeTo(ApiFileName.makeRelativeToRequest) returns (ApiFileName.makeRelativeToResponse);
+    /// Returns the concatenation of this file name with another
+    rpc getConcat(ApiFileName.getConcatRequest) returns (ApiFileName.getConcatResponse);
+    /// Concats other filename to this file name
+    rpc concat(ApiFileName.concatRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this instance is equal to the other one
+    rpc equals(ApiFileName.equalsRequest) returns (ApiFileName.equalsResponse);
+    /// Returns TRUE if this instance is not equal to the other one
+    rpc notEquals(ApiFileName.notEqualsRequest) returns (ApiFileName.notEqualsResponse);
+    /// Returns TRUE if this instance is "less" than the other one (useful for ordered maps)
+    rpc lessThan(ApiFileName.lessThanRequest) returns (ApiFileName.lessThanResponse);
+    /// Returns TRUE if this instance is equal to the other one, using a case-sensitive comparison
+    /// on all platforms
+    rpc exactlyEquals(ApiFileName.exactlyEqualsRequest) returns (ApiFileName.exactlyEqualsResponse);
+    /// Returns TRUE if this instance is "less" than the other one, using a case-sensitive comparison
+    /// on all platforms
+    rpc exactlyLessThan(ApiFileName.exactlyLessThanRequest) returns (ApiFileName.exactlyLessThanResponse);
+    /// Appends some text to the file name of the last token, but makes sure
+    /// that it is inserted in front of the suffix (if the last token has one)
+    rpc appendToFileName(ApiFileName.appendToFileNameRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this file name exists as directory OR as file
+    rpc exists(ApiFileName.existsRequest) returns (ApiFileName.existsResponse);
+    /// Returns TRUE if this file name exists and is a file
+    rpc existsAsFile(ApiFileName.existsAsFileRequest) returns (ApiFileName.existsAsFileResponse);
+    /// Returns TRUE if this file name exists and is a file
+    rpc existsAsDirectory(ApiFileName.existsAsDirectoryRequest) returns (ApiFileName.existsAsDirectoryResponse);
+    /// Returns TRUE if we can write to the specified file name
+    rpc hasWriteAccess(ApiFileName.hasWriteAccessRequest) returns (ApiFileName.hasWriteAccessResponse);
+    /// Tries to create a directory with this file name, which must be an absolute file name
+    /// (asserted)
+    rpc createDirectory(ApiFileName.createDirectoryRequest) returns (ApiFileName.createDirectoryResponse);
+}

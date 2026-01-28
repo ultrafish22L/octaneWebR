@@ -1,0 +1,93 @@
+syntax = "proto3";
+package octaneapi;
+option optimize_for = CODE_SIZE;
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+message ApiItemArray
+{
+    // Request packet corresponding to '[in] parameters in ApiItemArray::begin1'
+    message begin1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItemArray::begin1'
+    message begin1Response
+    {
+        
+        ObjectRefArrayT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItemArray::end1'
+    message end1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItemArray::end1'
+    message end1Response
+    {
+        
+        ObjectRefArrayT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItemArray::get'
+    message getRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItemArray::get'
+    message getResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItemArray::init'
+    message initRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 size = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItemArray::items'
+    message itemsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItemArray::items'
+    message itemsResponse
+    {
+        
+        ObjectRefArrayT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItemArray::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItemArray::size'
+    message sizeResponse
+    {
+        
+        uint32 result = 1;
+    }
+}
+service ApiItemArrayService
+{
+    /// Returns the size of the item list
+    rpc size(ApiItemArray.sizeRequest) returns (ApiItemArray.sizeResponse);
+    /// Returns the item at the given index
+    rpc get(ApiItemArray.getRequest) returns (ApiItemArray.getResponse);
+    /// Returns the internal array (owned by this object)
+    rpc items(ApiItemArray.itemsRequest) returns (ApiItemArray.itemsResponse);
+    /// Begin function for constant range-based for loop
+    rpc begin1(ApiItemArray.begin1Request) returns (ApiItemArray.begin1Response);
+    /// End function for constant range-based for loop
+    rpc end1(ApiItemArray.end1Request) returns (ApiItemArray.end1Response);
+    /// Init function (only used internally)
+    rpc init(ApiItemArray.initRequest) returns (google.protobuf.Empty);
+}
+

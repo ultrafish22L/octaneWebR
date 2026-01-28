@@ -1,0 +1,24 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+
+    enum MessageType 
+    {
+        TYPE_INFO = 0;
+        TYPE_ERROR = 1;
+    }
+
+    enum DialogResult 
+    {
+        DIALOG_RESULT_YES = 0;
+        DIALOG_RESULT_NO = 1;
+        DIALOG_RESULT_CANCEL = 2;
+    }
+
+

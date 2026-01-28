@@ -1,0 +1,315 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiCustomCurveEditorController' class from 'apicustomcurveeditorcontroller.h'
+message ApiCustomCurveEditorController
+{
+    enum Button 
+    {
+        SelectSubCurvePrimary = 0;
+        SelectSubCurveSecondaryRed = 1;
+        SelectSubCurveSecondaryGreen = 2;
+        SelectSubCurveSecondaryBlue = 3;
+        DeletePoint = 4;
+        Reset = 5;
+    }
+
+    enum Key 
+    {
+        Delete = 0;
+        Up = 1;
+        Down = 2;
+        Left = 3;
+        Right = 4;
+    }
+
+    enum MouseCursorType 
+    {
+        Normal = 0;
+        PlacePoint = 1;
+        MovePoint = 2;
+    }
+
+     // GRPC proto definitions for 'Listener' class from 'apicustomcurveeditorcontroller.h'
+    message ApiCustomCurveEditorController_Listener
+    {
+    // Request packet corresponding to '[in] parameters in Listener::onVisualChange'
+        message onVisualChangeRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // If true, the four "select sub curve" buttons should be visible (and enabled). If
+            bool subCurveButtonsVisible = 2;
+            // If subCurveButtonsVisible is true, this is the one of them that should be
+            Button activeSubCurveButton = 3;
+            // If true, the "delete selected point" button should be enabled. If false, it should
+            bool deleteSelectedPointButtonEnabled = 4;
+            // The type of mouse cursor that should be used when the mouse is over the editor.
+            MouseCursorType mouseCursorType = 5;
+        }
+
+    }
+     // GRPC proto definitions for 'Drawer' class from 'apicustomcurveeditorcontroller.h'
+    message ApiCustomCurveEditorController_Drawer
+    {
+        enum Color 
+        {
+            Background = 0;
+            Grid = 1;
+            SubCurvePrimary = 2;
+            SubCurveSecondaryRed = 3;
+            SubCurveSecondaryGreen = 4;
+            SubCurveSecondaryBlue = 5;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::setColor'
+        message setColorRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The color to use.
+            Color color = 2;
+            // The opacity to use. This will always be in the range [0, 1].
+            float opacity = 3;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::setClipRegionAndFillBackground'
+        message setClipRegionAndFillBackgroundRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The top left corner of the clip region.
+            int32_2 position = 2;
+            // The size of the clip region.
+            int32_2 size = 3;
+            // Radius of the rounded corners of the clip region.
+            int32 cornerRadius = 4;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::drawRectangle'
+        message drawRectangleRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The top left corner of the rectangle.
+            int32_2 position = 2;
+            // The size of the rectangle.
+            int32_2 size = 3;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::fillRectangle'
+        message fillRectangleRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The top left corner of the rectangle.
+            int32_2 position = 2;
+            // The size of the rectangle.
+            int32_2 size = 3;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::fillCircle'
+        message fillCircleRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The center of the circle.
+            float_2 center = 2;
+            // The radius of the circle.
+            float radius = 3;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::startPath'
+        message startPathRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The initial "previous" point of the path.
+            float_2 point = 2;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::lineTo'
+        message lineToRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The end point of the line.
+            float_2 point = 2;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::cubicBezierTo'
+        message cubicBezierToRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The first control point.
+            float_2 controlPoint0 = 2;
+            // The second control point.
+            float_2 controlPoint1 = 3;
+            // The end point of the curve.
+            float_2 point = 4;
+        }
+
+    // Request packet corresponding to '[in] parameters in Drawer::finishPath'
+        message finishPathRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The thickness of the path.
+            float thickness = 2;
+        }
+
+    }
+    Buffer internal = 1;
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::setBounds'
+    message setBoundsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The position of the editor. This has no meaning to this class itself, except that all
+        int32_2 position = 2;
+        // The size of the editor.
+        int32_2 size = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onButtonClick'
+    message onButtonClickRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The button that was clicked.
+        Button button = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onKeyPress'
+    message onKeyPressRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The key that was pressed.
+        Key key = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onMouseMove'
+    message onMouseMoveRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The new mouse position.
+        float_2 mousePosition = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onMouseExit'
+    message onMouseExitRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onMouseDown'
+    message onMouseDownRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The mouse position.
+        float_2 mousePosition = 2;
+        // True if the mouse button that went down is the (logical) left mouse button. False if
+        bool leftButton = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCustomCurveEditorController::onMouseDown'
+    message onMouseDownResponse
+    {
+        //     True if this controller handled the event; false if it was not handled because it
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::onMouseUp'
+    message onMouseUpRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The mouse position.
+        float_2 mousePosition = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCustomCurveEditorController::draw'
+    message drawRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The drawer to use to do the actual drawing. This will not be accessed after this
+        ObjectRef drawer = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiCustomCurveEditorController' from 'apicustomcurveeditorcontroller.h'
+service ApiCustomCurveEditorControllerService
+{
+    /// Sets the position and size of the editor within some parent
+    rpc setBounds(ApiCustomCurveEditorController.setBoundsRequest) returns (google.protobuf.Empty);
+    /// Called when a button that works with the editor is clicked
+    rpc onButtonClick(ApiCustomCurveEditorController.onButtonClickRequest) returns (google.protobuf.Empty);
+    /// Called when a key that works with the editor is pressed when the editor has keyboard focus
+    rpc onKeyPress(ApiCustomCurveEditorController.onKeyPressRequest) returns (google.protobuf.Empty);
+    /// Called when the mouse is moved
+    rpc onMouseMove(ApiCustomCurveEditorController.onMouseMoveRequest) returns (google.protobuf.Empty);
+    /// Called when the mouse is moved to a position that's definitely not over the editor, so the
+    /// last given position is no longer valid
+    rpc onMouseExit(ApiCustomCurveEditorController.onMouseExitRequest) returns (google.protobuf.Empty);
+    /// Called when a mouse button is pressed when the mouse is at a position that's potentially
+    /// over the editor
+    rpc onMouseDown(ApiCustomCurveEditorController.onMouseDownRequest) returns (ApiCustomCurveEditorController.onMouseDownResponse);
+    /// Called when a mouse button is released
+    rpc onMouseUp(ApiCustomCurveEditorController.onMouseUpRequest) returns (google.protobuf.Empty);
+    /// Draws the editor, using the provided drawer
+    rpc draw(ApiCustomCurveEditorController.drawRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiCustomCurveEditorController_Drawer' from 'apicustomcurveeditorcontroller.h'
+service ApiCustomCurveEditorController_DrawerService
+{
+    /// Sets the color and opacity to use for future drawing commands
+    rpc setColor(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.setColorRequest) returns (google.protobuf.Empty);
+    /// Sets the clip region to an antialiased rounded rectangle (if possible; if not then an
+        /// aliased rounded rectangle or just a non-rounded rectangle is OK) and then fills with the
+        /// current color
+    rpc setClipRegionAndFillBackground(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.setClipRegionAndFillBackgroundRequest) returns (google.protobuf.Empty);
+    /// Draws the border of a rectangle, one pixel thick
+    rpc drawRectangle(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.drawRectangleRequest) returns (google.protobuf.Empty);
+    /// Fills a rectangle
+    rpc fillRectangle(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.fillRectangleRequest) returns (google.protobuf.Empty);
+    /// Fills a circle
+    rpc fillCircle(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.fillCircleRequest) returns (google.protobuf.Empty);
+    /// Starts building a path to be drawn later when finishPath is called
+    rpc startPath(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.startPathRequest) returns (google.protobuf.Empty);
+    /// Adds to the current path a line from the previous point to the given end point, and then
+        /// sets the previous point to the end point of the line
+    rpc lineTo(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.lineToRequest) returns (google.protobuf.Empty);
+    /// Adds to the current path a cubic Bezier curve from the previous point to the given end
+        /// point (using the two given control points), and then sets the previous point to the end
+        /// point of the curve
+    rpc cubicBezierTo(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.cubicBezierToRequest) returns (google.protobuf.Empty);
+    /// Draws the path that has been built up by calls to startPath/lineTo/cubicTo, and clears
+        /// the path ready to possibly start a new one from scratch
+    rpc finishPath(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Drawer.finishPathRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiCustomCurveEditorController_Listener' from 'apicustomcurveeditorcontroller.h'
+service ApiCustomCurveEditorController_ListenerService
+{
+    /// Called when the editor needs to be redrawn, or any of the values passed as arguments
+        /// have changed since this was last called
+    rpc onVisualChange(ApiCustomCurveEditorController.ApiCustomCurveEditorController_Listener.onVisualChangeRequest) returns (google.protobuf.Empty);
+}

@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Python virtual environment (for gRPC proxy)
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build output
+dist/
+.vite/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated proto files (reference only)
+server/src/generated/
+
+# Icon extraction temporary files
+extracted_icons/
+extracted_icons_v2/
+icon_backup_before_remap/
+alignment_debug_*.png
+samples_img*.png
+test_cam_*.png
+*_debug*.png
+*_samples*.png
+icon_positions_debug.png
+menu_structure_analysis.png
+text_match_debug_*.png
+camera_icon_final_verification.png
+grid_detection_img2.png
+img2_grid_candidates.png
+
+# Icon extraction scripts (development only)
+extract_icons_*.py
+analyze_screenshot_structure.py
+create_mapping_template.py
+debug_icon_positions.py
+map_icons_with_ocr.py
+sample_pixels.py
+mapping_helper.html

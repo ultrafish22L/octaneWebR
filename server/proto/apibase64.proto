@@ -1,0 +1,70 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+
+ // GRPC proto definitions for 'ApiBase64' class from 'apibase64.h'
+message ApiBase64
+{
+    // Request packet corresponding to '[in] parameters in ApiBase64::cleanupResult'
+    message cleanupResultRequest
+    {
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBase64::encode'
+    message encodeRequest
+    {
+        // The data block to encode.
+        string data = 1;
+        // The size of the data block.
+        uint32 size = 2;
+        // Set to TRUE to use base 64 URL-safe encoding
+        bool useBase64Url = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBase64::encode'
+    message encodeResponse
+    {
+        //     TRUE if the encoding was successful.
+        bool result = 1;
+        // The base64-encoded string. This should be cleaned up by calling cleanupResult().
+        string encoded = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBase64::decode'
+    message decodeRequest
+    {
+        // The data block to encode.
+        string data = 1;
+        // The maximum size of the data block to decode.
+        uint32 size = 2;
+        // Set to TRUE to use base 64 URL-safe encoding
+        bool useBase64Url = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBase64::decode'
+    message decodeResponse
+    {
+        //     TRUE if the encoding was successful
+        bool result = 1;
+        // The base64-encoded string. This should be cleaned up by calling cleanupResult().
+        bytes decoded = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiBase64' from 'apibase64.h'
+service ApiBase64Service
+{
+    /// Encodes the given data block as base64
+    rpc encode(ApiBase64.encodeRequest) returns (ApiBase64.encodeResponse);
+    /// Encodes the given data block as base64
+    rpc decode(ApiBase64.decodeRequest) returns (ApiBase64.decodeResponse);
+}

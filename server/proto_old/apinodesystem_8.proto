@@ -1,0 +1,242 @@
+syntax = "proto3";
+package octaneapi;
+option optimize_for = CODE_SIZE;
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octanetime.proto";
+
+message ApiRootNodeGraph
+{
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::animationTimeSpan'
+    message animationTimeSpanRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::animationTimeSpan'
+    message animationTimeSpanResponse
+    {
+        
+        TimeSpanT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::convertAndEvaluate'
+    message convertAndEvaluateRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::create'
+    message createRequest
+    {
+        uint32 version = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::exportToFile'
+    message exportToFileRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // absolute path of the file. This can be a .orbx or a .ocs file.
+        string filePath = 2;
+        // set whether to save asset file paths relative to @ref filePath
+        bool useRelativePaths = 3;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::exportToFile'
+    message exportToFileResponse
+    {
+        //     TRUE on successful write, FALSE otherwisein which case there
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::exportToString'
+    message exportToStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Absolute path to the export directory for assets (optional).
+        string baseDirectory = 2;
+        // set whether to save asset file paths relative to @ref baseDirectory
+        bool useRelativePaths = 3;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::exportToString'
+    message exportToStringResponse
+    {
+        //     Null terminated OCS XML, which is owned by the API and shouldn't be deleted and stays
+        string result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::importFromFile'
+    message importFromFileRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Absolute path to the .ocs or .orbx file.
+        string path = 2;
+        // Callback will be called if the ocs loader could not find an asset file.
+        AssetMissingCallbackT assetMissingCallback = 3;
+        uint64 assetsMissingCallbackUserData = 4;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::importFromFile'
+    message importFromFileResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+        // Octane version the OCS XML string was written with.
+        uint32 ocsVersion = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::importOcsFromMemory'
+    message importOcsFromMemoryRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Path to a base directory used to resolve relative paths in the xml.
+        string baseDirectory = 2;
+        // XML string. Doesn't need to be null terminated.
+        string xml = 3;
+        // Length of the XML string (excl. any terminators).
+        uint32 xmlLength = 4;
+        // Callback will be called if the ocs loader could not find an asset file.
+        AssetMissingCallbackT assetMissingCallback = 5;
+        uint64 assetsMissingCallbackUserData = 6;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::importOcsFromMemory'
+    message importOcsFromMemoryResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+        // Octane version the OCS XML string was written with.
+        uint32 ocsVersion = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::importOrbxFromCallback'
+    message importOrbxFromCallbackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Path to a base directory used to unpack the assets from the ORBX.
+        string baseDirectory = 2;
+        // The callback that returns ORBX file data in memory buffer chunk by chunk.
+        NextChunkCallbackT getOrbxChunkCallback = 3;
+        // Opaque user data passed in by the plugin.
+        uint64 orbxChunkCallbackUserData = 4;
+        // Callback will be called if the ocs loader could not find an asset file.
+        AssetMissingCallbackT assetMissingCallback = 5;
+        // Opaque user data passed in by the plug in.
+        uint64 assetMissingCallbackUserData = 6;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::importOrbxFromCallback'
+    message importOrbxFromCallbackResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+        // Id of second callback function
+        uint32 callbackId2 = 3;
+        // Octane version the ORBX project data was written with.
+        uint32 ocsVersion = 4;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::importOrbxFromMemory'
+    message importOrbxFromMemoryRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Path to a base directory used to unpack the assets from the ORBX.
+        string baseDirectory = 2;
+        // The ORBX data buffer.
+        Buffer orbxData = 3;
+        // The size of ORBX data buffer.
+        uint32 dataSize = 4;
+        // Callback will be called if the ocs loader could not find an asset file.
+        AssetMissingCallbackT assetMissingCallback = 5;
+        uint64 assetsMissingCallbackUserData = 6;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::importOrbxFromMemory'
+    message importOrbxFromMemoryResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+        // Octane version the ORBX project data was written with.
+        uint32 ocsVersion = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::init'
+    message initRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 version = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::loadAllReferences'
+    message loadAllReferencesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::referenceGraphCount'
+    message referenceGraphCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiRootNodeGraph::referenceGraphCount'
+    message referenceGraphCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::unloadAllReferences'
+    message unloadAllReferencesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRootNodeGraph::updateTime'
+    message updateTimeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The new time stamp
+        TimeT time = 2;
+    }
+}
+service ApiRootNodeGraphService
+{
+    /// Creates a root node graph (graph without owner) with the specified version
+    rpc create2(ApiRootNodeGraph.createRequest) returns (ApiRootNodeGraph.createResponse);
+    /// Clears the root node graph (it will be empty afterwards) and sets it to the specified
+    /// version
+    rpc init2(ApiRootNodeGraph.initRequest) returns (google.protobuf.Empty);
+    /// Converts the root node graph to the current version and evaluates all nodes
+    rpc convertAndEvaluate(ApiRootNodeGraph.convertAndEvaluateRequest) returns (google.protobuf.Empty);
+    /// Returns the total time span for all animations in this graph
+    rpc animationTimeSpan(ApiRootNodeGraph.animationTimeSpanRequest) returns (ApiRootNodeGraph.animationTimeSpanResponse);
+    /// Updates the time of all attributes in this root node graph
+    rpc updateTime(ApiRootNodeGraph.updateTimeRequest) returns (google.protobuf.Empty);
+    /// Imports a scene from disk into this graph
+    rpc importFromFile(ApiRootNodeGraph.importFromFileRequest) returns (ApiRootNodeGraph.importFromFileResponse);
+    /// Imports an OCS XML string scene from disk into this graph
+    rpc importOcsFromMemory(ApiRootNodeGraph.importOcsFromMemoryRequest) returns (ApiRootNodeGraph.importOcsFromMemoryResponse);
+    /// Imports an ORBX data from memory into this graph, chunk by chunk
+    rpc importOrbxFromCallback(ApiRootNodeGraph.importOrbxFromCallbackRequest) returns (ApiRootNodeGraph.importOrbxFromCallbackResponse);
+    /// Imports an ORBX data from memory into this graph
+    rpc importOrbxFromMemory(ApiRootNodeGraph.importOrbxFromMemoryRequest) returns (ApiRootNodeGraph.importOrbxFromMemoryResponse);
+    /// Exports this root graph into a file (regular ocs or package)
+    rpc exportToFile(ApiRootNodeGraph.exportToFileRequest) returns (ApiRootNodeGraph.exportToFileResponse);
+    /// Exports this graph into a string and optionally exports the raw data
+    rpc exportToString(ApiRootNodeGraph.exportToStringRequest) returns (ApiRootNodeGraph.exportToStringResponse);
+    /// Returns the number of reference graphs that this root graph contains
+    rpc referenceGraphCount(ApiRootNodeGraph.referenceGraphCountRequest) returns (ApiRootNodeGraph.referenceGraphCountResponse);
+    /// Loads all reference graphs in this graph
+    rpc loadAllReferences(ApiRootNodeGraph.loadAllReferencesRequest) returns (google.protobuf.Empty);
+    /// Unloads all reference graphs in this graph
+    rpc unloadAllReferences(ApiRootNodeGraph.unloadAllReferencesRequest) returns (google.protobuf.Empty);
+}
+

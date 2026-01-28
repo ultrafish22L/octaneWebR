@@ -1,0 +1,243 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiGridLayout' class from 'apigridlayout.h'
+message ApiGridLayout
+{
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGridLayout::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::startSetup'
+    message startSetupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The horizontal margin that should be used left and right around the grid. If negative
+        int32 borderX = 2;
+        // The vertical margin that should be used top and bottom around the grid. If negative
+        int32 borderY = 3;
+        // The default padding that will be used between columns. If the value is negative
+        int32 paddingX = 4;
+        // The default padding that will be used between rows . If the value is negative
+        int32 paddingY = 5;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::endSetup'
+    message endSetupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::add'
+    message addRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The component to add. The layout will NOT take ownership of the component. I.e. the
+        ObjectRef child = 2;
+        // The row of the grid cell where the component will be placed. The grid will be
+        uint32 cellX = 3;
+        // The column of the grid cell where the component will be placed. The grid will be
+        uint32 cellY = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::addEmpty'
+    message addEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The row of the empty grid cell. The grid will be automatically extended if necessary.
+        uint32 cellX = 2;
+        // The column of the empty grid cell. The grid will be automatically extended if necessary.
+        uint32 cellY = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::addSpan'
+    message addSpanRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Component to add in the span.
+        ObjectRef child = 2;
+        // The first column of the span.
+        uint32 minCellX = 3;
+        // The first row of the span.
+        uint32 minCellY = 4;
+        // The last column of the span.
+        uint32 maxCellX = 5;
+        // The last row of the span.
+        uint32 maxCellY = 6;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::setStartSize'
+    message setStartSizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 cellX = 2;
+        uint32 cellY = 3;
+        int32 sizeX = 4;
+        int32 sizeY = 5;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::setRowElasticity'
+    message setRowElasticityRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the rowIx.
+        uint32 rowIx = 2;
+        // The elasticity (must be >= 0).
+        float elasticity = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::setColElasticity'
+    message setColElasticityRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the column.
+        uint32 columnIx = 2;
+        // The elasticity (must be >= 0).
+        float elasticity = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::setElasticityForAllRows'
+    message setElasticityForAllRowsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        float elasticity = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::setElasticityForAllCols'
+    message setElasticityForAllColsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        float elasticity = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::startNestedGrid'
+    message startNestedGridRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The row of the start of the cell range the nested grid will be placed in.
+        uint32 minCellX = 2;
+        // The column of the start of the cell range the nested grid will be placed in.
+        uint32 minCellY = 3;
+        // The row of the end of the cell range the nested grid will be placed in.
+        uint32 maxCellX = 4;
+        // The column of the end of the cell range the nested grid will be placed in.
+        uint32 maxCellY = 5;
+        // The horizontal margin that should be used left and right around the grid. If negative
+        int32 borderX = 6;
+        // The vertical margin that should be used top and bottom around the grid. If negative
+        int32 borderY = 7;
+        // The default padding that will be used between columns. If the value is negative or
+        int32 paddingX = 8;
+        // The default padding that will be used between rows. If the value is negative or
+        int32 paddingY = 9;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::endNestedGrid'
+    message endNestedGridRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::width'
+    message widthRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGridLayout::width'
+    message widthResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGridLayout::height'
+    message heightRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGridLayout::height'
+    message heightResponse
+    {
+        
+        int32 result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiGridLayout' from 'apigridlayout.h'
+service ApiGridLayoutService
+{
+    /// Creates a new ApiGridLayout or returns a NULL pointer when creation failed
+    rpc create(ApiGridLayout.createRequest) returns (ApiGridLayout.createResponse);
+    /// Destroys the component created with create()
+    rpc destroy(ApiGridLayout.destroyRequest) returns (google.protobuf.Empty);
+    /// Starts the set up phase, where components can be added to the grid
+    rpc startSetup(ApiGridLayout.startSetupRequest) returns (google.protobuf.Empty);
+    /// Creates the initial layout and resizes the parent component accordingly
+    rpc endSetup(ApiGridLayout.endSetupRequest) returns (google.protobuf.Empty);
+    /// Adds a new component to a grid cell
+    rpc add(ApiGridLayout.addRequest) returns (google.protobuf.Empty);
+    /// Add a new empty grid cell
+    rpc addEmpty(ApiGridLayout.addEmptyRequest) returns (google.protobuf.Empty);
+    /// Adds a new component spanning multiple cells of the grid
+    rpc addSpan(ApiGridLayout.addSpanRequest) returns (google.protobuf.Empty);
+    /// Sets a minimum start size for a cell during the layout setup
+    rpc setStartSize(ApiGridLayout.setStartSizeRequest) returns (google.protobuf.Empty);
+    /// Sets the stretch factor of a row
+    rpc setRowElasticity(ApiGridLayout.setRowElasticityRequest) returns (google.protobuf.Empty);
+    /// Sets the stretch factor of a column
+    rpc setColElasticity(ApiGridLayout.setColElasticityRequest) returns (google.protobuf.Empty);
+    /// Sets the elasticity for all the rows in the grid (which is the current active grid, i
+    rpc setElasticityForAllRows(ApiGridLayout.setElasticityForAllRowsRequest) returns (google.protobuf.Empty);
+    /// Sets the elasticity for all the colums in the grid (which is the current active grid, i
+    rpc setElasticityForAllCols(ApiGridLayout.setElasticityForAllColsRequest) returns (google.protobuf.Empty);
+    /// Starts a new nested grid
+    rpc startNestedGrid(ApiGridLayout.startNestedGridRequest) returns (google.protobuf.Empty);
+    /// Finishes the current nested grid and switches the context back to the parent grid
+    rpc endNestedGrid(ApiGridLayout.endNestedGridRequest) returns (google.protobuf.Empty);
+    /// Returns the current width of the grid in pixels
+    rpc width(ApiGridLayout.widthRequest) returns (ApiGridLayout.widthResponse);
+    /// Returns the current height of the grid in pixels
+    rpc height(ApiGridLayout.heightRequest) returns (ApiGridLayout.heightResponse);
+}

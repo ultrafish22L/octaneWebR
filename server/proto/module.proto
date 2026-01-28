@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package octaneapi;
+ 
+// The service definition, exposing "Start" and "Stop" RPC methods to the client.
+service ModuleService {
+  // The module is asked to start. The request can contain
+  // parameters (e.g., config data) if needed.
+  rpc Start (StartRequest) returns (StartReply);
+
+  // The module is asked to stop. 
+  rpc Stop (StopRequest) returns (StopReply);
+}
+
+// A simple request message for starting the module.
+message StartRequest {
+  // You can add fields as needed. For example, 
+  // string startupConfig = 1;
+}
+
+// A possible response after requesting start.
+message StartReply {
+  // For instance, if the start was successful:
+  bool success = 1; 
+}
+
+// A simple request message for stopping the module.
+message StopRequest {
+  // Possibly add fields if the stop command needs parameters.
+}
+
+// A possible response for the stop call.
+message StopReply {
+  // Whether the stop succeeded:
+  bool success = 1; 
+}

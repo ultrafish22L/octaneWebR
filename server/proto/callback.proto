@@ -1,0 +1,502 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "apirender.proto";
+import "apimouselistener.proto";
+import "octaneenums.proto";
+import "octanenet.proto";
+import "google/protobuf/empty.proto";
+
+service CallbackHandler
+{
+    rpc Start (StartRequest) returns (StartResponse);
+    rpc Stop (StopRequest) returns (StopResponse);
+    rpc PerformBlocking (google.protobuf.Empty) returns (CallbackAck);
+    rpc LoadRenderStateProject (LoadRenderStateProjectRequest) returns (LoadRenderStateProjectResponse);
+    rpc OnDaemonUpdate (DaemonUpdateRequest) returns (CallbackAck);
+    rpc OnStatusUpdate (StatusUpdateRequest) returns (CallbackAck);
+    rpc TriggerFunc (TriggerFuncRequest) returns (CallbackAck);
+    rpc EvaluateFunc (EvaluateFuncRequest) returns (CallbackAck);
+    rpc CleanupFunc (CleanupFuncRequest) returns (CallbackAck);
+    rpc DestroyFunc (DestroyFuncRequest) returns (CallbackAck);
+    rpc ColorChanged (ColorChangedRequest) returns (CallbackAck);
+    rpc CreateFunc (CreateFuncRequest) returns (CreateFuncResponse);
+    rpc InitFunc (InitFuncRequest) returns (InitFuncResponse);
+    rpc ChangeManagerObserver (ChangeManagerObserverRequest) returns (CallbackAck);
+    rpc ChangeManagerTimeObserver (ChangeManagerTimeObserverRequest) returns (CallbackAck);
+    rpc ProjectManagerObserver (ObserverRequest) returns (CallbackAck);
+    rpc SelectionManagerObserver (ObserverRequest) returns (CallbackAck);
+    rpc IsReady (IsReadyRequest) returns (IsReadyResponse);
+    rpc Notify (NotificationRequest) returns (NotificationResponse);
+    rpc CommandModuleRunFunc (CommandModuleRunFuncRequest) returns (CallbackAck);
+    rpc ObserverCallback (ObserverCallbackRequest) returns (CallbackAck);
+    rpc DbViewLoaded (DbViewLoadedRequest) returns (CallbackAck);
+    rpc Finish (FinishRequest) returns (CallbackAck);
+    rpc OnTileBlended (BasicCallbackRequest) returns (CallbackAck);
+    rpc OnNewStatistics (BasicCallbackRequest) returns (CallbackAck);
+    rpc OnNewImage (OnNewImageRequest) returns (CallbackAck);
+    rpc OnOcioError (OnOcioErrorRequest) returns (CallbackAck);
+    rpc OnRenderFailure (BasicCallbackRequest) returns (CallbackAck);
+    rpc NextChunk (NextChunkRequest) returns (NextChunkResponse);
+    rpc Checked (CheckedRequest) returns (CallbackAck);
+    rpc ComboBoxChanged (ComboBoxChangedRequest) returns (CallbackAck);
+    rpc ApiLog (ApiLogRequest) returns (CallbackAck);
+    rpc OnMainWindowClose (BasicCallbackRequest) returns (CallbackAck);
+    rpc MouseEvent (MouseEventRequest) returns (CallbackAck);
+    rpc DbViewClosing (BasicCallbackRequest) returns (CallbackAck);
+    rpc NumericBoxChanged (NumericBoxChangedRequest) returns (CallbackAck);
+    rpc Callback1 (Callback1Request) returns (CallbackAck);
+    rpc Callback2 (Callback2Request) returns (CallbackAck);
+    rpc ApiProjectManager_AssetMissing (AssetMissingRequest) returns (AssetMissingResponse);
+    rpc Update (UpdateRequest) returns (UpdateResponse);
+    rpc AsyncUpdate (AsyncUpdateRequest) returns (UpdateResponse);
+    rpc AssetMissing (AssetMissingRequest) returns (AssetMissingResponse);
+    rpc NumRows (BasicCallbackRequest) returns (NumRowsResponse);
+    rpc Content (ContentRequest) returns (ContentResponse);
+    rpc ButtonClicked (ButtonClickedRequest) returns (CallbackAck);
+    rpc SelectionChanged (SelectionChangedRequest) returns (CallbackAck);
+    rpc TextEditorChanged (TextEditorChangedRequest) returns (CallbackAck);
+    rpc OnWindowClose (OnWindowCloseRequest) returns (CallbackAck);
+}
+
+message BasicCallbackRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message OnNewImageRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ApiArrayApiRenderImage render_images = 4;
+}
+ 
+
+message LoadRenderStateProjectRequest
+{
+    int32  callback_id = 1;
+    string customProjectFileName = 2;
+    float  customProjectTime = 3;
+    uint64 customVersion = 4;
+    bytes  custom_data = 5;
+    uint64 user_data = 6;
+}
+
+message LoadRenderStateProjectResponse
+{
+    ObjectRef moduleNodeGraph = 2;
+}
+
+message DaemonUpdateRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    repeated NetDaemonInfo daemonInfoArray = 3;
+    uint64 user_data = 4;
+}
+
+message StatusUpdateRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    NetRenderStatus status= 3;
+    uint64 user_data = 4;
+}
+
+message TriggerFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message EvaluateFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message CleanupFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message DestroyFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message ColorChangedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    ObjectRef apiColorSwatch = 3;
+    uint64 user_data = 4;
+}
+
+message CreateFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    ObjectRef moduleNodeGraph = 3;
+}
+
+message CreateFuncResponse
+{
+    uint64 user_data = 1;
+}
+
+message InitFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    ObjectRef apiGridLayout = 3;
+}
+
+message InitFuncResponse
+{
+    uint64 user_data = 1;
+}
+
+// A simple request message for starting the module.
+message IsReadyRequest
+{
+
+}
+
+// A possible response after requesting start.
+message IsReadyResponse
+{
+    bool success = 1;
+}
+
+// A simple request message for starting the module.
+message StartRequest
+{
+    // passed back to server so the server knowns which client to send events to
+    string callbackSource = 1;
+    // true iof dispalyng Englihs (the first langauge), false if displaying the scond language
+    bool displayingEnglish = 2;
+    // the language ID of the second langauge supports bys tandalone
+    int32 secondLanguage = 3;
+}
+
+message StartResponse
+{
+    bool success = 1;
+}
+
+message StopRequest
+{
+
+}
+
+message StopResponse
+{
+    bool success = 1;
+}
+
+message TimeChangeEvent
+{
+    TimeEventType type = 1;
+    ObjectRef rootGraph = 2;
+}
+
+message ChangeManagerTimeObserverRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    TimeChangeEvent eventData = 4;
+}
+
+// The ChangeEvent message and its enum "Type"
+message ChangeEvent
+{
+    // Enum of possible event types
+    enum Type
+    {
+        ITEM_ADDED = 0;
+        ITEM_DELETE = 1;
+        CONNECTION_CHANGED = 2;
+        DESTINATION_ADDED = 3;
+        PINS_CHANGED = 4;
+        ITEM_VALUE_CHANGED = 5;
+        ITEM_INPUT_CHANGED = 6;
+        ITEM_NAME_CHANGED = 7;
+        ITEM_MOVED = 8;
+        LINKER_ORDER_CHANGED = 9;
+        ITEM_UI_OPERATION_FLAG_CHANGED = 10;
+        TIME_TRANSFORM_CHANGED = 11;
+    }
+
+    // The change type of the event.
+    Type type = 1;
+
+    // The owner of added/removed items (originally mChangedOwner).
+    ObjectRef changedOwner = 2;
+
+    // The index of a pin if changed_owner is a node
+    uint32 changedOwnerPinIx = 3;
+
+    // The item that got changed 
+    ObjectRef changedItem = 4;
+
+    // The index of the pin for CONNECTION_CHANGED events.
+    uint32 changedPinIx = 5;
+
+    repeated uint32 changedIndices = 6; 
+}
+
+message ChangeManagerObserverRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ChangeEvent eventData = 4;
+}
+
+message ObserverRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message NotificationRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    string notification_id = 3; // Unique identifier for this notification
+    string message = 4;         // The message to send to the clien
+    ApiArrayApiRenderImage images = 5;
+}
+
+message NotificationResponse
+{
+    string status = 1;          // Acknowledgment from the client
+}
+
+message CallbackAck
+{
+    bool success = 1;
+}
+
+
+
+message CommandModuleRunFuncRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message ObserverCallbackRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    int32 type = 4;
+    string path = 5;
+}
+
+message DbViewLoadedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    int32 origin = 4;
+}
+ 
+message FinishRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    bool success = 4;
+    string error_msg = 5;
+    string scene_guid = 6;
+    string root_guid = 7;
+    string scene_name = 8;
+}
+
+
+message OnOcioErrorRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    repeated string messages = 4;
+    bool has_error = 5;
+}
+
+message NextChunkRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+}
+
+message NextChunkResponse
+{
+    string callback_source = 1;
+    uint64 chunk_size = 2;
+    bytes data_chunk = 3;
+}
+
+message CheckedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef button = 4;
+}
+
+message ComboBoxChangedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef combo_box = 4;
+}
+
+message ApiLogRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    int32 log_type = 3;
+    string message = 4;
+}
+
+message MouseEventRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    int32 event_type = 4;
+    ApiMouseEvent event = 5;
+    ApiMouseWheelDetails wheel_details = 6;
+}
+
+message NumericBoxChangedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef numeric_box = 4;
+}
+
+message Callback1Request
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    bool loading = 4;
+    ObjectRef config = 5;
+}
+
+message Callback2Request
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef config = 4;
+    bool context_usable = 5;
+}
+
+message AssetMissingRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    string file_name = 4;
+}
+
+message AssetMissingResponse
+{
+    string resolved_file_path = 1;
+}
+
+message UpdateRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    float percent = 4;
+}
+
+message UpdateResponse
+{
+    bool continueUpload = 1;
+}
+
+message AsyncUpdateRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    uint64 change_level = 4;
+}
+
+message NumRowsResponse
+{
+    int32 num_rows = 1;
+}
+
+message ContentRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    int32 row = 4;
+    int32 column = 5;
+}
+
+message ContentResponse
+{
+    string content = 1;
+}
+
+message ButtonClickedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef text_button = 4;
+}
+
+message SelectionChangedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    int32 last_row_selected = 4;
+}
+
+message TextEditorChangedRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef text_edit = 4;
+}
+
+message OnWindowCloseRequest
+{
+    string callback_source = 1;
+    int32 callback_id = 2;
+    uint64 user_data = 3;
+    ObjectRef window = 4;
+}

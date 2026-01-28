@@ -1,0 +1,276 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneids.proto";
+
+ // GRPC proto definitions for 'VdbGridSampler' class from 'octanevolume.h'
+message VdbGridSampler
+{
+    uint64 dataPtr = 1;
+    bool ignoreTransform = 2;
+    // Request packet corresponding to '[in] parameters in VdbGridSampler::getValue'
+    message getValueRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The x coordinate of the sample point in world/local space based on how the sampler has been created
+        float x = 2;
+        // The y coordinate of the sample point in world/local space based on how the sampler has been created
+        float y = 3;
+        // The z coordinate of the sample point in world/local space based on how the sampler has been created
+        float z = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridSampler::getValue'
+    message getValueResponse
+    {
+        //     The sampled value at the given coordinate, if succeeded. OR zero on failure
+        float result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'VdbGridInfo' class from 'octanevolume.h'
+message VdbGridInfo
+{
+    string name = 1;
+    string type = 2;
+    uint32_3 resolution = 3;
+    int32_3 minBounds = 4;
+    int32_3 maxBounds = 5;
+    MatrixF transform = 6;
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::name'
+    message nameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::name'
+    message nameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::type'
+    message typeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::type'
+    message typeResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::resolution'
+    message resolutionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::resolution'
+    message resolutionResponse
+    {
+        
+        uint32_3 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::minBound'
+    message minBoundRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::minBound'
+    message minBoundResponse
+    {
+        
+        int32_3 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::maxBound'
+    message maxBoundRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::maxBound'
+    message maxBoundResponse
+    {
+        
+        int32_3 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbGridInfo::transform'
+    message transformRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbGridInfo::transform'
+    message transformResponse
+    {
+        
+        MatrixF result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'VdbInfo' class from 'octanevolume.h'
+message VdbInfo
+{
+    string fileName = 1;
+    Buffer fileStream = 2;
+    Buffer vdbStream = 3;
+    uint32 gridCount = 4;
+    ObjectRef grids = 5;
+    uint32 samplerIndex = 6;
+    ObjectRef sampler = 7;
+    // Request packet corresponding to '[in] parameters in VdbInfo::valid'
+    message validRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbInfo::valid'
+    message validResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbInfo::gridCount'
+    message gridCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbInfo::gridCount'
+    message gridCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbInfo::grid'
+    message gridRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the grid in the VDB file.
+        uint32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbInfo::grid'
+    message gridResponse
+    {
+        //     NULL.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbInfo::sampler'
+    message samplerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the grid in the VDB file.
+        uint32 index = 2;
+        // The flag indicating if we will apply the world transform
+        bool ignoreVdbTransform = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbInfo::sampler'
+    message samplerResponse
+    {
+        //     a pointer to a VdbGridSampler. Otherwise NULL.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbInfo::destroySampler'
+    message destroySamplerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in VdbInfo::findGrid'
+    message findGridRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // One of: A_VOLUME_ABSORPTION_ID,         float grid
+        AttributeId channelAttributeId = 2;
+        // Preferred grid name, perhaps as specified by the end-user. This grid name may be
+        string gridName = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'VdbInfo::findGrid'
+    message findGridResponse
+    {
+        //     If gridName specifies a grid that exists in this VDB, and it is of the correct type for
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'VdbGridInfo' from 'octanevolume.h'
+service VdbGridInfoService
+{
+    /// Returns the name of this grid
+    rpc name(VdbGridInfo.nameRequest) returns (VdbGridInfo.nameResponse);
+    /// Returns the type of this grid
+    rpc type(VdbGridInfo.typeRequest) returns (VdbGridInfo.typeResponse);
+    /// Returns the width, height and depth of the grid in voxels
+    rpc resolution(VdbGridInfo.resolutionRequest) returns (VdbGridInfo.resolutionResponse);
+    /// Returns the minimum active voxel bounding box of the grid
+    rpc minBound(VdbGridInfo.minBoundRequest) returns (VdbGridInfo.minBoundResponse);
+    /// Returns the maximum active voxel bounding box of the grid
+    rpc maxBound(VdbGridInfo.maxBoundRequest) returns (VdbGridInfo.maxBoundResponse);
+    /// Returns the _transposed_ transform from the VDB, excluding the perspective projection
+    rpc transform(VdbGridInfo.transformRequest) returns (VdbGridInfo.transformResponse);
+}
+
+// GRPC interface definition for class 'VdbGridSampler' from 'octanevolume.h'
+service VdbGridSamplerService
+{
+    /// Returns the voxel value at the given location of the current grid
+    rpc getValue(VdbGridSampler.getValueRequest) returns (VdbGridSampler.getValueResponse);
+}
+
+// GRPC interface definition for class 'VdbInfo' from 'octanevolume.h'
+service VdbInfoService
+{
+    /// If the VDB information was loaded successfully, this will return TRUE, otherwise FALSE
+    rpc valid(VdbInfo.validRequest) returns (VdbInfo.validResponse);
+    /// Returns the number of grids stored in the VDB file
+    rpc gridCount(VdbInfo.gridCountRequest) returns (VdbInfo.gridCountResponse);
+    /// Returns a pointer to the VdbGridInfo of the specified index or NULL if the index is invalid
+    /// or the VdbInfo wasn't loaded correctly
+    rpc grid(VdbInfo.gridRequest) returns (VdbInfo.gridResponse);
+    /// Returns a pointer to the VdbGridSampler of the specified index or NULL if the index is invalid
+    /// , the current grid is not a float grid or the VdbInfo wasn't loaded correctly
+    rpc sampler(VdbInfo.samplerRequest) returns (VdbInfo.samplerResponse);
+    /// Destroys the single sampler if any
+    rpc destroySampler(VdbInfo.destroySamplerRequest) returns (google.protobuf.Empty);
+    /// Convenience function to check whether a grid a) exists, b) is of a suitable type for the 
+    /// channel specified
+    rpc findGrid(VdbInfo.findGridRequest) returns (VdbInfo.findGridResponse);
+}

@@ -1,0 +1,265 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneids.proto";
+
+
+message PinSelectionArrayT
+{
+    repeated  ApiSelectionManager.ApiSelectionManager_PinSelection data = 1;
+}
+
+ // GRPC proto definitions for 'ApiSelectionManager' class from 'apiselectionmanager.h'
+message ApiSelectionManager
+{
+     // GRPC proto definitions for 'PinSelection' class from 'apiselectionmanager.h'
+    message ApiSelectionManager_PinSelection
+    {
+        ObjectRef node = 1;
+        uint32 pinIndex = 2;
+    }
+     // GRPC proto definitions for 'Observer' class from 'apiselectionmanager.h'
+    message ApiSelectionManager_Observer
+    {
+        OnChangeT callback = 1;
+        uint64 privateData = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::isItemSelected'
+    message isItemSelectedRequest
+    {
+        ObjectRef item = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::isItemSelected'
+    message isItemSelectedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::isPinSelected'
+    message isPinSelectedRequest
+    {
+        ObjectRef node = 1;
+        PinId pinId = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::isPinSelected'
+    message isPinSelectedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::isPinSelected1'
+    message isPinSelected1Request
+    {
+        ObjectRef node = 1;
+        string pinName = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::isPinSelected1'
+    message isPinSelected1Response
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::isPinSelectedIx'
+    message isPinSelectedIxRequest
+    {
+        ObjectRef node = 1;
+        uint32 pinIx = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::isPinSelectedIx'
+    message isPinSelectedIxResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::selectedItemCount'
+    message selectedItemCountRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::selectedItemCount'
+    message selectedItemCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::selectedPinCount'
+    message selectedPinCountRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::selectedPinCount'
+    message selectedPinCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::getSelection'
+    message getSelectionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::getSelection'
+    message getSelectionResponse
+    {
+        ObjectRefArrayT selectedItems = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::deleteSelectionArray'
+    message deleteSelectionArrayRequest
+    {
+        ObjectRefArrayT arrayToDelete = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::getSelection1'
+    message getSelection1Request
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::getSelection1'
+    message getSelection1Response
+    {
+        PinSelectionArrayT selectedPins = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::deletePinSelectionArray'
+    message deletePinSelectionArrayRequest
+    {
+        PinSelectionArrayT arrayToDelete = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::clearSelection'
+    message clearSelectionRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::setSelection'
+    message setSelectionRequest
+    {
+        // The selected node items or an empty array if no items should be selected.
+        ObjectRefArrayT selectedItems = 1;
+        // The explicitely selected node pins or an empty array if no pins should be selected
+        PinSelectionArrayT selectedPins = 2;
+        // If TRUE the destination pins of all selected items will be selected implicitely.
+        bool selectDestPins = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::select'
+    message selectRequest
+    {
+        // The selected node item.
+        ObjectRef item = 1;
+        // If TRUE the destination pins of the selected item will be selected implicitely.
+        bool selectDestPins = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::select1'
+    message select1Request
+    {
+        ObjectRef pinSelection = 1;
+        bool selectConnectedItem = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::deselect'
+    message deselectRequest
+    {
+        ObjectRef item = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::deselect1'
+    message deselect1Request
+    {
+        ObjectRef pin = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::swapSelection'
+    message swapSelectionRequest
+    {
+        ObjectRef oldItem = 1;
+        ObjectRef newItem = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::addSelectionObserver'
+    message addSelectionObserverRequest
+    {
+        // Selection change observer.
+        GRPCSelectionManagerObserverT observer = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSelectionManager::addSelectionObserver'
+    message addSelectionObserverResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSelectionManager::removeSelectionObserver'
+    message removeSelectionObserverRequest
+    {
+        GRPCSelectionManagerObserverT observer = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiSelectionManager' from 'apiselectionmanager.h'
+service ApiSelectionManagerService
+{
+    /// Returns TRUE if the specified item is currently selected
+    rpc isItemSelected(ApiSelectionManager.isItemSelectedRequest) returns (ApiSelectionManager.isItemSelectedResponse);
+    /// Returns TRUE if the specified pin is currently selected on the specified node
+    rpc isPinSelected(ApiSelectionManager.isPinSelectedRequest) returns (ApiSelectionManager.isPinSelectedResponse);
+    /// Returns TRUE if the specified pin is currently selected on the specified node
+    rpc isPinSelected1(ApiSelectionManager.isPinSelected1Request) returns (ApiSelectionManager.isPinSelected1Response);
+    /// Returns TRUE if the specified pin is currently selected on the specified node
+    rpc isPinSelectedIx(ApiSelectionManager.isPinSelectedIxRequest) returns (ApiSelectionManager.isPinSelectedIxResponse);
+    /// Returns the number of selected items
+    rpc selectedItemCount(ApiSelectionManager.selectedItemCountRequest) returns (ApiSelectionManager.selectedItemCountResponse);
+    /// Returns the number of selected pins
+    rpc selectedPinCount(ApiSelectionManager.selectedPinCountRequest) returns (ApiSelectionManager.selectedPinCountResponse);
+    /// Copies the set of currently selected items into the specified array
+    rpc getSelection(ApiSelectionManager.getSelectionRequest) returns (ApiSelectionManager.getSelectionResponse);
+    /// Copies the set of currently selected pins into the specified array
+    rpc getSelection1(ApiSelectionManager.getSelection1Request) returns (ApiSelectionManager.getSelection1Response);
+    /// De-selects everything and sends a selection change event if something actually got
+    /// deselected
+    rpc clearSelection(ApiSelectionManager.clearSelectionRequest) returns (google.protobuf.Empty);
+    /// Replaces the complete current selection with a new item/pin selection and sends a selection
+    /// change event
+    rpc setSelection(ApiSelectionManager.setSelectionRequest) returns (google.protobuf.Empty);
+    /// Adds an item to the current selection and sends a change event if the selection changed
+    rpc select(ApiSelectionManager.selectRequest) returns (google.protobuf.Empty);
+    /// Adds a pin to the current selection and sends a change event if the selection changed
+    rpc select1(ApiSelectionManager.select1Request) returns (google.protobuf.Empty);
+    /// Removed an item from the current selection and sends a change event if the selection changed
+    rpc deselect(ApiSelectionManager.deselectRequest) returns (google.protobuf.Empty);
+    /// Removes a pin from the current selection and sends a change event if the selection changed
+    rpc deselect1(ApiSelectionManager.deselect1Request) returns (google.protobuf.Empty);
+    /// If the old item was selected, the new item will be selected and the old item deselected
+    rpc swapSelection(ApiSelectionManager.swapSelectionRequest) returns (google.protobuf.Empty);
+    /// Adds a selection changed observer
+    rpc addSelectionObserver(ApiSelectionManager.addSelectionObserverRequest) returns (ApiSelectionManager.addSelectionObserverResponse);
+    /// Removes a selection observer
+    rpc removeSelectionObserver(ApiSelectionManager.removeSelectionObserverRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiSelectionManager_Observer' from 'apiselectionmanager.h'
+
+// GRPC interface definition for class 'ApiSelectionManager_PinSelection' from 'apiselectionmanager.h'

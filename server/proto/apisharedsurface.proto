@@ -1,0 +1,169 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiSharedSurface' class from 'apisharedsurface.h'
+message ApiSharedSurface
+{
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::createD3D11'
+    message createD3D11Request
+    {
+        // The LUID of the D3D11 adapter on which the shared texture exists. The two fields from
+        uint64 adapterLuid = 1;
+        // HANDLE for a shared ID3D11Texture2D instance. Must not be null. This must have been
+        uint64 handle = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::createD3D11'
+    message createD3D11Response
+    {
+        //     The created shared surface. Will not be null. Must be released.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::equals'
+    message equalsRequest
+    {
+        // The first object to compare, or null.
+        ObjectRef a = 1;
+        // The second object to compare, or null.
+        ObjectRef b = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::equals'
+    message equalsResponse
+    {
+        //     True if both a and b are null or both are non-null and point to objects that refer to
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::isLessThan'
+    message isLessThanRequest
+    {
+        // The first object to compare, or null.
+        ObjectRef a = 1;
+        // The second object to compare, or null.
+        ObjectRef b = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::isLessThan'
+    message isLessThanResponse
+    {
+        //     True if a is less than b, where null is considered less than everything else, and two
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::hash'
+    message hashRequest
+    {
+        // The object for which to get the hash, or null.
+        ObjectRef surface = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::hash'
+    message hashResponse
+    {
+        //     A hash value the underlying shared surface object, or some fixed hash value if surface
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::release'
+    message releaseRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::clone'
+    message cloneRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::clone'
+    message cloneResponse
+    {
+        //     The created instance. Will not be null. Must be released.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::getType'
+    message getTypeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::getType'
+    message getTypeResponse
+    {
+        
+        SharedSurfaceType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::getD3D11AdapterLuid'
+    message getD3D11AdapterLuidRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::getD3D11AdapterLuid'
+    message getD3D11AdapterLuidResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSharedSurface::getD3D11Handle'
+    message getD3D11HandleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSharedSurface::getD3D11Handle'
+    message getD3D11HandleResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiSharedSurface' from 'apisharedsurface.h'
+service ApiSharedSurfaceService
+{
+    /// Creates a shared surface with a D3D11 texture
+    rpc createD3D11(ApiSharedSurface.createD3D11Request) returns (ApiSharedSurface.createD3D11Response);
+    /// Returns whether two ApiSharedSurface pointers refer to the same underlying shared surface
+    /// object
+    rpc equals(ApiSharedSurface.equalsRequest) returns (ApiSharedSurface.equalsResponse);
+    /// Defines a strict total order of ApiSharedSurface pointers based on the underlying shared
+    /// surface object
+    rpc isLessThan(ApiSharedSurface.isLessThanRequest) returns (ApiSharedSurface.isLessThanResponse);
+    /// Returns a hash value that's the same for ApiSharedSurface instances that refer to the same
+    /// underlying shared surface object
+    rpc hash(ApiSharedSurface.hashRequest) returns (ApiSharedSurface.hashResponse);
+    /// Destroys this specific ApiSharedSurface instance, decrementing the reference count of the
+    /// underlying shared surface object
+    rpc release(ApiSharedSurface.releaseRequest) returns (google.protobuf.Empty);
+    /// Creates a new ApiSharedSurface instance that refers to the same underlying shared surface
+    /// object as this instance
+    rpc clone(ApiSharedSurface.cloneRequest) returns (ApiSharedSurface.cloneResponse);
+    /// Gets the type of the shared surface
+    rpc getType(ApiSharedSurface.getTypeRequest) returns (ApiSharedSurface.getTypeResponse);
+    /// Gets the LUID of the D3D11 adapter on which the shared texture exists
+    rpc getD3D11AdapterLuid(ApiSharedSurface.getD3D11AdapterLuidRequest) returns (ApiSharedSurface.getD3D11AdapterLuidResponse);
+}

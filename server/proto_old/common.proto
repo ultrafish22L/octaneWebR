@@ -1,0 +1,932 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+message ObjectRef
+{
+    enum ObjectType
+    {
+        ApiFileName = 0;
+        ApiGeometryExporter = 1;
+        ApiGuiComponent = 2;
+        MetaData = 3;
+        ApiImageBuffer = 4;
+        ImageType = 5;
+        LayerInfo = 6;
+        ApiAttributeInfo = 7;
+        ApiOcioConfig = 8;
+        ApiOctaneModuleInfo = 9;
+        ApiOutputColorSpaceInfo = 10;
+        ApiSharedSurface = 11;
+        ImageExportSettings = 12;
+        RenderPassExport = 13;
+        RenderResultStatistics = 14;
+        ReferencePackageExportSettings = 15;
+        ApiItem = 16;
+        ApiNode = 17;
+        ApiRootNodeGraph = 18;
+        ApiReferenceGraph = 19;
+        ApiNodeGraph = 20;
+        AnimationTimeTransform = 21;
+        ApiAnimationTimeTransform = 22;
+        ApiLinearTimeTransform = 23;
+        SocketAddress = 24;
+        TimeSpanT = 25;
+        FrameRangeT = 26;
+        ApiCustomCurveEditorController = 27;
+        DBCategoryArray = 28;
+        DBMaterialArray = 29;
+        ImageInfo = 30;
+        ApiItemArray = 31;
+        Package = 32;
+        Category = 33;
+        ApiNodeArray = 34;
+        ApiOcioConfigLoader = 35;
+        ApiOcioContextManager = 36;
+        ApiPackage = 37;
+        ApiRenderImage = 38;
+        ApiSceneExporter = 39;
+        VdbGridInfo = 40;
+        VdbInfo = 41;
+        ApiMainWindow = 42;
+        ApiProjectWorkspace = 43;
+        ApiNodePinInfo = 44;
+        ApiCompatibilityModeInfo = 45;
+        ApiCompatibilityModeInfoSet = 46;
+        ApiNodeInspector = 47;
+        ApiRenderView = 48;
+        NetRenderStatus = 49;
+        VdbGridSampler = 50;
+        ApiSceneOutliner = 51;
+        ApiNodeGraphEditor = 52;
+        ApiLocalDB_Category = 53;
+        ApiLocalDB_Package = 54;
+        ApiDBMaterialManager_DBCategoryArray = 55;
+        ApiDBMaterialManager_DBMaterialArray = 56;
+        ApiBinaryTable = 57;
+        ApiBinaryGroup = 58;
+        ApiLock = 59;
+        ApiWorkPaneModuleInfo = 60;
+        ApiNodeGraphModuleInfo = 61;
+        ApiCommandModuleInfo = 62;
+        ApiThread = 63;
+        ApiModuleNodeGraph = 64;
+        ApiSelectionManager = 65;
+        ApiSelectionManager_PinSelection = 66;
+        ApiCheckBox = 67;
+        ApiCollapsiblePanelStack = 68;
+        ApiColorSwatch = 69;
+        ApiComboBoxItem = 70;
+        ApiComboBox = 71;
+        ApiFileChooser = 72;
+        ApiGridLayout = 73;
+        ApiLabel = 74;
+        ApiModalDialog = 75;
+        ApiMouseListener = 76;
+        ApiNumericBox = 77;
+        ApiProgressBar = 78;
+        ApiTable = 79;
+        ApiTextButton = 80;
+        ApiTextEditor = 81;
+        ApiTitleComponent = 82;
+        ApiWindow = 83;
+        ApiImage = 84;
+        ApiImageComponent = 85;
+        ApiPinSelection = 86;
+        ApiMouseEvent = 87;
+        ApiRenderEngine_PickIntersection = 88;
+        ApiCustomCurveEditorController_Drawer = 89;
+        ApiCustomCurveEditorController_Listener = 90;
+        ApiTileGridLoader = 91;
+        ApiGaussianSplatCloudNode =92;
+    };
+
+    uint64 handle = 1;  // 64-bit handle representing the object reference
+    ObjectType type = 2;
+}
+
+
+message ApiItemPtr
+{
+    enum PointerType
+    {
+        ApiItem = 0;
+        ApiNode = 1;
+        ApiNodeGraph = 2;
+        ApiRootNodeGraph = 3;  // Root node graph
+        ApiReferenceGraph = 4; // Reference node graph
+    }
+    uint64 handle = 1;  // 64-bit handle representing the object reference
+    PointerType type = 2;
+
+}
+
+message ApiNodePtr
+{
+    uint64 handle = 1;  // 64-bit handle representing the object reference
+}
+
+message ApiNodeGraphPtr
+ {
+    uint64 handle = 1;  // 64-bit handle representing the object reference
+
+    enum PointerType
+    {
+        ApiNodeGraph = 0;        // Generic node graph
+        ApiRootNodeGraph = 1;    // Root node graph
+        ApiReferenceGraph = 2;   // Reference node graph
+    }
+
+    PointerType pointer_type = 2;  // Enumerated type to indicate the pointer's type
+}
+
+// used in GetValueResponse to identify the `oneof` type
+enum AttributeTypeId
+{
+    ATTR_ID_UNDEFINED = 0;
+    ATTR_ID_BOOL      = 1;
+    ATTR_ID_BYTE      = 2;
+    ATTR_ID_INT       = 3;
+    ATTR_ID_INT2      = 4;
+    ATTR_ID_INT3      = 5;
+    ATTR_ID_INT4      = 6;
+    ATTR_ID_LONG      = 7;
+    ATTR_ID_LONG2     = 8;
+    ATTR_ID_FLOAT     = 9;
+    ATTR_ID_FLOAT2    = 90;
+    ATTR_ID_FLOAT3    = 11;
+    ATTR_ID_FLOAT4    = 12;
+    ATTR_ID_MATRIX    = 13;
+    ATTR_ID_STRING    = 14;
+}
+
+
+message LoadRenderStateProjectT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+//message ApiOcioViewPinInfo {//empty structure
+/// \src\globals\octaneinfos.h
+/// Stores static information for pins of type PT_OCIO_VIEW.
+/// struct ApiOcioViewPinInfo
+/// {
+///     // No customization options for this pin type yet.
+/// };
+    // Add real fields here when available.
+    //string placeholder = 1; // Temporary placeholder field.
+//}
+
+// Represents a RGBA color in low dynamic range (LDR).
+message ApiColorLdr
+{
+    uint32 r = 1; // Red channel (0–255).
+    uint32 g = 2; // Green channel (0–255).
+    uint32 b = 3; // Blue channel (0–255).
+    uint32 a = 4; // Alpha channel (0–255, optional depending on transparency).
+}
+
+// Represents a RGBA color in high dynamic range (HDR).
+message ApiColorHdr
+{
+    float r = 1;  // Red channel with high precision (floating-point).
+    float g = 2;  // Green channel with high precision.
+    float b = 3;  // Blue channel with high precision.
+    float a = 4;  // Alpha channel with high precision (floating-point transparency).
+}
+
+message ComboBoxItem
+{
+    int32 id = 1;
+    string text = 2;
+}
+
+message ComboItemArrayT
+{
+    repeated ComboBoxItem data = 1;
+}
+
+message AABBFArrayT
+{
+    repeated AABBF data = 1;
+}
+
+
+message GuidT
+{
+    // Add real fields here when available.
+    string guid = 1; // Temporary placeholder field.
+}
+
+message ByteArrayT
+{//approved
+    bytes data = 1;
+}
+
+message ModuleIdT
+{//approved
+    int32 id = 1;
+}
+
+message ApiArrayModuleIdT
+{//approved
+    // Add real fields here when available.
+    repeated ModuleIdT data = 1; // Temporary placeholder field.
+}
+ 
+
+
+//message ApiMouseListener {
+//    // Add real fields here when available.
+//    string placeholder = 1; // Temporary placeholder field.
+//}
+
+// substitute for void * 
+message Buffer
+{
+    bytes data = 1; // Raw binary data (replaces void*)
+    uint32 size = 2; // Size of the buffer (optional, if needed)
+}
+
+// ========  Time Scalar ========
+message TimeT
+{//approved
+    float value = 1; // Represents the time as a float in seconds
+}
+
+// ========  Change level ========
+message CLevelT
+{
+    uint64 value = 1; // The data type used for tracking change levels.
+}
+
+// ========  Vectors ========
+
+// Generic 2D vector of double
+message double_2
+{
+    double x = 1;
+    double y = 2;
+}
+
+// Generic 3D vector of double
+message double_3
+{
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+// Generic 4D vector of double
+message double_4
+{
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
+
+// Generic 2D vector of float
+message float_2
+{
+    float x = 1;
+    float y = 2;
+}
+
+// Generic 3D vector of float
+message float_3
+{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+// Generic 4D vector of float
+message float_4 
+{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float w = 4;
+}
+
+// Define a 3x4 matrix using an array of 3 Vec4s
+message MatrixF
+{
+    repeated float_4 m = 1; // Array of 3 Vec4 vectors
+}
+
+// Vector of half-precision floats (16-bit unsigned shorts)
+message half_2
+{
+    uint32 x = 1; // 2D vector
+    uint32 y = 2;
+}
+
+message half_4
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+    uint32 w = 4;
+}
+
+// ========  2D, 3D, and 4D Vectors for Signed Integers ========
+
+// 8-bit signed integers
+message int8_2
+{
+    int32 x = 1;
+    int32 y = 2;
+}
+
+message int8_3
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+}
+
+message int8_4
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+    int32 w = 4;
+}
+
+// 16-bit signed integers
+message int16_2
+{
+    int32 x = 1;
+    int32 y = 2;
+}
+
+message int16_3
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+}
+
+message int16_4
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+    int32 w = 4;
+}
+
+// 32-bit signed integers
+message int32_2
+{
+    int32 x = 1;
+    int32 y = 2;
+}
+
+message int32_3
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+}
+
+message int32_4
+{
+    int32 x = 1;
+    int32 y = 2;
+    int32 z = 3;
+    int32 w = 4;
+}
+
+// 64-bit signed integers
+message int64_2
+{
+    int64 x = 1;
+    int64 y = 2;
+}
+
+message int64_3
+{
+    int64 x = 1;
+    int64 y = 2;
+    int64 z = 3;
+}
+
+message int64_4
+{
+    int64 x = 1;
+    int64 y = 2;
+    int64 z = 3;
+    int64 w = 4;
+}
+
+// ========  2D, 3D, and 4D Vectors for Unsigned Integers ========
+
+// 8-bit unsigned integers
+message uint8_2
+{
+    uint32 x = 1;
+    uint32 y = 2;
+}
+
+message uint8_3
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+}
+
+message uint8_4
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+    uint32 w = 4;
+}
+
+// 16-bit unsigned integers
+message uint16_2
+{
+    uint32 x = 1;
+    uint32 y = 2;
+}
+
+message uint16_3
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+}
+
+message uint16_4
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+    uint32 w = 4;
+}
+
+// 32-bit unsigned integers
+message uint32_2
+{
+    uint32 x = 1;
+    uint32 y = 2;
+}
+
+message uint32_3
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+}
+
+message uint32_4
+{
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+    uint32 w = 4;
+}
+
+// 64-bit unsigned integers
+message uint64_2
+{
+    uint64 x = 1;
+    uint64 y = 2;
+}
+
+message uint64_3
+{
+    uint64 x = 1;
+    uint64 y = 2;
+    uint64 z = 3;
+}
+
+message uint64_4
+{
+    uint64 x = 1;
+    uint64 y = 2;
+    uint64 z = 3;
+    uint64 w = 4;
+}
+
+
+message AABBF
+{
+    // pmin should have 3 elements (x, y, z)
+    repeated float pmin = 1;
+    // pmax should have 3 elements (x, y, z)
+    repeated float pmax = 2;
+}
+
+message AABBD
+{
+    // pmin should have 3 elements (x, y, z)
+    repeated double pmin = 1;
+    // pmax should have 3 elements (x, y, z)
+    repeated double pmax = 2;
+}
+
+// Placeholder for "enum_t"
+message enum_t 
+{
+    int32 id = 1;
+}
+ 
+
+// ========  Array Types ========
+message ObjectRefArrayT
+{
+    repeated ObjectRef data = 1; // Array of generic poitners
+}
+
+message TimeArrayT
+{
+    repeated TimeT data = 1; // Array of strings
+}
+
+// String array (array of const char *)
+message StringArrayT
+{//approved
+    repeated string data = 1; // Array of strings
+}
+
+// Unsigned integer array
+message UIntArrayT
+{//approved
+    repeated uint32 data = 1; // Array of unsigned integers
+}
+
+// Array of Bool (boolean values)
+message BoolArrayT
+{
+    repeated bool data = 1; // Array of boolean values
+}
+// Array of 32-bit signed integers
+message UintArrayT
+{
+    repeated uint32 data = 1; // Array of signed int32 values
+}
+
+// Array of 2D vectors of 32-bit signed integers
+message Uint2ArrayT
+{
+    repeated uint32_2 data = 1; // Array of 2D integer vectors
+}
+
+
+// Array of 32-bit signed integers
+message IntArrayT
+{
+    repeated int32 data = 1; // Array of signed int32 values
+}
+
+// Array of 2D vectors of 32-bit signed integers
+message Int2ArrayT
+{
+    repeated int32_2 data = 1; // Array of 2D integer vectors
+}
+
+// Array of 3D vectors of 32-bit signed integers
+message Int3ArrayT
+{
+    repeated int32_3 data = 1; // Array of 3D integer vectors
+}
+
+// Array of 4D vectors of 32-bit signed integers
+message Int4ArrayT
+{
+    repeated int32_4 data = 1; // Array of 4D integer vectors
+}
+
+// Array of 64-bit signed integers
+message LongArrayT
+{
+    repeated int64 data = 1; // Array of signed int64 values
+}
+
+// Array of 2D vectors of 64-bit signed integers
+message Long2ArrayT
+{
+    repeated int64_2 data = 1; // Array of 2D long integer vectors
+}
+
+// Placeholder for a matrix (can be extended with specific matrix needs)
+message MatrixArrayT
+{
+    // Define specific matrix arrays as needed
+    repeated MatrixF data = 1; // Example: 4D rows for a transformation matrix
+}
+
+// Array of single-precision float (32-bit floating-point)
+message FloatArrayT
+{
+    repeated float data = 1; // Array of float32 values
+}
+
+// Array of 2D vectors of single-precision float
+message Float2ArrayT
+{
+    repeated float_2 data = 1; // Array of 2D float vectors
+}
+
+// Array of 3D vectors of single-precision float
+message Float3ArrayT
+{
+    repeated float_3 data = 1; // Array of 3D float vectors
+}
+
+// Array of 4D vectors of single-precision float
+message Float4ArrayT
+{
+    repeated float_4 data = 1; // Array of 4D float vectors
+}
+// ========  Callback Wrappers (Abstractions for function pointers) ========
+// Placeholder for "ApiImage" remove this after the proepr class has been added
+//message ApiImage {}
+
+
+message AttachDataDeallocT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message ButtonClickedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message TextEditorChangedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnWindowCloseCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message NumRowsCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message ContentCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message SelectionChangedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message NumericBoxChangedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message MouseEventCallbackT
+{
+    string callbackSource = 1;
+    int32  callbackId = 2;
+}
+
+message GRPCChangeObserverT
+{
+    string callbackSource = 1;
+    int32    callbackId = 2;
+    uint64   userData = 3;
+}
+
+message GRPCChangeTimeObserverT
+{
+    string      callbackSource = 1;
+    int32       callbackId = 2;
+    uint64      userData = 3;
+}
+
+message GRPCProjectManagerObserverT
+{
+    string     callbackSource = 1;
+    int32      callbackId = 2;
+    uint64     userData = 3;
+}
+
+message GRPCSelectionManagerObserverT
+{
+    string     callbackSource = 1;
+    int32      callbackId = 2;
+    uint64     userData = 3;
+}
+
+message CheckedCallbackT
+{
+    string     callbackSource = 1;
+    int32      callbackId = 2;
+}
+
+message ColorChangedT
+{
+    string callbackSource = 1;
+    int32  callbackId = 2;
+}
+
+message ComboBoxChangedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message RunFunctionT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message MainThreadCallT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message CommandModuleRunFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message InitFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message CleanupFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message CreateFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message DestroyFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnEvaluateFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnTriggerFuncT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message ObserverCallback
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message DbViewClosingCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message DbViewLoadedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message AssetMissingCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message NextChunkCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+// Callback handling activation status updates
+message UpdateActivationStatusCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+    bool status = 3;         // Activation status (true or false)
+    string message = 4;      // Optional message accompanying the status
+    bytes context = 5;       // Opaque context, similar to 'void*' in C++
+}
+
+// Callback called with progress updates
+message UpdateCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+    float progress = 3;      // Progress as a float
+    bytes context = 4;       // Opaque context, similar to 'void*' in C++
+}
+
+message OnMainWindowCloseCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message AsyncUpdateCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnTileBlendedCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnNewStatisticsCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnNewImageCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnOcioErrorCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnRenderFailureCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnStatusUpdateT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnDaemonUpdateT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message FinishCallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message CallbackT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message OnChangeT
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}
+
+message ApiLogCallbackProc
+{
+    string callbackSource = 1;
+    int32 callbackId = 2;
+}

@@ -1,0 +1,188 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiCaches' class from 'apicaches.h'
+message ApiCaches
+{
+    // Request packet corresponding to '[in] parameters in ApiCaches::getMeshletCacheSize'
+    message getMeshletCacheSizeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::getMeshletCacheSize'
+    message getMeshletCacheSizeResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::getMeshletCacheUsedSize'
+    message getMeshletCacheUsedSizeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::getMeshletCacheUsedSize'
+    message getMeshletCacheUsedSizeResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::clearMeshletCache'
+    message clearMeshletCacheRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::hasMeshletCacheFile'
+    message hasMeshletCacheFileRequest
+    {
+        // Pointer to the mesh node to check. Must be a valid pointer to a node of type NT_GEO_MESH.
+        ObjectRef meshNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::hasMeshletCacheFile'
+    message hasMeshletCacheFileResponse
+    {
+        //     TRUE if a valid meshlet cache file exists for the mesh node, FALSE if not.
+        bool result = 1;
+        // Pointer to the mesh node to check. Must be a valid pointer to a node of type NT_GEO_MESH.
+        ObjectRef meshNode = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::checkMeshletBuildStatus'
+    message checkMeshletBuildStatusRequest
+    {
+        // Pointer to the mesh node to check. Must be a valid pointer to a node of type NT_GEO_MESH.
+        ObjectRef meshNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::checkMeshletBuildStatus'
+    message checkMeshletBuildStatusResponse
+    {
+        //     CACHE_NONE if meshNode is not a valid pointer to a mesh node, or to a mesh node that has
+        CacheStatus result = 1;
+        // Pointer to the mesh node to check. Must be a valid pointer to a node of type NT_GEO_MESH.
+        ObjectRef meshNode = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::clearMeshletCacheFileForNode'
+    message clearMeshletCacheFileForNodeRequest
+    {
+        // Pointer to the mesh node of which the meshlet cache file should be deleted. Must be a
+        ObjectRef meshNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::clearMeshletCacheFileForNode'
+    message clearMeshletCacheFileForNodeResponse
+    {
+        //     TRUE if either the node pointer didn't represent a mesh node with a valid meshlet cache
+        bool result = 1;
+        // Pointer to the mesh node of which the meshlet cache file should be deleted. Must be a
+        ObjectRef meshNode = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::getVirtualTextureCacheSize'
+    message getVirtualTextureCacheSizeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::getVirtualTextureCacheSize'
+    message getVirtualTextureCacheSizeResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::getVirtualTextureCacheUsedSize'
+    message getVirtualTextureCacheUsedSizeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::getVirtualTextureCacheUsedSize'
+    message getVirtualTextureCacheUsedSizeResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::pruneVirtualTextureCache'
+    message pruneVirtualTextureCacheRequest
+    {
+        // Maximum size to keep. Pass in 0 if you want to remove all cache files not
+        uint64 maximumSize = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::checkVirtualTextureStatus'
+    message checkVirtualTextureStatusRequest
+    {
+        ObjectRef node = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::checkVirtualTextureStatus'
+    message checkVirtualTextureStatusResponse
+    {
+        
+        CacheStatus result = 1;
+        ObjectRef node = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCaches::clearVirtualTextureCacheForNode'
+    message clearVirtualTextureCacheForNodeRequest
+    {
+        ObjectRef node = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCaches::clearVirtualTextureCacheForNode'
+    message clearVirtualTextureCacheForNodeResponse
+    {
+        //     true if either the node didn't represent a virtual texture cache, or if
+        bool result = 1;
+        ObjectRef node = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiCaches' from 'apicaches.h'
+service ApiCachesService
+{
+    /// Returns the maximum size of the meshlet cache in bytes
+    rpc getMeshletCacheSize(ApiCaches.getMeshletCacheSizeRequest) returns (ApiCaches.getMeshletCacheSizeResponse);
+    /// Returns the amount data stored in the meshlet cache in number of bytes
+    rpc getMeshletCacheUsedSize(ApiCaches.getMeshletCacheUsedSizeRequest) returns (ApiCaches.getMeshletCacheUsedSizeResponse);
+    /// Deletes all meshlet cache files that are currently not in use
+    rpc clearMeshletCache(ApiCaches.clearMeshletCacheRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if a cache file can be found for the given geometry import preferences and
+    /// filename / meshlet ID attribute and FALSE if not
+    rpc hasMeshletCacheFile(ApiCaches.hasMeshletCacheFileRequest) returns (ApiCaches.hasMeshletCacheFileResponse);
+    /// Check the status of the cached meshlet mesh for the given mesh node
+    rpc checkMeshletBuildStatus(ApiCaches.checkMeshletBuildStatusRequest) returns (ApiCaches.checkMeshletBuildStatusResponse);
+    /// Deletes the meshlet cache file of the given node if the file isn't used anywhere else
+    rpc clearMeshletCacheFileForNode(ApiCaches.clearMeshletCacheFileForNodeRequest) returns (ApiCaches.clearMeshletCacheFileForNodeResponse);
+    /// Returns the maximum size of the virtual texture cache in bytes
+    rpc getVirtualTextureCacheSize(ApiCaches.getVirtualTextureCacheSizeRequest) returns (ApiCaches.getVirtualTextureCacheSizeResponse);
+    /// Returns the amount data stored in the virtual texture cache in number of bytes
+    rpc getVirtualTextureCacheUsedSize(ApiCaches.getVirtualTextureCacheUsedSizeRequest) returns (ApiCaches.getVirtualTextureCacheUsedSizeResponse);
+    /// Deletes virtual texture cache files that are currently not in use, until
+    /// the cache reaches the desired maximum size
+    ///
+    /// 
+    rpc pruneVirtualTextureCache(ApiCaches.pruneVirtualTextureCacheRequest) returns (google.protobuf.Empty);
+    /// Check the status of the cached virtual texture corresponding to the settings contained
+    /// in the given node
+    rpc checkVirtualTextureStatus(ApiCaches.checkVirtualTextureStatusRequest) returns (ApiCaches.checkVirtualTextureStatusResponse);
+    /// Clears the cache entry matching the settings contained in the given node item
+    /// This call succeeds only if there are no other node items referencing the same
+    /// file, and if the build for the given cache entry is not currently in progress
+    rpc clearVirtualTextureCacheForNode(ApiCaches.clearVirtualTextureCacheForNodeRequest) returns (ApiCaches.clearVirtualTextureCacheForNodeResponse);
+}

@@ -1,0 +1,194 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiOcioContextManager' class from 'apiociocontextmanager.h'
+message ApiOcioContextManager
+{
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::guessIntermediateColorSpace'
+    message guessIntermediateColorSpaceRequest
+    {
+        // The OCIO config to select a color space from. This pointer needs to remain valid for as
+        ObjectRef config = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::guessIntermediateColorSpace'
+    message guessIntermediateColorSpaceResponse
+    {
+        //     True if the guess succeeded. False if no suitable intermediate color space was found.
+        bool result = 1;
+        // The guessed Octane half of the intermediate color space. Only modified if this function
+        NamedColorSpace guessedOctaneValue = 2;
+        // The guessed OCIO half of the intermediate color space. Only modified if this function
+        string guessedOcioName = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::create'
+    message createResponse
+    {
+        //     The created context manager. This must be destroyed with destroy(). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::addCallback'
+    message addCallbackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The function to call with the current state now and with the new state whenever the
+        CallbackT callback = 2;
+        // The private data pointer to be passed to the callback whenever it is called. This isn't
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::addCallback'
+    message addCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::removeCallback'
+    message removeCallbackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The function that was passed to addCallback.
+        CallbackT callback = 2;
+        // The private data pointer that was passed to addCallback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::removeCallback'
+    message removeCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::getDefaultConfigFilename'
+    message getDefaultConfigFilenameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::getDefaultConfigFilename'
+    message getDefaultConfigFilenameResponse
+    {
+        //     Will not be null. This pointer remains valid until this context manager is destroyed.
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::getLastConfigLoadFilename'
+    message getLastConfigLoadFilenameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::getLastConfigLoadFilename'
+    message getLastConfigLoadFilenameResponse
+    {
+        //     Will not be null. This pointer remains valid until the next time any local preferences
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::createConfig'
+    message createConfigRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::createConfig'
+    message createConfigResponse
+    {
+        //     If there is a config loaded, a newly created config wrapper (must be destroyed with
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::getContextUsableForConversion'
+    message getContextUsableForConversionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioContextManager::getContextUsableForConversion'
+    message getContextUsableForConversionResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::donateConfig'
+    message donateConfigRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The filename of the config file. Must not be null.
+        string filename = 2;
+        // The config that was loaded from that filename, or null if loading a config from that
+        ObjectRef config = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioContextManager::handlePendingConfigDonation'
+    message handlePendingConfigDonationRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiOcioContextManager' from 'apiociocontextmanager.h'
+service ApiOcioContextManagerService
+{
+    /// Guesses the best values to use for the intermediate color space based on the names of color
+    /// spaces in the OCIO config
+    rpc guessIntermediateColorSpace(ApiOcioContextManager.guessIntermediateColorSpaceRequest) returns (ApiOcioContextManager.guessIntermediateColorSpaceResponse);
+    /// 
+    rpc create(ApiOcioContextManager.createRequest) returns (ApiOcioContextManager.createResponse);
+    /// Must not be called from a callback function
+    rpc destroy(ApiOcioContextManager.destroyRequest) returns (google.protobuf.Empty);
+    /// Registers a callback to be called when the current OCIO context changes
+    rpc addCallback(ApiOcioContextManager.addCallbackRequest) returns (ApiOcioContextManager.addCallbackResponse);
+    /// Deregisters a callback that was registered with addCallback
+    rpc removeCallback(ApiOcioContextManager.removeCallbackRequest) returns (ApiOcioContextManager.removeCallbackResponse);
+    /// Gets the filename of the default config to use if it is not overridden by local preferences
+    rpc getDefaultConfigFilename(ApiOcioContextManager.getDefaultConfigFilenameRequest) returns (ApiOcioContextManager.getDefaultConfigFilenameResponse);
+    /// Gets the most recent config filename that we tried to load
+    rpc getLastConfigLoadFilename(ApiOcioContextManager.getLastConfigLoadFilenameRequest) returns (ApiOcioContextManager.getLastConfigLoadFilenameResponse);
+    /// Gets the config of the current context, if there is a config loaded
+    rpc createConfig(ApiOcioContextManager.createConfigRequest) returns (ApiOcioContextManager.createConfigResponse);
+    /// Gets whether the current context is suitable for use by the renderer for color conversions
+    rpc getContextUsableForConversion(ApiOcioContextManager.getContextUsableForConversionRequest) returns (ApiOcioContextManager.getContextUsableForConversionResponse);
+    /// Sets the current config
+    rpc donateConfig(ApiOcioContextManager.donateConfigRequest) returns (google.protobuf.Empty);
+    /// This should be called after calling donateConfig and changing local preferences, to handle
+    /// the case where the local preferences technically didn't change (because filenames etc
+    rpc handlePendingConfigDonation(ApiOcioContextManager.handlePendingConfigDonationRequest) returns (google.protobuf.Empty);
+}

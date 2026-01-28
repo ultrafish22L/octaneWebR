@@ -1,0 +1,33 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiDiagnostics' class from 'apidiagnostics.h'
+message ApiDiagnostics
+{
+    // Request packet corresponding to '[in] parameters in ApiDiagnostics::diagnosticCommand'
+    message diagnosticCommandRequest
+    {
+        uint32 commandType = 1;
+        // The delay before generating the access violation
+        uint32 delayInSeconds = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiDiagnostics' from 'apidiagnostics.h'
+service ApiDiagnosticsService
+{
+    /// Crashes the software after the specified number of seconds
+    ///
+    /// 
+    rpc diagnosticCommand(ApiDiagnostics.diagnosticCommandRequest) returns (google.protobuf.Empty);
+}

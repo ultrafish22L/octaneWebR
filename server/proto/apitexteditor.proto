@@ -1,0 +1,133 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiTextEditor' class from 'apitexteditor.h'
+message ApiTextEditor
+{
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::create'
+    message createRequest
+    {
+        // Number of lines in the text editor.
+        uint32 nbOfLines = 1;
+        // Called when the text editor changes.
+        TextEditorChangedCallbackT callback = 2;
+        // Private data passed back into the callback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextEditor::create'
+    message createResponse
+    {
+        //     Pointer to a text editor.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::text'
+    message textRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextEditor::text'
+    message textResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextEditor::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::setText'
+    message setTextRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // New text that replaces the existing text.
+        string newText = 2;
+        // TRUE to call the change callback for this event.
+        bool sendEvent = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::setReadOnly'
+    message setReadOnlyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        bool shouldBeReadOnly = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextEditor::isReadOnly'
+    message isReadOnlyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextEditor::isReadOnly'
+    message isReadOnlyResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiTextEditor' from 'apitexteditor.h'
+service ApiTextEditorService
+{
+    /// Creates a new text editor
+    rpc create(ApiTextEditor.createRequest) returns (ApiTextEditor.createResponse);
+    /// Destroys this text editor
+    rpc destroy(ApiTextEditor.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the text the user typed in the text editor
+    rpc text(ApiTextEditor.textRequest) returns (ApiTextEditor.textResponse);
+    /// Returns TRUE if there's no text in the text editor
+    rpc isEmpty(ApiTextEditor.isEmptyRequest) returns (ApiTextEditor.isEmptyResponse);
+    /// Sets the text in the text editor
+    rpc setText(ApiTextEditor.setTextRequest) returns (google.protobuf.Empty);
+    /// Clears the text in the text editor
+    rpc clear(ApiTextEditor.clearRequest) returns (google.protobuf.Empty);
+    /// Changes the text editor to read only mode
+    rpc setReadOnly(ApiTextEditor.setReadOnlyRequest) returns (google.protobuf.Empty);
+    /// Returns true if the editor is in read-only mode
+    rpc isReadOnly(ApiTextEditor.isReadOnlyRequest) returns (ApiTextEditor.isReadOnlyResponse);
+}

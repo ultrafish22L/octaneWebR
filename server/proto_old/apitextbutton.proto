@@ -1,0 +1,79 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiTextButton' class from 'apitextbutton.h'
+message ApiTextButton
+{
+    // Request packet corresponding to '[in] parameters in ApiTextButton::create'
+    message createRequest
+    {
+        // Text to appear on the button.
+        string text = 1;
+        // Function called when the user clicks the button.
+        ButtonClickedCallbackT clickCallback = 2;
+        // Data passed back untouched into the callback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextButton::create'
+    message createResponse
+    {
+        //     Pointer the new button.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextButton::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextButton::setText'
+    message setTextRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string text = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextButton::text'
+    message textRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextButton::text'
+    message textResponse
+    {
+        
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiTextButton' from 'apitextbutton.h'
+service ApiTextButtonService
+{
+    /// Creates a new text button
+    rpc create(ApiTextButton.createRequest) returns (ApiTextButton.createResponse);
+    /// Destroys the component created with create(
+    rpc destroy(ApiTextButton.destroyRequest) returns (google.protobuf.Empty);
+    /// Updates the text on the button
+    rpc setText(ApiTextButton.setTextRequest) returns (google.protobuf.Empty);
+    /// Returns the text on the button
+    rpc text(ApiTextButton.textRequest) returns (ApiTextButton.textResponse);
+}

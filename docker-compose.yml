@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  octanewebr:
+    build: .
+    container_name: octanewebr
+    ports:
+      - "43930:43930"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - octane-network
+    # Note: Octane must be running on host machine with LiveLink enabled
+    # Container connects to host's localhost:51022
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  octane-network:
+    driver: bridge

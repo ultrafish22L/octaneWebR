@@ -1,0 +1,80 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiProjectWorkspace' class from 'apiprojectworkspace.h'
+message ApiProjectWorkspace
+{
+    // Request packet corresponding to '[in] parameters in ApiProjectWorkspace::getNodeGraphEditors'
+    message getNodeGraphEditorsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectWorkspace::getNodeGraphEditors'
+    message getNodeGraphEditorsResponse
+    {
+        
+        ObjectRefArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectWorkspace::resetLayout'
+    message resetLayoutRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectWorkspace::loadLayout'
+    message loadLayoutRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string layoutString = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectWorkspace::loadLayout'
+    message loadLayoutResponse
+    {
+        //     TRUE if the layout was successfully loaded.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectWorkspace::serializeLayout'
+    message serializeLayoutRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectWorkspace::serializeLayout'
+    message serializeLayoutResponse
+    {
+        //     The layout (OCL) serialized from the current layout.
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiProjectWorkspace' from 'apiprojectworkspace.h'
+service ApiProjectWorkspaceService
+{
+    /// Gets all the node graph editors in the project workspace
+    rpc getNodeGraphEditors(ApiProjectWorkspace.getNodeGraphEditorsRequest) returns (ApiProjectWorkspace.getNodeGraphEditorsResponse);
+    /// Resets the workspace to the default layout for plugins
+    rpc resetLayout(ApiProjectWorkspace.resetLayoutRequest) returns (google.protobuf.Empty);
+    /// Loads the layout given
+    rpc loadLayout(ApiProjectWorkspace.loadLayoutRequest) returns (ApiProjectWorkspace.loadLayoutResponse);
+    /// Serializes the current layout
+    rpc serializeLayout(ApiProjectWorkspace.serializeLayoutRequest) returns (ApiProjectWorkspace.serializeLayoutResponse);
+}

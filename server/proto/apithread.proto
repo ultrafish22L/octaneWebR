@@ -1,0 +1,210 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiThread' class from 'apithread.h'
+message ApiThread
+{
+    // Request packet corresponding to '[in] parameters in ApiThread::create'
+    message createRequest
+    {
+        // Name of the thread.
+        string threadName = 1;
+        // Run fuction that is executed when the thread is started.
+        RunFunctionT runFunction = 2;
+        // Private user data passed unmodified back into the run function.
+        uint64 userData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::create'
+    message createResponse
+    {
+        //     Pointer to the thread object. Should be disposed of via a call to destroy.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::startThread'
+    message startThreadRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::stopThread'
+    message stopThreadRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The number of milliseconds to wait for the thread to finish before killing it by force.
+        int32 timeOutMilliseconds = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::stopThread'
+    message stopThreadResponse
+    {
+        //     TRUE if the thread was cleanly stopped before the timeout, or false if it had to be
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::isThreadRunning'
+    message isThreadRunningRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::isThreadRunning'
+    message isThreadRunningResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::signalThreadShouldExit'
+    message signalThreadShouldExitRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::threadShouldExit'
+    message threadShouldExitRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::threadShouldExit'
+    message threadShouldExitResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::waitForThreadToExit'
+    message waitForThreadToExitRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the time to wait, in milliseconds. If this value is less than zero, it will wait
+        int32 timeOutMilliseconds = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::waitForThreadToExit'
+    message waitForThreadToExitResponse
+    {
+        //     TRUE if the thread exits, or FALSE if the timeout expires first.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::sleep'
+    message sleepRequest
+    {
+        int32 milliseconds = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::yield'
+    message yieldRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::wait'
+    message waitRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 timeOutMilliseconds = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::wait'
+    message waitResponse
+    {
+        //     TRUE if the event has been signalled, FALSE if the timeout expires.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::notify'
+    message notifyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::callFunctionOnMessageThread'
+    message callFunctionOnMessageThreadRequest
+    {
+        // Function to call on the mesage thread.
+        MainThreadCallT functionToCall = 1;
+        // Private data passed back into the function call.
+        uint64 privateData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::callFunctionOnMessageThread'
+    message callFunctionOnMessageThreadResponse
+    {
+        //     Returned void* from the function call.
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiThread::isThisTheMessageThread'
+    message isThisTheMessageThreadRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiThread::isThisTheMessageThread'
+    message isThisTheMessageThreadResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiThread' from 'apithread.h'
+service ApiThreadService
+{
+    /// Creates a new thread
+    rpc create(ApiThread.createRequest) returns (ApiThread.createResponse);
+    /// Destroys this thread
+    rpc destroy(ApiThread.destroyRequest) returns (google.protobuf.Empty);
+    /// Starts the thread running
+    rpc startThread(ApiThread.startThreadRequest) returns (google.protobuf.Empty);
+    /// Attempts to stop the thread running
+    rpc stopThread(ApiThread.stopThreadRequest) returns (ApiThread.stopThreadResponse);
+    /// Returns TRUE if the thread is currently active
+    rpc isThreadRunning(ApiThread.isThreadRunningRequest) returns (ApiThread.isThreadRunningResponse);
+    /// Sets a flag to tell the thread it should stop
+    rpc signalThreadShouldExit(ApiThread.signalThreadShouldExitRequest) returns (google.protobuf.Empty);
+    /// Checks whether the thread has been told to stop running
+    rpc threadShouldExit(ApiThread.threadShouldExitRequest) returns (ApiThread.threadShouldExitResponse);
+    /// Waits for the thread to stop
+    rpc waitForThreadToExit(ApiThread.waitForThreadToExitRequest) returns (ApiThread.waitForThreadToExitResponse);
+    /// This can be called from any thread that needs to pause
+    rpc sleep(ApiThread.sleepRequest) returns (google.protobuf.Empty);
+    /// Yields the calling thread's current time-slot
+    rpc yield(ApiThread.yieldRequest) returns (google.protobuf.Empty);
+    /// 
+    rpc wait(ApiThread.waitRequest) returns (ApiThread.waitResponse);
+    /// Wakes up the thread
+    rpc notify(ApiThread.notifyRequest) returns (google.protobuf.Empty);
+    /// Calls the passed in function in the message thread (also referred to as the main thread)
+    rpc callFunctionOnMessageThread(ApiThread.callFunctionOnMessageThreadRequest) returns (ApiThread.callFunctionOnMessageThreadResponse);
+    /// Returns TRUE if the caller-thread is the message thread
+    rpc isThisTheMessageThread(ApiThread.isThisTheMessageThreadRequest) returns (ApiThread.isThisTheMessageThreadResponse);
+}

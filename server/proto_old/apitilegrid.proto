@@ -1,0 +1,373 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiTileGridSettings' class from 'apitilegrid.h'
+message ApiTileGridSettings
+{
+    string parent = 1;
+    uint32_2 gridSize = 2;
+    bool gridFlipV = 3;
+    uint32 start = 4;
+}
+ // GRPC proto definitions for 'ApiTileGridLoader' class from 'apitilegrid.h'
+message ApiTileGridLoader
+{
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::create'
+    message createResponse
+    {
+        //     ApiTileGridLoader object. This must be released by calling destroy().
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::loadFromNodeItem'
+    message loadFromNodeItemRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef node = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::saveToNodeItem'
+    message saveToNodeItemRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::saveToNodeItem'
+    message saveToNodeItemResponse
+    {
+        ObjectRef node = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::applyStoredSettings'
+    message applyStoredSettingsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Stored settings. If mParent is set to nullptr and the files are not stored
+        ApiTileGridSettings initialSettings = 2;
+        // The list of files in the node in question.
+        StringArrayT initialFiles = 3;
+        // True if the node exists inside an ORBX package.
+        bool inPackage = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::inferSettingsFromFilename'
+    message inferSettingsFromFilenameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Selected file name. Ideally this is the first tile in the grid.
+        string firstImg = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::inferSettingsFromFilename'
+    message inferSettingsFromFilenameResponse
+    {
+        // indices in the grid where we think the given tile is
+        uint32_2 indices = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::scanTiles'
+    message scanTilesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If not {0, 0}, the grid will be resized to this size, and only newly added cells are scanned.
+        uint32_2 newSize = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::automaticSizeGrid'
+    message automaticSizeGridRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::getSettings'
+    message getSettingsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::getSettings'
+    message getSettingsResponse
+    {
+        
+        ApiTileGridSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::updateSettings'
+    message updateSettingsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ApiTileGridSettings settings = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::getFiles'
+    message getFilesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::getFiles'
+    message getFilesResponse
+    {
+        
+        StringArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::setFiles'
+    message setFilesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        StringArrayT files = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasFileInCell'
+    message hasFileInCellRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32_2 cellIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasFileInCell'
+    message hasFileInCellResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::fileNameForCell'
+    message fileNameForCellRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32_2 cellIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::fileNameForCell'
+    message fileNameForCellResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::count'
+    message countRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::count'
+    message countResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::updatePattern'
+    message updatePatternRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string pattern = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasEmptyPattern'
+    message hasEmptyPatternRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasEmptyPattern'
+    message hasEmptyPatternResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::patternString'
+    message patternStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::patternString'
+    message patternStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasPlaceholders'
+    message hasPlaceholdersRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasPlaceholders'
+    message hasPlaceholdersResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasIndex'
+    message hasIndexRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasIndex'
+    message hasIndexResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasUDIM'
+    message hasUDIMRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasUDIM'
+    message hasUDIMResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::hasUv'
+    message hasUvRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::hasUv'
+    message hasUvResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTileGridLoader::substitute'
+    message substituteRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Index where the numbering should start (usually 0 or 1)
+        uint32 start = 2;
+        // Linear row major index of the tile
+        uint32 index = 3;
+        // Index of the tile in the U direction
+        uint32 u = 4;
+        // Index of the tile in the V direction
+        uint32 v = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTileGridLoader::substitute'
+    message substituteResponse
+    {
+        //     Resulting file name. Will remain valid until the next call
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiTileGridLoader' from 'apitilegrid.h'
+service ApiTileGridLoaderService
+{
+    /// Creates a pattern for generating file names, as described in the 
+        /// attribute info of A_GRID_FILE_PATTERN on NT_TEX_IMAGE_TILES
+    rpc create(ApiTileGridLoader.createRequest) returns (ApiTileGridLoader.createResponse);
+    /// Destroy this object
+    rpc destroy(ApiTileGridLoader.destroyRequest) returns (google.protobuf.Empty);
+    /// Initialize from settings stored in a supported node item (NT_TEX_IMAGE_TILES and NT_TEX_IMAGE_TILE_SET)
+        /// Equivalent to calling updatePattern() and applyStoredSettings(), but it reads the source data from the
+        /// passed in node item
+    rpc loadFromNodeItem(ApiTileGridLoader.loadFromNodeItemRequest) returns (google.protobuf.Empty);
+    /// Store data in this object in a supported node item (NT_TEX_IMAGE_TILES and NT_TEX_IMAGE_TILE_SET)
+        /// This does not evaluate the item
+    rpc saveToNodeItem(ApiTileGridLoader.saveToNodeItemRequest) returns (ApiTileGridLoader.saveToNodeItemResponse);
+    /// Set from settings stored in a node
+    rpc applyStoredSettings(ApiTileGridLoader.applyStoredSettingsRequest) returns (google.protobuf.Empty);
+    /// Given a file name, guess which pattern it may represent
+    rpc inferSettingsFromFilename(ApiTileGridLoader.inferSettingsFromFilenameRequest) returns (ApiTileGridLoader.inferSettingsFromFilenameResponse);
+    /// Look for tiles in the file system
+    rpc scanTiles(ApiTileGridLoader.scanTilesRequest) returns (google.protobuf.Empty);
+    /// Automatically resize a tile grid
+    rpc automaticSizeGrid(ApiTileGridLoader.automaticSizeGridRequest) returns (google.protobuf.Empty);
+    /// Get the current settings
+    rpc getSettings(ApiTileGridLoader.getSettingsRequest) returns (ApiTileGridLoader.getSettingsResponse);
+    /// Change the settings stored in this object, and if the list of files is set, add or
+        /// remove padding to it so that it covers the new grid size
+    rpc updateSettings(ApiTileGridLoader.updateSettingsRequest) returns (google.protobuf.Empty);
+    /// Get the list of files
+    rpc getFiles(ApiTileGridLoader.getFilesRequest) returns (ApiTileGridLoader.getFilesResponse);
+    /// Populate the current list of files
+    rpc setFiles(ApiTileGridLoader.setFilesRequest) returns (google.protobuf.Empty);
+    /// Check if a cell has a file assigned to it
+    rpc hasFileInCell(ApiTileGridLoader.hasFileInCellRequest) returns (ApiTileGridLoader.hasFileInCellResponse);
+    /// For cells which aren't empty, return the file name
+    rpc fileNameForCell(ApiTileGridLoader.fileNameForCellRequest) returns (ApiTileGridLoader.fileNameForCellResponse);
+    /// Count the number of valid files in the currently defined tile grid
+    rpc count(ApiTileGridLoader.countRequest) returns (ApiTileGridLoader.countResponse);
+    /// Updates the file name pattern
+    rpc updatePattern(ApiTileGridLoader.updatePatternRequest) returns (google.protobuf.Empty);
+    /// Returns true if the pattern is empty
+    rpc hasEmptyPattern(ApiTileGridLoader.hasEmptyPatternRequest) returns (ApiTileGridLoader.hasEmptyPatternResponse);
+    /// Returns the pattern as a string
+    rpc patternString(ApiTileGridLoader.patternStringRequest) returns (ApiTileGridLoader.patternStringResponse);
+    /// True if the pattern contains any placeholders
+    rpc hasPlaceholders(ApiTileGridLoader.hasPlaceholdersRequest) returns (ApiTileGridLoader.hasPlaceholdersResponse);
+    /// True if the pattern has any linear indexing (including UDIM)
+    rpc hasIndex(ApiTileGridLoader.hasIndexRequest) returns (ApiTileGridLoader.hasIndexResponse);
+    /// True if the pattern has a UDIM placeholder
+    rpc hasUDIM(ApiTileGridLoader.hasUDIMRequest) returns (ApiTileGridLoader.hasUDIMResponse);
+    /// True if the pattern uses two-dimensional indexing
+    rpc hasUv(ApiTileGridLoader.hasUvRequest) returns (ApiTileGridLoader.hasUvResponse);
+    /// Sutstitute placeholders in the file name pattern with the given
+        /// indices
+        ///
+        /// 
+    rpc substitute(ApiTileGridLoader.substituteRequest) returns (ApiTileGridLoader.substituteResponse);
+}
+
+// GRPC interface definition for class 'ApiTileGridSettings' from 'apitilegrid.h'

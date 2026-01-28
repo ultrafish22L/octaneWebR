@@ -1,0 +1,47 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiTitleComponent' class from 'apititlecomponent.h'
+message ApiTitleComponent
+{
+    // Request packet corresponding to '[in] parameters in ApiTitleComponent::create'
+    message createRequest
+    {
+        // Text that appears in the title component.
+        string text = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTitleComponent::create'
+    message createResponse
+    {
+        //     Returns a pointer to the newly created title component.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTitleComponent::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiTitleComponent' from 'apititlecomponent.h'
+service ApiTitleComponentService
+{
+    /// Creates a new title component
+    rpc create(ApiTitleComponent.createRequest) returns (ApiTitleComponent.createResponse);
+    /// Destroys this title component
+    rpc destroy(ApiTitleComponent.destroyRequest) returns (google.protobuf.Empty);
+}

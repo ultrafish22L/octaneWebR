@@ -1,0 +1,99 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiNumericBox' class from 'apinumericbox.h'
+message ApiNumericBox
+{
+    // Request packet corresponding to '[in] parameters in ApiNumericBox::create'
+    message createRequest
+    {
+        // Step size between 2 consecutive values (use a step size of 1 for integer boxes).
+        double step = 1;
+        // Callback, called every time the user changes the value in the box.
+        NumericBoxChangedCallbackT callback = 2;
+        // Private data passed back into the callback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNumericBox::create'
+    message createResponse
+    {
+        //     Pointer to the box.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNumericBox::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNumericBox::value'
+    message valueRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNumericBox::value'
+    message valueResponse
+    {
+        
+        double result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNumericBox::setValue'
+    message setValueRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The new value for the box.
+        double newValue = 2;
+        // TRUE to send the event to the callback.
+        bool sendEvent = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNumericBox::setLimits'
+    message setLimitsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Minimum allowed value.
+        double minimum = 2;
+        // Maximum allowed value.
+        double maximum = 3;
+        // Minimum displayed value on the slider.
+        double sliderMinimum = 4;
+        // Maximum displayed value on the slider.
+        double sliderMaximum = 5;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiNumericBox' from 'apinumericbox.h'
+service ApiNumericBoxService
+{
+    /// Creates a numeric box
+    rpc create(ApiNumericBox.createRequest) returns (ApiNumericBox.createResponse);
+    /// Destroys this numeric box
+    rpc destroy(ApiNumericBox.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the current value in the box
+    rpc value(ApiNumericBox.valueRequest) returns (ApiNumericBox.valueResponse);
+    /// Sets the value in the box
+    rpc setValue(ApiNumericBox.setValueRequest) returns (google.protobuf.Empty);
+    /// Sets the limits of this box
+    rpc setLimits(ApiNumericBox.setLimitsRequest) returns (google.protobuf.Empty);
+}

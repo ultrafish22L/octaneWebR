@@ -1,0 +1,416 @@
+syntax = "proto3";
+package octaneapi;
+option optimize_for = CODE_SIZE;
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneids.proto";
+import "octanetime.proto";
+import "octaneinfos.proto";
+
+message ApiNodeGraph
+{
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::clearTimeTransform'
+    message clearTimeTransformRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::closeDbWindow'
+    message closeDbWindowRequest
+    {
+        // Clears all cached data.
+        bool clearData = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::closeWindow'
+    message closeWindowRequest
+    {
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::copyFrom1'
+    message copyFrom1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The item to copy, this item must have an owner.
+        ObjectRef sourceItem = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::copyFrom1'
+    message copyFrom1Response
+    {
+        //     Ptr to the copied item or NULL if the item couldn't be copied.
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::copyFrom2'
+    message copyFrom2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Pointer to an array of items (must not be NULL). All the items in the array
+        ObjectRefArrayT sourceItems = 2;
+        uint32 sourceItemsCount = 3;
+        // Optional list of original items for which we'd like to now what their copies are.
+        ObjectRefArrayT origItems = 4;
+        // Size of origItems.
+        uint32 origItemsCount = 5;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::copyFrom2'
+    message copyFrom2Response
+    {
+        // Optional empty list. This method will fill it with a pointer to the copy for
+        ObjectRef sourceItemCopies = 1;
+        ObjectRef origItemCopies = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::copyFrom'
+    message copyFromRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Source grap who's content we copy.
+        ObjectRef source = 2;
+        // Original items for which we'd like to know what their copies are.
+        ObjectRefArrayT origItems = 3;
+        // The length of the list of original items.
+        uint32 origItemCount = 4;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::copyFrom'
+    message copyFromResponse
+    {
+        // Copies of the items in the list origItems. The copies are in the same
+        ObjectRef copiedItems = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::copyItemTree'
+    message copyItemTreeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Item at the root of the copy tree, the item must have an owner. If the item is an
+        ObjectRef rootItem = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::copyItemTree'
+    message copyItemTreeResponse
+    {
+        //     Pointer to the copied item or NULL if the item couldn't be copied.
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::create'
+    message createRequest
+    {
+        // The type of the graph to create.
+        NodeGraphType type = 1;
+        // Graph that will own the new graph.
+        ObjectRef ownerGraph = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::create'
+    message createResponse
+    {
+        //     Pointer to the created graph or NULL if creation failed.
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::findFirstNode'
+    message findFirstNodeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        NodeType type = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::findFirstNode'
+    message findFirstNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::findFirstOutputNode'
+    message findFirstOutputNodeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        NodePinType pinType = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::findFirstOutputNode'
+    message findFirstOutputNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::findItemsByName'
+    message findItemsByNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The name of the items to collect.
+        string name = 2;
+        // Recurses into nested graphs to collect the nodes.
+        bool recurse = 3;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::findItemsByName'
+    message findItemsByNameResponse
+    {
+        // List of items that match the given name.
+        ObjectRef list = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::findNodes'
+    message findNodesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Type of the nodes we'd like to collect.
+        NodeType type = 2;
+        // Recurses into nested graphs to collect the nodes.
+        bool recurse = 3;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::findNodes'
+    message findNodesResponse
+    {
+        // List of nodes that have the given type.
+        ObjectRef list = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::getAssetPaths'
+    message getAssetPathsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::getAssetPaths'
+    message getAssetPathsResponse
+    {
+        //     The list of asset paths in the current node graph.
+        StringArrayT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::getInputNodes'
+    message getInputNodesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::getInputNodes'
+    message getInputNodesResponse
+    {
+        ObjectRef list = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::getOutputNodes'
+    message getOutputNodesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::getOutputNodes'
+    message getOutputNodesResponse
+    {
+        ObjectRef list = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::getOwnedItems'
+    message getOwnedItemsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::getOwnedItems'
+    message getOwnedItemsResponse
+    {
+        // Empty item list. The graph will fill it in with pointer to the items
+        ObjectRef list = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::groupItems'
+    message groupItemsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The list of items to copy. All these items will be destroyed after copying.
+        ObjectRefArrayT items = 2;
+        // The number of items in the list.
+        uint32 itemsCount = 3;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::groupItems'
+    message groupItemsResponse
+    {
+        //     The nodegraph with the items or NULL.
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::info'
+    message infoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::info'
+    message infoResponse
+    {
+        
+        ApiNodeGraphInfo result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::recenter'
+    message recenterRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The point which will be the average of the positions of all items in this graph.
+        float_2 center = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::setLinearTimeTransform'
+    message setLinearTimeTransformRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // offset of the animation start time in seconds
+        float delay = 2;
+        // scale of the animation playback speed (1 is normal playback, 2 is 2x faster)
+        float speedUp = 3;
+        // Start and end time (in seconds) of the untransformed time of the animation that
+        TimeSpanT customInterval = 4;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::showDbWindow'
+    message showDbWindowRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Called when the dialog is being closed by the user. May be nullptr.
+        DbViewClosingCallbackT dbViewClosingCallback = 2;
+        // Called after an item has been imported. The item will be imported as child items of
+        DbViewLoadedCallbackT dbViewLoadedCallback = 3;
+        // Passed to the callbacks as the first argument.
+        uint64 userData = 4;
+        // Show the LiveDB in this window too.
+        bool showLiveDb = 5;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::showDbWindow'
+    message showDbWindowResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+        // Id of second callback function
+        uint32 callbackId2 = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::showWindow'
+    message showWindowRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If TRUE the graph will be unfolded.
+        bool unfold = 2;
+        // Optional window state. When passed into the function we try to restore the window from
+        string windowState = 3;
+        // Whether the window should be set to always on top. Either way, the window is still shown
+        bool alwaysOnTop = 4;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::showWindow'
+    message showWindowResponse
+    {
+        //     String with the last window state. This state can be used to restore the last state of
+        string result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::timeTransform'
+    message timeTransformRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::timeTransform'
+    message timeTransformResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::type'
+    message typeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::type'
+    message typeResponse
+    {
+        
+        NodeGraphType result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::unfold'
+    message unfoldRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If set to TRUE, all nested node graphs that are inspectable are unfolded, too.
+        bool recursive = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiNodeGraph::ungroup'
+    message ungroupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraph::ungroup'
+    message ungroupResponse
+    {
+        // List of the ungrouped items.
+        ObjectRef ungroupedItems = 1;
+    }
+}
+service ApiNodeGraphService
+{
+    /// Creates a new graph of the specified type
+    rpc create1(ApiNodeGraph.createRequest) returns (ApiNodeGraph.createResponse);
+    /// Returns info for this graph
+    rpc info1(ApiNodeGraph.infoRequest) returns (ApiNodeGraph.infoResponse);
+    /// Returns this graph's type
+    rpc type1(ApiNodeGraph.typeRequest) returns (ApiNodeGraph.typeResponse);
+    /// Returns the owned items of the node graph
+    rpc getOwnedItems(ApiNodeGraph.getOwnedItemsRequest) returns (ApiNodeGraph.getOwnedItemsResponse);
+    /// Returns the list of input nodes
+    rpc getInputNodes(ApiNodeGraph.getInputNodesRequest) returns (ApiNodeGraph.getInputNodesResponse);
+    /// Returns the list of output nodes
+    rpc getOutputNodes(ApiNodeGraph.getOutputNodesRequest) returns (ApiNodeGraph.getOutputNodesResponse);
+    /// Returns a list with all nodes in the graph of the given type
+    rpc findNodes(ApiNodeGraph.findNodesRequest) returns (ApiNodeGraph.findNodesResponse);
+    /// Returns the first node of the specified type
+    rpc findFirstNode(ApiNodeGraph.findFirstNodeRequest) returns (ApiNodeGraph.findFirstNodeResponse);
+    /// Returns the first output linker of the specified pin type
+    rpc findFirstOutputNode(ApiNodeGraph.findFirstOutputNodeRequest) returns (ApiNodeGraph.findFirstOutputNodeResponse);
+    /// Find all items with a given name
+    rpc findItemsByName(ApiNodeGraph.findItemsByNameRequest) returns (ApiNodeGraph.findItemsByNameResponse);
+    /// Assigns linear time transformation to the animation of the nested owned items
+    /// Can be used to offset or scale the animation playback
+    /// 
+    rpc setLinearTimeTransform(ApiNodeGraph.setLinearTimeTransformRequest) returns (google.protobuf.Empty);
+    /// Returns current ApiAnimationTimeTransform
+    /// or NULL if it doesn't have one
+    rpc timeTransform(ApiNodeGraph.timeTransformRequest) returns (ApiNodeGraph.timeTransformResponse);
+    /// Removes animation time transformation
+    rpc clearTimeTransform(ApiNodeGraph.clearTimeTransformRequest) returns (google.protobuf.Empty);
+    /// Returns an array of null-terminated strings containing all paths of the assets
+    /// currently used by the current node graph
+    /// 
+    /// 
+    rpc getAssetPaths(ApiNodeGraph.getAssetPathsRequest) returns (ApiNodeGraph.getAssetPathsResponse);
+    /// Recenter all items in this graph around the given position
+    rpc recenter(ApiNodeGraph.recenterRequest) returns (google.protobuf.Empty);
+    /// Clears the node graph, i
+    rpc clear(ApiNodeGraph.clearRequest) returns (google.protobuf.Empty);
+    /// Copies the items from the source graph into this graph
+    rpc copyFrom1(ApiNodeGraph.copyFromRequest) returns (ApiNodeGraph.copyFromResponse);
+    /// Copies one item into the node graph
+    rpc copyFrom11(ApiNodeGraph.copyFrom1Request) returns (ApiNodeGraph.copyFrom1Response);
+    /// Copies the tree starting at rootItem into this graph
+    rpc copyItemTree(ApiNodeGraph.copyItemTreeRequest) returns (ApiNodeGraph.copyItemTreeResponse);
+    /// Copies an array of items into the node graph
+    rpc copyFrom2(ApiNodeGraph.copyFrom2Request) returns (ApiNodeGraph.copyFrom2Response);
+    /// Replace a group of node items with a group node containing a copy of these items
+    rpc groupItems(ApiNodeGraph.groupItemsRequest) returns (ApiNodeGraph.groupItemsResponse);
+    /// Replaces this node graph with a copy of its content in its parent node graph
+    rpc ungroup(ApiNodeGraph.ungroupRequest) returns (ApiNodeGraph.ungroupResponse);
+    /// Unfolds the specified node graph if it's inspectable, i
+    rpc unfold(ApiNodeGraph.unfoldRequest) returns (google.protobuf.Empty);
+    /// Shows the node graph in a window, allowing the user to edit this node graph
+    rpc showWindow(ApiNodeGraph.showWindowRequest) returns (ApiNodeGraph.showWindowResponse);
+    /// Closes the opened node graph editor window (if any)
+    rpc closeWindow(ApiNodeGraph.closeWindowRequest) returns (google.protobuf.Empty);
+    /// Opens a dialog window where the user can import items from liveDB and localDB
+    rpc showDbWindow(ApiNodeGraph.showDbWindowRequest) returns (ApiNodeGraph.showDbWindowResponse);
+    /// Closes the currently opened DB window (if any)
+    ///
+    /// 
+    rpc closeDbWindow(ApiNodeGraph.closeDbWindowRequest) returns (google.protobuf.Empty);
+}
+

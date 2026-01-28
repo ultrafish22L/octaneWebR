@@ -1,0 +1,783 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "octaneinfos.proto";
+import "octanerenderpasses.proto";
+import "octaneenums.proto";
+import "octaneids.proto";
+
+ // GRPC proto definitions for 'ApiInfo' class from 'apiinfo.h'
+message ApiInfo
+{
+    // Request packet corresponding to '[in] parameters in ApiInfo::octaneVersion'
+    message octaneVersionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::octaneVersion'
+    message octaneVersionResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::octaneName'
+    message octaneNameRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::octaneName'
+    message octaneNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::isDemoVersion'
+    message isDemoVersionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::isDemoVersion'
+    message isDemoVersionResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::isSubscriptionVersion'
+    message isSubscriptionVersionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::isSubscriptionVersion'
+    message isSubscriptionVersionResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::tierIdx'
+    message tierIdxRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::tierIdx'
+    message tierIdxResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::osVersionInfo'
+    message osVersionInfoRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::osVersionInfo'
+    message osVersionInfoResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::driverVersionInfo'
+    message driverVersionInfoRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::driverVersionInfo'
+    message driverVersionInfoResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::cpuInfo'
+    message cpuInfoRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::cpuInfo'
+    message cpuInfoResponse
+    {
+        // Pointer to a pointer that will be set to the C string of the CPU vendor name (e.g.
+        string cpuVendor = 1;
+        // Pointer to a pointer that will be set to the C string of the CPU model name (e.g.
+        string cpuModel = 2;
+        // Receives the CPU clock speed in MHz.
+        uint32 clockSpeedMhz = 3;
+        // Receives the number of physical cpu cores in the system.
+        uint32 nbCores = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::texCacheFolder'
+    message texCacheFolderRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::texCacheFolder'
+    message texCacheFolderResponse
+    {
+        //     The absolute path of the texture cache folder.
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeTypes'
+    message getAttributeTypesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeTypes'
+    message getAttributeTypesResponse
+    {
+        // Array of attribute types. This array is owned by the API.
+        AttributeTypeArrayT attributeTypes = 1;
+        // Size of the array.
+        uint32 size = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinTypes'
+    message getPinTypesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinTypes'
+    message getPinTypesResponse
+    {
+        // Array of pin types. This array is owned by the API.
+        NodePinTypeArrayT pinTypes = 1;
+        // Size of the array.
+        uint32 size = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getGraphTypes'
+    message getGraphTypesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getGraphTypes'
+    message getGraphTypesResponse
+    {
+        // Array of graph types. This array is owned by the API.
+        NodeGraphTypeArrayT graphTypes = 1;
+        // Size of the array.
+        uint32 size = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getNodeTypes'
+    message getNodeTypesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getNodeTypes'
+    message getNodeTypesResponse
+    {
+        // Array of node types. This array is owned by the API.
+        NodeTypeArrayT nodesTypes = 1;
+        // Size of the array.
+        uint32 size = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::nodeInfo'
+    message nodeInfoRequest
+    {
+        NodeType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::nodeInfo'
+    message nodeInfoResponse
+    {
+        
+        ApiNodeInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::graphInfo'
+    message graphInfoRequest
+    {
+        NodeGraphType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::graphInfo'
+    message graphInfoResponse
+    {
+        
+        ApiNodeGraphInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::nodeIconImage'
+    message nodeIconImageRequest
+    {
+        NodeType nodeType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::nodeIconImage'
+    message nodeIconImageResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::graphIconImage'
+    message graphIconImageRequest
+    {
+        NodeGraphType nodeGraphType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::graphIconImage'
+    message graphIconImageResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::attributeInfo'
+    message attributeInfoRequest
+    {
+        NodeType type = 1;
+        AttributeId attrId = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::attributeInfo'
+    message attributeInfoResponse
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::attributeInfo1'
+    message attributeInfo1Request
+    {
+        NodeType type = 1;
+        uint32 attrIx = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::attributeInfo1'
+    message attributeInfo1Response
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::attributeInfo2'
+    message attributeInfo2Request
+    {
+        NodeGraphType type = 1;
+        uint32 attrIx = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::attributeInfo2'
+    message attributeInfo2Response
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::nodePinInfo'
+    message nodePinInfoRequest
+    {
+        NodeType nodeType = 1;
+        uint32 pinIx = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::nodePinInfo'
+    message nodePinInfoResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeTypeName'
+    message getAttributeTypeNameRequest
+    {
+        AttributeType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeTypeName'
+    message getAttributeTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinTypeName'
+    message getPinTypeNameRequest
+    {
+        NodePinType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinTypeName'
+    message getPinTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinTypeColor'
+    message getPinTypeColorRequest
+    {
+        NodePinType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinTypeColor'
+    message getPinTypeColorResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getGraphTypeName'
+    message getGraphTypeNameRequest
+    {
+        NodeGraphType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getGraphTypeName'
+    message getGraphTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getNodeTypeName'
+    message getNodeTypeNameRequest
+    {
+        NodeType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getNodeTypeName'
+    message getNodeTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getItemTypeName'
+    message getItemTypeNameRequest
+    {
+        ObjectRef item = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getItemTypeName'
+    message getItemTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeName'
+    message getAttributeNameRequest
+    {
+        AttributeId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeName'
+    message getAttributeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeId'
+    message getAttributeIdRequest
+    {
+        string attributeName = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeId'
+    message getAttributeIdResponse
+    {
+        
+        AttributeId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeIdName'
+    message getAttributeIdNameRequest
+    {
+        AttributeId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeIdName'
+    message getAttributeIdNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAttributeIdName1'
+    message getAttributeIdName1Request
+    {
+        string attributeName = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAttributeIdName1'
+    message getAttributeIdName1Response
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinName'
+    message getPinNameRequest
+    {
+        PinId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinName'
+    message getPinNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinId'
+    message getPinIdRequest
+    {
+        string pinName = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinId'
+    message getPinIdResponse
+    {
+        
+        PinId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinIdName'
+    message getPinIdNameRequest
+    {
+        PinId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinIdName'
+    message getPinIdNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getPinIdName1'
+    message getPinIdName1Request
+    {
+        string pinName = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getPinIdName1'
+    message getPinIdName1Response
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getTextureValueTypeName'
+    message getTextureValueTypeNameRequest
+    {
+        TextureValueType textureValueType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getTextureValueTypeName'
+    message getTextureValueTypeNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getTextureValueTypeForOslType'
+    message getTextureValueTypeForOslTypeRequest
+    {
+        string oslType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getTextureValueTypeForOslType'
+    message getTextureValueTypeForOslTypeResponse
+    {
+        
+        TextureValueType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getCompatibleTypes'
+    message getCompatibleTypesRequest
+    {
+        NodePinType outType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getCompatibleTypes'
+    message getCompatibleTypesResponse
+    {
+        // Array of graph types compatible with the provided output type. Will
+        NodeGraphTypeArrayT compatGraphs = 1;
+        // Size of the compatible graphs array.
+        uint32 compatGraphsSize = 2;
+        // Array of node types compatible with the provided output type. Will be
+        NodeTypeArrayT compatNodes = 3;
+        // Size of the compatible nodes array.
+        uint32 compatNodesSize = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::renderPassInfo'
+    message renderPassInfoRequest
+    {
+        RenderPassId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::renderPassInfo'
+    message renderPassInfoResponse
+    {
+        
+        ApiRenderPassInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getAllRenderPassIds'
+    message getAllRenderPassIdsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getAllRenderPassIds'
+    message getAllRenderPassIdsResponse
+    {
+        //     Array of all available render pass ids. This array doesn't change at runtime.
+        ApiArrayRenderPassId result = 1;
+        // Length of the returned array.
+        uint32 length = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getRenderPassIdFromRenderAovNode'
+    message getRenderPassIdFromRenderAovNodeRequest
+    {
+        ObjectRef node = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getRenderPassIdFromRenderAovNode'
+    message getRenderPassIdFromRenderAovNodeResponse
+    {
+        
+        RenderPassId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::getRenderAovInfoFromRenderAovNode'
+    message getRenderAovInfoFromRenderAovNodeRequest
+    {
+        ObjectRef node = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::getRenderAovInfoFromRenderAovNode'
+    message getRenderAovInfoFromRenderAovNodeResponse
+    {
+        
+        ApiRenderPassInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::renderPassName'
+    message renderPassNameRequest
+    {
+        RenderPassId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::renderPassName'
+    message renderPassNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::renderPassShortName'
+    message renderPassShortNameRequest
+    {
+        RenderPassId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::renderPassShortName'
+    message renderPassShortNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::renderPassIdToPinId'
+    message renderPassIdToPinIdRequest
+    {
+        RenderPassId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::renderPassIdToPinId'
+    message renderPassIdToPinIdResponse
+    {
+        
+        PinId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::renderPassGroupName'
+    message renderPassGroupNameRequest
+    {
+        RenderPassGroupId id = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::renderPassGroupName'
+    message renderPassGroupNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::pinIdToRenderPassId'
+    message pinIdToRenderPassIdRequest
+    {
+        PinId pinId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::pinIdToRenderPassId'
+    message pinIdToRenderPassIdResponse
+    {
+        
+        RenderPassId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::findPinIdForRenderPassId'
+    message findPinIdForRenderPassIdRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::findPinIdForRenderPassId'
+    message findPinIdForRenderPassIdResponse
+    {
+        
+        bool result = 1;
+        PinId pinId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiInfo::findRenderPassIdForPinId'
+    message findRenderPassIdForPinIdRequest
+    {
+        PinId pinId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiInfo::findRenderPassIdForPinId'
+    message findRenderPassIdForPinIdResponse
+    {
+        
+        bool result = 1;
+        RenderPassId renderPassId = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiInfo' from 'apiinfo.h'
+service ApiInfoService
+{
+    /// Returns the version of the Octane DLL
+    rpc octaneVersion(ApiInfo.octaneVersionRequest) returns (ApiInfo.octaneVersionResponse);
+    /// Returns the full name of the Octane DLL build
+    rpc octaneName(ApiInfo.octaneNameRequest) returns (ApiInfo.octaneNameResponse);
+    /// Returns TRUE if the DLL is a demo version
+    rpc isDemoVersion(ApiInfo.isDemoVersionRequest) returns (ApiInfo.isDemoVersionResponse);
+    /// Returns TRUE if the DLL is a subscription version
+    rpc isSubscriptionVersion(ApiInfo.isSubscriptionVersionRequest) returns (ApiInfo.isSubscriptionVersionResponse);
+    /// Returns -1 for builds with no tiers or the build tier index (1-3)
+    rpc tierIdx(ApiInfo.tierIdxRequest) returns (ApiInfo.tierIdxResponse);
+    /// Returns a string describing the OS version
+    rpc osVersionInfo(ApiInfo.osVersionInfoRequest) returns (ApiInfo.osVersionInfoResponse);
+    ///  Returns the driver version string (NVIDIA only)
+    rpc driverVersionInfo(ApiInfo.driverVersionInfoRequest) returns (ApiInfo.driverVersionInfoResponse);
+    /// Returns info about the cpu(s)
+    rpc cpuInfo(ApiInfo.cpuInfoRequest) returns (ApiInfo.cpuInfoResponse);
+    /// Returns the absolute path of the texture cache folder
+    ///
+    /// 
+    rpc texCacheFolder(ApiInfo.texCacheFolderRequest) returns (ApiInfo.texCacheFolderResponse);
+    /// Returns a sorted list of all attribute types
+    rpc getAttributeTypes(ApiInfo.getAttributeTypesRequest) returns (ApiInfo.getAttributeTypesResponse);
+    /// Returns a sorted list of all pin types
+    rpc getPinTypes(ApiInfo.getPinTypesRequest) returns (ApiInfo.getPinTypesResponse);
+    /// Returns a sorted list of all graph types
+    rpc getGraphTypes(ApiInfo.getGraphTypesRequest) returns (ApiInfo.getGraphTypesResponse);
+    /// Returns a sorted list of all node types
+    rpc getNodeTypes(ApiInfo.getNodeTypesRequest) returns (ApiInfo.getNodeTypesResponse);
+    /// Returns info for this particular node type or NULL if no info is available
+    rpc nodeInfo(ApiInfo.nodeInfoRequest) returns (ApiInfo.nodeInfoResponse);
+    /// Returns info for this particular graph type or NULL if no info is available
+    rpc graphInfo(ApiInfo.graphInfoRequest) returns (ApiInfo.graphInfoResponse);
+    /// Returns an image containing the icon of a given node type
+    /// Note: Octane is the owner of the returned image and 
+    rpc nodeIconImage(ApiInfo.nodeIconImageRequest) returns (ApiInfo.nodeIconImageResponse);
+    /// Returns an image containing the icon of a given graph type
+    /// Note: Octane is the owner of the returned image and 
+    rpc graphIconImage(ApiInfo.graphIconImageRequest) returns (ApiInfo.graphIconImageResponse);
+    /// Returns info for an attribute available on nodes of the given type or NULL if no info for the
+    /// attribute is available
+    rpc attributeInfo(ApiInfo.attributeInfoRequest) returns (ApiInfo.attributeInfoResponse);
+    /// Returns info for an attribute available on nodes of the given type or NULL
+    /// if no info for the attribute is available
+    rpc attributeInfo1(ApiInfo.attributeInfo1Request) returns (ApiInfo.attributeInfo1Response);
+    /// Returns info for an attribute available on graphs of the given type or NULL
+    /// if no info for the attribute is available
+    rpc attributeInfo2(ApiInfo.attributeInfo2Request) returns (ApiInfo.attributeInfo2Response);
+    /// Returns info for a pin available on a node or NULL if there's no such pin
+    rpc nodePinInfo(ApiInfo.nodePinInfoRequest) returns (ApiInfo.nodePinInfoResponse);
+    /// Returns the name for an attribute type, e
+    rpc getAttributeTypeName(ApiInfo.getAttributeTypeNameRequest) returns (ApiInfo.getAttributeTypeNameResponse);
+    /// Returns the name for a node pin type, e
+    rpc getPinTypeName(ApiInfo.getPinTypeNameRequest) returns (ApiInfo.getPinTypeNameResponse);
+    /// Returns the color for a node pin type (ARGB encoded)
+    rpc getPinTypeColor(ApiInfo.getPinTypeColorRequest) returns (ApiInfo.getPinTypeColorResponse);
+    /// Returns the name for a node graph type, e
+    rpc getGraphTypeName(ApiInfo.getGraphTypeNameRequest) returns (ApiInfo.getGraphTypeNameResponse);
+    /// Returns the name for a node type, e
+    rpc getNodeTypeName(ApiInfo.getNodeTypeNameRequest) returns (ApiInfo.getNodeTypeNameResponse);
+    /// Returns the type name of an api item
+    rpc getItemTypeName(ApiInfo.getItemTypeNameRequest) returns (ApiInfo.getItemTypeNameResponse);
+    /// Returns the name for an attribute ID, e
+    rpc getAttributeName(ApiInfo.getAttributeNameRequest) returns (ApiInfo.getAttributeNameResponse);
+    /// Returns the ID for an attribute name, e
+    rpc getAttributeId(ApiInfo.getAttributeIdRequest) returns (ApiInfo.getAttributeIdResponse);
+    /// Returns the enum name for an attribute ID, e
+    rpc getAttributeIdName(ApiInfo.getAttributeIdNameRequest) returns (ApiInfo.getAttributeIdNameResponse);
+    /// Returns the enum name for an attribute name, e
+    rpc getAttributeIdName1(ApiInfo.getAttributeIdName1Request) returns (ApiInfo.getAttributeIdName1Response);
+    /// Returns the name for a pin ID, e
+    rpc getPinName(ApiInfo.getPinNameRequest) returns (ApiInfo.getPinNameResponse);
+    /// Returns the ID for a pin name, e
+    rpc getPinId(ApiInfo.getPinIdRequest) returns (ApiInfo.getPinIdResponse);
+    /// Returns the enum name for a pin ID, e
+    rpc getPinIdName(ApiInfo.getPinIdNameRequest) returns (ApiInfo.getPinIdNameResponse);
+    /// Returns the enum name for a pin name, e
+    rpc getPinIdName1(ApiInfo.getPinIdName1Request) returns (ApiInfo.getPinIdName1Response);
+    /// Get the string name of an OSL value type of a given texture value type enum
+    rpc getTextureValueTypeName(ApiInfo.getTextureValueTypeNameRequest) returns (ApiInfo.getTextureValueTypeNameResponse);
+    /// Get the OSL value type for a given OSL type name
+    rpc getTextureValueTypeForOslType(ApiInfo.getTextureValueTypeForOslTypeRequest) returns (ApiInfo.getTextureValueTypeForOslTypeResponse);
+    /// Returns a list of graphs compatible with the output type and a list
+    /// of nodes compatible with the output type
+    rpc getCompatibleTypes(ApiInfo.getCompatibleTypesRequest) returns (ApiInfo.getCompatibleTypesResponse);
+    /// Returns the information related to a render pass given its id
+    rpc renderPassInfo(ApiInfo.renderPassInfoRequest) returns (ApiInfo.renderPassInfoResponse);
+    /// Returns an array with all the available render pass ids
+    rpc getAllRenderPassIds(ApiInfo.getAllRenderPassIdsRequest) returns (ApiInfo.getAllRenderPassIdsResponse);
+    /// Returns the 
+    rpc getRenderPassIdFromRenderAovNode(ApiInfo.getRenderPassIdFromRenderAovNodeRequest) returns (ApiInfo.getRenderPassIdFromRenderAovNodeResponse);
+    /// Returns the 
+    rpc getRenderAovInfoFromRenderAovNode(ApiInfo.getRenderAovInfoFromRenderAovNodeRequest) returns (ApiInfo.getRenderAovInfoFromRenderAovNodeResponse);
+    /// Returns the name of the render pass associated with the id
+    rpc renderPassName(ApiInfo.renderPassNameRequest) returns (ApiInfo.renderPassNameResponse);
+    /// Returns the short (~ abbreviated) name of a render pass
+    rpc renderPassShortName(ApiInfo.renderPassShortNameRequest) returns (ApiInfo.renderPassShortNameResponse);
+    /// Returns the pin id for a render pass
+    rpc renderPassIdToPinId(ApiInfo.renderPassIdToPinIdRequest) returns (ApiInfo.renderPassIdToPinIdResponse);
+    /// Returns the group name of a render pass
+    /// 
+    rpc renderPassGroupName(ApiInfo.renderPassGroupNameRequest) returns (ApiInfo.renderPassGroupNameResponse);
+    /// Returns the render pass id for a pin id
+    rpc pinIdToRenderPassId(ApiInfo.pinIdToRenderPassIdRequest) returns (ApiInfo.pinIdToRenderPassIdResponse);
+    /// Finds the bool pin used to enable/disable the render pass
+    rpc findPinIdForRenderPassId(ApiInfo.findPinIdForRenderPassIdRequest) returns (ApiInfo.findPinIdForRenderPassIdResponse);
+    /// Finds the render pass you can enable/disable with the passed in pin id
+    rpc findRenderPassIdForPinId(ApiInfo.findRenderPassIdForPinIdRequest) returns (ApiInfo.findRenderPassIdForPinIdResponse);
+}

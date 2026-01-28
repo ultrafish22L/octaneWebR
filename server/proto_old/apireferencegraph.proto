@@ -1,0 +1,146 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+
+ // GRPC proto definitions for 'ApiReferenceGraph' class from 'apireferencegraph.h'
+message ApiReferenceGraph
+{
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::create'
+    message createRequest
+    {
+        ObjectRef ownerGraph = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::create'
+    message createResponse
+    {
+        //     pointer to the created graph or null if creation failed.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::obtain'
+    message obtainRequest
+    {
+        // The node graph to obtain API for.
+        ObjectRef nodeGraph = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::obtain'
+    message obtainResponse
+    {
+        //     The ApiReferenceGraph object pointer if nodeGraph type is GT_REFERENCE. NULL otherwise.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::hasAabbData'
+    message hasAabbDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::hasAabbData'
+    message hasAabbDataResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::totalAabbEntries'
+    message totalAabbEntriesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::totalAabbEntries'
+    message totalAabbEntriesResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::fetchAllBounds'
+    message fetchAllBoundsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The number of Octane::AABBF that can be put in the buffer (not the size in bytes).
+        uint32 bufferSize = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::fetchAllBounds'
+    message fetchAllBoundsResponse
+    {
+        //     The number of Octane::AABBF that have been written into the buffer
+        uint32 result = 1;
+        // The buffer to store the result.
+        AABBFArrayT buffer = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::totalAabbEntriesForOutput'
+    message totalAabbEntriesForOutputRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // the index of the output in the outputNodes() list.
+        uint32 outputIndex = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::totalAabbEntriesForOutput'
+    message totalAabbEntriesForOutputResponse
+    {
+        //     The number of AABB entries
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiReferenceGraph::fetchBoundsForOutput'
+    message fetchBoundsForOutputRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the output node in the getOutputNodes() array
+        uint32 outputIndex = 2;
+        // The number of Octane::AABBF that can be put in the buffer (not the size in bytes).
+        uint32 bufferSize = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiReferenceGraph::fetchBoundsForOutput'
+    message fetchBoundsForOutputResponse
+    {
+        //     The number of Octane::AABBF that have been written into the buffer
+        uint32 result = 1;
+        // The buffer to store the result.
+        AABBFArrayT buffer = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiReferenceGraph' from 'apireferencegraph.h'
+service ApiReferenceGraphService
+{
+    /// creates a new graph of the GT_REFERENCE type
+    rpc create(ApiReferenceGraph.createRequest) returns (ApiReferenceGraph.createResponse);
+    /// Returns ApiReferenceGraph interface for the ApiNodeGraph of GT_REFERENCE type
+    /// 
+    /// 
+    rpc obtain(ApiReferenceGraph.obtainRequest) returns (ApiReferenceGraph.obtainResponse);
+    /// Returns true if the AABB data is present in the referenced orbx
+    rpc hasAabbData(ApiReferenceGraph.hasAabbDataRequest) returns (ApiReferenceGraph.hasAabbDataResponse);
+    /// Returns the number of AABB entries for all outputs
+    rpc totalAabbEntries(ApiReferenceGraph.totalAabbEntriesRequest) returns (ApiReferenceGraph.totalAabbEntriesResponse);
+    /// Populates the buffer with AABBs for all the output nodes at current time
+    rpc fetchAllBounds(ApiReferenceGraph.fetchAllBoundsRequest) returns (ApiReferenceGraph.fetchAllBoundsResponse);
+    /// Returns the number of AABB entries for the certain output node
+    rpc totalAabbEntriesForOutput(ApiReferenceGraph.totalAabbEntriesForOutputRequest) returns (ApiReferenceGraph.totalAabbEntriesForOutputResponse);
+    /// Populates the buffer with AABBs for a particular output node index at current scene time
+    rpc fetchBoundsForOutput(ApiReferenceGraph.fetchBoundsForOutputRequest) returns (ApiReferenceGraph.fetchBoundsForOutputResponse);
+}

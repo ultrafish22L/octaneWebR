@@ -1,0 +1,117 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+    enum NetDaemonState 
+    {
+        DAEMON_STATE_UNKNOWN = 0;
+        DAEMON_SLAVE_HAS_INVALID_VERSION = 1;
+        DAEMON_SLAVE_UNBOUND = 2;
+        DAEMON_SLAVE_BOUND_TO_OTHER = 3;
+        DAEMON_SLAVE_AUTHENTICATING = 4;
+        DAEMON_SLAVE_RUNNING = 5;
+        DAEMON_SLAVE_DEACTIVATED = 6;
+        DAEMON_SLAVE_CRASHED = 7;
+    }
+
+    enum NetTransportMode 
+    {
+        NET_MODE_TCP = 0;
+    }
+
+ // GRPC proto definitions for 'NetInterfaceInfo' class from 'octanenet.h'
+message NetInterfaceInfo
+{
+    uint32 adapterIP = 1;
+    uint32 baseAddress = 2;
+    uint32 mask = 3;
+}
+ // GRPC proto definitions for 'SocketAddress' class from 'octanenet.h'
+message SocketAddress
+{
+    uint32 ipAddress = 1;
+    uint32 port = 2;
+    // Request packet corresponding to '[in] parameters in SocketAddress::isValid'
+    message isValidRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'SocketAddress::isValid'
+    message isValidResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'NetRenderStatus' class from 'octanenet.h'
+message NetRenderStatus
+{
+    uint32 netSlaveCount = 1;
+    uint32 updatingNetSlaveCount = 2;
+    uint32 updatedNetSlaveCount = 3;
+    uint32 pendingSize = 4;
+    uint32 totalSize = 5;
+    uint32 netGpuCount = 6;
+    uint32 inUseNetGpuCount = 7;
+    bool canRenderUsingRenderNodes = 8;
+    // Request packet corresponding to '[in] parameters in NetRenderStatus::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+}
+ // GRPC proto definitions for 'NetDaemonInfo' class from 'octanenet.h'
+message NetDaemonInfo
+{
+    uint32 ipAddress = 1;
+    string name = 2;
+    NetDaemonState state = 3;
+    uint32 gpuCount = 4;
+    uint32 slaveVersion = 5;
+    SocketAddress boundMasterAddress = 6;
+    string boundMasterName = 7;
+}
+ // GRPC proto definitions for 'NetRenderSettings' class from 'octanenet.h'
+message NetRenderSettings
+{
+    uint32 masterPort = 1;
+    uint32 daemonPort = 2;
+    UintArrayT daemonSearchAdapters = 3;
+    uint32 daemonSearchAdapterCount = 4;
+    StringArrayT daemonSearchAdresses = 5;
+    uint32 daemonSearchAddressCount = 6;
+}
+
+
+// GRPC interface definition for class 'NetDaemonInfo' from 'octanenet.h'
+
+// GRPC interface definition for class 'NetInterfaceInfo' from 'octanenet.h'
+
+// GRPC interface definition for class 'NetRenderSettings' from 'octanenet.h'
+
+// GRPC interface definition for class 'NetRenderStatus' from 'octanenet.h'
+service NetRenderStatusService
+{
+    /// Resets and nullifies everything
+    rpc clear(NetRenderStatus.clearRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'SocketAddress' from 'octanenet.h'
+service SocketAddressService
+{
+    /// checks if this address makes sense
+    rpc isValid(SocketAddress.isValidRequest) returns (SocketAddress.isValidResponse);
+}

@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package octaneapi;
+import "octaneinfos.proto";
+import "common.proto";
+
+message ApiNodePinInfoEx
+{
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::startBlockingOperation'
+    message startBlockingRequest
+    {
+        string uniqueModuleId = 1;
+        string message = 2;
+    }
+
+    message startBlockingResponse
+    {
+        bool success = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::createApiNodePinInfoArray'
+    message createNodePinInfoArrayRequest
+    {
+        repeated ApiNodePinInfo nodePinInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfoEx::createApiNodePinInfoArray'
+    message createNodePinInfoArrayResponse
+    {
+        repeated ObjectRef nodePinInfoRefs = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::createApiNodePinInfo'
+    message createNodePinInfoRequest
+    {
+        ApiNodePinInfo nodePinInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfoEx::createApiNodePinInfo'
+    message createNodePinInfoResponse
+    {
+        ObjectRef nodePinInfoRef = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfo::create'
+    message deleteNodePinInfoRequest
+    {
+        ObjectRef nodePinInfoRef = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfo::create'
+    message deleteNodePinInfoResponse
+    {
+        bool success = 1;
+    }
+
+    message updateNodePinInfoRequest
+    {
+        ObjectRef nodePinInfoRef = 1;
+        ApiNodePinInfo nodePinInfo = 2;
+    }
+
+    message updateNodePinInfoResponse
+    {
+        bool success = 1;
+    }
+}
+
+// GRPC interface definition for class 'ApiWindow' from 'apiwindow.h'
+service ApiNodePinInfoExService
+{
+    /// Test method
+    rpc startBlockingOperation(ApiNodePinInfoEx.startBlockingRequest) returns (ApiNodePinInfoEx.startBlockingResponse);
+
+    /// Creates a ApiNodePinInfo object on the server
+    rpc createApiNodePinInfoArray(ApiNodePinInfoEx.createNodePinInfoArrayRequest) returns (ApiNodePinInfoEx.createNodePinInfoArrayResponse);
+
+    /// Creates a ApiNodePinInfo object on the server
+    rpc createApiNodePinInfo(ApiNodePinInfoEx.createNodePinInfoRequest) returns (ApiNodePinInfoEx.createNodePinInfoResponse);
+
+    /// Deletes a ApiNodePinInfo object on the server
+    rpc deleteApiNodePinInfo(ApiNodePinInfoEx.deleteNodePinInfoRequest) returns (ApiNodePinInfoEx.deleteNodePinInfoResponse);
+
+    /// Modifies a ApiNodePinInfo object on the server
+    rpc updateApiNodePinInfo(ApiNodePinInfoEx.updateNodePinInfoRequest) returns (ApiNodePinInfoEx.updateNodePinInfoResponse);
+}

@@ -1,0 +1,738 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "apinodesystem_7.proto";
+
+ // GRPC proto definitions for 'ApiModuleNodeGraph' class from 'apimodulenodegraph.h'
+message ApiModuleNodeGraph
+{
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputLinkers'
+    message setInputLinkersRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Input pin infos list.
+        ObjectRefArrayT inputInfos = 2;
+        uint32 inputInfosCount = 3;
+        // The linkers in this range will be modified or deleted from the list. Including range.y
+        uint32_2 range = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setOutputLinkers'
+    message setOutputLinkersRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Output pin infos list.
+        ObjectRefArrayT outputInfos = 2;
+        uint32 outputInfosCount = 3;
+        // The linkers in this range will be modified or deleted from the list. Including range.y
+        uint32_2 range = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::insertLinkers'
+    message insertLinkersRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Linker node pin infos list which needs to be inserted.
+        ObjectRefArrayT infos = 2;
+        // Count of the linker node pin infos.
+        uint32 infosCount = 3;
+        // Position in the linker list where the new linkers needs to be inserted.
+        uint32 ix = 4;
+        // Set TRUE if the infos is a input linkers and False for output linkers.
+        bool isInputLinkers = 5;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::removeLinkers'
+    message removeLinkersRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Count of the linker node pin infos.
+        ObjectRefArrayT infos = 2;
+        // The linkers in this range will be deleted and removed from the list. Including range.y
+        uint32_2 range = 3;
+        // Set TRUE if the infos is a input linkers and False for output linkers.
+        bool isInputLinkers = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputInfo'
+    message setInputInfoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // A linker node that need to be modified.
+        ObjectRef linkerNode = 2;
+        // Info that needs to set to the linker node.
+        ObjectRef info = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::inputWasChanged'
+    message inputWasChangedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::inputWasChanged'
+    message inputWasChangedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue'
+    message getInputValueRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue'
+    message getInputValueResponse
+    {
+        
+        bool result = 1;
+        bool value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue1'
+    message getInputValue1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue1'
+    message getInputValue1Response
+    {
+        
+        bool result = 1;
+        float value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue2'
+    message getInputValue2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue2'
+    message getInputValue2Response
+    {
+        
+        bool result = 1;
+        float_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue3'
+    message getInputValue3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue3'
+    message getInputValue3Response
+    {
+        
+        bool result = 1;
+        float_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue4'
+    message getInputValue4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue4'
+    message getInputValue4Response
+    {
+        
+        bool result = 1;
+        float_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue5'
+    message getInputValue5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue5'
+    message getInputValue5Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue6'
+    message getInputValue6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue6'
+    message getInputValue6Response
+    {
+        
+        bool result = 1;
+        int32_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue7'
+    message getInputValue7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue7'
+    message getInputValue7Response
+    {
+        
+        bool result = 1;
+        int32_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue8'
+    message getInputValue8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue8'
+    message getInputValue8Response
+    {
+        
+        bool result = 1;
+        int32_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue9'
+    message getInputValue9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue9'
+    message getInputValue9Response
+    {
+        
+        bool result = 1;
+        MatrixF value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue10'
+    message getInputValue10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue10'
+    message getInputValue10Response
+    {
+        
+        bool result = 1;
+        string value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getInputValue11'
+    message getInputValue11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getInputValue11'
+    message getInputValue11Response
+    {
+        
+        bool result = 1;
+        ApiFilePath value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue'
+    message setInputValueRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        bool value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue1'
+    message setInputValue1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        float value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue2'
+    message setInputValue2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        float_2 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue3'
+    message setInputValue3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        float_3 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue4'
+    message setInputValue4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        float_4 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue5'
+    message setInputValue5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        int32 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue6'
+    message setInputValue6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        int32_2 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue7'
+    message setInputValue7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        int32_3 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue8'
+    message setInputValue8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        int32_4 value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue9'
+    message setInputValue9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        MatrixF value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue10'
+    message setInputValue10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        string value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setInputValue11'
+    message setInputValue11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef linkerNode = 2;
+        ApiFilePath value = 3;
+        bool evaluate = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::reset'
+    message resetRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setEvaluateTimeChanges'
+    message setEvaluateTimeChangesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // if true the onEvaluate function will be called after time changes
+        bool shouldEvaluate = 2;
+        float_2 timeInterval = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setIcon'
+    message setIconRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The image to use. If NULL, the icon will be reverted to a default icon.
+        ObjectRef image = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::wasTimeChanged'
+    message wasTimeChangedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::wasTimeChanged'
+    message wasTimeChangedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::appendAsset'
+    message appendAssetRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ApiFilePath filePath = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::appendAsset'
+    message appendAssetResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::removeAsset'
+    message removeAssetRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // "The index of the asset in the array."
+        uint32 index = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getAsset'
+    message getAssetRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the asset in the array
+        uint32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getAsset'
+    message getAssetResponse
+    {
+        //     Returns file path which contains filename and package. The returned filepath should be
+        ApiFilePath result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getAssetCount'
+    message getAssetCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getAssetCount'
+    message getAssetCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::readAsset'
+    message readAssetRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the asset in the array
+        uint32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::readAsset'
+    message readAssetResponse
+    {
+        // TRUE if successful.
+        bool result = 1;
+        //  file data, This should deleted via cleanupString().
+        string data = 2;
+        //  size of the data.
+        uint64 size = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::readAsset1'
+    message readAsset1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  path to a file. filename should be absolute if the file is from file system. or relative if
+        ApiFilePath path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::readAsset1'
+    message readAsset1Response
+    {
+        // TRUE if successful.
+        bool result = 1;
+        //  file data, This should deleted via freeAssetDataString().
+        string data = 2;
+        //  size of the data.
+        uint64 size = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::freeAssetDataString'
+    message freeAssetDataStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string str = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::removeAllAssets'
+    message removeAllAssetsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setSaveData'
+    message setSaveDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Data to be stored.
+        string data = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::getSaveData'
+    message getSaveDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::getSaveData'
+    message getSaveDataResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setCustomData'
+    message setCustomDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // data pointer to be assigned
+        uint64 data = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::customData'
+    message customDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::customData'
+    message customDataResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::isTriggerEnabled'
+    message isTriggerEnabledRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleNodeGraph::isTriggerEnabled'
+    message isTriggerEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::trigger'
+    message triggerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setTriggerButtonIcon'
+    message setTriggerButtonIconRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef image = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setTriggerButtonTooltip'
+    message setTriggerButtonTooltipRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string tooltip = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleNodeGraph::setProgressState'
+    message setProgressStateRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Whether the progress bar should be visible
+        bool progressBarVisible = 2;
+        // Whether the progress bar should be visible
+        float progress = 3;
+        // The text for the status label. If null or empty, the status label will be hidden.
+        string statusText = 4;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiModuleNodeGraph' from 'apimodulenodegraph.h'
+service ApiModuleNodeGraphService
+{
+    /// Function to set input linker to a graph
+    rpc setInputLinkers(ApiModuleNodeGraph.setInputLinkersRequest) returns (google.protobuf.Empty);
+    /// Function to set output linker to a graph
+    rpc setOutputLinkers(ApiModuleNodeGraph.setOutputLinkersRequest) returns (google.protobuf.Empty);
+    /// Function to insert linkers
+    rpc insertLinkers(ApiModuleNodeGraph.insertLinkersRequest) returns (google.protobuf.Empty);
+    ///     Linker node pin infos which needs to be inserted
+    rpc removeLinkers(ApiModuleNodeGraph.removeLinkersRequest) returns (google.protobuf.Empty);
+    /// Assigns a new node pin info to an input linker node
+    rpc setInputInfo(ApiModuleNodeGraph.setInputInfoRequest) returns (google.protobuf.Empty);
+    /// Return if an input was changed since the last evaluation
+    rpc inputWasChanged(ApiModuleNodeGraph.inputWasChangedRequest) returns (ApiModuleNodeGraph.inputWasChangedResponse);
+    /// Reads the input value of a linker node, which can't be done directly using the input pin of
+    /// the linker
+    rpc getInputValue(ApiModuleNodeGraph.getInputValueRequest) returns (ApiModuleNodeGraph.getInputValueResponse);
+    rpc getInputValue1(ApiModuleNodeGraph.getInputValue1Request) returns (ApiModuleNodeGraph.getInputValue1Response);
+    rpc getInputValue2(ApiModuleNodeGraph.getInputValue2Request) returns (ApiModuleNodeGraph.getInputValue2Response);
+    rpc getInputValue3(ApiModuleNodeGraph.getInputValue3Request) returns (ApiModuleNodeGraph.getInputValue3Response);
+    rpc getInputValue4(ApiModuleNodeGraph.getInputValue4Request) returns (ApiModuleNodeGraph.getInputValue4Response);
+    rpc getInputValue5(ApiModuleNodeGraph.getInputValue5Request) returns (ApiModuleNodeGraph.getInputValue5Response);
+    rpc getInputValue6(ApiModuleNodeGraph.getInputValue6Request) returns (ApiModuleNodeGraph.getInputValue6Response);
+    rpc getInputValue7(ApiModuleNodeGraph.getInputValue7Request) returns (ApiModuleNodeGraph.getInputValue7Response);
+    rpc getInputValue8(ApiModuleNodeGraph.getInputValue8Request) returns (ApiModuleNodeGraph.getInputValue8Response);
+    rpc getInputValue9(ApiModuleNodeGraph.getInputValue9Request) returns (ApiModuleNodeGraph.getInputValue9Response);
+    rpc getInputValue10(ApiModuleNodeGraph.getInputValue10Request) returns (ApiModuleNodeGraph.getInputValue10Response);
+    rpc getInputValue11(ApiModuleNodeGraph.getInputValue11Request) returns (ApiModuleNodeGraph.getInputValue11Response);
+    /// Sets the input value of a linker node, which can't be done directly using the input pin of
+    /// the linker
+    rpc setInputValue(ApiModuleNodeGraph.setInputValueRequest) returns (google.protobuf.Empty);
+    rpc setInputValue1(ApiModuleNodeGraph.setInputValue1Request) returns (google.protobuf.Empty);
+    rpc setInputValue2(ApiModuleNodeGraph.setInputValue2Request) returns (google.protobuf.Empty);
+    rpc setInputValue3(ApiModuleNodeGraph.setInputValue3Request) returns (google.protobuf.Empty);
+    rpc setInputValue4(ApiModuleNodeGraph.setInputValue4Request) returns (google.protobuf.Empty);
+    rpc setInputValue5(ApiModuleNodeGraph.setInputValue5Request) returns (google.protobuf.Empty);
+    rpc setInputValue6(ApiModuleNodeGraph.setInputValue6Request) returns (google.protobuf.Empty);
+    rpc setInputValue7(ApiModuleNodeGraph.setInputValue7Request) returns (google.protobuf.Empty);
+    rpc setInputValue8(ApiModuleNodeGraph.setInputValue8Request) returns (google.protobuf.Empty);
+    rpc setInputValue9(ApiModuleNodeGraph.setInputValue9Request) returns (google.protobuf.Empty);
+    rpc setInputValue10(ApiModuleNodeGraph.setInputValue10Request) returns (google.protobuf.Empty);
+    rpc setInputValue11(ApiModuleNodeGraph.setInputValue11Request) returns (google.protobuf.Empty);
+    rpc reset(ApiModuleNodeGraph.resetRequest) returns (google.protobuf.Empty);
+    /// Function will cause the evaluate function to be called after time changes
+    /// 
+    rpc setEvaluateTimeChanges(ApiModuleNodeGraph.setEvaluateTimeChangesRequest) returns (google.protobuf.Empty);
+    /// sets a icon for this graph
+    rpc setIcon(ApiModuleNodeGraph.setIconRequest) returns (google.protobuf.Empty);
+    /// Tells if the time was changed since the last evaluation
+    rpc wasTimeChanged(ApiModuleNodeGraph.wasTimeChangedRequest) returns (ApiModuleNodeGraph.wasTimeChangedResponse);
+    /// Adds an asset to the graph
+    rpc appendAsset(ApiModuleNodeGraph.appendAssetRequest) returns (ApiModuleNodeGraph.appendAssetResponse);
+    /// removes an asset from the graph
+    rpc removeAsset(ApiModuleNodeGraph.removeAssetRequest) returns (google.protobuf.Empty);
+    /// gets an asset from the graph
+    rpc getAsset(ApiModuleNodeGraph.getAssetRequest) returns (ApiModuleNodeGraph.getAssetResponse);
+    /// Returns size of the asset array
+    rpc getAssetCount(ApiModuleNodeGraph.getAssetCountRequest) returns (ApiModuleNodeGraph.getAssetCountResponse);
+    /// Reads an asset as a cstring
+    /// 
+    rpc readAsset(ApiModuleNodeGraph.readAssetRequest) returns (ApiModuleNodeGraph.readAssetResponse);
+    /// Reads a file as a c String
+    /// 
+    rpc readAsset1(ApiModuleNodeGraph.readAsset1Request) returns (ApiModuleNodeGraph.readAsset1Response);
+    /// removes all the assets
+    rpc removeAllAssets(ApiModuleNodeGraph.removeAllAssetsRequest) returns (google.protobuf.Empty);
+    /// Function to save some settings with the graph when this graph getting saved in a save file
+    rpc setSaveData(ApiModuleNodeGraph.setSaveDataRequest) returns (google.protobuf.Empty);
+    /// Function to retrieve user data which was saved with the graph
+    rpc getSaveData(ApiModuleNodeGraph.getSaveDataRequest) returns (ApiModuleNodeGraph.getSaveDataResponse);
+    /// Assigns user data pointer
+    rpc setCustomData(ApiModuleNodeGraph.setCustomDataRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if the underlying module provides an onTrigger callback
+    rpc isTriggerEnabled(ApiModuleNodeGraph.isTriggerEnabledRequest) returns (ApiModuleNodeGraph.isTriggerEnabledResponse);
+    /// Calls the onTrigger callback
+    rpc trigger(ApiModuleNodeGraph.triggerRequest) returns (google.protobuf.Empty);
+    /// Assigns the icon for the trigger button
+    rpc setTriggerButtonIcon(ApiModuleNodeGraph.setTriggerButtonIconRequest) returns (google.protobuf.Empty);
+    /// Assigns the tooltip text for the trigger button
+    rpc setTriggerButtonTooltip(ApiModuleNodeGraph.setTriggerButtonTooltipRequest) returns (google.protobuf.Empty);
+    /// Updates the progress bar visibility, progress value and status label text
+    rpc setProgressState(ApiModuleNodeGraph.setProgressStateRequest) returns (google.protobuf.Empty);
+}

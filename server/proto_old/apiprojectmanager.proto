@@ -1,0 +1,298 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octanereferenceexport.proto";
+
+ // GRPC proto definitions for 'ApiProjectManager' class from 'apiprojectmanager.h'
+message ApiProjectManager
+{
+     // GRPC proto definitions for 'Observer' class from 'apiprojectmanager.h'
+    message ApiProjectManager_Observer
+    {
+        OnChangeT onProjectNew = 1;
+        uint64 userData = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::isValid'
+    message isValidRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::isValid'
+    message isValidResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::rootNodeGraph'
+    message rootNodeGraphRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::rootNodeGraph'
+    message rootNodeGraphResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::applicationPreferences'
+    message applicationPreferencesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::applicationPreferences'
+    message applicationPreferencesResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::projectSettings'
+    message projectSettingsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::projectSettings'
+    message projectSettingsResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::projectMetadata'
+    message projectMetadataRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::projectMetadata'
+    message projectMetadataResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::previewRenderTarget'
+    message previewRenderTargetRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::previewRenderTarget'
+    message previewRenderTargetResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::materialBall'
+    message materialBallRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::materialBall'
+    message materialBallResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::getCurrentProject'
+    message getCurrentProjectRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::getCurrentProject'
+    message getCurrentProjectResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::resetProject'
+    message resetProjectRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::resetProject'
+    message resetProjectResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::loadProject'
+    message loadProjectRequest
+    {
+        // Absolute path to the project file on disk.
+        string projectPath = 1;
+        AssetMissingCallbackT assetMissingcallback = 2;
+        uint64 assetMissinguserData = 3;
+        // Setting this to FALSE will speedup the project load by not evaluating the root node
+        bool evaluate = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::loadProject'
+    message loadProjectResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::loadedFromPackage'
+    message loadedFromPackageRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::loadedFromPackage'
+    message loadedFromPackageResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::loadedOcsVersion'
+    message loadedOcsVersionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::loadedOcsVersion'
+    message loadedOcsVersionResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::saveProject'
+    message saveProjectRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::saveProject'
+    message saveProjectResponse
+    {
+        //     TRUE on success, FALSE on failure in which case there should have been additional error
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::saveProjectAs'
+    message saveProjectAsRequest
+    {
+        // Absolute path to the file on disk. This can be a .orbx file
+        string path = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::saveProjectAs'
+    message saveProjectAsResponse
+    {
+        //     TRUE on success, FALSE on failure in which case there should have been additional error
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::saveProjectAsReferencePackage'
+    message saveProjectAsReferencePackageRequest
+    {
+        // Absolute path to the file on disk. Only .orbx files are supported.
+        string path = 1;
+        // Configures the export parameters of the bounding boxes
+        ReferencePackageExportSettings referencePackageSettings = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::saveProjectAsReferencePackage'
+    message saveProjectAsReferencePackageResponse
+    {
+        //     TRUE on success, FALSE on failure in which case there should have been additional error
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::unpackPackage'
+    message unpackPackageRequest
+    {
+        // Absolute path to the unpack directory (must not be NULL).
+        string unpackDir = 1;
+        // Absolute path of the package file (.orbx) or NULL if the project package should be
+        string packagePath = 2;
+        // The filename to unpack or NULL if the whole package should be unpacked.
+        string unpackName = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::unpackPackage'
+    message unpackPackageResponse
+    {
+        //     TRUE if the package was unpacked successfully FALSE on failure in which case there
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::addObserver'
+    message addObserverRequest
+    {
+        GRPCProjectManagerObserverT observer = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProjectManager::addObserver'
+    message addObserverResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProjectManager::removeObserver'
+    message removeObserverRequest
+    {
+        GRPCProjectManagerObserverT removeObserver = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiProjectManager' from 'apiprojectmanager.h'
+service ApiProjectManagerService
+{
+    /// Returns whether the project manager is valid
+    rpc isValid(ApiProjectManager.isValidRequest) returns (ApiProjectManager.isValidResponse);
+    /// Returns the root node graph of the current project
+    rpc rootNodeGraph(ApiProjectManager.rootNodeGraphRequest) returns (ApiProjectManager.rootNodeGraphResponse);
+    /// Returns the application preferences node (node type NT_LOCAL_APP_PREFS)
+    rpc applicationPreferences(ApiProjectManager.applicationPreferencesRequest) returns (ApiProjectManager.applicationPreferencesResponse);
+    /// Returns the project settings node (node type NT_PROJECT_SETTINGS)
+    rpc projectSettings(ApiProjectManager.projectSettingsRequest) returns (ApiProjectManager.projectSettingsResponse);
+    /// Returns the project metadata node (node type NT_METADATA)
+    rpc projectMetadata(ApiProjectManager.projectMetadataRequest) returns (ApiProjectManager.projectMetadataResponse);
+    /// Returns the preview render target of the current project
+    rpc previewRenderTarget(ApiProjectManager.previewRenderTargetRequest) returns (ApiProjectManager.previewRenderTargetResponse);
+    /// Returns the geometry of the material ball we use for previewing
+    rpc materialBall(ApiProjectManager.materialBallRequest) returns (ApiProjectManager.materialBallResponse);
+    /// Returns the absolute path to the current project
+    rpc getCurrentProject(ApiProjectManager.getCurrentProjectRequest) returns (ApiProjectManager.getCurrentProjectResponse);
+    /// Resets a project to a fresh new project
+    rpc resetProject(ApiProjectManager.resetProjectRequest) returns (ApiProjectManager.resetProjectResponse);
+    /// Loads a project into octane
+    rpc loadProject(ApiProjectManager.loadProjectRequest) returns (ApiProjectManager.loadProjectResponse);
+    /// Returns TRUE if the project is loaded from a package (
+    rpc loadedFromPackage(ApiProjectManager.loadedFromPackageRequest) returns (ApiProjectManager.loadedFromPackageResponse);
+    /// Returns the OCS version that the current project was loaded from
+    rpc loadedOcsVersion(ApiProjectManager.loadedOcsVersionRequest) returns (ApiProjectManager.loadedOcsVersionResponse);
+    /// Saves a project
+    rpc saveProject(ApiProjectManager.saveProjectRequest) returns (ApiProjectManager.saveProjectResponse);
+    /// Saves a project under a different name
+    rpc saveProjectAs(ApiProjectManager.saveProjectAsRequest) returns (ApiProjectManager.saveProjectAsResponse);
+    /// Saves a project into an orbx package
+    rpc saveProjectAsReferencePackage(ApiProjectManager.saveProjectAsReferencePackageRequest) returns (ApiProjectManager.saveProjectAsReferencePackageResponse);
+    /// Unpacks a package into the provided directory
+    rpc unpackPackage(ApiProjectManager.unpackPackageRequest) returns (ApiProjectManager.unpackPackageResponse);
+    /// Adds a new observer for the project
+    rpc addObserver(ApiProjectManager.addObserverRequest) returns (ApiProjectManager.addObserverResponse);
+    /// Removes an existing observer
+    rpc removeObserver(ApiProjectManager.removeObserverRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiProjectManager_Observer' from 'apiprojectmanager.h'

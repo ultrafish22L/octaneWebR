@@ -1,0 +1,280 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'ApiDBMaterialManager' class from 'apidbmaterialmanager.h'
+message ApiDBMaterialManager
+{
+     // GRPC proto definitions for 'DBCategory' class from 'apidbmaterialmanager.h'
+    message ApiDBMaterialManager_DBCategory
+    {
+        ObjectRef objectRef = 1; // path E:\__wip\grpc_api_2026_1_master\src\api\apidbmaterialmanager.h
+        int32 id = 2;
+        int32 parentID = 3;
+        OctaneLiveCategory typeID = 4;
+        string name = 5;
+    }
+    message CategoryArray
+    {
+        repeated ApiDBMaterialManager_DBCategory categories = 1;
+    }
+
+     // GRPC proto definitions for 'DBCategoryArray' class from 'apidbmaterialmanager.h'
+    message ApiDBMaterialManager_DBCategoryArray
+    {
+        CategoryArray data = 1;
+        uint32 size = 2;
+    // Request packet corresponding to '[in] parameters in DBCategoryArray::init'
+        message initRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            uint32 size = 2;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBCategoryArray::free'
+        message freeRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBCategoryArray::getCategory'
+        message getCategoryRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'DBCategoryArray::getCategory'
+        message getCategoryResponse
+    {
+            
+            CategoryArray result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBCategoryArray::getCount'
+        message getCountRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'DBCategoryArray::getCount'
+        message getCountResponse
+    {
+            
+            uint32 result = 1;
+        }
+
+    }
+     // GRPC proto definitions for 'DBMaterial' class from 'apidbmaterialmanager.h'
+    message ApiDBMaterialManager_DBMaterial
+    {
+        int32 id = 1;
+        int32 categoryID = 2;
+        string name = 3;
+        string nickname = 4;
+        string copyright = 5;
+    }
+    message MaterialArray
+    {
+        repeated ApiDBMaterialManager_DBMaterial materials = 1;
+    }
+
+     // GRPC proto definitions for 'DBMaterialArray' class from 'apidbmaterialmanager.h'
+    message ApiDBMaterialManager_DBMaterialArray
+    {
+        MaterialArray data = 1;
+        uint32 size = 2;
+    // Request packet corresponding to '[in] parameters in DBMaterialArray::init'
+        message initRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            uint32 size = 2;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBMaterialArray::free'
+        message freeRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBMaterialArray::getMaterial'
+        message getMaterialRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'DBMaterialArray::getMaterial'
+        message getMaterialResponse
+    {
+            
+            MaterialArray result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in DBMaterialArray::getCount'
+        message getCountRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'DBMaterialArray::getCount'
+        message getCountResponse
+    {
+            
+            uint32 result = 1;
+        }
+
+    }
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::getCategories'
+    message getCategoriesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiDBMaterialManager::getCategories'
+    message getCategoriesResponse
+    {
+        //     TRUE on success, FALSE on failure. This will only fail when the
+        bool result = 1;
+        // List of the LiveDB categories.
+        ObjectRef list = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::getMaterials'
+    message getMaterialsRequest
+    {
+        // Id of the category from which we'd like the materials.
+        int32 categoryId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiDBMaterialManager::getMaterials'
+    message getMaterialsResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // List of materials.
+        ObjectRef list = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::getMaterialPreview'
+    message getMaterialPreviewRequest
+    {
+        // Id identifying the material
+        int32 materialId = 1;
+        // Requested image size.
+        uint32 requestedSize = 2;
+        // Which view to download. One of the values in Octane#LiveDbThumbnailView.
+        LiveDbThumbnailView view = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiDBMaterialManager::getMaterialPreview'
+    message getMaterialPreviewResponse
+    {
+        //     pointer to image data. The data must be freed with freeMaterialPreview().
+        Buffer result = 1;
+        // The size of the returned image. If view is not VIEW_COMBINED the downloaded image
+        uint32_2 size = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::freeMaterialPreview'
+    message freeMaterialPreviewRequest
+    {
+        uint32 preview = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::downloadMaterial'
+    message downloadMaterialRequest
+    {
+        // Id of the material in the live db.
+        int32 materialId = 1;
+        // The material graph will be copied into this graph.
+        ObjectRef destinationGraph = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiDBMaterialManager::downloadMaterial'
+    message downloadMaterialResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+        // Optional pointer to the output linker node of the material graph.
+        ObjectRef outputNode = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiDBMaterialManager::downloadMaterial1'
+    message downloadMaterial1Request
+    {
+        // Id of the material in the live db.
+        int32 materialId = 1;
+        // Absolute path to the asset save locations (directory).
+        string assetPath = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiDBMaterialManager::downloadMaterial1'
+    message downloadMaterial1Response
+    {
+        //     The material or the texture node. This is the material or texture node in
+        ObjectRef result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiDBMaterialManager' from 'apidbmaterialmanager.h'
+service ApiDBMaterialManagerService
+{
+    /// Returns a list of the categories in the LiveDB
+    rpc getCategories(ApiDBMaterialManager.getCategoriesRequest) returns (ApiDBMaterialManager.getCategoriesResponse);
+    /// Returns the list of materials for a category
+    rpc getMaterials(ApiDBMaterialManager.getMaterialsRequest) returns (ApiDBMaterialManager.getMaterialsResponse);
+    /// Gets an image of the material rendered on the material ball from the
+    /// LiveDB server
+    rpc getMaterialPreview(ApiDBMaterialManager.getMaterialPreviewRequest) returns (ApiDBMaterialManager.getMaterialPreviewResponse);
+    /// Downloads a material from the LiveDB
+    rpc downloadMaterial(ApiDBMaterialManager.downloadMaterialRequest) returns (ApiDBMaterialManager.downloadMaterialResponse);
+    /// Downloads a material from the LiveDB
+    rpc downloadMaterial1(ApiDBMaterialManager.downloadMaterial1Request) returns (ApiDBMaterialManager.downloadMaterial1Response);
+}
+
+// GRPC interface definition for class 'ApiDBMaterialManager_DBCategory' from 'apidbmaterialmanager.h'
+
+// GRPC interface definition for class 'ApiDBMaterialManager_DBCategoryArray' from 'apidbmaterialmanager.h'
+service ApiDBMaterialManager_DBCategoryArrayService
+{
+    /// Initializes this array with size elements
+    rpc init(ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.initRequest) returns (google.protobuf.Empty);
+    /// Destroys all the elements in this array
+    rpc free(ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.freeRequest) returns (google.protobuf.Empty);
+    /// Returns the internal array of categories
+    rpc getCategory(ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.getCategoryRequest) returns (ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.getCategoryResponse);
+    /// Returns the number of categories
+    rpc getCount(ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.getCountRequest) returns (ApiDBMaterialManager.ApiDBMaterialManager_DBCategoryArray.getCountResponse);
+}
+
+// GRPC interface definition for class 'ApiDBMaterialManager_DBMaterial' from 'apidbmaterialmanager.h'
+
+// GRPC interface definition for class 'ApiDBMaterialManager_DBMaterialArray' from 'apidbmaterialmanager.h'
+service ApiDBMaterialManager_DBMaterialArrayService
+{
+    /// Initializes this list with size elements
+    rpc init1(ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.initRequest) returns (google.protobuf.Empty);
+    /// Destroys all the elements in this array
+    rpc free1(ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.freeRequest) returns (google.protobuf.Empty);
+    /// Returns the internal array of materials
+    rpc getMaterial(ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.getMaterialRequest) returns (ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.getMaterialResponse);
+    /// Returns the number of materials
+    rpc getCount1(ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.getCountRequest) returns (ApiDBMaterialManager.ApiDBMaterialManager_DBMaterialArray.getCountResponse);
+}

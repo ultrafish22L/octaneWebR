@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package livelinkapi;
+
+// A 3D vector
+message Vec3
+{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+// 4D vector of doubles (used in matrix rows)
+message Vec4D {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
+
+// 3x4 matrix (3 rows, 4 columns per row)
+message MatrixD
+{
+    Vec4D row0 = 1;
+    Vec4D row1 = 2;
+    Vec4D row2 = 3;
+}
+
+// Represents a single mesh entity
+message Mesh
+{
+    string name = 1;
+    int32 id = 2;
+    int64 objectHandle = 3; // or use string for UUID handles if needed
+}
+
+// A list of meshes
+message MeshList
+{
+    repeated Mesh meshes = 1;
+}
+
+// A partially or fully accepted camera state
+message CameraState
+{
+    oneof pos_set
+    {
+        Vec3 position = 1;
+    }
+    oneof target_set
+    {
+        Vec3 target = 2;
+    }
+    oneof up_set
+    {
+        Vec3 up = 3;
+    }
+    oneof fov_set
+    {
+        float fov = 4;
+    }
+
+}
+
+// Request message containing the image filename
+message FileRequest
+{
+    string filepath = 1;
+}
+
+// Response message containing the image data
+message FileResponse
+{
+    bytes filedata = 1;
+}
+
+
+// Request a specific mesh by ID
+message MeshRequest
+{
+    int32 objecthandle = 1;
+}
+
+// This is optional, but it lets the server reply once when the stream ends
+message StreamStatus
+{
+    string message = 1;
+}
+
+
+// Raw geometry data for a single mesh
+message MeshData
+{
+    string name = 1;
+
+    repeated Vec3 positions = 2;        // Vertex positions
+
+    repeated Vec3 normals = 3;          // Vertex normals
+
+    repeated uint32 vertsPerPoly = 4;   // Polygon size (3 = tri, 4 = quad, etc.)
+
+    repeated uint32 polyVertIndices = 5;// Flat list of indices into positions
+
+    repeated uint32 polyNormalIndices = 6; // Indices for normals if needed (optional)
+
+    int32 windingOrder = 7;             // 0 = Unknown, 1 = CW, 2 = CCW
+
+    MatrixD worldMatrix = 8;
+}
+
+// Empty message (no dependency on google.protobuf.Empty)
+message Empty {}
+
+// Core camera control service
+service LiveLinkService
+{
+    // Allows full or partial update of the camera
+    rpc SetCamera(CameraState) returns (Empty);
+
+    // Optional: you may still want this
+    rpc GetCamera(Empty) returns (CameraState);
+
+    // New: retrieve list of meshes
+    rpc GetMeshes(Empty) returns (MeshList);
+
+    // Fetch full mesh geometry by Object ID
+    rpc GetMesh(MeshRequest) returns (MeshData);
+
+    // RPC to request an image by filename
+    rpc GetFile (FileRequest) returns (FileResponse);
+
+    // Client streaming: client streams CameraState messages continuously.
+    // Server replies ONCE (can be an Empty or StreamStatus).
+    rpc StreamCamera(stream CameraState) returns (StreamStatus);
+}

@@ -1,0 +1,211 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+import "octaneids.proto";
+
+ // GRPC proto definitions for 'RenderResultStatistics' class from 'octanerenderpasses.h'
+message RenderResultStatistics
+{
+    uint32_2 setSize = 1;
+    uint32_2 usedSize = 2;
+    SubSampleMode subSampleMode = 3;
+    float upSamplingRatio = 4;
+    TonemapBufferType bufferType = 5;
+    NamedColorSpace colorSpace = 6;
+    bool isLinear = 7;
+    bool hasAlpha = 8;
+    PremultipliedAlphaType premultipliedAlphaType = 9;
+    bool keepEnvironment = 10;
+    CLevelT changeLevel = 11;
+    bool hasPendingUpdates = 12;
+    uint32 deepBinCount = 13;
+    uint32 deepSeedSpp = 14;
+    uint32 cryptomatteSeedSpp = 15;
+    bool deepPassesEnabled = 16;
+    uint32 tonemapPassesCount = 17;
+    ApiArrayRenderPassId tonemapPasses = 18;
+    uint32 passesCount = 19;
+    ApiArrayRenderPassId renderPasses = 20;
+    uint32 beautyWipeCount = 21;
+    uint32 beautySamplesPerPixel = 22;
+    uint32 beautyMaxSamplesPerPixel = 23;
+    double beautySamplesPerSecond = 24;
+    uint32 regionSamplesPerPixel = 25;
+    uint32 denoisedSamplesPerPixel = 26;
+    uint32 regionDenoisedSamplesPerPixel = 27;
+    uint32 infoWipeCount = 28;
+    uint32 infoSamplesPerPixel = 29;
+    uint32 infoMaxSamplesPerPixel = 30;
+    double infoSamplesPerSecond = 31;
+    RenderState state = 32;
+    double renderTime = 33;
+    double estimatedRenderTime = 34;
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::clear'
+    message clearRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::internalFilmResolution'
+    message internalFilmResolutionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::internalFilmResolution'
+    message internalFilmResolutionResponse
+    {
+        
+        uint32_2 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::channelType'
+    message channelTypeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::channelType'
+    message channelTypeResponse
+    {
+        
+        ImageChannelType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::samplesPerPixel'
+    message samplesPerPixelRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::samplesPerPixel'
+    message samplesPerPixelResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::maxSamplesPerPixel'
+    message maxSamplesPerPixelRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::maxSamplesPerPixel'
+    message maxSamplesPerPixelResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::samplesPerSecond'
+    message samplesPerSecondRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::samplesPerSecond'
+    message samplesPerSecondResponse
+    {
+        
+        double result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::progress'
+    message progressRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::progress'
+    message progressResponse
+    {
+        
+        double result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::started'
+    message startedRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::started'
+    message startedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in RenderResultStatistics::finished'
+    message finishedRequest
+    {
+        RenderPassId renderPassId = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'RenderResultStatistics::finished'
+    message finishedResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'RenderPassExport' class from 'octanerenderpasses.h'
+message RenderPassExport
+{
+    RenderPassId renderPassId = 1;
+    string exportName = 2;
+}
+ // GRPC proto definitions for 'ApiRenderPassInfo' class from 'octanerenderpasses.h'
+message ApiRenderPassInfo
+{
+    RenderPassId renderPassId = 1;
+    NodeType nodeType = 2;
+    enum_t subType = 3;
+    PinId pinId = 4;
+    string name = 5;
+    string exrLayerName = 6;
+    string shortName = 7;
+    string description = 8;
+    string category = 9;
+    bool isInfoPass = 10;
+    bool isGreyscale = 11;
+    RenderPassGroupId renderPassGroupId = 12;
+}
+
+
+// GRPC interface definition for class 'ApiRenderPassInfo' from 'octanerenderpasses.h'
+
+// GRPC interface definition for class 'RenderPassExport' from 'octanerenderpasses.h'
+
+// GRPC interface definition for class 'RenderResultStatistics' from 'octanerenderpasses.h'
+service RenderResultStatisticsService
+{
+    /// Clears our members and sets the sub sample mode to SUBSAMPLE_NONE and the state to
+    /// RSTATE_STOPPED
+    rpc clear(RenderResultStatistics.clearRequest) returns (google.protobuf.Empty);
+    /// Returns the internal film resolution which takes the upsampling into account
+    rpc internalFilmResolution(RenderResultStatistics.internalFilmResolutionRequest) returns (RenderResultStatistics.internalFilmResolutionResponse);
+    /// Returns the type of the channels, this is either float or 8-bit unsigned int
+    rpc channelType(RenderResultStatistics.channelTypeRequest) returns (RenderResultStatistics.channelTypeResponse);
+    /// Returns the samples per pixel of the specified render pass
+    rpc samplesPerPixel(RenderResultStatistics.samplesPerPixelRequest) returns (RenderResultStatistics.samplesPerPixelResponse);
+    /// Returns the maximum samples per pixel of the specified render pass
+    rpc maxSamplesPerPixel(RenderResultStatistics.maxSamplesPerPixelRequest) returns (RenderResultStatistics.maxSamplesPerPixelResponse);
+    /// Returns the samples per second of the specified render pass
+    rpc samplesPerSecond(RenderResultStatistics.samplesPerSecondRequest) returns (RenderResultStatistics.samplesPerSecondResponse);
+    /// Returns the render progress for the specified render pass
+    rpc progress(RenderResultStatistics.progressRequest) returns (RenderResultStatistics.progressResponse);
+    /// Returns TRUE if at least one sample per pixel has been calculated for the specified render
+    /// pass
+    rpc started(RenderResultStatistics.startedRequest) returns (RenderResultStatistics.startedResponse);
+    /// Returns TRUE if all samples per pixel have been calculated for the specified render pass
+    rpc finished(RenderResultStatistics.finishedRequest) returns (RenderResultStatistics.finishedResponse);
+}

@@ -1,0 +1,141 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'TimeSpanT' class from 'octanetime.h'
+message TimeSpanT
+{
+    TimeT begin = 1;
+    TimeT end = 2;
+    // Request packet corresponding to '[in] parameters in TimeSpanT::make'
+    message makeRequest
+    {
+        TimeT begin = 1;
+        TimeT end = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'TimeSpanT::make'
+    message makeResponse
+    {
+        
+        TimeSpanT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in TimeSpanT::length'
+    message lengthRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'TimeSpanT::length'
+    message lengthResponse
+    {
+        
+        TimeT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in TimeSpanT::empty'
+    message emptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'TimeSpanT::empty'
+    message emptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in TimeSpanT::shift'
+    message shiftRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        TimeT offset = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in TimeSpanT::contains'
+    message containsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The time to test.
+        TimeT time = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'TimeSpanT::contains'
+    message containsResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'FrameRangeT' class from 'octanetime.h'
+message FrameRangeT
+{
+    int32 first = 1;
+    int32 last = 2;
+    // Request packet corresponding to '[in] parameters in FrameRangeT::make'
+    message makeRequest
+    {
+        int32 begin = 1;
+        int32 end = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'FrameRangeT::make'
+    message makeResponse
+    {
+        
+        FrameRangeT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in FrameRangeT::count'
+    message countRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'FrameRangeT::count'
+    message countResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'FrameRangeT' from 'octanetime.h'
+service FrameRangeTService
+{
+    rpc make(FrameRangeT.makeRequest) returns (FrameRangeT.makeResponse);
+    /// returns the amount of frames
+    rpc count(FrameRangeT.countRequest) returns (FrameRangeT.countResponse);
+}
+
+// GRPC interface definition for class 'TimeSpanT' from 'octanetime.h'
+service TimeSpanTService
+{
+    rpc make1(TimeSpanT.makeRequest) returns (TimeSpanT.makeResponse);
+    /// Returns the length of this time interval
+    rpc length(TimeSpanT.lengthRequest) returns (TimeSpanT.lengthResponse);
+    /// Returns TRUE if this interval has zero length
+    rpc empty(TimeSpanT.emptyRequest) returns (TimeSpanT.emptyResponse);
+    /// Adds an offset to the start and end of the interval
+    rpc shift(TimeSpanT.shiftRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if the passed time is inside the interval
+    rpc contains(TimeSpanT.containsRequest) returns (TimeSpanT.containsResponse);
+}

@@ -1,0 +1,161 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octanereferenceexport.proto";
+import "octaneenums.proto";
+import "octanetime.proto";
+
+ // GRPC proto definitions for 'ApiSceneExporter' class from 'apisceneexporter.h'
+message ApiSceneExporter
+{
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::isSupported'
+    message isSupportedRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::isSupported'
+    message isSupportedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::create'
+    message createRequest
+    {
+        // The scene file that will be written during finish(). Can be either an .ocs or .orbx file
+        string sceneFile = 1;
+        // An array of the root nodes that should be tracked. All root nodes must come from the
+        ObjectRefArrayT rootNodes = 2;
+        // The size of the array specified in rootNodes.
+        uint32 rootNodesSize = 3;
+        // The period of the time sampling. (see ApiTimeSampling for more information)
+        TimeT timeSamplesPeriod = 4;
+        // The period of the time sampling. (see ApiTimeSampling for more information)
+        TimeArrayT timeSamples = 5;
+        // The size of the time sample pattern array. If 0, a regular time sampling is constructed.
+        uint32 timeSamplesSize = 6;
+        // The format that should be used for the geometry export.
+        GeometryExportFormat geometryFormat = 7;
+        // If not NULL, the package will include bounding box data exported with these settings.
+        ReferencePackageExportSettings referencePackageSettings = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::create'
+    message createResponse
+    {
+        //     The created scene exporter or NULL if an error occurred in which case you should check
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::state'
+    message stateRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::state'
+    message stateResponse
+    {
+        
+        ExportState result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::exportSample'
+    message exportSampleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The time interval that is passed on to the geometry exporters (see
+        TimeSpanT interval = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::sampleIx'
+    message sampleIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::sampleIx'
+    message sampleIxResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::finish'
+    message finishRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The frames per second that should be written into the project settings that are stored
+        float framesPerSecond = 2;
+        // If TRUE, all nodes that are not connected with the specified root nodes, will
+        bool deleteUnconnectedNodes = 3;
+        // Enables the creation of the OCS string if no file name was specified in create().
+        bool createOcsString = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::finish'
+    message finishResponse
+    {
+        //     TRUE if the executed successfully, FALSE if not (in which case you should check the log
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiSceneExporter::ocsString'
+    message ocsStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiSceneExporter::ocsString'
+    message ocsStringResponse
+    {
+        
+        string result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiSceneExporter' from 'apisceneexporter.h'
+service ApiSceneExporterService
+{
+    /// Tells whether the 
+    rpc isSupported(ApiSceneExporter.isSupportedRequest) returns (ApiSceneExporter.isSupportedResponse);
+    /// Starts a new export
+    rpc create(ApiSceneExporter.createRequest) returns (ApiSceneExporter.createResponse);
+    /// Destroys the instance
+    rpc destroy(ApiSceneExporter.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the current state of the scene exporter
+    rpc state(ApiSceneExporter.stateRequest) returns (ApiSceneExporter.stateResponse);
+    /// Exports the next time sample
+    rpc exportSample(ApiSceneExporter.exportSampleRequest) returns (google.protobuf.Empty);
+    /// Returns the current sample/frame index of the export
+    rpc sampleIx(ApiSceneExporter.sampleIxRequest) returns (ApiSceneExporter.sampleIxResponse);
+    /// Finishes the scene export and creates the scene file or creates an OCS string if no
+    /// sceneFile
+    rpc finish(ApiSceneExporter.finishRequest) returns (ApiSceneExporter.finishResponse);
+    /// Returns the current OCS string that was written during finish() or an empty string if
+    /// finish() wasn't called yet or a sceneFile was specified during create()
+    rpc ocsString(ApiSceneExporter.ocsStringRequest) returns (ApiSceneExporter.ocsStringResponse);
+}

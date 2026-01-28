@@ -1,0 +1,1035 @@
+/**
+ * OctaneWebR Application Styles
+ * Main layout and structure
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Added from octane-theme.css: */
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--octane-border-primary);
+  color: var(--octane-text-primary);
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  padding: 6px 12px;
+  background: var(--octane-bg-primary);
+  border-radius: var(--border-radius-base);
+}
+
+.status-led {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--border-radius-circle);
+  animation: pulse 2s infinite;
+}
+
+.status-led-connected {
+  background: var(--octane-accent-green);
+  box-shadow: 0 0 8px var(--octane-accent-green);
+}
+
+.status-led-disconnected {
+  background: var(--octane-accent-red);
+  box-shadow: 0 0 8px var(--octane-accent-red);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: var(--opacity-full); }
+  50% { opacity: var(--opacity-moderate); }
+}
+
+.status-text {
+  font-size: var(--font-size-medium);
+  color: var(--octane-text-secondary);
+}
+
+/* Main Content */
+.viewport-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--octane-bg-primary);
+  position: relative;
+}
+
+.render-viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--octane-border-primary);
+  position: relative;
+}
+
+#render-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid var(--octane-border);
+}
+
+.viewport-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--octane-overlay-dark);
+}
+
+.scene-tree {
+  min-height: 200px;
+  padding: 10px;
+  background: var(--octane-bg-secondary);
+  border-radius: var(--border-radius-base);
+}
+
+/* Component Styles */
+/* .callback-render-viewport - consolidated in octane-theme.css:824 (superset with background) */
+
+.viewport-canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--octane-border-primary);
+}
+
+/* Scene Outliner */
+/* .scene-outliner - consolidated in octane-theme.css:470 (superset with color, font, overflow, position) */
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-medium);
+}
+
+.tree-node:hover {
+  background: var(--octane-viewport-bg);
+}
+
+.tree-node.selected {
+  background: var(--octane-node-bg);
+  border-left: 3px solid var(--octane-accent);
+}
+
+/* Node Inspector */
+.node-inspector {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.node-inspector h3 {
+  margin: 0 0 10px 0;
+}
+
+/* .inspector-content moved to layout.css (consolidated) */
+
+/* ========================================
+   LAYOUT SYSTEM (merged from layout.css)
+   ======================================== */
+
+/**
+ * OctaneWeb Layout System
+ * Responsive grid layout with resizable panels matching Octane Studio
+ */
+
+/* Resizable Panel System */
+
+.panel-splitter {
+    background-color: var(--octane-border, #3a3a3a);
+    cursor: col-resize;
+    z-index: var(--z-dropdown);
+    transition: background-color 0.2s ease;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.panel-splitter:hover {
+    background-color: var(--octane-accent-yellow, #ffc107);
+}
+
+.panel-splitter.vertical {
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+}
+
+.panel-splitter.horizontal {
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
+}
+
+.panel-splitter.vertical:hover {
+    pointer-events: auto;
+}
+
+.panel-splitter.horizontal {
+    height: var(--splitter-size, 4px);
+    width: 100%;
+    cursor: row-resize;
+    pointer-events: auto;
+}
+
+/* Bottom splitter positioned in grid layout */
+#bottom-splitter {
+    position: relative;
+    background-color: var(--octane-border);
+    margin: 0;
+}
+
+#bottom-splitter:hover,
+#bottom-splitter.dragging {
+    background-color: var(--octane-accent-yellow);
+}
+
+.panel-splitter.dragging {
+    background-color: var(--octane-accent-yellow);
+}
+
+/* Panel Resize States */
+.panel.resizing {
+    pointer-events: none;
+    user-select: none;
+}
+
+body.resizing {
+    user-select: none;
+}
+
+body.resizing * {
+    pointer-events: none;
+}
+
+body.resizing .panel-splitter {
+    pointer-events: auto;
+}
+
+.app-layout.resizing {
+    cursor: col-resize;
+}
+
+.app-layout.resizing * {
+    pointer-events: none;
+}
+
+
+.inspector-content {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+    background: var(--octane-bg-primary);
+    border-radius: var(--border-radius-base);
+}
+
+
+.scene-tree {
+    font-size: var(--font-size-small);
+}
+
+/* Node Graph Layout */
+
+@media (max-width: 1400px) {
+    .app-layout {
+        grid-template-columns: 180px 1fr 280px;
+        /* Added from octane-theme.css: */
+        grid-template-columns: 150px 1fr 200px;
+        grid-template-rows: 1fr 200px;
+}
+}
+
+@media (max-width: 1200px) {
+    .app-layout {
+        grid-template-columns: 160px 1fr 250px;
+    }
+    
+    .parameter-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .parameter-label {
+        text-align: left;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .app-layout {
+        grid-template-columns: 140px 1fr 220px;
+    }
+    
+    .node-graph-section {
+        height: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+    }
+    
+    .left-panel, .right-panel {
+        height: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--octane-border);
+    }
+    
+    .panel-splitter.vertical {
+        display: none;
+    }
+    
+    .node-graph-section {
+        height: 120px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .app-container {
+        display: block;
+        /* Added from octane-theme.css: */
+        background-color: var(--octane-bg-primary);
+        grid-template-rows: var(--menu-height) 1fr var(--status-bar-height);
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        padding: 0;
+        width: 100vw;
+}
+    
+    .menu-bar, .status-bar {
+        display: none;
+    }
+    
+    .app-layout {
+        display: block;
+        height: auto;
+    }
+    
+    .panel {
+        border: 1px solid var(--octane-text-primary);
+        margin-bottom: 20px;
+        break-inside: avoid;
+        /* Added from octane-theme.css: */
+        background-color: var(--octane-bg-secondary);
+        display: flex;
+        flex-direction: column;
+}
+}
+
+/* Ensure ReactFlow edges are clickable and interactive */
+.react-flow__edge {
+    pointer-events: all !important;
+    cursor: pointer !important;
+}
+
+.react-flow__edge path {
+    pointer-events: all !important;
+    cursor: pointer !important;
+}
+
+.react-flow__edge-path {
+    pointer-events: all !important;
+    cursor: pointer !important;
+}
+
+/* ReactFlow uses invisible interaction layer for wider click area */
+.react-flow__edge-interaction {
+    pointer-events: all !important;
+    cursor: pointer !important;
+}
+
+/* Increase hit area for easier edge selection */
+.react-flow__edge path {
+    stroke-width: 2;
+}
+
+.react-flow__edge:hover path,
+.react-flow__edge.selected path {
+    stroke-width: 3;
+}
+
+/* Override any parent pointer-events blocking */
+.react-flow__edges {
+    pointer-events: auto !important;
+}
+
+/* CRITICAL: Ensure edges work even during body.resizing */
+body.resizing .react-flow__edge,
+body.resizing .react-flow__edge path,
+body.resizing .react-flow__edge-path,
+body.resizing .react-flow__edge-interaction {
+    pointer-events: all !important;
+    cursor: pointer !important;
+}
+
+/* ReactFlow Handle (Pin) Styling - Vibrant colors like Octane */
+.react-flow__handle {
+    /* Minimal shadow for depth - no inset shadows to keep solid appearance */
+    box-shadow: 0 1px 2px var(--octane-overlay-subtle);
+    
+    /* Ensure smooth rendering */
+    transition: all 0.15s ease;
+}
+
+/* Hover state - subtle glow */
+.react-flow__handle:hover {
+    box-shadow: 
+        0 1px 2px var(--octane-shadow-medium),
+        0 0 4px var(--octane-highlight-medium); /* Subtle outer glow */
+}
+  /*
+          background: linear-gradient(to bottom, #4CAF50 0%, #45a049 100%), 
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), 
+        */
+/* Octane Node Body Styling - Match Reference 3D Button Effect */
+.octane-node {
+    /* 3D gradient overlay - use background-image to layer over inline backgroundColor */
+    background-image: linear-gradient(180deg, 
+        var(--octane-highlight-ultra-subtle) 0%,  /* 0.084 / 2 = 0.042 */
+        var(--octane-shadow-ultra-subtle) 100%    /* 0.105 / 2 = 0.053 */
+    );
+    
+    /* Stronger 3D button effect - dimmer highlights to match primary background */
+    box-shadow: 
+        inset 0 2px 1px var(--octane-highlight-subtle),   /* 0.105 / 2 = 0.053 */
+        inset 0 -2px 1px var(--octane-overlay-light),         
+        0 2px 3px var(--octane-shadow-heavy);                
+    
+    /* Smooth transitions */
+    transition: all 0.15s ease;
+}
+
+/* Selected node - slightly more prominent */
+.octane-node.selected {
+    box-shadow: 
+        inset 0 1px 0 var(--octane-highlight),
+        inset 0 -1px 0 var(--octane-shadow-light),
+        0 0 0 2px var(--octane-accent-yellow),
+        0 2px 4px var(--octane-shadow-heavy);
+}
+
+/* ReactFlow Edge (Connection Line) Styling - Vibrant Colors */
+.react-flow__edge path {
+    /* No filter - use vibrant colors like Octane */
+}
+
+
+/* ========================================
+   SHARED COMPONENTS (from components.css)
+   ======================================== */
+
+/**
+ * OctaneWeb Component Styles
+ * Specific styling for individual UI components
+ */
+
+/* Context Menu Components */
+.context-menu {
+    position: absolute;
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 8px var(--octane-shadow);
+    padding: 4px 0;
+    min-width: 150px;
+    font-size: var(--font-size-xxs); /* 10px - slightly smaller than menu bar (11px) */
+    z-index: var(--z-context-menu);
+    pointer-events: auto;
+}
+
+/* Context menu item styles moved to octane-theme.css for consistency */
+
+.context-menu-separator {
+    height: 1px;
+    background-color: var(--octane-border);
+    margin: 4px 0;
+}
+
+.context-menu-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-small);
+}
+
+.context-menu-shortcut {
+    margin-left: auto;
+    color: var(--octane-text-muted);
+    font-size: var(--font-size-small);
+}
+
+.context-menu-arrow {
+    margin-left: auto;
+    color: var(--octane-text-muted);
+    font-size: var(--font-size-small);
+    transition: transform 0.15s ease;
+}
+
+.context-menu-item.has-submenu:hover .context-menu-arrow {
+    color: var(--octane-text-primary);
+}
+
+/* Submenu Styles */
+.context-menu.submenu {
+    z-index: var(--z-dropdown-content);
+}
+
+.context-menu.submenu::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--octane-border);
+}
+
+/* Drop Indicator for File Manager */
+
+
+
+
+
+/* Drag Over State */
+body.drag-over {
+    pointer-events: none;
+}
+
+body.drag-over * {
+    pointer-events: none;
+}
+
+
+/* Modal Dialog Components */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--octane-overlay-semi);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-context-menu);
+    pointer-events: auto;
+}
+
+.modal-dialog {
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 16px var(--octane-shadow);
+    min-width: 300px;
+    max-width: 80vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Removed duplicate - consolidated .modal-header at line ~3762 (later definition applies due to CSS cascade) */
+
+.modal-title {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-bold);
+    color: var(--octane-text-primary);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    font-size: var(--font-size-xl);
+    padding: 4px;
+    border-radius: var(--border-radius);
+    transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+    background-color: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+}
+
+.modal-content {
+    padding: 16px;
+    flex: 1;
+    overflow: auto;
+    color: var(--octane-text-primary);
+}
+
+/* Removed duplicate - consolidated .modal-footer at line ~3808 (later definition applies due to CSS cascade) */
+
+.modal-button {
+    background-color: var(--octane-bg-header);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    padding: 6px 12px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.modal-button:hover {
+    background-color: var(--octane-bg-hover);
+}
+
+.modal-button.primary {
+    background-color: var(--octane-accent-blue);
+    border-color: var(--octane-accent-blue);
+    color: white;
+}
+
+.modal-button.primary:hover {
+    background-color: var(--octane-accent-blue);
+}
+
+/* Tooltip Components */
+.tooltip {
+    position: absolute;
+    background-color: var(--octane-bg-primary);
+    color: var(--octane-text-primary);
+    padding: 4px 8px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--octane-border);
+    box-shadow: 0 2px 4px var(--octane-shadow);
+    z-index: var(--z-dropdown-content);
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 200px;
+    word-wrap: break-word;
+    white-space: normal;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid var(--octane-border);
+}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid var(--octane-bg-primary);
+}
+
+/* Progress Components */
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: var(--octane-bg-secondary);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--octane-accent-blue);
+    border-radius: var(--border-radius-sm);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* ===== OFFICIAL OTOY CONTROL BARS ===== */
+
+.control-btn {
+    background: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-small);
+    width: 18px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.control-btn:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+    border-color: var(--octane-accent-blue);
+}
+
+.control-btn:active {
+    background: var(--octane-accent-blue);
+    color: white;
+}
+/* ===== EXTRACTED FROM octane-theme.css ===== */
+
+/* Loading Screen */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--octane-bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-context-menu);
+}
+
+.loading-content {
+    text-align: center;
+    color: var(--octane-text-primary);
+}
+
+.octane-logo-large {
+    margin-bottom: 20px;
+}
+
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loading-content h1 {
+    font-size: var(--font-size-icon);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: 5px;
+}
+
+.loading-content p {
+    font-size: var(--font-size-large);
+    color: var(--octane-text-secondary);
+    margin-bottom: 30px;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--octane-bg-secondary);
+    border-top: 3px solid var(--octane-accent-blue);
+    border-radius: var(--border-radius-circle);
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+.loading-status {
+    color: var(--octane-text-muted);
+    font-size: var(--font-size-small);
+}
+
+
+/* Application Container */
+/* Application Container */
+.app-container {
+    display: grid;
+    grid-template-rows: var(--menu-height) 1fr var(--status-bar-height);
+    height: 100vh;
+    width: 100vw;
+    background-color: var(--octane-bg-primary);
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Menu Bar */
+.menu-bar {
+    background-color: var(--octane-bg-primary);
+    border-bottom: 1px solid var(--octane-border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    height: var(--menu-height);
+}
+
+.main-menu {
+    display: flex;
+    align-items: center;
+}
+
+.menu-item {
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+    border-radius: var(--border-radius);
+    transition: background-color 0.15s ease;
+}
+
+.menu-item:hover {
+    background-color: var(--octane-bg-hover);
+}
+
+.menu-item.active {
+    background-color: var(--octane-accent-blue);
+}
+
+
+/* Connection Status */
+/* Connection Status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4xl);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--border-radius-circle);
+    background-color: var(--octane-accent-red);
+    transition: background-color 0.3s ease;
+}
+
+.status-dot.connected {
+    background-color: var(--octane-accent-green);
+}
+
+.status-dot.connecting {
+    background-color: var(--octane-accent-orange);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: var(--opacity-full); }
+    50% { opacity: var(--opacity-medium); }
+}
+
+
+/* Main Layout & Panels */
+/* Main Layout */
+.app-layout {
+    display: grid;
+    grid-template-columns: 200px 4px 1fr 4px 320px; /* Will be overridden by inline styles */
+    grid-template-rows: 770px 4px 1fr; /* Will be overridden by inline styles: top-height, splitter, bottom */
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%; 
+    background-color: var(--octane-bg-primary);
+    overflow: hidden; /* Prevent layout overflow */
+    gap: var(--spacing-none); /* No gaps between grid areas */
+    margin: 0;
+    padding: 0;
+}
+
+/* Panel Base Styles 
+    border-right: 1px solid var(--octane-border);
+
+*/
+.panel {
+    background-color: var(--octane-bg-secondary);
+    display: flex;
+    flex-direction: column;
+}
+.panel-horz {
+    background-color: var(--octane-bg-secondary);
+    border-right: 1px solid var(--octane-border);
+    display: flex;
+    flex-direction: row;
+}
+
+.panel-header {
+    background-color: var(--octane-bg-header);
+    border-bottom: 1px solid var(--octane-border);
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--panel-header-height);
+}
+
+.panel-header h3 {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-normal);
+    color: var(--octane-text-primary);
+}
+
+.panel-controls {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.panel-btn {
+    background: none;
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    padding: 2px 6px;
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    transition: all 0.15s ease;
+}
+
+.panel-btn:hover {
+    background-color: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+}
+
+.panel-content {
+    flex: 1;
+    overflow: auto;
+}
+
+
+/* Status Bar */
+/* Status Bar */
+.status-bar {
+    background-color: var(--octane-bg-primary);
+    border-top: 1px solid var(--octane-border);
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--status-bar-height);
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    margin: 0;
+    width: 100%;
+}
+
+.status-left, .status-center, .status-right {
+    display: flex;
+    gap: var(--spacing-5xl);
+    align-items: center;
+}
+
+.status-center {
+    flex: 1;
+    justify-content: center;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+
+/* Scrollbars */
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 10px; /* Reduced from 12px for more refined appearance matching Octane SE */
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--octane-bg-primary); /* primary track for subtle appearance */
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--octane-border);
+    border-radius: var(--border-radius-sm); /* Reduced from 6px to match Octane's minimal radius */
+    border: 1px solid var(--octane-bg-primary); /* Thinner border matching track color */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--octane-border-light);
+}
+
+::-webkit-scrollbar-corner {
+    background-color: var(--octane-bg-primary); /* Match primary track */
+}
+
+
+/* Input Controls */
+/* Professional Input Controls - Matching Octane Reference */
+input[type="number"], 
+input[type="text"], 
+select {
+    background-color: var(--octane-parameter-bg);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    padding: 4px 8px;
+    font-size: var(--font-size-small);
+    font-family: var(--font-family);
+    border-radius: var(--border-radius);
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+input[type="number"]:focus, 
+input[type="text"]:focus, 
+select:focus {
+    border-color: var(--octane-accent);
+    box-shadow: 0 0 0 1px var(--octane-accent);
+}
+
+input[type="number"]:hover, 
+input[type="text"]:hover, 
+select:hover {
+    border-color: var(--octane-border-light);
+}
+
+/* Numeric input styling to match Octane's parameter controls */
+input[type="number"] {
+    text-align: right;
+    width: 60px;
+}
+
+/* Select dropdown styling */
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    padding-right: 28px;
+}
+

@@ -1,0 +1,174 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiChangeManager' class from 'apichangemanager.h'
+message ApiChangeManager
+{
+     // GRPC proto definitions for 'ChangeEvent' class from 'apichangemanager.h'
+    message ApiChangeManager_ChangeEvent
+    {
+        enum Type 
+        {
+            Type_UNSPECIFIED = 0;
+            ITEM_ADDED = 1;
+            ITEM_DELETE = 2;
+            CONNECTION_CHANGED = 4;
+            DESTINATION_ADDED = 8;
+            PINS_CHANGED = 16;
+            ITEM_VALUE_CHANGED = 32;
+            ITEM_INPUT_CHANGED = 64;
+            ITEM_NAME_CHANGED = 128;
+            ITEM_MOVED = 256;
+            LINKER_ORDER_CHANGED = 512;
+            ITEM_UI_OPERATION_FLAG_CHANGED = 1024;
+            TIME_TRANSFORM_CHANGED = 2048;
+        }
+
+        Type type = 1;
+        ObjectRef changedOwner = 2;
+        uint32 changedOwnerPinIx = 3;
+        ObjectRef changedItem = 4;
+        uint32 changedPinIx = 5;
+        UIntArrayT changedIndices = 6;
+        uint32 changedIndicesSize = 7;
+    }
+     // GRPC proto definitions for 'Observer' class from 'apichangemanager.h'
+    message ApiChangeManager_Observer
+    {
+        OnChangeT callback = 1;
+        uint64 userData = 2;
+    }
+     // GRPC proto definitions for 'TimeEvent' class from 'apichangemanager.h'
+    message ApiChangeManager_TimeEvent
+    {
+        enum Type 
+        {
+            GRAPH_TIME_CHANGED = 0;
+            GRAPH_INTERVAL_CHANGED = 1;
+            FRAME_RATE_CHANGED = 2;
+        }
+
+        Type type = 1;
+        ObjectRef rootGraph = 2;
+    }
+     // GRPC proto definitions for 'TimeObserver' class from 'apichangemanager.h'
+    message ApiChangeManager_TimeObserver
+    {
+        OnChangeT callback = 1;
+        uint64 userData = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::observeApiItem'
+    message observeApiItemRequest
+    {
+        // The item that should be observed (must be valid).
+        ObjectRef item = 1;
+        // The observer interested in changes.
+        GRPCChangeObserverT observer = 2;
+        // A bit mask of the events the observer wants to receive for this item.
+        int32 eventMask = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiChangeManager::observeApiItem'
+    message observeApiItemResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::stopObserving'
+    message stopObservingRequest
+    {
+        // The item of which the callback will be removed from the callback list.
+        ObjectRef item = 1;
+        // The observer that wants to stop observing the item.
+        GRPCChangeObserverT observer = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::stopObserving1'
+    message stopObserving1Request
+    {
+        // The observer that wants to stop observing everything.
+        GRPCChangeObserverT observer = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::stopObserving2'
+    message stopObserving2Request
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::update'
+    message updateRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::addTimeObserver'
+    message addTimeObserverRequest
+    {
+        // The observer the will be added to the list.
+        GRPCChangeTimeObserverT observer = 1;
+        // "The root node graph to start observing.
+        ObjectRef rootNodeGraph = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiChangeManager::addTimeObserver'
+    message addTimeObserverResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::removeTimeObserver'
+    message removeTimeObserverRequest
+    {
+        // The observer the will be removed from the list.
+        GRPCChangeTimeObserverT observer = 1;
+        // The root node graph to stop observing. If this is nullptr, the change manager
+        ObjectRef rootNodeGraph = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiChangeManager::stopObservingTime'
+    message stopObservingTimeRequest
+    {
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiChangeManager' from 'apichangemanager.h'
+service ApiChangeManagerService
+{
+    /// Registers a callback for receiving change events for the item
+    rpc observeApiItem(ApiChangeManager.observeApiItemRequest) returns (ApiChangeManager.observeApiItemResponse);
+    /// Removes an observer from the item
+    rpc stopObserving(ApiChangeManager.stopObservingRequest) returns (google.protobuf.Empty);
+    /// Removes a callback from all the items it's hooked up to
+    rpc stopObserving1(ApiChangeManager.stopObserving1Request) returns (google.protobuf.Empty);
+    /// Removes all the observers
+    rpc stopObserving2(ApiChangeManager.stopObserving2Request) returns (google.protobuf.Empty);
+    /// Sends an update event to Octane which will then update all its sub-systems, which currently
+    /// is mainly the render engine
+    rpc update(ApiChangeManager.updateRequest) returns (google.protobuf.Empty);
+    /// Adds a time observer to the observer list
+    rpc addTimeObserver(ApiChangeManager.addTimeObserverRequest) returns (ApiChangeManager.addTimeObserverResponse);
+    /// Removes a time observer from the observer list
+    rpc removeTimeObserver(ApiChangeManager.removeTimeObserverRequest) returns (google.protobuf.Empty);
+    /// Removes all the time observers
+    rpc stopObservingTime(ApiChangeManager.stopObservingTimeRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiChangeManager_ChangeEvent' from 'apichangemanager.h'
+
+// GRPC interface definition for class 'ApiChangeManager_Observer' from 'apichangemanager.h'
+
+// GRPC interface definition for class 'ApiChangeManager_TimeEvent' from 'apichangemanager.h'
+
+// GRPC interface definition for class 'ApiChangeManager_TimeObserver' from 'apichangemanager.h'

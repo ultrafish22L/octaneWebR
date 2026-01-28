@@ -1,0 +1,623 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "octaneenums.proto";
+import "octaneids.proto";
+
+
+message ApiCompatibilityModeInfoSetArrayT
+{
+    repeated ApiCompatibilityModeInfo infos = 1;
+}
+
+ // GRPC proto definitions for 'ApiNodeGraphInfo' class from 'octaneinfos.h'
+message ApiNodeGraphInfo
+{
+    NodeGraphType type = 1;
+    string description = 2;
+    NodePinType outType = 3;
+    string category = 4;
+    string defaultName = 5;
+    bool isInspectable = 6;
+    bool isCreatableByApi = 7;
+    bool isHidden = 8;
+    bool isScripted = 9;
+    bool isModule = 10;
+    bool isPopulatedAtConstruction = 11;
+    uint32 attributeInfoCount = 12;
+}
+ // GRPC proto definitions for 'ApiTextureValueTypeSet' class from 'octaneinfos.h'
+message ApiTextureValueTypeSet
+{
+    uint32 bitField = 1;
+    uint32 count = 2;
+    // Request packet corresponding to '[in] parameters in ApiTextureValueTypeSet::size'
+    message sizeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureValueTypeSet::size'
+    message sizeResponse
+    {
+        //     The number of texture value types, which may be zero.
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextureValueTypeSet::at'
+    message atRequest
+    {
+        // The index of a TextureValueType.
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureValueTypeSet::at'
+    message atResponse
+    {
+        //     The TextureValueType at a given index (TEXTURE_VALUE_TYPE_UNKNOWN if out of bounds).
+        TextureValueType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextureValueTypeSet::contains'
+    message containsRequest
+    {
+        TextureValueType textureValueType = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureValueTypeSet::contains'
+    message containsResponse
+    {
+        //     TRUE if the given TextureValueType is included in the set, FALSE otherwise.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextureValueTypeSet::bitField'
+    message bitFieldRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureValueTypeSet::bitField'
+    message bitFieldResponse
+    {
+        //     A 32-wide bit field, encoding texture value types (single bit per TextureValueType enum option).
+        uint32 result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiTextureNodeTypeInfo' class from 'octaneinfos.h'
+message ApiTextureNodeTypeInfo
+{
+     // GRPC proto definitions for 'Configuration' class from 'octaneinfos.h'
+    message ApiTextureNodeTypeInfo_Configuration
+    {
+         // GRPC proto definitions for 'Parameters' class from 'octaneinfos.h'
+        message ApiTextureNodeTypeInfo_Configuration_Parameters
+        {
+            TextureValueType outputValueType = 1;
+            TextureValueType inputValueType = 2;
+            bool isInputValueTypeToggled = 3;
+        }
+         // GRPC proto definitions for 'Interface' class from 'octaneinfos.h'
+        message ApiTextureNodeTypeInfo_Configuration_Interface
+        {
+            TextureValueType outputValueType = 1;
+            repeated TextureValueType inputValueTypes = 2;
+            repeated PinId inputPinIds = 3;
+            uint32 inputPinCount = 4;
+        }
+        NodeType nodeType = 1;
+        ApiTextureNodeTypeInfo_Configuration_Parameters parameters = 2;
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration.ApiTextureNodeTypeInfo_Configuration_Interface interface = 3;
+    }
+    bool isValid = 1;
+    TextureNodeTypeMode outputMode = 2;
+    TextureNodeTypeMode inputMode = 3;
+    bool canToggleValueTypesOfPins = 4;
+    TextureValueType staticOutputValueType = 5;
+    ApiTextureValueTypeSet inputValueTypes = 6;
+    ApiTextureValueTypeSet outputValueTypes = 7;
+    uint32 configurationsCount = 8;
+    repeated ApiTextureNodeTypeInfo_Configuration configurations = 9;
+    // Request packet corresponding to '[in] parameters in ApiTextureNodeTypeInfo::findConfiguration'
+    message findConfigurationRequest
+    {
+        // The texture value type selections the typed texture node would be set to in the desired configuration
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration.ApiTextureNodeTypeInfo_Configuration_Parameters configurationParameters = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureNodeTypeInfo::findConfiguration'
+    message findConfigurationResponse
+    {
+        //     A pointer to the matching node configuration (nullptr if not found)
+        ApiTextureNodeTypeInfo_Configuration result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiTextureNodeTypeInfo::findConfiguration1'
+    message findConfiguration1Request
+    {
+        // The types of output and inputs a typed texture node would have in the desired configuration
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration.ApiTextureNodeTypeInfo_Configuration_Interface configurationInterface = 1;
+        // Whether to consider inputs/output texture value types as equivalent when they can be trivially casted across
+        bool considerAutoTypeConversion = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTextureNodeTypeInfo::findConfiguration1'
+    message findConfiguration1Response
+    {
+        //     A pointer to the matching node configuration (nullptr if not found)
+        ApiTextureNodeTypeInfo_Configuration result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiTexturePinTypeInfo' class from 'octaneinfos.h'
+message ApiTexturePinTypeInfo
+{
+    bool isValid = 1;
+    TexturePinValueTypeMode mode = 2;
+    TextureValueType valueType = 3;
+    TextureValueType valueTypeWhenToggled = 4;
+    bool nodeInputTypesAreDerivedFromOutputType = 5;
+    // Request packet corresponding to '[in] parameters in ApiTexturePinTypeInfo::getTextureValueType'
+    message getTextureValueTypeRequest
+    {
+        // The parameters of a specific texture node type configuration
+        ApiTextureNodeTypeInfo.ApiTextureNodeTypeInfo_Configuration.ApiTextureNodeTypeInfo_Configuration_Parameters configurationParameters = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiTexturePinTypeInfo::getTextureValueType'
+    message getTextureValueTypeResponse
+    {
+        //     A texture value type for the pin
+        TextureValueType result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiNodeInfo' class from 'octaneinfos.h'
+message ApiNodeInfo
+{
+    NodeType type = 1;
+    string description = 2;
+    NodePinType outType = 3;
+    uint32 nodeColor = 4;
+    bool isLinker = 5;
+    bool isOutputLinker = 6;
+    bool takesPinDefaultValue = 7;
+    bool isHidden = 8;
+    bool isCreatableByApi = 9;
+    bool isScriptGraphWrapper = 10;
+    bool isTypedTextureNode = 11;
+    string category = 12;
+    string defaultName = 13;
+    uint32 attributeInfoCount = 14;
+    uint32 pinInfoCount = 15;
+    AttributeId movableInputCountAttribute = 16;
+    uint32 movableInputPinCount = 17;
+    MovableInputFormat movableInputFormat = 18;
+    string movableInputName = 19;
+    ApiTextureNodeTypeInfo texNodeTypeInfo = 20;
+    ApiCompatibilityModeInfoSetArrayT compatibilityModeInfos = 21;
+    uint32 minVersion = 22;
+}
+ // GRPC proto definitions for 'ApiAttributeInfo' class from 'octaneinfos.h'
+message ApiAttributeInfo
+{
+    AttributeId id = 1;
+    AttributeType type = 2;
+    bool isArray = 3;
+    AttributeId fileNameAttribute = 4;
+    AttributeId packageAttribute = 5;
+    string description = 6;
+    int32_4 defaultInts = 7;
+    int64_2 defaultLongs = 8;
+    float_4 defaultFloats = 9;
+    string defaultString = 10;
+    uint32 minVersion = 11;
+    uint32 endVersion = 12;
+    // Request packet corresponding to '[in] parameters in ApiAttributeInfo::isValidFor'
+    message isValidForRequest
+    {
+        uint32 version = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiAttributeInfo::isValidFor'
+    message isValidForResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiBitMaskPinInfo' class from 'octaneinfos.h'
+message ApiBitMaskPinInfo
+{
+     // GRPC proto definitions for 'Label' class from 'octaneinfos.h'
+    message ApiBitMaskPinInfo_Label
+    {
+        string name = 1;
+        string shortName = 2;
+    }
+    bool isValid = 1;
+    repeated ApiBitMaskPinInfo_Label labels = 2;
+    uint32 labelCount = 3;
+    int32 defaultValue = 4;
+}
+ // GRPC proto definitions for 'ApiBoolPinInfo' class from 'octaneinfos.h'
+message ApiBoolPinInfo
+{
+    bool isValid = 1;
+    bool defaultValue = 2;
+}
+ // GRPC proto definitions for 'ApiEnumPinInfo' class from 'octaneinfos.h'
+message ApiEnumPinInfo
+{
+     // GRPC proto definitions for 'Value' class from 'octaneinfos.h'
+    message ApiEnumPinInfo_Value
+    {
+        int32 value = 1;
+        string label = 2;
+    }
+    bool isValid = 1;
+    repeated ApiEnumPinInfo_Value values = 2;
+    uint32 valueCount = 3;
+    int32 defaultValue = 4;
+}
+ // GRPC proto definitions for 'ApiFloatPinInfo' class from 'octaneinfos.h'
+message ApiFloatPinInfo
+{
+     // GRPC proto definitions for 'DimInfo' class from 'octaneinfos.h'
+    message ApiFloatPinInfo_DimInfo
+    {
+        string name = 1;
+        float minValue = 2;
+        float maxValue = 3;
+        float sliderMinValue = 4;
+        float sliderMaxValue = 5;
+        float sliderStep = 6;
+    }
+    bool isValid = 1;
+    uint32 dimCount = 2;
+    repeated ApiFloatPinInfo.ApiFloatPinInfo_DimInfo dimInfos = 3;
+    float_4 defaultValue = 4;
+    bool useSliders = 5;
+    bool allowLog = 6;
+    bool defaultIsLog = 7;
+    bool displayPercentages = 8;
+    bool useAspectRatio = 9;
+    bool isColor = 10;
+    bool alwaysDisplaySign = 11;
+}
+ // GRPC proto definitions for 'ApiIntPinInfo' class from 'octaneinfos.h'
+message ApiIntPinInfo
+{
+     // GRPC proto definitions for 'DimInfo' class from 'octaneinfos.h'
+    message ApiIntPinInfo_DimInfo
+    {
+        string name = 1;
+        int32 minValue = 2;
+        int32 maxValue = 3;
+        int32 sliderMinValue = 4;
+        int32 sliderMaxValue = 5;
+        int32 sliderStep = 6;
+    }
+    bool isValid = 1;
+    uint32 dimCount = 2;
+    repeated ApiIntPinInfo.ApiIntPinInfo_DimInfo dimInfos = 3;
+    int32_4 defaultValue = 4;
+    bool useSliders = 5;
+    bool allowLog = 6;
+    bool defaultIsLog = 7;
+    bool isColor = 8;
+    bool alwaysDisplaySign = 9;
+}
+ // GRPC proto definitions for 'ApiOcioColorSpacePinInfo' class from 'octaneinfos.h'
+message ApiOcioColorSpacePinInfo
+{
+    bool isValid = 1;
+    NamedColorSpace defaultColorSpace = 2;
+    string otherText = 3;
+    bool showFileTypeHints = 4;
+    bool linearSrgbUsesLegacyGamma = 5;
+}
+ // GRPC proto definitions for 'ApiOcioLookPinInfo' class from 'octaneinfos.h'
+message ApiOcioLookPinInfo
+{
+    bool isValid = 1;
+    bool forView = 2;
+}
+ // GRPC proto definitions for 'ApiOcioViewPinInfo' class from 'octaneinfos.h'
+message ApiOcioViewPinInfo
+{
+    bool isValid = 1;
+}
+ // GRPC proto definitions for 'ApiProjectionPinInfo' class from 'octaneinfos.h'
+message ApiProjectionPinInfo
+{
+    bool isValid = 1;
+    bool useImageProjection = 2;
+}
+ // GRPC proto definitions for 'ApiStringPinInfo' class from 'octaneinfos.h'
+message ApiStringPinInfo
+{
+    bool isValid = 1;
+    string defaultValue = 2;
+    string filePatterns = 3;
+    StringArrayT values = 4;
+    uint32 valueCount = 5;
+    bool multiLine = 6;
+    bool isFile = 7;
+    bool forSaving = 8;
+    bool allowCustomValue = 9;
+    bool updateWhileTyping = 10;
+}
+ // GRPC proto definitions for 'ApiTexturePinInfo' class from 'octaneinfos.h'
+message ApiTexturePinInfo
+{
+    bool isValid = 1;
+    float minValue = 2;
+    float maxValue = 3;
+    float sliderMinValue = 4;
+    float sliderMaxValue = 5;
+    float_4 defaultValue = 6;
+    bool usesSpectrum = 7;
+    bool allowLog = 8;
+    bool defaultIsLog = 9;
+    bool displayPercentages = 10;
+    bool alwaysDisplaySign = 11;
+}
+ // GRPC proto definitions for 'ApiTransformPinInfo' class from 'octaneinfos.h'
+message ApiTransformPinInfo
+{
+     // GRPC proto definitions for 'Bounds' class from 'octaneinfos.h'
+    message ApiTransformPinInfo_Bounds
+    {
+        double defaultValue = 1;
+        double minValue = 2;
+        double maxValue = 3;
+    }
+    bool isValid = 1;
+    MatrixF defaultValue = 2;
+    uint32 dimCount = 3;
+    ApiTransformPinInfo_Bounds scaleBounds = 4;
+    ApiTransformPinInfo_Bounds rotationBounds = 5;
+    ApiTransformPinInfo_Bounds translationBounds = 6;
+    bool isUvwTransform = 7;
+}
+ // GRPC proto definitions for 'ApiNodePinInfo' class from 'octaneinfos.h'
+message ApiNodePinInfo
+{
+    PinId id = 1;
+    NodePinType type = 2;
+    bool isTypedTexturePin = 3;
+    string staticName = 4;
+    string staticLabel = 5;
+    string description = 6;
+    string groupName = 7;
+    uint32 pinColor = 8;
+    NodeType defaultNodeType = 9;
+    uint32 minVersion = 10;
+    uint32 endVersion = 11;
+    ApiBoolPinInfo boolInfo = 12;
+    ApiFloatPinInfo floatInfo = 13;
+    ApiIntPinInfo intInfo = 14;
+    ApiEnumPinInfo enumInfo = 15;
+    ApiOcioColorSpacePinInfo ocioColorSpaceInfo = 16;
+    ApiOcioLookPinInfo ocioLookInfo = 17;
+    ApiOcioViewPinInfo ocioViewInfo = 18;
+    ApiProjectionPinInfo projectionInfo = 19;
+    ApiTexturePinInfo texInfo = 20;
+    ApiTexturePinTypeInfo texTypeInfo = 21;
+    ApiTransformPinInfo transformInfo = 22;
+    ApiStringPinInfo stringInfo = 23;
+    ApiBitMaskPinInfo bitMaskInfo = 24;
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfo::isValidFor'
+    message isValidForRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 version = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfo::isValidFor'
+    message isValidForResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiCompatibilityModeInfo' class from 'octaneinfos.h'
+message ApiCompatibilityModeInfo
+{
+    uint32 startVersion = 1;
+    string name = 2;
+    string description = 3;
+    // Request packet corresponding to '[in] parameters in ApiCompatibilityModeInfo::startVersion'
+    message startVersionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCompatibilityModeInfo::startVersion'
+    message startVersionResponse
+    {
+        //     The start version, which will always be less than or equal to OCTANE_VERSION.
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCompatibilityModeInfo::name'
+    message nameRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCompatibilityModeInfo::name'
+    message nameResponse
+    {
+        //     The name, which is not null. The pointer points to a string literal that will never be
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCompatibilityModeInfo::description'
+    message descriptionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCompatibilityModeInfo::description'
+    message descriptionResponse
+    {
+        //     The description, or null if this mode doesn't have a description because it represents
+        string result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiCompatibilityModeInfoSet' class from 'octaneinfos.h'
+message ApiCompatibilityModeInfoSet
+{
+    ApiCompatibilityModeInfo infos = 1;
+    uint32 count = 2;
+    // Request packet corresponding to '[in] parameters in ApiCompatibilityModeInfoSet::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCompatibilityModeInfoSet::size'
+    message sizeResponse
+    {
+        //     The number of modes in this list, which may be zero.
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCompatibilityModeInfoSet::info'
+    message infoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the mode for which to get the info. Must be less than size().
+        uint32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCompatibilityModeInfoSet::info'
+    message infoResponse
+    {
+        //     The info. Refers to an object that will never be modified or deallocated.
+        ApiCompatibilityModeInfo result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiAttributeInfo' from 'octaneinfos.h'
+service ApiAttributeInfoService
+{
+    /// fast version validity check
+    rpc isValidFor(ApiAttributeInfo.isValidForRequest) returns (ApiAttributeInfo.isValidForResponse);
+}
+
+// GRPC interface definition for class 'ApiBitMaskPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiBitMaskPinInfo_Label' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiBoolPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiCompatibilityModeInfo' from 'octaneinfos.h'
+service ApiCompatibilityModeInfoService
+{
+    /// Gets the first version of Octane that has this behavior, i
+    rpc startVersion(ApiCompatibilityModeInfo.startVersionRequest) returns (ApiCompatibilityModeInfo.startVersionResponse);
+    /// Gets the name of the compatibility mode
+    rpc name(ApiCompatibilityModeInfo.nameRequest) returns (ApiCompatibilityModeInfo.nameResponse);
+    /// Gets a brief description of how this behavior differs from the behavior of the current
+    /// version of Octane
+    rpc description(ApiCompatibilityModeInfo.descriptionRequest) returns (ApiCompatibilityModeInfo.descriptionResponse);
+}
+
+// GRPC interface definition for class 'ApiCompatibilityModeInfoSet' from 'octaneinfos.h'
+service ApiCompatibilityModeInfoSetService
+{
+    /// Gets the number of compatibility modes
+    rpc size(ApiCompatibilityModeInfoSet.sizeRequest) returns (ApiCompatibilityModeInfoSet.sizeResponse);
+    /// Gets the info for one of the compatibility modes
+    rpc info(ApiCompatibilityModeInfoSet.infoRequest) returns (ApiCompatibilityModeInfoSet.infoResponse);
+}
+
+// GRPC interface definition for class 'ApiEnumPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiEnumPinInfo_Value' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiFloatPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiFloatPinInfo_DimInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiIntPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiIntPinInfo_DimInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiNodeGraphInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiNodeInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiNodePinInfo' from 'octaneinfos.h'
+service ApiNodePinInfoService
+{
+    /// fast version validity check
+    rpc isValidFor1(ApiNodePinInfo.isValidForRequest) returns (ApiNodePinInfo.isValidForResponse);
+}
+
+// GRPC interface definition for class 'ApiOcioColorSpacePinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiOcioLookPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiOcioViewPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiProjectionPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiStringPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTextureNodeTypeInfo' from 'octaneinfos.h'
+service ApiTextureNodeTypeInfoService
+{
+    /// Find the configuration that has the given node interface of texture value types of output and inputs
+    ///
+    /// 
+    rpc findConfiguration1(ApiTextureNodeTypeInfo.findConfiguration1Request) returns (ApiTextureNodeTypeInfo.findConfiguration1Response);
+}
+
+// GRPC interface definition for class 'ApiTextureNodeTypeInfo_Configuration' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTextureNodeTypeInfo_Configuration_Interface' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTextureNodeTypeInfo_Configuration_Parameters' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTexturePinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTexturePinTypeInfo' from 'octaneinfos.h'
+service ApiTexturePinTypeInfoService
+{
+    /// Get the texture value type of a pin for given configuration parameters
+    ///
+    /// 
+    rpc getTextureValueType(ApiTexturePinTypeInfo.getTextureValueTypeRequest) returns (ApiTexturePinTypeInfo.getTextureValueTypeResponse);
+}
+
+// GRPC interface definition for class 'ApiTextureValueTypeSet' from 'octaneinfos.h'
+service ApiTextureValueTypeSetService
+{
+    /// Gets the number of texture value types
+    rpc size1(ApiTextureValueTypeSet.sizeRequest) returns (ApiTextureValueTypeSet.sizeResponse);
+    /// Gets the TextureValueType at a given index (TEXTURE_VALUE_TYPE_UNKNOWN if out of bounds)
+    rpc at(ApiTextureValueTypeSet.atRequest) returns (ApiTextureValueTypeSet.atResponse);
+    /// Checks if a given TextureValueType is included in the set
+    rpc contains(ApiTextureValueTypeSet.containsRequest) returns (ApiTextureValueTypeSet.containsResponse);
+    /// Return the bitfield encoding all the texture value types in the set
+    rpc bitField(ApiTextureValueTypeSet.bitFieldRequest) returns (ApiTextureValueTypeSet.bitFieldResponse);
+}
+
+// GRPC interface definition for class 'ApiTransformPinInfo' from 'octaneinfos.h'
+
+// GRPC interface definition for class 'ApiTransformPinInfo_Bounds' from 'octaneinfos.h'

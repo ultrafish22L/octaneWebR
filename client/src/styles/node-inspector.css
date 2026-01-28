@@ -1,0 +1,1466 @@
+/**
+ * Node Inspector Styles
+ * Part of octaneWebR CSS reorganization
+ */
+
+/* Node Inspector Styling */
+.node-inspector-header {
+    padding: 8px 12px;
+    background-color: var(--octane-bg-secondary);
+}
+
+.node-inspector-header h3 {
+    margin: 0 0 8px 0;
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-bold);
+    color: var(--octane-text-primary);
+}
+
+.node-selector {
+    width: 100%;
+    padding: 4px 8px;
+    background-color: var(--octane-bg-primary);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    /* Added from octane-theme.css: */
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.parameter-icon {
+    width: 16px;
+    height: 16px;
+    text-align: center;
+    margin-right: 6px;
+    margin-left: 2px;
+    font-size: var(--font-size-xs);
+    flex-shrink: 0;
+    background: var(--octane-accent-blue); /* Blue background like official Octane */
+    border: 1px solid var(--octane-accent-blue);
+    border-radius: var(--border-radius-base); /* Slightly smaller rounded blue background */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.parameter-label {
+    flex: 1;
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+    margin-right: 6px;
+    font-weight: var(--font-weight-normal);
+    min-width: 80px;
+}
+
+.parameter-value {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    font-family: var(--font-family-mono);
+    margin-left: auto;
+}
+
+/* Color parameter display (matching reference screenshot) */
+.color-parameter {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-left: auto;
+}
+
+.color-bar {
+    width: 120px;
+    height: 16px;
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius-sm);
+    flex-shrink: 0;
+}
+
+/* Official Octane-style Input Controls - Compact Studio Design */
+.parameter-control-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-none);
+    position: relative;
+}
+
+.parameter-spinner-btn {
+    width: 12px;
+    height: 16px;
+    background: var(--octane-border);
+    border: 1px solid var(--octane-text-disabled);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-tiny);
+    border-radius: var(--border-radius-none);
+    transition: all 0.15s ease;
+    font-family: var(--font-family-mono);
+}
+
+.parameter-spinner-btn:first-child {
+    border-right: none;
+    border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+}
+
+.parameter-spinner-btn:last-of-type {
+    border-left: none;
+    border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+}
+
+.parameter-spinner-btn:hover {
+    background: var(--octane-text-disabled);
+    color: var(--octane-text-primary);
+}
+
+.parameter-dropdown {
+    min-width: 80px;
+    padding: 1px 4px;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-normal);
+}
+
+.parameter-number-input {
+    width: 50px;
+    height: 16px;
+    padding: 0 2px;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    border-left: none;
+    border-right: none;
+    border-radius: var(--border-radius-none);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    text-align: center;
+    font-family: var(--font-family-mono);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-pixel);
+}
+
+.parameter-number-input:focus {
+    outline: none;
+    background: var(--octane-border-dark);
+    border-color: var(--octane-accent-blue);
+}
+
+/* Removed duplicate - consolidated at line ~2760 */
+
+/* Node Inspector Components - Professional Octane Style */
+.node-inspector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    background-color: var(--octane-bg-primary);
+    border-bottom: 1px solid var(--octane-bg-header);
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+}
+
+.inspector-icon {
+    margin-right: 4px;
+    font-size: var(--font-size-normal);
+}
+
+.inspector-dropdown {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.inspector-target-select {
+    background-color: var(--octane-border-dark);
+    border: 1px solid var(--octane-bg-header);
+    color: var(--octane-text-primary);
+    padding: 2px 20px 2px 6px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    appearance: none;
+    min-width: 120px;
+}
+
+.inspector-dropdown-arrow {
+    position: absolute;
+    right: 4px;
+    pointer-events: none;
+    font-size: var(--font-size-tiny);
+    color: var(--octane-text-disabled);
+}
+
+
+.octane-inspector-dropdown {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.octane-inspector-target-select {
+    background-color: var(--octane-border-dark);
+    border: 1px solid var(--octane-bg-header);
+    color: var(--octane-text-primary);
+    padding: 2px 20px 2px 6px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    appearance: none;
+    min-width: 120px;
+}
+
+.octane-inspector-dropdown-arrow {
+    position: absolute;
+    right: 4px;
+    pointer-events: none;
+    font-size: var(--font-size-tiny);
+    color: var(--octane-text-disabled);
+}
+
+.octane-inspector-dropdown-inline {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    margin-left: auto;
+}
+
+.octane-inspector-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0;
+}
+
+.inspector-title {
+    font-weight: var(--font-weight-normal);
+    color: var(--octane-text-primary);
+}
+
+/* Removed duplicate - see line ~598 for .inspector-dropdown container styles */
+
+.inspector-target-select {
+    background-color: var(--octane-bg-secondary);
+    color: var(--octane-text-primary);
+    padding: 2px 20px 2px 6px;
+    font-size: var(--font-size-small);
+    cursor: pointer;
+    appearance: none;
+    min-width: 120px;
+}
+
+.inspector-dropdown-arrow {
+    position: absolute;
+    right: 4px;
+    pointer-events: none;
+    font-size: var(--font-size-tiny);
+    color: var(--octane-text-muted);
+}
+
+/* .inspector-content moved to layout.css (consolidated) */
+
+/* Parameter Sections */
+.parameter-section {
+    border-bottom: 1px solid var(--octane-border);
+}
+
+
+
+
+/* Parameter Subsections */
+.parameter-subsection {
+    padding: 0;
+}
+
+
+
+
+
+/* Octane Parameter Rows (matching reference screenshot exactly) */
+
+
+
+/* CSS-based parameter icon (small blue circle with gear symbol) */
+
+
+/* Color parameter icon (palette icon instead of gear) */
+
+
+
+
+/* Parameter Input Containers */
+
+
+
+/* Parameter Control Wrappers (matching reference screenshot) */
+.parameter-control-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.parameter-control-wrapper.parameter-vector3 {
+    gap: var(--spacing-xxs);
+}
+
+
+/* Parameter Number Inputs (matching reference screenshot exactly) */
+.parameter-number-input {
+    background-color: var(--octane-viewport-bg);
+    border: 1px solid var(--octane-node-bg);
+    color: var(--octane-text-primary);
+    padding: 0px 3px;
+    font-size: var(--font-size-xs);
+    border-radius: var(--border-radius-xs);
+    width: 50px;
+    text-align: right;
+    font-family: var(--font-family-mono);
+    height: 14px;
+    line-height: var(--line-height-none);
+}
+
+.parameter-number-input:focus {
+    outline: none;
+    border-color: var(--octane-accent-blue);
+    background-color: var(--octane-border-dark);
+}
+
+/* Parameter Color Bars (matching reference screenshot) */
+
+
+/* Parameter Checkboxes (matching reference screenshot) */
+.parameter-checkbox {
+    width: 12px;
+    height: 12px;
+    background-color: var(--octane-viewport-bg);
+    border: 1px solid var(--octane-node-bg);
+    border-radius: var(--border-radius-xs);
+    cursor: pointer;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.parameter-checkbox:hover {
+    border-color: var(--octane-accent-blue);
+}
+
+.parameter-checkbox:checked {
+    background-color: var(--octane-viewport-bg);
+    border-color: var(--octane-accent-blue);
+}
+
+.parameter-checkbox:checked::after {
+    content: '✓';
+    font-size: var(--font-size-tiny);
+    font-weight: bold;
+    color: var(--octane-accent-blue);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: var(--line-height-none);
+}
+
+.parameter-controls {
+    display: flex;
+    flex-direction: column;
+    margin-left: -14px;
+    z-index: var(--z-low);
+}
+
+.parameter-spinner-btn {
+    background: none;
+    border: none;
+    color: var(--octane-text-disabled);
+    font-size: var(--font-size-nano);
+    width: 12px;
+    height: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: var(--line-height-none);
+}
+
+.parameter-spinner-btn:hover {
+    color: var(--octane-text-muted);
+}
+
+/* Parameter Sliders */
+
+.parameter-slider {
+    position: relative;
+    height: 4px;
+    background-color: var(--octane-border);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+}
+
+
+
+
+/* Parameter Checkboxes (matching octaneWeb exactly) */
+.parameter-checkbox-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Removed duplicate - consolidated at line ~3600 */
+
+/* Parameter Dropdowns */
+.parameter-dropdown {
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    padding: 2px 6px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    min-width: 140px;
+}
+
+.parameter-dropdown:focus {
+    outline: none;
+    border-color: var(--octane-accent-blue);
+}
+
+/* Color Parameter Controls (matching reference screenshot) */
+
+
+
+
+
+/* Node Inspector Layout - Official OTOY Design with Vertical Quick Access Buttons */
+.node-inspector-layout {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    background: var(--octane-bg-primary);    
+}
+
+/* Vertical Quick Access Buttons (Left Side) - Matching Official Octane Documentation Figure 2 */
+.node-inspector-controls-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xxs);
+    background: var(--octane-bg-primary);
+    padding: 2px 2px 2px 2px;
+    width: 26px;
+    min-width: 26px;
+}
+
+/* Main Node Inspector Content (Right Side) */
+.node-inspector-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    min-width: 80px;
+}
+
+.quick-btn {
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    padding: 3px 2px 3px 2px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-small);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.quick-btn:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+    border-color: var(--octane-accent-blue);
+    z-index: var(--z-low);
+}
+
+.quick-btn:active {
+    background: var(--octane-accent-blue);
+    color: white;
+}
+
+.quick-btn.active {
+    background: var(--octane-accent-red);
+    color: white;
+    border-color: var(--octane-accent-red);
+}
+
+.controls-spacer {
+    width: 4px;
+    height: 16px;
+    border-left: 1px solid var(--octane-border);
+    margin: 0 2px;
+}
+
+/* Vertical spacer for the new vertical layout */
+.controls-spacer-vertical {
+    width: 20px;
+    height: 4px;
+    border-top: 1px solid var(--octane-border);
+    margin: 2px 0;
+}
+
+/* Octane-Style Node Inspector */
+.octane-node-inspector {
+    height: 100%;
+    overflow-y: visible;
+    font-size: var(--font-size-small);
+}
+
+.inspector-header {
+    padding: 6px 8px;
+    background: var(--octane-bg-secondary);
+    border-bottom: 1px solid var(--octane-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inspector-title {
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-header);
+    color: var(--octane-text-primary);
+}
+
+.inspector-dropdown {
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-sm);
+    min-width: 120px;
+}
+
+.section-header {
+    padding: 4px 8px;
+    background: var(--octane-bg-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-header);
+    border-bottom: 1px solid var(--octane-border);
+}
+
+.section-header:hover {
+    background: var(--octane-bg-hover);
+}
+
+.section-toggle {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    width: 12px;
+}
+
+.section-title {
+    color: var(--octane-text-primary);
+}
+
+.section-content {
+    padding: 2px 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.grid-button {
+    background: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-secondary);
+    font-size: var(--font-size-xs);
+    padding: 1px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    min-width: 18px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.grid-button:hover {
+    background: var(--octane-bg-hover);
+    color: var(--octane-text-primary);
+}
+
+.grid-button.active {
+    background: var(--octane-accent);
+    color: white;
+    border-color: var(--octane-accent);
+}
+
+.file-path {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4px 8px;
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-left: 20px;
+}
+
+.file-path-text {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    font-family: var(--font-family-mono);
+}
+
+.file-stats {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-tertiary);
+}
+
+/* ========================================
+   ENHANCED PARAMETER CONTROLS
+   Professional Octane-style parameter inputs
+   ======================================== */
+
+/* Loading and Error States */
+.loading-parameters {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--octane-text-secondary);
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--octane-border);
+    border-top: 2px solid var(--octane-accent);
+    border-radius: var(--border-radius-circle);
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--octane-text-secondary);
+}
+
+.error-icon {
+    font-size: var(--font-size-title);
+    margin-bottom: 12px;
+}
+
+.retry-button {
+    background: var(--octane-accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-base);
+    cursor: pointer;
+    margin-top: 12px;
+    font-size: var(--font-size-small);
+}
+
+.retry-button:hover {
+    background: var(--octane-accent-hover);
+}
+
+
+/* Parameter Rows */
+/* .parameter-row moved to layout.css (consolidated) */
+
+.parameter-label {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 120px;
+    margin-right: 12px;
+}
+
+.parameter-icon {
+    margin-right: 6px;
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    width: 16px;
+    text-align: center;
+}
+
+.parameter-name {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+    font-weight: var(--font-weight-normal);
+}
+
+.parameter-control {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+/* Numeric Slider Controls */
+
+
+.parameter-slider {
+    width: 100%;
+    height: 4px;
+    background: var(--octane-bg-secondary);
+    border-radius: var(--border-radius-sm);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.parameter-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--octane-accent);
+    border-radius: var(--border-radius-circle);
+    cursor: pointer;
+    border: 1px solid var(--octane-border);
+}
+
+.parameter-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--octane-accent);
+    border-radius: var(--border-radius-circle);
+    cursor: pointer;
+    border: 1px solid var(--octane-border);
+}
+
+
+
+
+/* Numeric Input Controls */
+
+/* Removed duplicate - consolidated in Numeric Input Controls section at line ~3588 */
+
+.parameter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xxs);
+}
+
+.param-increment,
+
+
+
+.param-increment:hover,
+
+.param-increment:active,
+
+/* CONSOLIDATED: Merged 3 duplicate definitions */
+.parameter-unit {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-tertiary);
+    margin-left: 4px;
+    min-width: 20px;
+}
+/* Checkbox Controls - see line 1058 for .parameter-checkbox-container */
+
+/* Removed duplicate - consolidated at line ~3570 */
+
+/* Dropdown Controls */
+
+.parameter-dropdown {
+    width: 100%;
+    height: 22px;
+    background: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius-md);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    padding: 0 20px 0 6px;
+    appearance: none;
+    cursor: pointer;
+}
+
+.parameter-dropdown:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+    background: var(--octane-bg-primary);
+}
+
+
+/* Color Picker Controls */
+
+
+
+
+
+/* Vector Input Controls */
+
+
+/* Text Input Controls */
+
+/* Removed duplicate - overridden by multi-selector at line ~3605 in Numeric Input Controls section */
+
+/* Parameter Animation Effects */
+/* .parameter-row consolidated in layout.css:223 */
+
+.parameter-number-input,
+.parameter-dropdown {
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Parameter Value Indicators */
+.parameter-row[data-type="checkbox"] .parameter-checkbox:checked ~ .parameter-label .parameter-name {
+    color: var(--octane-accent);
+}
+
+.parameter-row[data-type="numeric-slider"] .parameter-slider:not([value="0"]) ~ .parameter-label .parameter-name,
+.parameter-row[data-type="numeric-input"] .parameter-number-input:not([value="0"]) ~ .parameter-label .parameter-name {
+    color: var(--octane-text-primary);
+}
+
+/* Enhanced Focus States */
+.parameter-control:focus-within .parameter-label .parameter-name {
+    color: var(--octane-accent);
+}
+
+.parameter-control:focus-within .parameter-icon {
+    color: var(--octane-accent);
+}
+
+/* ===== NODE INSPECTOR ===== */
+.inspector-group-indent {
+    background-color: var(--octane-bg-secondary);
+    padding: 0 0 0 0;
+    margin: 0 0 0 20px;    
+}
+
+.inspector-group-header {
+    background: var(--octane-bg-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+}
+
+.inspector-group-header:hover {
+    background-color: var(--octane-bg-hover);
+}
+
+.inspector-group-icon {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    transition: transform 0.2s ease;
+    min-width: 12px;
+    text-align: center;
+}
+
+.inspector-group-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+    min-height: 20px;
+}
+
+.inspector-group-content {
+    background-color: var(--octane-bg-secondary);
+}
+
+.node-box {
+    position: relative;
+    background: var(--octane-bg-secondary);
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.node-box-parameter {
+    position: relative;
+    background: var(--octane-bg-parameter);
+    border-radius: var(--border-radius-lg); 
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    padding: 0 4px 0 0;
+}
+
+.node-box:hover {
+    background: var(--octane-bg-hover);
+    border-color: var(--octane-border-hover);
+}
+
+.node-box.selected {
+    background: var(--octane-accent-bg);
+    border-color: var(--octane-accent);
+}
+
+.node-box.selected .node-title {
+    color: var(--octane-accent);
+}
+
+/* Level-based indentation system with consistent 24px increments - ONLY for Node Inspector */
+.node-inspector .node-indent-0,
+.octane-node-inspector .node-indent-0 {
+    background-color: var(--octane-bg-primary);
+    border: 1px solid var(--octane-parameter-bg);
+    border-radius: var(--border-radius-lg); 
+    margin: 0 2px 2px 8px;
+    padding: 0 0 0 0;
+}
+
+.node-inspector .node-indent,
+.octane-node-inspector .node-indent {
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-parameter-bg);
+    border-radius: var(--border-radius-lg); 
+    margin: 2px 2px 2px 20px;   
+    padding: 0 0 0 0;
+}
+
+.node-inspector .node-indent-done,
+.octane-node-inspector .node-indent-done {
+    background-color: var(--octane-bg-secondary);
+    border: 1px solid var(--octane-parameter-bg);
+    border-radius: var(--border-radius-lg); 
+    margin: 2px 2px 2px 1px;   
+    padding: 0 0 0 0; 
+}
+
+.node-inspector .node-toggle-content,
+.octane-node-inspector .node-toggle-content {
+    background-color: var(--octane-bg-secondary);
+    padding: 0;
+    margin: 0;
+}
+
+/* Icon box with better visibility and positioning - ONLY for Node Inspector */
+.node-inspector .node-icon-box,
+.octane-node-inspector .node-icon-box {
+    position: absolute;
+    left: -8px; 
+    width: 20px;
+    height: 20px;
+    border-radius: var(--border-radius-lg) 0 0 var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-small);
+    border: 1px solid var(--octane-highlight-medium); /* More visible border */
+    background: var(--octane-overlay-subtle); /* Subtle background for better contrast */
+    box-shadow: 0 1px 2px var(--octane-overlay-subtle); /* Subtle shadow for depth */
+}
+
+/* Node content area with improved spacing - ONLY for Node Inspector */
+.node-inspector .node-content,
+.octane-node-inspector .node-content {
+    flex: 1;
+    padding: 0 0 0 18px; /* Increased padding for better spacing */
+    min-height: 10px;
+    border-radius: var(--border-radius-lg); 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Node parameters container - ONLY for Node Inspector */
+.node-inspector .node-parameters,
+.octane-node-inspector .node-parameters {
+    width: 100%;
+    margin-top: 4px;
+    padding-left: 0;
+}
+
+/* Node header with improved spacing and alignment - ONLY for Node Inspector */
+.node-inspector .node-label,
+.octane-node-inspector .node-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    width: 100%;
+    min-height: 20px;
+    gap: var(--spacing-none);
+}
+
+.node-inspector .node-label:hover,
+.octane-node-inspector .node-label:hover {
+    background: var(--octane-bg-hover);
+}
+
+/* Collapse/expand icon styling - ONLY for Node Inspector */
+.node-inspector .node-collapse-icon,
+.octane-node-inspector .node-collapse-icon {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    transition: transform 0.2s ease;
+    min-width: 12px;
+    text-align: center;
+}
+
+.node-inspector .node-collapse-icon:hover,
+.octane-node-inspector .node-collapse-icon:hover {
+    color: var(--octane-text-primary);
+}
+
+/* Node title styling - ONLY for Node Inspector */
+.node-inspector .node-title,
+.octane-node-inspector .node-title {
+    padding: 0px 0px 0px 0px;
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-light);
+    color: var(--octane-text-primary);
+    flex-shrink: 2;
+    display:grid;
+    width: 120px;
+}
+
+/* Node parameter controls with better spacing - ONLY for Node Inspector */
+.node-inspector .node-parameter-controls,
+.octane-node-inspector .node-parameter-controls {
+    margin-left: 12px; /* Space between title and dropdown */
+    flex: 1; /* Fill remaining space to the right */
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-none);
+}
+
+.node-inspector .node-parameter-controls .parameter-dropdown,
+.octane-node-inspector .node-parameter-controls .parameter-dropdown {
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-lg);
+    color: var(--octane-bg-header);
+    padding: 4px 8px;
+    font-size: var(--font-size-small);
+    min-width: 120px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.node-inspector .node-parameter-controls .parameter-dropdown:hover,
+.octane-node-inspector .node-parameter-controls .parameter-dropdown:hover {
+}
+
+.node-inspector .node-parameter-controls .parameter-dropdown:focus,
+.octane-node-inspector .node-parameter-controls .parameter-dropdown:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+    box-shadow: 0 0 0 2px var(--octane-warning-bg-alpha);
+}
+
+/* Child nodes container - ONLY for Node Inspector */
+.node-inspector .node-children {
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* ===== OCTANE PARAMETER ROW STYLES ===== */
+/* New parameter control styles for GenericNodeRenderer */
+
+
+
+
+
+
+/* Individual control styles - Match Octane Studio with 3D recessed effect */
+.octane-checkbox {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    cursor: pointer;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-sm);
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+}
+
+.octane-checkbox:checked {
+    background: var(--octane-bg-primary);
+    border-color: var(--octane-accent);
+}
+
+.octane-checkbox:checked::after {
+    content: '✓';
+    color: var(--octane-accent);
+    font-size: var(--font-size-xxs);
+    font-weight: bold;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.octane-number-input {
+    flex: 1;
+    min-width: 36px;
+    height: 18px;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-base);
+    color: var(--octane-bg-header);
+    font-size: var(--font-size-small);
+    padding: 0 8px;
+    font-family: var(--font-family-mono);
+    text-align: right;
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.octane-number-input:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+    background: var(--octane-border-dark);
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy), 0 0 0 1px var(--octane-accent);
+}
+
+/* Number input with spinners */
+.parameter-number-with-spinner {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-none);
+    position: relative;
+    flex: 1;
+}
+
+.parameter-number-with-spinner .octane-number-input {
+    border-radius: var(--border-radius-base) 0 0 var(--border-radius-base);
+    border-right: none;
+}
+
+.parameter-spinner-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-none);
+}
+
+.parameter-spinner-btn {
+    width: 14px;
+    height: 9px;
+    background: var(--octane-border);
+    border: 1px solid var(--octane-text-disabled);
+    color: var(--octane-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-tiny);
+    transition: all 0.15s ease;
+    font-family: var(--font-family-mono);
+    user-select: none;
+}
+
+.parameter-spinner-btn:first-child {
+    border-bottom: none;
+    border-radius: 0 var(--border-radius-base) 0 0;
+}
+
+.parameter-spinner-btn:last-child {
+    border-radius: 0 0 var(--border-radius-base) 0;
+}
+
+/* .parameter-spinner-btn:hover - see line 354 */
+
+.parameter-spinner-btn:active {
+    background: var(--octane-border-light);
+}
+
+.octane-text-input {
+    width: 80px;
+    height: 18px;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-sm);
+    color: var(--octane-bg-header);
+    font-size: var(--font-size-small);
+    padding: 1px 4px;
+    text-align: right;
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.octane-text-input:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+    background: var(--octane-border-dark);
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy), 0 0 0 1px var(--octane-accent);
+}
+
+.octane-color-input {
+    width: 180px;
+    min-width: 60px;
+    height: 18px;
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    padding: 0;
+    background: var(--octane-bg-primary);
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.octane-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.octane-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: var(--border-radius-xs);
+}
+
+.octane-dropdown {
+    height: 18px;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-bg-header);
+    border-radius: var(--border-radius-sm);
+    color: var(--octane-bg-header);
+    font-size: var(--font-size-small);
+    padding: 0 4px;
+    min-width: 80px;
+    cursor: pointer;
+    display: grid;
+    text-align: right;
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.octane-dropdown:focus {
+    outline: none;
+    border-color: var(--octane-accent);
+    background: var(--octane-border-dark);
+    box-shadow: inset 0 1px 3px var(--octane-shadow-heavy), 0 0 0 1px var(--octane-accent);
+}
+
+/* Vector control styles */
+
+
+
+
+/* Parameter rows within nodes - ONLY for Node Inspector */
+.node-inspector .node-parameter-row {
+    margin: 2px 0;
+    padding: 2px 0;
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    line-height: var(--line-height-tight);
+}
+
+/* Collapse/expand icons */
+.collapse-icon {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-secondary);
+    width: 12px;
+    margin: 0 8px 0 0;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.collapse-icon:hover {
+    color: var(--octane-text-primary);
+}
+
+/* Node title */
+.node-title {
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
+    font-weight: var(--font-weight-header);
+}
+
+/* Children container */
+.node-children {
+    margin-top: 2px;
+    padding-left: 0;
+}
+
+/* Pin group specific styles */
+
+
+/* Parameter specific styles */
+.parameter {
+    background: var(--octane-bg-primary);
+    border-color: var(--octane-border-light);
+}
+
+.parameter .node-label {
+    justify-content: space-between;
+}
+
+/* Removed duplicate - consolidated at line ~2760 */
+
+/* Hover states */
+
+.parameter:hover {
+    background: var(--octane-bg-secondary);
+}
+
+/* Selected state */
+
+
+.empty-message
+{
+    padding: 2px 6px;
+    text-align: left;
+    color: var(--octane-text-secondary);
+    font-size: var(--font-size-small);
+    font-style: italic;
+}
+
+/* Parameter Control Styles for Interactive Node Inspector */
+.parameter-control-container {
+    display: inline-flex;
+    width: 100%; /* Stretch to fill parent node-parameter-controls */
+    align-items: center;
+    gap: var(--spacing-md);
+}
+/* Checkbox Controls - Match octaneWeb exactly (see line 1058 for .parameter-checkbox-container) */
+
+/* CONSOLIDATED: Merged 4 duplicate definitions into one comprehensive definition */
+.parameter-checkbox-custom {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--octane-border);
+    border-radius: var(--border-radius-md);
+    background: var(--octane-bg-primary);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.parameter-checkbox:hover + .parameter-checkbox-custom {
+    border-color: var(--octane-accent);
+}
+
+.parameter-checkbox-container:hover .parameter-checkbox-custom {
+    border-color: var(--octane-accent);
+}
+
+.parameter-checkbox:checked + .parameter-checkbox-custom {
+    background-color: var(--octane-bg-primary);
+    border-color: var(--octane-accent);
+}
+
+.parameter-checkbox:checked + .parameter-checkbox-custom::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: var(--font-size-xxs);
+    font-weight: var(--font-weight-bold);
+    color: var(--octane-accent);
+}
+/* ===== EXTRACTED FROM octane-theme.css ===== */
+
+/* Right Panel - Node Inspector */
+.right-panel {
+    background-color: var(--octane-bg-secondary); /* Professional dark background */
+    border-left: none; /* No border - splitter acts as boundary */
+    border-right: none;
+    overflow-y: visible; /* Allow scrolling if content is tall */
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Ensure proper stacking context */
+    z-index: var(--z-panel); /* Higher z-index than center panel */
+    height: 100%; /* Fill grid area height */
+    width: 100%; /* Fill grid area width */
+    /* Width controlled by grid layout - no explicit width needed */
+}
+
+
+.node-selector {
+    background-color: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    padding: 4px 8px;
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    width: 100%;
+}
+
+/* Octane-style sections and parameter groups */
+.octane-section {
+    margin-bottom: 4px;
+}
+
+
+
+
+
+.octane-subsection {
+    padding: 8px;
+    border-bottom: 1px solid var(--octane-border);
+}
+
+
+.octane-node-icon {
+    font-size: var(--font-size-normal);
+}
+
+
+.node-inspector {
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+}
+
+.inspector-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--octane-text-muted);
+    font-style: italic;
+}
+

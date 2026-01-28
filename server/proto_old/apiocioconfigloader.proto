@@ -1,0 +1,114 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiOcioConfigLoader' class from 'apiocioconfigloader.h'
+message ApiOcioConfigLoader
+{
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfigLoader::create'
+    message createResponse
+    {
+        //     The created config loader. This must be destroyed with destroy(). Will not be null.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::addCallback'
+    message addCallbackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The function to call with the current state now and with the new state whenever the
+        CallbackT callback = 2;
+        // The private data pointer to be passed to the callback whenever it is called. This isn't
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfigLoader::addCallback'
+    message addCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::removeCallback'
+    message removeCallbackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The function that was passed to addCallback.
+        CallbackT callback = 2;
+        // The private data pointer that was passed to addCallback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfigLoader::removeCallback'
+    message removeCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::load'
+    message loadRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The path to the config file to load, or an empty string to unload any config. Must not
+        string filename = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiOcioConfigLoader::createConfig'
+    message createConfigRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // This parameter only has an effect if we are currently loading a config. In that case, if
+        bool waitIfLoading = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiOcioConfigLoader::createConfig'
+    message createConfigResponse
+    {
+        //     The current config (must be destroyed with destroy()), or null if there is no config.
+        ObjectRef result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiOcioConfigLoader' from 'apiocioconfigloader.h'
+service ApiOcioConfigLoaderService
+{
+    /// 
+    rpc create(ApiOcioConfigLoader.createRequest) returns (ApiOcioConfigLoader.createResponse);
+    /// Must not be called from a callback function
+    rpc destroy(ApiOcioConfigLoader.destroyRequest) returns (google.protobuf.Empty);
+    /// Registers a callback to be called when the state of loading an OCIO config changes
+    rpc addCallback(ApiOcioConfigLoader.addCallbackRequest) returns (ApiOcioConfigLoader.addCallbackResponse);
+    /// Deregisters a callback that was registered with addCallback
+    rpc removeCallback(ApiOcioConfigLoader.removeCallbackRequest) returns (ApiOcioConfigLoader.removeCallbackResponse);
+    /// Starts loading a config file
+    rpc load(ApiOcioConfigLoader.loadRequest) returns (google.protobuf.Empty);
+    /// Gets the current config
+    rpc createConfig(ApiOcioConfigLoader.createConfigRequest) returns (ApiOcioConfigLoader.createConfigResponse);
+}

@@ -1,0 +1,2689 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiBinaryTable' class from 'apibinaryfile.h'
+message ApiBinaryTable
+{
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::size'
+    message sizeResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::erase'
+    message eraseRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::has'
+    message hasRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::has'
+    message hasResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::equals'
+    message equalsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::equals'
+    message equalsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get'
+    message getRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get'
+    message getResponse
+    {
+        
+        bool result = 1;
+        bool value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get1'
+    message get1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get1'
+    message get1Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get2'
+    message get2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get2'
+    message get2Response
+    {
+        
+        bool result = 1;
+        int8_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get3'
+    message get3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get3'
+    message get3Response
+    {
+        
+        bool result = 1;
+        int8_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get4'
+    message get4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get4'
+    message get4Response
+    {
+        
+        bool result = 1;
+        int8_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get5'
+    message get5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get5'
+    message get5Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get6'
+    message get6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get6'
+    message get6Response
+    {
+        
+        bool result = 1;
+        uint8_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get7'
+    message get7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get7'
+    message get7Response
+    {
+        
+        bool result = 1;
+        uint8_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get8'
+    message get8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get8'
+    message get8Response
+    {
+        
+        bool result = 1;
+        uint8_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get9'
+    message get9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get9'
+    message get9Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get10'
+    message get10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get10'
+    message get10Response
+    {
+        
+        bool result = 1;
+        int16_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get11'
+    message get11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get11'
+    message get11Response
+    {
+        
+        bool result = 1;
+        int16_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get12'
+    message get12Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get12'
+    message get12Response
+    {
+        
+        bool result = 1;
+        int16_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get13'
+    message get13Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get13'
+    message get13Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get14'
+    message get14Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get14'
+    message get14Response
+    {
+        
+        bool result = 1;
+        uint16_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get15'
+    message get15Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get15'
+    message get15Response
+    {
+        
+        bool result = 1;
+        uint16_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get16'
+    message get16Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get16'
+    message get16Response
+    {
+        
+        bool result = 1;
+        uint16_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get17'
+    message get17Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get17'
+    message get17Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get18'
+    message get18Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get18'
+    message get18Response
+    {
+        
+        bool result = 1;
+        int32_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get19'
+    message get19Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get19'
+    message get19Response
+    {
+        
+        bool result = 1;
+        int32_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get20'
+    message get20Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get20'
+    message get20Response
+    {
+        
+        bool result = 1;
+        int32_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get21'
+    message get21Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get21'
+    message get21Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get22'
+    message get22Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get22'
+    message get22Response
+    {
+        
+        bool result = 1;
+        uint32_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get23'
+    message get23Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get23'
+    message get23Response
+    {
+        
+        bool result = 1;
+        uint32_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get24'
+    message get24Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get24'
+    message get24Response
+    {
+        
+        bool result = 1;
+        uint32_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get25'
+    message get25Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get25'
+    message get25Response
+    {
+        
+        bool result = 1;
+        int64 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get26'
+    message get26Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get26'
+    message get26Response
+    {
+        
+        bool result = 1;
+        int64_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get27'
+    message get27Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get27'
+    message get27Response
+    {
+        
+        bool result = 1;
+        int64_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get28'
+    message get28Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get28'
+    message get28Response
+    {
+        
+        bool result = 1;
+        int64_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get29'
+    message get29Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get29'
+    message get29Response
+    {
+        
+        bool result = 1;
+        uint64 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get30'
+    message get30Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get30'
+    message get30Response
+    {
+        
+        bool result = 1;
+        uint64_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get31'
+    message get31Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get31'
+    message get31Response
+    {
+        
+        bool result = 1;
+        uint64_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get32'
+    message get32Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get32'
+    message get32Response
+    {
+        
+        bool result = 1;
+        uint64_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get33'
+    message get33Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get33'
+    message get33Response
+    {
+        
+        bool result = 1;
+        float value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get34'
+    message get34Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get34'
+    message get34Response
+    {
+        
+        bool result = 1;
+        float_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get35'
+    message get35Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get35'
+    message get35Response
+    {
+        
+        bool result = 1;
+        float_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get36'
+    message get36Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get36'
+    message get36Response
+    {
+        
+        bool result = 1;
+        float_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get37'
+    message get37Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get37'
+    message get37Response
+    {
+        
+        bool result = 1;
+        double value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get38'
+    message get38Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get38'
+    message get38Response
+    {
+        
+        bool result = 1;
+        double_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get39'
+    message get39Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get39'
+    message get39Response
+    {
+        
+        bool result = 1;
+        double_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get40'
+    message get40Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get40'
+    message get40Response
+    {
+        
+        bool result = 1;
+        double_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::get41'
+    message get41Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::get41'
+    message get41Response
+    {
+        
+        bool result = 1;
+        string value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::cleanupString'
+    message cleanupStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string str = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::getGroup'
+    message getGroupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::getGroup'
+    message getGroupResponse
+    {
+        
+        bool result = 1;
+        ObjectRef group = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::getTable'
+    message getTableRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::getTable'
+    message getTableResponse
+    {
+        
+        bool result = 1;
+        ObjectRef table = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set'
+    message setRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        bool value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set1'
+    message set1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set2'
+    message set2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set3'
+    message set3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set4'
+    message set4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set5'
+    message set5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set6'
+    message set6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set7'
+    message set7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set8'
+    message set8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set9'
+    message set9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set10'
+    message set10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set11'
+    message set11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set12'
+    message set12Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set13'
+    message set13Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set14'
+    message set14Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set15'
+    message set15Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set16'
+    message set16Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set17'
+    message set17Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set18'
+    message set18Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set19'
+    message set19Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set20'
+    message set20Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set21'
+    message set21Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set22'
+    message set22Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set23'
+    message set23Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set24'
+    message set24Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set25'
+    message set25Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set26'
+    message set26Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set27'
+    message set27Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set28'
+    message set28Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set29'
+    message set29Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set30'
+    message set30Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set31'
+    message set31Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set32'
+    message set32Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set33'
+    message set33Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set34'
+    message set34Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set35'
+    message set35Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set36'
+    message set36Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set37'
+    message set37Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set38'
+    message set38Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set39'
+    message set39Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set40'
+    message set40Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::set41'
+    message set41Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        string value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::setGroup'
+    message setGroupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        ObjectRef group = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::setTable'
+    message setTableRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        ObjectRef table = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::write'
+    message writeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Full path to the output file.
+        string path = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::write'
+    message writeResponse
+    {
+        //     TRUE if the operation was successful, FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::read'
+    message readRequest
+    {
+        // Full path to the input file.
+        string path = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryTable::read'
+    message readResponse
+    {
+        //     Pointer to the binary table. Should be destroyed via destroy. A Null pointer when
+        ObjectRef result = 1;
+        // Octane version number used to write the input file.
+        uint32 octaneVersion = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryTable::dump'
+    message dumpRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 indent = 2;
+    }
+
+}
+ // GRPC proto definitions for 'ApiBinaryGroup' class from 'apibinaryfile.h'
+message ApiBinaryGroup
+{
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::size'
+    message sizeResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::popFront'
+    message popFrontRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::popBack'
+    message popBackRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::getId'
+    message getIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::getId'
+    message getIdResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::equals'
+    message equalsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef other = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::equals'
+    message equalsResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get'
+    message getRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get'
+    message getResponse
+    {
+        
+        bool result = 1;
+        bool value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get1'
+    message get1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get1'
+    message get1Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get2'
+    message get2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get2'
+    message get2Response
+    {
+        
+        bool result = 1;
+        int8_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get3'
+    message get3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get3'
+    message get3Response
+    {
+        
+        bool result = 1;
+        int8_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get4'
+    message get4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get4'
+    message get4Response
+    {
+        
+        bool result = 1;
+        int8_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get5'
+    message get5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get5'
+    message get5Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get6'
+    message get6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get6'
+    message get6Response
+    {
+        
+        bool result = 1;
+        uint8_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get7'
+    message get7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get7'
+    message get7Response
+    {
+        
+        bool result = 1;
+        uint8_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get8'
+    message get8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get8'
+    message get8Response
+    {
+        
+        bool result = 1;
+        uint8_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get9'
+    message get9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get9'
+    message get9Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get10'
+    message get10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get10'
+    message get10Response
+    {
+        
+        bool result = 1;
+        int16_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get11'
+    message get11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get11'
+    message get11Response
+    {
+        
+        bool result = 1;
+        int16_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get12'
+    message get12Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get12'
+    message get12Response
+    {
+        
+        bool result = 1;
+        int16_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get13'
+    message get13Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get13'
+    message get13Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get14'
+    message get14Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get14'
+    message get14Response
+    {
+        
+        bool result = 1;
+        uint16_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get15'
+    message get15Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get15'
+    message get15Response
+    {
+        
+        bool result = 1;
+        uint16_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get16'
+    message get16Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get16'
+    message get16Response
+    {
+        
+        bool result = 1;
+        uint16_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get17'
+    message get17Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get17'
+    message get17Response
+    {
+        
+        bool result = 1;
+        int32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get18'
+    message get18Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get18'
+    message get18Response
+    {
+        
+        bool result = 1;
+        int32_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get19'
+    message get19Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get19'
+    message get19Response
+    {
+        
+        bool result = 1;
+        int32_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get20'
+    message get20Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get20'
+    message get20Response
+    {
+        
+        bool result = 1;
+        int32_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get21'
+    message get21Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get21'
+    message get21Response
+    {
+        
+        bool result = 1;
+        uint32 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get22'
+    message get22Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get22'
+    message get22Response
+    {
+        
+        bool result = 1;
+        uint32_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get23'
+    message get23Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get23'
+    message get23Response
+    {
+        
+        bool result = 1;
+        uint32_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get24'
+    message get24Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get24'
+    message get24Response
+    {
+        
+        bool result = 1;
+        uint32_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get25'
+    message get25Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get25'
+    message get25Response
+    {
+        
+        bool result = 1;
+        int64 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get26'
+    message get26Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get26'
+    message get26Response
+    {
+        
+        bool result = 1;
+        int64_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get27'
+    message get27Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get27'
+    message get27Response
+    {
+        
+        bool result = 1;
+        int64_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get28'
+    message get28Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get28'
+    message get28Response
+    {
+        
+        bool result = 1;
+        int64_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get29'
+    message get29Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get29'
+    message get29Response
+    {
+        
+        bool result = 1;
+        uint64 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get30'
+    message get30Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get30'
+    message get30Response
+    {
+        
+        bool result = 1;
+        uint64_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get31'
+    message get31Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get31'
+    message get31Response
+    {
+        
+        bool result = 1;
+        uint64_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get32'
+    message get32Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get32'
+    message get32Response
+    {
+        
+        bool result = 1;
+        uint64_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get33'
+    message get33Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get33'
+    message get33Response
+    {
+        
+        bool result = 1;
+        float value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get34'
+    message get34Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get34'
+    message get34Response
+    {
+        
+        bool result = 1;
+        float_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get35'
+    message get35Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get35'
+    message get35Response
+    {
+        
+        bool result = 1;
+        float_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get36'
+    message get36Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get36'
+    message get36Response
+    {
+        
+        bool result = 1;
+        float_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get37'
+    message get37Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get37'
+    message get37Response
+    {
+        
+        bool result = 1;
+        double value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get38'
+    message get38Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get38'
+    message get38Response
+    {
+        
+        bool result = 1;
+        double_2 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get39'
+    message get39Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get39'
+    message get39Response
+    {
+        
+        bool result = 1;
+        double_3 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get40'
+    message get40Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get40'
+    message get40Response
+    {
+        
+        bool result = 1;
+        double_4 value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::get41'
+    message get41Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::get41'
+    message get41Response
+    {
+        
+        bool result = 1;
+        string value = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::cleanupString'
+    message cleanupStringRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string str = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::getGroup'
+    message getGroupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::getGroup'
+    message getGroupResponse
+    {
+        
+        bool result = 1;
+        ObjectRef group = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::getTable'
+    message getTableRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 ix = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiBinaryGroup::getTable'
+    message getTableResponse
+    {
+        
+        bool result = 1;
+        ObjectRef table = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add'
+    message addRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        bool value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add1'
+    message add1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add2'
+    message add2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add3'
+    message add3Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add4'
+    message add4Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int8_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add5'
+    message add5Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add6'
+    message add6Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add7'
+    message add7Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add8'
+    message add8Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint8_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add9'
+    message add9Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add10'
+    message add10Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add11'
+    message add11Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add12'
+    message add12Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int16_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add13'
+    message add13Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add14'
+    message add14Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add15'
+    message add15Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add16'
+    message add16Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint16_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add17'
+    message add17Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add18'
+    message add18Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add19'
+    message add19Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add20'
+    message add20Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int32_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add21'
+    message add21Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add22'
+    message add22Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add23'
+    message add23Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add24'
+    message add24Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint32_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add25'
+    message add25Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add26'
+    message add26Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add27'
+    message add27Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add28'
+    message add28Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        int64_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add29'
+    message add29Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add30'
+    message add30Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add31'
+    message add31Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add32'
+    message add32Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        uint64_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add33'
+    message add33Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add34'
+    message add34Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add35'
+    message add35Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add36'
+    message add36Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        float_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add37'
+    message add37Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add38'
+    message add38Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_2 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add39'
+    message add39Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_3 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add40'
+    message add40Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        double_4 value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::add41'
+    message add41Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        string value = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::addGroup'
+    message addGroupRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        ObjectRef group = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::addTable'
+    message addTableRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 id = 2;
+        ObjectRef table = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiBinaryGroup::dump'
+    message dumpRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 indent = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiBinaryGroup' from 'apibinaryfile.h'
+service ApiBinaryGroupService
+{
+    /// Creates a new binary group
+    rpc create(ApiBinaryGroup.createRequest) returns (ApiBinaryGroup.createResponse);
+    /// Destroys this group
+    rpc destroy(ApiBinaryGroup.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this group doesn't have any entries
+    rpc isEmpty(ApiBinaryGroup.isEmptyRequest) returns (ApiBinaryGroup.isEmptyResponse);
+    /// Returns the number of entries in this group
+    rpc size(ApiBinaryGroup.sizeRequest) returns (ApiBinaryGroup.sizeResponse);
+    /// Removes the first entry
+    rpc popFront(ApiBinaryGroup.popFrontRequest) returns (google.protobuf.Empty);
+    /// Removes the last entry
+    rpc popBack(ApiBinaryGroup.popBackRequest) returns (google.protobuf.Empty);
+    /// Returns the id of the element stored at ix
+    rpc getId(ApiBinaryGroup.getIdRequest) returns (ApiBinaryGroup.getIdResponse);
+    /// Returns TRUE if the 2 objects refer to the same group internally
+    rpc equals(ApiBinaryGroup.equalsRequest) returns (ApiBinaryGroup.equalsResponse);
+    rpc get(ApiBinaryGroup.getRequest) returns (ApiBinaryGroup.getResponse);
+    rpc get1(ApiBinaryGroup.get1Request) returns (ApiBinaryGroup.get1Response);
+    rpc get2(ApiBinaryGroup.get2Request) returns (ApiBinaryGroup.get2Response);
+    rpc get3(ApiBinaryGroup.get3Request) returns (ApiBinaryGroup.get3Response);
+    rpc get4(ApiBinaryGroup.get4Request) returns (ApiBinaryGroup.get4Response);
+    rpc get5(ApiBinaryGroup.get5Request) returns (ApiBinaryGroup.get5Response);
+    rpc get6(ApiBinaryGroup.get6Request) returns (ApiBinaryGroup.get6Response);
+    rpc get7(ApiBinaryGroup.get7Request) returns (ApiBinaryGroup.get7Response);
+    rpc get8(ApiBinaryGroup.get8Request) returns (ApiBinaryGroup.get8Response);
+    rpc get9(ApiBinaryGroup.get9Request) returns (ApiBinaryGroup.get9Response);
+    rpc get10(ApiBinaryGroup.get10Request) returns (ApiBinaryGroup.get10Response);
+    rpc get11(ApiBinaryGroup.get11Request) returns (ApiBinaryGroup.get11Response);
+    rpc get12(ApiBinaryGroup.get12Request) returns (ApiBinaryGroup.get12Response);
+    rpc get13(ApiBinaryGroup.get13Request) returns (ApiBinaryGroup.get13Response);
+    rpc get14(ApiBinaryGroup.get14Request) returns (ApiBinaryGroup.get14Response);
+    rpc get15(ApiBinaryGroup.get15Request) returns (ApiBinaryGroup.get15Response);
+    rpc get16(ApiBinaryGroup.get16Request) returns (ApiBinaryGroup.get16Response);
+    rpc get17(ApiBinaryGroup.get17Request) returns (ApiBinaryGroup.get17Response);
+    rpc get18(ApiBinaryGroup.get18Request) returns (ApiBinaryGroup.get18Response);
+    rpc get19(ApiBinaryGroup.get19Request) returns (ApiBinaryGroup.get19Response);
+    rpc get20(ApiBinaryGroup.get20Request) returns (ApiBinaryGroup.get20Response);
+    rpc get21(ApiBinaryGroup.get21Request) returns (ApiBinaryGroup.get21Response);
+    rpc get22(ApiBinaryGroup.get22Request) returns (ApiBinaryGroup.get22Response);
+    rpc get23(ApiBinaryGroup.get23Request) returns (ApiBinaryGroup.get23Response);
+    rpc get24(ApiBinaryGroup.get24Request) returns (ApiBinaryGroup.get24Response);
+    rpc get25(ApiBinaryGroup.get25Request) returns (ApiBinaryGroup.get25Response);
+    rpc get26(ApiBinaryGroup.get26Request) returns (ApiBinaryGroup.get26Response);
+    rpc get27(ApiBinaryGroup.get27Request) returns (ApiBinaryGroup.get27Response);
+    rpc get28(ApiBinaryGroup.get28Request) returns (ApiBinaryGroup.get28Response);
+    rpc get29(ApiBinaryGroup.get29Request) returns (ApiBinaryGroup.get29Response);
+    rpc get30(ApiBinaryGroup.get30Request) returns (ApiBinaryGroup.get30Response);
+    rpc get31(ApiBinaryGroup.get31Request) returns (ApiBinaryGroup.get31Response);
+    rpc get32(ApiBinaryGroup.get32Request) returns (ApiBinaryGroup.get32Response);
+    rpc get33(ApiBinaryGroup.get33Request) returns (ApiBinaryGroup.get33Response);
+    rpc get34(ApiBinaryGroup.get34Request) returns (ApiBinaryGroup.get34Response);
+    rpc get35(ApiBinaryGroup.get35Request) returns (ApiBinaryGroup.get35Response);
+    rpc get36(ApiBinaryGroup.get36Request) returns (ApiBinaryGroup.get36Response);
+    rpc get37(ApiBinaryGroup.get37Request) returns (ApiBinaryGroup.get37Response);
+    rpc get38(ApiBinaryGroup.get38Request) returns (ApiBinaryGroup.get38Response);
+    rpc get39(ApiBinaryGroup.get39Request) returns (ApiBinaryGroup.get39Response);
+    rpc get40(ApiBinaryGroup.get40Request) returns (ApiBinaryGroup.get40Response);
+    /// Returned string should be deleted via cleanupString()
+    rpc get41(ApiBinaryGroup.get41Request) returns (ApiBinaryGroup.get41Response);
+    /// Values should be cleaned up via destroy()
+    rpc getGroup(ApiBinaryGroup.getGroupRequest) returns (ApiBinaryGroup.getGroupResponse);
+    rpc getTable(ApiBinaryGroup.getTableRequest) returns (ApiBinaryGroup.getTableResponse);
+    rpc add(ApiBinaryGroup.addRequest) returns (google.protobuf.Empty);
+    rpc add1(ApiBinaryGroup.add1Request) returns (google.protobuf.Empty);
+    rpc add2(ApiBinaryGroup.add2Request) returns (google.protobuf.Empty);
+    rpc add3(ApiBinaryGroup.add3Request) returns (google.protobuf.Empty);
+    rpc add4(ApiBinaryGroup.add4Request) returns (google.protobuf.Empty);
+    rpc add5(ApiBinaryGroup.add5Request) returns (google.protobuf.Empty);
+    rpc add6(ApiBinaryGroup.add6Request) returns (google.protobuf.Empty);
+    rpc add7(ApiBinaryGroup.add7Request) returns (google.protobuf.Empty);
+    rpc add8(ApiBinaryGroup.add8Request) returns (google.protobuf.Empty);
+    rpc add9(ApiBinaryGroup.add9Request) returns (google.protobuf.Empty);
+    rpc add10(ApiBinaryGroup.add10Request) returns (google.protobuf.Empty);
+    rpc add11(ApiBinaryGroup.add11Request) returns (google.protobuf.Empty);
+    rpc add12(ApiBinaryGroup.add12Request) returns (google.protobuf.Empty);
+    rpc add13(ApiBinaryGroup.add13Request) returns (google.protobuf.Empty);
+    rpc add14(ApiBinaryGroup.add14Request) returns (google.protobuf.Empty);
+    rpc add15(ApiBinaryGroup.add15Request) returns (google.protobuf.Empty);
+    rpc add16(ApiBinaryGroup.add16Request) returns (google.protobuf.Empty);
+    rpc add17(ApiBinaryGroup.add17Request) returns (google.protobuf.Empty);
+    rpc add18(ApiBinaryGroup.add18Request) returns (google.protobuf.Empty);
+    rpc add19(ApiBinaryGroup.add19Request) returns (google.protobuf.Empty);
+    rpc add20(ApiBinaryGroup.add20Request) returns (google.protobuf.Empty);
+    rpc add21(ApiBinaryGroup.add21Request) returns (google.protobuf.Empty);
+    rpc add22(ApiBinaryGroup.add22Request) returns (google.protobuf.Empty);
+    rpc add23(ApiBinaryGroup.add23Request) returns (google.protobuf.Empty);
+    rpc add24(ApiBinaryGroup.add24Request) returns (google.protobuf.Empty);
+    rpc add25(ApiBinaryGroup.add25Request) returns (google.protobuf.Empty);
+    rpc add26(ApiBinaryGroup.add26Request) returns (google.protobuf.Empty);
+    rpc add27(ApiBinaryGroup.add27Request) returns (google.protobuf.Empty);
+    rpc add28(ApiBinaryGroup.add28Request) returns (google.protobuf.Empty);
+    rpc add29(ApiBinaryGroup.add29Request) returns (google.protobuf.Empty);
+    rpc add30(ApiBinaryGroup.add30Request) returns (google.protobuf.Empty);
+    rpc add31(ApiBinaryGroup.add31Request) returns (google.protobuf.Empty);
+    rpc add32(ApiBinaryGroup.add32Request) returns (google.protobuf.Empty);
+    rpc add33(ApiBinaryGroup.add33Request) returns (google.protobuf.Empty);
+    rpc add34(ApiBinaryGroup.add34Request) returns (google.protobuf.Empty);
+    rpc add35(ApiBinaryGroup.add35Request) returns (google.protobuf.Empty);
+    rpc add36(ApiBinaryGroup.add36Request) returns (google.protobuf.Empty);
+    rpc add37(ApiBinaryGroup.add37Request) returns (google.protobuf.Empty);
+    rpc add38(ApiBinaryGroup.add38Request) returns (google.protobuf.Empty);
+    rpc add39(ApiBinaryGroup.add39Request) returns (google.protobuf.Empty);
+    rpc add40(ApiBinaryGroup.add40Request) returns (google.protobuf.Empty);
+    rpc add41(ApiBinaryGroup.add41Request) returns (google.protobuf.Empty);
+    rpc addGroup(ApiBinaryGroup.addGroupRequest) returns (google.protobuf.Empty);
+    rpc addTable(ApiBinaryGroup.addTableRequest) returns (google.protobuf.Empty);
+    /// Dumps the group into the log (use for debugging only)
+    rpc dump(ApiBinaryGroup.dumpRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiBinaryTable' from 'apibinaryfile.h'
+service ApiBinaryTableService
+{
+    /// Create a new binary table
+    rpc create1(ApiBinaryTable.createRequest) returns (ApiBinaryTable.createResponse);
+    /// Destroys this binary table
+    rpc destroy1(ApiBinaryTable.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if this table doesn't have any entries
+    rpc isEmpty1(ApiBinaryTable.isEmptyRequest) returns (ApiBinaryTable.isEmptyResponse);
+    /// Returns the number of entries in this table
+    rpc size1(ApiBinaryTable.sizeRequest) returns (ApiBinaryTable.sizeResponse);
+    /// Erases the entry with the passed in id
+    rpc erase(ApiBinaryTable.eraseRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if there is an entry with the passed in id
+    rpc has(ApiBinaryTable.hasRequest) returns (ApiBinaryTable.hasResponse);
+    /// Returns TRUE if the 2 objects refer to the same table internally
+    rpc equals1(ApiBinaryTable.equalsRequest) returns (ApiBinaryTable.equalsResponse);
+    rpc get1(ApiBinaryTable.getRequest) returns (ApiBinaryTable.getResponse);
+    rpc get11(ApiBinaryTable.get1Request) returns (ApiBinaryTable.get1Response);
+    rpc get21(ApiBinaryTable.get2Request) returns (ApiBinaryTable.get2Response);
+    rpc get31(ApiBinaryTable.get3Request) returns (ApiBinaryTable.get3Response);
+    rpc get41(ApiBinaryTable.get4Request) returns (ApiBinaryTable.get4Response);
+    rpc get51(ApiBinaryTable.get5Request) returns (ApiBinaryTable.get5Response);
+    rpc get61(ApiBinaryTable.get6Request) returns (ApiBinaryTable.get6Response);
+    rpc get71(ApiBinaryTable.get7Request) returns (ApiBinaryTable.get7Response);
+    rpc get81(ApiBinaryTable.get8Request) returns (ApiBinaryTable.get8Response);
+    rpc get91(ApiBinaryTable.get9Request) returns (ApiBinaryTable.get9Response);
+    rpc get101(ApiBinaryTable.get10Request) returns (ApiBinaryTable.get10Response);
+    rpc get111(ApiBinaryTable.get11Request) returns (ApiBinaryTable.get11Response);
+    rpc get121(ApiBinaryTable.get12Request) returns (ApiBinaryTable.get12Response);
+    rpc get131(ApiBinaryTable.get13Request) returns (ApiBinaryTable.get13Response);
+    rpc get141(ApiBinaryTable.get14Request) returns (ApiBinaryTable.get14Response);
+    rpc get151(ApiBinaryTable.get15Request) returns (ApiBinaryTable.get15Response);
+    rpc get161(ApiBinaryTable.get16Request) returns (ApiBinaryTable.get16Response);
+    rpc get171(ApiBinaryTable.get17Request) returns (ApiBinaryTable.get17Response);
+    rpc get181(ApiBinaryTable.get18Request) returns (ApiBinaryTable.get18Response);
+    rpc get191(ApiBinaryTable.get19Request) returns (ApiBinaryTable.get19Response);
+    rpc get201(ApiBinaryTable.get20Request) returns (ApiBinaryTable.get20Response);
+    rpc get211(ApiBinaryTable.get21Request) returns (ApiBinaryTable.get21Response);
+    rpc get221(ApiBinaryTable.get22Request) returns (ApiBinaryTable.get22Response);
+    rpc get231(ApiBinaryTable.get23Request) returns (ApiBinaryTable.get23Response);
+    rpc get241(ApiBinaryTable.get24Request) returns (ApiBinaryTable.get24Response);
+    rpc get251(ApiBinaryTable.get25Request) returns (ApiBinaryTable.get25Response);
+    rpc get261(ApiBinaryTable.get26Request) returns (ApiBinaryTable.get26Response);
+    rpc get271(ApiBinaryTable.get27Request) returns (ApiBinaryTable.get27Response);
+    rpc get281(ApiBinaryTable.get28Request) returns (ApiBinaryTable.get28Response);
+    rpc get291(ApiBinaryTable.get29Request) returns (ApiBinaryTable.get29Response);
+    rpc get301(ApiBinaryTable.get30Request) returns (ApiBinaryTable.get30Response);
+    rpc get311(ApiBinaryTable.get31Request) returns (ApiBinaryTable.get31Response);
+    rpc get321(ApiBinaryTable.get32Request) returns (ApiBinaryTable.get32Response);
+    rpc get331(ApiBinaryTable.get33Request) returns (ApiBinaryTable.get33Response);
+    rpc get341(ApiBinaryTable.get34Request) returns (ApiBinaryTable.get34Response);
+    rpc get351(ApiBinaryTable.get35Request) returns (ApiBinaryTable.get35Response);
+    rpc get361(ApiBinaryTable.get36Request) returns (ApiBinaryTable.get36Response);
+    rpc get371(ApiBinaryTable.get37Request) returns (ApiBinaryTable.get37Response);
+    rpc get381(ApiBinaryTable.get38Request) returns (ApiBinaryTable.get38Response);
+    rpc get391(ApiBinaryTable.get39Request) returns (ApiBinaryTable.get39Response);
+    rpc get401(ApiBinaryTable.get40Request) returns (ApiBinaryTable.get40Response);
+    /// Returned string should be deleted via cleanupString()
+    rpc get411(ApiBinaryTable.get41Request) returns (ApiBinaryTable.get41Response);
+    /// Values should be cleaned up via destroy()
+    rpc getGroup1(ApiBinaryTable.getGroupRequest) returns (ApiBinaryTable.getGroupResponse);
+    rpc getTable1(ApiBinaryTable.getTableRequest) returns (ApiBinaryTable.getTableResponse);
+    rpc set(ApiBinaryTable.setRequest) returns (google.protobuf.Empty);
+    rpc set1(ApiBinaryTable.set1Request) returns (google.protobuf.Empty);
+    rpc set2(ApiBinaryTable.set2Request) returns (google.protobuf.Empty);
+    rpc set3(ApiBinaryTable.set3Request) returns (google.protobuf.Empty);
+    rpc set4(ApiBinaryTable.set4Request) returns (google.protobuf.Empty);
+    rpc set5(ApiBinaryTable.set5Request) returns (google.protobuf.Empty);
+    rpc set6(ApiBinaryTable.set6Request) returns (google.protobuf.Empty);
+    rpc set7(ApiBinaryTable.set7Request) returns (google.protobuf.Empty);
+    rpc set8(ApiBinaryTable.set8Request) returns (google.protobuf.Empty);
+    rpc set9(ApiBinaryTable.set9Request) returns (google.protobuf.Empty);
+    rpc set10(ApiBinaryTable.set10Request) returns (google.protobuf.Empty);
+    rpc set11(ApiBinaryTable.set11Request) returns (google.protobuf.Empty);
+    rpc set12(ApiBinaryTable.set12Request) returns (google.protobuf.Empty);
+    rpc set13(ApiBinaryTable.set13Request) returns (google.protobuf.Empty);
+    rpc set14(ApiBinaryTable.set14Request) returns (google.protobuf.Empty);
+    rpc set15(ApiBinaryTable.set15Request) returns (google.protobuf.Empty);
+    rpc set16(ApiBinaryTable.set16Request) returns (google.protobuf.Empty);
+    rpc set17(ApiBinaryTable.set17Request) returns (google.protobuf.Empty);
+    rpc set18(ApiBinaryTable.set18Request) returns (google.protobuf.Empty);
+    rpc set19(ApiBinaryTable.set19Request) returns (google.protobuf.Empty);
+    rpc set20(ApiBinaryTable.set20Request) returns (google.protobuf.Empty);
+    rpc set21(ApiBinaryTable.set21Request) returns (google.protobuf.Empty);
+    rpc set22(ApiBinaryTable.set22Request) returns (google.protobuf.Empty);
+    rpc set23(ApiBinaryTable.set23Request) returns (google.protobuf.Empty);
+    rpc set24(ApiBinaryTable.set24Request) returns (google.protobuf.Empty);
+    rpc set25(ApiBinaryTable.set25Request) returns (google.protobuf.Empty);
+    rpc set26(ApiBinaryTable.set26Request) returns (google.protobuf.Empty);
+    rpc set27(ApiBinaryTable.set27Request) returns (google.protobuf.Empty);
+    rpc set28(ApiBinaryTable.set28Request) returns (google.protobuf.Empty);
+    rpc set29(ApiBinaryTable.set29Request) returns (google.protobuf.Empty);
+    rpc set30(ApiBinaryTable.set30Request) returns (google.protobuf.Empty);
+    rpc set31(ApiBinaryTable.set31Request) returns (google.protobuf.Empty);
+    rpc set32(ApiBinaryTable.set32Request) returns (google.protobuf.Empty);
+    rpc set33(ApiBinaryTable.set33Request) returns (google.protobuf.Empty);
+    rpc set34(ApiBinaryTable.set34Request) returns (google.protobuf.Empty);
+    rpc set35(ApiBinaryTable.set35Request) returns (google.protobuf.Empty);
+    rpc set36(ApiBinaryTable.set36Request) returns (google.protobuf.Empty);
+    rpc set37(ApiBinaryTable.set37Request) returns (google.protobuf.Empty);
+    rpc set38(ApiBinaryTable.set38Request) returns (google.protobuf.Empty);
+    rpc set39(ApiBinaryTable.set39Request) returns (google.protobuf.Empty);
+    rpc set40(ApiBinaryTable.set40Request) returns (google.protobuf.Empty);
+    rpc set41(ApiBinaryTable.set41Request) returns (google.protobuf.Empty);
+    rpc setGroup(ApiBinaryTable.setGroupRequest) returns (google.protobuf.Empty);
+    rpc setTable(ApiBinaryTable.setTableRequest) returns (google.protobuf.Empty);
+    /// Writes this ApiBinaryTable into a file
+    rpc write(ApiBinaryTable.writeRequest) returns (ApiBinaryTable.writeResponse);
+    /// Reads an ApiBinaryTable from a file
+    rpc read(ApiBinaryTable.readRequest) returns (ApiBinaryTable.readResponse);
+    /// Dumps the table into the log (use for debugging only)
+    rpc dump1(ApiBinaryTable.dumpRequest) returns (google.protobuf.Empty);
+}

@@ -1,0 +1,82 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiProgressBar' class from 'apiprogressbar.h'
+message ApiProgressBar
+{
+    // Request packet corresponding to '[in] parameters in ApiProgressBar::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProgressBar::create'
+    message createResponse
+    {
+        //     Pointer to the progress bar or nullptr if something went wrong.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProgressBar::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProgressBar::setProgress'
+    message setProgressRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If value is not in [0,1], a spinning progress bar is shown.
+        double newValue = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProgressBar::progress'
+    message progressRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiProgressBar::progress'
+    message progressResponse
+    {
+        
+        double result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiProgressBar::setText'
+    message setTextRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string newText = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiProgressBar' from 'apiprogressbar.h'
+service ApiProgressBarService
+{
+    /// Creates a new progress bar
+    rpc create(ApiProgressBar.createRequest) returns (ApiProgressBar.createResponse);
+    /// Destroys this progress bar
+    rpc destroy(ApiProgressBar.destroyRequest) returns (google.protobuf.Empty);
+    /// Set the progress to a new value
+    rpc setProgress(ApiProgressBar.setProgressRequest) returns (google.protobuf.Empty);
+    /// Returns the current progress
+    rpc progress(ApiProgressBar.progressRequest) returns (ApiProgressBar.progressResponse);
+    /// Sets the text displayed on the progress bar
+    rpc setText(ApiProgressBar.setTextRequest) returns (google.protobuf.Empty);
+}

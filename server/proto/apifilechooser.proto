@@ -1,0 +1,165 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiFileChooser' class from 'apifilechooser.h'
+message ApiFileChooser
+{
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::create'
+    message createRequest
+    {
+        // Title that appears on the top of the dialog.
+        string dialogTitle = 1;
+        // Absolute path to start directory. If this is left empty a sensible default directory
+        string initialDirectory = 2;
+        // A set of file patterns to specify which files can be selected - each pattern should be
+        string filePatterns = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::create'
+    message createResponse
+    {
+        //     Pointer to the chooser or nullptr if something went wrong.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::browseForFileToOpen'
+    message browseForFileToOpenRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::browseForFileToOpen'
+    message browseForFileToOpenResponse
+    {
+        //         out what it was. Returns FALSE if they cancelled instead.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::browseForMultipleFilesToOpen'
+    message browseForMultipleFilesToOpenRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::browseForMultipleFilesToOpen'
+    message browseForMultipleFilesToOpenResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::browseForFileToSave'
+    message browseForFileToSaveRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // If true, the dialog box will ask the user if they're sure they want to overwrite a
+        bool warnAboutOverwritingExistingFiles = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::browseForFileToSave'
+    message browseForFileToSaveResponse
+    {
+        //     TRUE if the user chose a file and pressed 'ok', in which case, use the result()
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::browseForDirectory'
+    message browseForDirectoryRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::browseForDirectory'
+    message browseForDirectoryResponse
+    {
+        //     TRUE if the user chose a directory and pressed 'ok', in which case, use the result()
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::browseForMultipleFilesOrDirectories'
+    message browseForMultipleFilesOrDirectoriesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::browseForMultipleFilesOrDirectories'
+    message browseForMultipleFilesOrDirectoriesResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::result'
+    message resultRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::result'
+    message resultResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiFileChooser::results'
+    message resultsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiFileChooser::results'
+    message resultsResponse
+    {
+        
+        StringArrayT result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiFileChooser' from 'apifilechooser.h'
+service ApiFileChooserService
+{
+    /// Creates a new file chooser
+    rpc create(ApiFileChooser.createRequest) returns (ApiFileChooser.createResponse);
+    /// Destroys this file chooser created by create
+    rpc destroy(ApiFileChooser.destroyRequest) returns (google.protobuf.Empty);
+    /// Shows a dialog box to choose a file to open
+    rpc browseForFileToOpen(ApiFileChooser.browseForFileToOpenRequest) returns (ApiFileChooser.browseForFileToOpenResponse);
+    /// Same as browseForFileToOpen(), but allows the user to select multiple files
+    rpc browseForMultipleFilesToOpen(ApiFileChooser.browseForMultipleFilesToOpenRequest) returns (ApiFileChooser.browseForMultipleFilesToOpenResponse);
+    /// Shows a dialog box to choose a file to save
+    rpc browseForFileToSave(ApiFileChooser.browseForFileToSaveRequest) returns (ApiFileChooser.browseForFileToSaveResponse);
+    /// Shows a dialog box to choose a directory
+    rpc browseForDirectory(ApiFileChooser.browseForDirectoryRequest) returns (ApiFileChooser.browseForDirectoryResponse);
+    /// Same as browseForFileToOpen(), but allows the user to select multiple files and directories
+    rpc browseForMultipleFilesOrDirectories(ApiFileChooser.browseForMultipleFilesOrDirectoriesRequest) returns (ApiFileChooser.browseForMultipleFilesOrDirectoriesResponse);
+    /// Returns the last file that was chosen by one of the browseFor methods
+    rpc result(ApiFileChooser.resultRequest) returns (ApiFileChooser.resultResponse);
+    /// Returns a list of all the files that were chosen during the last call to a browse method
+    rpc results(ApiFileChooser.resultsRequest) returns (ApiFileChooser.resultsResponse);
+}

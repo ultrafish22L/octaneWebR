@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "google/protobuf/empty.proto";
+ 
+
+service StreamCallbackService
+{
+    rpc callbackChannel(google.protobuf.Empty) returns (stream StreamCallbackRequest);
+}
+
+message OnNewImageData
+{
+    uint64 user_data = 1;
+}
+
+message OnRenderFailureData
+{
+    uint64 user_data = 1;
+}
+
+message OnStatisticsData
+{
+    uint64 user_data = 1;
+}
+
+message OnProjectManagerData
+{
+    uint64 user_data = 1;
+}
+
+message StreamCallbackRequest
+{
+    oneof payload
+    {
+        OnNewImageData        newImage              = 10;
+        OnRenderFailureData   renderFailure         = 11;
+        OnStatisticsData      newStatistics         = 12;
+        OnProjectManagerData  projectManagerChanged = 13;
+    }
+}
+
+message OnNewRenderedImageRequest
+{
+    uint64 user_data = 1;
+}
+ 

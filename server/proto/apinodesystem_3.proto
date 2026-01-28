@@ -1,0 +1,1329 @@
+syntax = "proto3";
+package octaneapi;
+option optimize_for = CODE_SIZE;
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "apitimesampling.proto";
+import "octaneids.proto";
+import "octaneinfos.proto";
+
+message ApiItem
+{
+    // Request packet corresponding to '[in] parameters in ApiItem::attrAreDirty'
+    message attrAreDirtyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrAreDirty'
+    message attrAreDirtyResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrCount'
+    message attrCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrCount'
+    message attrCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrIdIx'
+    message attrIdIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrIdIx'
+    message attrIdIxResponse
+    {
+        
+        AttributeId result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrId'
+    message attrIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrId'
+    message attrIdResponse
+    {
+        
+        AttributeId result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrInfo1'
+    message attrInfo1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrInfo1'
+    message attrInfo1Response
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrInfoIx'
+    message attrInfoIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrInfoIx'
+    message attrInfoIxResponse
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrInfo'
+    message attrInfoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrInfo'
+    message attrInfoResponse
+    {
+        
+        ApiAttributeInfo result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrNameIx'
+    message attrNameIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrNameIx'
+    message attrNameIxResponse
+    {
+        
+        string result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrName'
+    message attrNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrName'
+    message attrNameResponse
+    {
+        
+        string result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrType1'
+    message attrType1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string attrName = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrType1'
+    message attrType1Response
+    {
+        
+        AttributeType result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrTypeIx'
+    message attrTypeIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrTypeIx'
+    message attrTypeIxResponse
+    {
+        
+        AttributeType result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::attrType'
+    message attrTypeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::attrType'
+    message attrTypeResponse
+    {
+        
+        AttributeType result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAllAttr'
+    message clearAllAttrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        bool evaluate = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAnim1'
+    message clearAnim1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAnimIx'
+    message clearAnimIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAnim'
+    message clearAnimRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAttr1'
+    message clearAttr1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+        bool evaluate = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAttrIx'
+    message clearAttrIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+        bool evaluate = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::clearAttr'
+    message clearAttrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+        bool evaluate = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::collapse'
+    message collapseRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::collapse'
+    message collapseResponse
+    {
+        //     TRUE if the item was collapsed.
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::collectItemTree'
+    message collectItemTreeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef treeItems = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::collectItemTree'
+    message collectItemTreeResponse
+    {
+        ObjectRef treeItems = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::copyAttrFrom1'
+    message copyAttrFrom1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId destId = 2;
+        ObjectRef srcItem = 3;
+        string srcAttrName = 4;
+        bool evaluate = 5;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::copyAttrFrom2'
+    message copyAttrFrom2Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef srcItem = 2;
+        bool evaluate = 3;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::copyAttrFromIx'
+    message copyAttrFromIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId destId = 2;
+        ObjectRef srcItem = 3;
+        uint32 srcAttrIx = 4;
+        bool evaluate = 5;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::copyAttrFrom'
+    message copyAttrFromRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Id identifying the destination attribute on this item.
+        AttributeId destId = 2;
+        // Other item to copy the attribute value from.
+        ObjectRef srcItem = 3;
+        // Id identifying the attribute to copy from.
+        AttributeId srcId = 4;
+        // TRUE to re-evaluate the node, FALSE otherwise.
+        bool evaluate = 5;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::deleteUnconnectedItems'
+    message deleteUnconnectedItemsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::dumpAttributes'
+    message dumpAttributesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Full path to a directory where the file will be written. If NULL the file will be
+        string directory = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::evaluate'
+    message evaluateRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::expandOutOfPin'
+    message expandOutOfPinRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::expandOutOfPin'
+    message expandOutOfPinResponse
+    {
+        //     itself if the current item is not owned by a pin
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::expand'
+    message expandRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::findAttr1'
+    message findAttr1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::findAttr1'
+    message findAttr1Response
+    {
+        
+        bool result = 1;
+        uint32 foundIndex = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::findAttr'
+    message findAttrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::findAttr'
+    message findAttrResponse
+    {
+        
+        bool result = 1;
+        uint32 foundIndex = 2;
+    }
+    // For arrays (matching getAnimResponse)
+    message getAnimArrayResponse 
+    {
+        ApiTimeSampling times = 1;          
+        optional uint32 num_time_samples = 2;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    // --- For animation array retrieval ---
+    message getAnimByIDRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        AttributeId     attribute_id  = 2; // which property inside the object
+        AttributeTypeId expected_type = 3;
+	bool            want_num_samples = 4;
+//        ApiTimeSampling times         = 4;
+  //      optional uint32 num_time_samples = 5;
+    }
+    message getAnimByIxRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        uint32          index         = 2; // property index
+        AttributeTypeId expected_type = 3;
+        bool            want_num_samples = 4;
+//        ApiTimeSampling times         = 4;
+  //      optional uint32 num_time_samples = 5;
+    }
+    message getAnimByNameRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        string          name          = 2; // property name
+        AttributeTypeId expected_type = 3;
+        bool            want_num_samples = 4;
+//        ApiTimeSampling times         = 4;
+  //      optional uint32 num_time_samples = 5;
+    }
+    // --- For array retrieval ---
+    message getArrayByIDRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        AttributeId     attribute_id  = 2; // which property inside the object
+        AttributeTypeId expected_type = 3; // optional
+    }
+    message getArrayByIxRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        uint32          index         = 2; // property index
+        AttributeTypeId expected_type = 3; // optional
+    }
+    message getArrayByNameRequest
+    {
+        ObjectRef       item_ref      = 1; // which object
+        string          name          = 2; // property name
+        AttributeTypeId expected_type = 3; // optional
+    }
+    // For arrays (matching getBoolArray, getIntArray, etc.)
+    message getArrayResponse 
+    {
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    // --- For scalar retrieval --- 
+    message getValueByIDRequest 
+    {
+        ObjectRef       item_ref      = 1; // which object
+        AttributeId     attribute_id  = 2; // which property inside the object
+        AttributeTypeId expected_type = 3; // optional type enum for validation
+    }
+    message getValueByIxRequest 
+    {
+        ObjectRef       item_ref      = 1; // which object
+        uint32          index         = 2; // property index
+        AttributeTypeId expected_type = 3; // optional
+    }
+    message getValueByNameRequest 
+    {
+        ObjectRef       item_ref      = 1; // which object
+        string          name          = 2; // property name
+        AttributeTypeId expected_type = 3; // optional
+    }
+    // Response for "get" calls
+    message getValueResponse
+    {
+        oneof value 
+        {
+            // -- Scalar types --
+            bool       bool_value     = 10;
+            int32      int_value      = 11;
+            int32_2    int2_value     = 12;
+            int32_3    int3_value     = 13;
+            int32_4    int4_value     = 14;
+            int64      long_value     = 15;
+            int64_2    long2_value    = 16;
+            float      float_value    = 17;
+            float_2    float2_value   = 18;
+            float_3    float3_value   = 19;
+            float_4    float4_value   = 20;
+            MatrixF    matrix_value   = 21;
+            string     string_value   = 22;
+        }
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::graphOwned'
+    message graphOwnedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::graphOwned'
+    message graphOwnedResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::graphOwner'
+    message graphOwnerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::graphOwner'
+    message graphOwnerResponse
+    {
+        //     The graph that owns this item. NULL in case this item is the root graph
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::hasAttr1'
+    message hasAttr1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::hasAttr1'
+    message hasAttr1Response
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::hasAttr'
+    message hasAttrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::hasAttr'
+    message hasAttrResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::hasOwner'
+    message hasOwnerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::hasOwner'
+    message hasOwnerResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isAnimated1'
+    message isAnimated1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isAnimated1'
+    message isAnimated1Response
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isAnimatedIx'
+    message isAnimatedIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isAnimatedIx'
+    message isAnimatedIxResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isAnimated'
+    message isAnimatedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isAnimated'
+    message isAnimatedResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isDirtyAttr1'
+    message isDirtyAttr1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isDirtyAttr1'
+    message isDirtyAttr1Response
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isDirtyAttrIx'
+    message isDirtyAttrIxRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isDirtyAttrIx'
+    message isDirtyAttrIxResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isDirtyAttr'
+    message isDirtyAttrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        AttributeId id = 2;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isDirtyAttr'
+    message isDirtyAttrResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isGraph'
+    message isGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isGraph'
+    message isGraphResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isInputLinker'
+    message isInputLinkerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isInputLinker'
+    message isInputLinkerResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isLinker'
+    message isLinkerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isLinker'
+    message isLinkerResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isNode'
+    message isNodeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isNode'
+    message isNodeResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::isOutputLinker'
+    message isOutputLinkerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::isOutputLinker'
+    message isOutputLinkerResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::name'
+    message nameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::name'
+    message nameResponse
+    {
+        
+        string result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::outType'
+    message outTypeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::outType'
+    message outTypeResponse
+    {
+        
+        NodePinType result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::persistentId'
+    message persistentIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::persistentId'
+    message persistentIdResponse
+    {
+        
+        uint64 result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::pinOwned'
+    message pinOwnedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::pinOwned'
+    message pinOwnedResponse
+    {
+        
+        bool result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::pinOwner'
+    message pinOwnerRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::pinOwner'
+    message pinOwnerResponse
+    {
+        //     The node which has the pin owning this item. NULL in case this item is
+        ObjectRef result = 1;
+        // Index of the pin on the returned node. (Only valid if the returned node
+        uint32 pinIx = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::position'
+    message positionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::position'
+    message positionResponse
+    {
+        
+        float_2 result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::rootGraph1'
+    message rootGraph1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::rootGraph1'
+    message rootGraph1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::rootGraph'
+    message rootGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::rootGraph'
+    message rootGraphResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::select'
+    message selectRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    message setAnimArrayResponse 
+    {
+        bool   success       = 1;
+        string error_message = 2;  // optional: for debugging
+    }    // Request packet corresponding to '[in] parameters in ApiItem::destroy'
+    message setAnimByIDRequest
+    {
+        ObjectRef   item_ref     = 1;
+        AttributeId attribute_id = 2;
+        ApiTimeSampling times         = 3;
+        optional uint32 num_time_samples = 4; // optional:: pass-through to C++ overload
+        optional bool evaluate = 5;          // optional:: default = true
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    message setAnimByIxRequest
+    {
+        ObjectRef item_ref = 1;
+        uint32    index    = 2;
+        ApiTimeSampling times         = 3;
+        optional uint32 num_time_samples = 4;
+        optional bool evaluate = 5;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+   // D) Name-based (array)
+    message setAnimByNameRequest
+    {
+        ObjectRef item_ref = 1;
+        string    name     = 2;
+        ApiTimeSampling times         = 3;
+        optional uint32 num_time_samples = 4;
+        optional bool evaluate = 5;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    // B) ID-based (array)
+    message setArrayByIDRequest
+    {
+        ObjectRef   item_ref     = 1;
+        AttributeId attribute_id = 2;
+        optional bool evaluate = 3;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    // F) Index-based (array)
+    message setArrayByIxRequest 
+    {
+        ObjectRef item_ref = 1;
+        uint32    index    = 2;
+        optional bool evaluate = 3;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    // D) Name-based (array)
+    message setArrayByNameRequest
+    {
+        ObjectRef item_ref = 1;
+        string    name     = 2;
+        optional bool evaluate = 3;
+        oneof array_value 
+        {
+            BoolArrayT   bool_array       = 10;
+            IntArrayT    int_array        = 11;
+            Int2ArrayT   int2_array       = 12;
+            Int3ArrayT   int3_array       = 13;
+            Int4ArrayT   int4_array       = 14;
+            LongArrayT   long_array       = 15;
+            Long2ArrayT  long2_array      = 16;
+            FloatArrayT  float_array      = 17;
+            Float2ArrayT float2_array     = 18;
+            Float3ArrayT float3_array     = 19;
+            Float4ArrayT float4_array     = 20;
+            MatrixArrayT matrix_array     = 21;
+            StringArrayT string_array     = 22;
+            ByteArrayT   byte_array       = 23;
+        }
+    }
+    message setArrayResponse 
+    {
+        bool   success       = 1;
+        string error_message = 2;  // optional: for debugging
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::setName'
+    message setNameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        string name = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::setPosition'
+    message setPositionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        float_2 newPos = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::setUIOperationFlags'
+    message setUIOperationFlagsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        enum_t flags = 2;
+    }
+    // A) ID-based (scalar)
+    message setValueByIDRequest
+    {
+        ObjectRef   item_ref     = 1; 
+        AttributeId attribute_id = 2;
+        optional bool evaluate = 3;
+        oneof value 
+        {
+            bool       bool_value     = 10;
+            int32      int_value      = 11;
+            int32_2    int2_value     = 12;
+            int32_3    int3_value     = 13;
+            int32_4    int4_value     = 14;
+            int64      long_value     = 15;
+            int64_2    long2_value    = 16;
+            float      float_value    = 17;
+            float_2    float2_value   = 18;
+            float_3    float3_value   = 19;
+            float_4    float4_value   = 20;
+            MatrixF    matrix_value   = 21;
+            string     string_value   = 22;
+            // If you have single "bytes" or other scalar variants, add them here
+        }
+    }
+    // E) Index-based (scalar)
+    message setValueByIxRequest
+    {
+        ObjectRef item_ref = 1;
+        uint32    index    = 2;
+        optional bool evaluate = 3;
+        oneof value 
+        {
+            bool       bool_value     = 10;
+            int32      int_value      = 11;
+            int32_2    int2_value     = 12;
+            int32_3    int3_value     = 13;
+            int32_4    int4_value     = 14;
+            int64      long_value     = 15;
+            int64_2    long2_value    = 16;
+            float      float_value    = 17;
+            float_2    float2_value   = 18;
+            float_3    float3_value   = 19;
+            float_4    float4_value   = 20;
+            MatrixF    matrix_value   = 21;
+            string     string_value   = 22;
+        }
+    }
+    // C) Name-based (scalar)
+    message setValueByNameRequest
+    {
+        ObjectRef item_ref = 1;
+        string    name     = 2;
+        optional bool evaluate = 3;
+        oneof value 
+        {
+            bool       bool_value     = 10;
+            int32      int_value      = 11;
+            int32_2    int2_value     = 12;
+            int32_3    int3_value     = 13;
+            int32_4    int4_value     = 14;
+            int64      long_value     = 15;
+            int64_2    long2_value    = 16;
+            float      float_value    = 17;
+            float_2    float2_value   = 18;
+            float_3    float3_value   = 19;
+            float_4    float4_value   = 20;
+            MatrixF    matrix_value   = 21;
+            string     string_value   = 22;
+        }
+    }
+    // -----------------------------------------------------------------------------
+    // 5. Response definition
+    // -----------------------------------------------------------------------------
+    message setValueResponse 
+    {
+        bool   success       = 1;
+        string error_message = 2;  // optional: for debugging
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::switchToFileData'
+    message switchToFileDataRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Absolute path to the destination directory on disk. The export filename is determined
+        string destinationDir = 2;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::time'
+    message timeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::time'
+    message timeResponse
+    {
+        
+        TimeT result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::toGraph1'
+    message toGraph1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::toGraph1'
+    message toGraph1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::toGraph'
+    message toGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::toGraph'
+    message toGraphResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::toNode1'
+    message toNode1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::toNode1'
+    message toNode1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::toNode'
+    message toNodeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::toNode'
+    message toNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::uiOperationFlags'
+    message uiOperationFlagsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::uiOperationFlags'
+    message uiOperationFlagsResponse
+    {
+        
+        enum_t result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::uniqueId'
+    message uniqueIdRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::uniqueId'
+    message uniqueIdResponse
+    {
+        
+        uint32 result = 1;
+    }
+    // Request packet corresponding to '[in] parameters in ApiItem::version'
+    message versionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+    // Response packet corresponding to '[out] parameters in 'ApiItem::version'
+    message versionResponse
+    {
+        
+        uint32 result = 1;
+    }
+}
+service ApiItemService
+{ /// ApiItem
+    /// Destroys this item
+    rpc destroy(ApiItem.destroyRequest) returns (google.protobuf.Empty);
+    /// Returns the name of this item
+    rpc name(ApiItem.nameRequest) returns (ApiItem.nameResponse);
+    /// Sets the name of this item
+    rpc setName(ApiItem.setNameRequest) returns (google.protobuf.Empty);
+    /// Returns the position of the item inside its owner
+    rpc position(ApiItem.positionRequest) returns (ApiItem.positionResponse);
+    /// Sets the position of this item
+    rpc setPosition(ApiItem.setPositionRequest) returns (google.protobuf.Empty);
+    /// Adds a UI operation flag to this node item and this flags will be only used when making a 
+    /// direct interaction from UI
+    rpc setUIOperationFlags(ApiItem.setUIOperationFlagsRequest) returns (google.protobuf.Empty);
+    /// Returns the UI operation flags of this node item
+    rpc uiOperationFlags(ApiItem.uiOperationFlagsRequest) returns (ApiItem.uiOperationFlagsResponse);
+    /// Sets the node item to selected state (for the window opened using ApiNodeGraph::showWindow())
+    rpc select(ApiItem.selectRequest) returns (google.protobuf.Empty);
+    /// Returns the current time of this item
+    rpc time(ApiItem.timeRequest) returns (ApiItem.timeResponse);
+    /// Returns the output type for this item
+    rpc outType(ApiItem.outTypeRequest) returns (ApiItem.outTypeResponse);
+    /// Returns the persistent ID of the node item
+    rpc persistentId(ApiItem.persistentIdRequest) returns (ApiItem.persistentIdResponse);
+    /// Returns the unique ID of the node item
+    rpc uniqueId(ApiItem.uniqueIdRequest) returns (ApiItem.uniqueIdResponse);
+    /// Collects all items that are connected to this node item
+    rpc collectItemTree(ApiItem.collectItemTreeRequest) returns (ApiItem.collectItemTreeResponse);
+    /// If the item is owned by a node graph, this function will remove all items owned by that node
+    /// graph that are not directly/indirectly connected with the item
+    rpc deleteUnconnectedItems(ApiItem.deleteUnconnectedItemsRequest) returns (google.protobuf.Empty);
+    /// If this item stores file data that has been provided by plugins directly, this function
+    /// will export that data into a file with the specified name
+    rpc switchToFileData(ApiItem.switchToFileDataRequest) returns (google.protobuf.Empty);
+    /// Returns the version of the item
+    rpc version(ApiItem.versionRequest) returns (ApiItem.versionResponse);
+    /// Returns TRUE if this item is a graph
+    rpc isGraph(ApiItem.isGraphRequest) returns (ApiItem.isGraphResponse);
+    /// Returns TRUE if this item is a node
+    rpc isNode(ApiItem.isNodeRequest) returns (ApiItem.isNodeResponse);
+    /// Returns TRUE if the item is an input/output linker node
+    rpc isLinker(ApiItem.isLinkerRequest) returns (ApiItem.isLinkerResponse);
+    /// Returns TRUE if the item is an input linker node
+    rpc isInputLinker(ApiItem.isInputLinkerRequest) returns (ApiItem.isInputLinkerResponse);
+    /// Returns TRUE if the item is an output linker node
+    rpc isOutputLinker(ApiItem.isOutputLinkerRequest) returns (ApiItem.isOutputLinkerResponse);
+    /// Downcasts this item to a graph
+    rpc toGraph(ApiItem.toGraphRequest) returns (ApiItem.toGraphResponse);
+    /// Downcasts this item to a node
+    rpc toNode(ApiItem.toNodeRequest) returns (ApiItem.toNodeResponse);
+    /// Downcasts this item to a graph
+    rpc toGraph1(ApiItem.toGraph1Request) returns (ApiItem.toGraph1Response);
+    /// Downcasts this item to a node
+    rpc toNode1(ApiItem.toNode1Request) returns (ApiItem.toNode1Response);
+    /// Returns TRUE if this item has an owner (graph or pin), usually always TRUE with the
+    /// exception of root node graphs, which never have an owner
+    rpc hasOwner(ApiItem.hasOwnerRequest) returns (ApiItem.hasOwnerResponse);
+    /// Returns TRUE if this item is owned by a graph
+    rpc graphOwned(ApiItem.graphOwnedRequest) returns (ApiItem.graphOwnedResponse);
+    /// Returns TRUE if this item is owned by a pin
+    rpc pinOwned(ApiItem.pinOwnedRequest) returns (ApiItem.pinOwnedResponse);
+    /// Gets the graph owner (if any)
+    rpc graphOwner(ApiItem.graphOwnerRequest) returns (ApiItem.graphOwnerResponse);
+    /// Gets the pin owner (if any)
+    rpc pinOwner(ApiItem.pinOwnerRequest) returns (ApiItem.pinOwnerResponse);
+    /// Returns the root node graph which contains this node item
+    rpc rootGraph(ApiItem.rootGraphRequest) returns (ApiItem.rootGraphResponse);
+    /// Returns the root node graph which contains this node item
+    rpc rootGraph1(ApiItem.rootGraph1Request) returns (ApiItem.rootGraph1Response);
+    /// Returns the number of attributes of this item
+    rpc attrCount(ApiItem.attrCountRequest) returns (ApiItem.attrCountResponse);
+    /// Returns TRUE if an attribute with the specified ID exists
+    rpc hasAttr(ApiItem.hasAttrRequest) returns (ApiItem.hasAttrResponse);
+    /// Returns TRUE if an attribute with the specified name exists
+    rpc hasAttr1(ApiItem.hasAttr1Request) returns (ApiItem.hasAttr1Response);
+    /// Returns TRUE if an attribute with this ID exists and returns its index in "foundIndex"
+    rpc findAttr(ApiItem.findAttrRequest) returns (ApiItem.findAttrResponse);
+    /// Returns TRUE if an attribute with this name exists and returns its index in "foundIndex"
+    rpc findAttr1(ApiItem.findAttr1Request) returns (ApiItem.findAttr1Response);
+    /// Returns the ID of attribute provided by it's name
+    rpc attrId(ApiItem.attrIdRequest) returns (ApiItem.attrIdResponse);
+    /// Returns the ID of the attribute at index
+    rpc attrIdIx(ApiItem.attrIdIxRequest) returns (ApiItem.attrIdIxResponse);
+    /// Returns the name of the attribute at the provided ID or "unknown" if there's no such attribute
+    rpc attrName(ApiItem.attrNameRequest) returns (ApiItem.attrNameResponse);
+    /// Returns the name of the attribute at the index or "unknown" if there's no such attribute
+    rpc attrNameIx(ApiItem.attrNameIxRequest) returns (ApiItem.attrNameIxResponse);
+    /// Returns the type of the attribute identified by it's ID
+    rpc attrType(ApiItem.attrTypeRequest) returns (ApiItem.attrTypeResponse);
+    /// Returns the type of the attribute identified by it's name
+    rpc attrType1(ApiItem.attrType1Request) returns (ApiItem.attrType1Response);
+    /// Returns the type of the attribute at the index
+    rpc attrTypeIx(ApiItem.attrTypeIxRequest) returns (ApiItem.attrTypeIxResponse);
+    /// Returns the info for the attribute identified by the ID
+    rpc attrInfo(ApiItem.attrInfoRequest) returns (ApiItem.attrInfoResponse);
+    /// Returns the info for the attribute identified by the name
+    rpc attrInfo1(ApiItem.attrInfo1Request) returns (ApiItem.attrInfo1Response);
+    /// Returns the info for the attribute at index
+    rpc attrInfoIx(ApiItem.attrInfoIxRequest) returns (ApiItem.attrInfoIxResponse);
+    /// Returns TRUE if any of the attributes are flagged dirty
+    rpc attrAreDirty(ApiItem.attrAreDirtyRequest) returns (ApiItem.attrAreDirtyResponse);
+    /// Returns TRUE if the attribute is flagged dirty
+    rpc isDirtyAttr(ApiItem.isDirtyAttrRequest) returns (ApiItem.isDirtyAttrResponse);
+    /// Returns TRUE if the attribute is flagged dirty
+    rpc isDirtyAttr1(ApiItem.isDirtyAttr1Request) returns (ApiItem.isDirtyAttr1Response);
+    /// Returns TRUE if the attribute is flagged dirty
+    rpc isDirtyAttrIx(ApiItem.isDirtyAttrIxRequest) returns (ApiItem.isDirtyAttrIxResponse);
+    /// Copies another item's attribute value into this item's attribute
+    rpc copyAttrFrom(ApiItem.copyAttrFromRequest) returns (google.protobuf.Empty);
+    /// Copies the attribute into our attribute, specified by its name
+    rpc copyAttrFrom1(ApiItem.copyAttrFrom1Request) returns (google.protobuf.Empty);
+    /// Copies the attribute into our attribute, specified by its index
+    rpc copyAttrFromIx(ApiItem.copyAttrFromIxRequest) returns (google.protobuf.Empty);
+    /// Copies all matching attributes from another item into this item
+    rpc copyAttrFrom2(ApiItem.copyAttrFrom2Request) returns (google.protobuf.Empty);
+    /// Clears all attributes
+    rpc clearAllAttr(ApiItem.clearAllAttrRequest) returns (google.protobuf.Empty);
+    /// Clears the attribute specified by its ID
+    rpc clearAttr(ApiItem.clearAttrRequest) returns (google.protobuf.Empty);
+    /// Clears the attribute specified by its name
+    rpc clearAttr1(ApiItem.clearAttr1Request) returns (google.protobuf.Empty);
+    /// Clears the attribute specified by its index
+    rpc clearAttrIx(ApiItem.clearAttrIxRequest) returns (google.protobuf.Empty);
+    /// Removes any animation from an attribute (if it has one)
+    rpc clearAnim(ApiItem.clearAnimRequest) returns (google.protobuf.Empty);
+    /// Removes any animation from an attribute (if it has one)
+    rpc clearAnim1(ApiItem.clearAnim1Request) returns (google.protobuf.Empty);
+    /// Removes any animation from an attribute (if it has one)
+    rpc clearAnimIx(ApiItem.clearAnimIxRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if the attribute has an animator object assigned to it
+    rpc isAnimated(ApiItem.isAnimatedRequest) returns (ApiItem.isAnimatedResponse);
+    /// Returns TRUE if the attribute has an animator object assigned to it
+    rpc isAnimated1(ApiItem.isAnimated1Request) returns (ApiItem.isAnimated1Response);
+    /// Returns TRUE if the attribute has an animator object assigned to it
+    rpc isAnimatedIx(ApiItem.isAnimatedIxRequest) returns (ApiItem.isAnimatedIxResponse);
+    /// Evaluates the item's attributes
+    rpc evaluate(ApiItem.evaluateRequest) returns (google.protobuf.Empty);
+    /// Expands all items owned by the pins of the node or by the input linkers of the node graph
+    rpc expand(ApiItem.expandRequest) returns (google.protobuf.Empty);
+    /// Expands the current item out of its owner pin
+    rpc expandOutOfPin(ApiItem.expandOutOfPinRequest) returns (ApiItem.expandOutOfPinResponse);
+    /// Collapse this node item down into all destination pins
+    rpc collapse(ApiItem.collapseRequest) returns (ApiItem.collapseResponse);
+    /// Dump all attributes of this item to a text file
+    rpc dumpAttributes(ApiItem.dumpAttributesRequest) returns (google.protobuf.Empty);
+    // Scalar getters
+    rpc getValueByAttrID(ApiItem.getValueByIDRequest) returns (ApiItem.getValueResponse);
+    rpc getValueByName(ApiItem.getValueByNameRequest) returns (ApiItem.getValueResponse);
+    rpc getValueByIx(ApiItem.getValueByIxRequest)     returns (ApiItem.getValueResponse);
+
+    // Array getters
+    rpc getArrayByAttrID(ApiItem.getArrayByIDRequest) returns (ApiItem.getArrayResponse);
+    rpc getArrayByName(ApiItem.getArrayByNameRequest) returns (ApiItem.getArrayResponse);
+    rpc getArrayByIx(ApiItem.getArrayByIxRequest)     returns (ApiItem.getArrayResponse);
+
+    // Scalar setters
+    rpc setValueByAttrID(ApiItem.setValueByIDRequest)      returns (ApiItem.setValueResponse);
+    rpc setValueByName(ApiItem.setValueByNameRequest)      returns (ApiItem.setValueResponse);   
+    rpc setValueByIx(ApiItem.setValueByIxRequest)          returns (ApiItem.setValueResponse);
+
+    // Array setters
+    rpc setArrayByName(ApiItem.setArrayByNameRequest)    returns (ApiItem.setArrayResponse);
+    rpc setArrayByAttrID(ApiItem.setArrayByIDRequest)    returns (ApiItem.setArrayResponse);
+    rpc setArrayByIx(ApiItem.setArrayByIxRequest)        returns (ApiItem.setArrayResponse);
+  
+    // Anim getters
+    rpc getAnimByAttr(ApiItem.getAnimByIDRequest)      returns (ApiItem.getAnimArrayResponse);
+    rpc getAnimByName(ApiItem.getAnimByNameRequest)    returns (ApiItem.getAnimArrayResponse);
+    rpc getAnimByIx(ApiItem.getAnimByIxRequest)        returns (ApiItem.getAnimArrayResponse);
+
+    // Anim setters
+    rpc setAnimByAttr(ApiItem.setAnimByIDRequest)    returns (ApiItem.setAnimArrayResponse);
+    rpc setAnimByName(ApiItem.setAnimByNameRequest)    returns (ApiItem.setAnimArrayResponse);
+    rpc setAnimByIx(ApiItem.setAnimByIxRequest)      returns (ApiItem.setAnimArrayResponse);
+
+}
+

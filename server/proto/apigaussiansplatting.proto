@@ -1,0 +1,107 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+
+ // GRPC proto definitions for 'ApiGaussianSplatting' class from 'apigaussiansplatting.h'
+message ApiGaussianSplatting
+{
+    // Request packet corresponding to '[in] parameters in ApiGaussianSplatting::create'
+    message createRequest
+    {
+        // Graph that will own the new ApiGaussianSplatCloudNode.
+        ObjectRef ownerGraph = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGaussianSplatting::create'
+    message createResponse
+    {
+        //     Pointer to the created node or NULL if creation failed.
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGaussianSplatting::setAttributesFromPly'
+    message setAttributesFromPlyRequest
+    {
+        // The node to write attributes into. The node type must be NT_GEO_GAUSSIAN_SPLAT.
+        ObjectRef gaussianSplatNode = 1;
+        // The number of points in the Gaussian splat cloud. If 0, the Gaussian splat
+        uint32 numberOfPoints = 2;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT x = 3;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT y = 4;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT z = 5;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT opacity = 6;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT scale0 = 7;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT scale1 = 8;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT scale2 = 9;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT rot0 = 10;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT rot1 = 11;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT rot2 = 12;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT rot3 = 13;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT dc0 = 14;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT dc1 = 15;
+        // The pointers to the corresponding PLY Gaussian splat attribute buffers.
+        FloatArrayT dc2 = 16;
+        // The number of elements in restAttributePointers buffer. If more than 45 provided, the
+        uint32 numberOfRestAttributes = 17;
+        // The buffer that contains pointers to the extra spherical harmonics data buffers.
+        repeated FloatArrayT restAttributePointers = 18;
+        // TRUE to re-evaluate the node, FALSE otherwise.
+        bool evaluate = 19;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGaussianSplatting::setAttributesFromPly'
+    message setAttributesFromPlyResponse
+    {
+        //     TRUE if attributes were set successfully, FALSE otherwise
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiGaussianSplatting::exportAsSpz'
+    message exportAsSpzRequest
+    {
+        // The node which attributes must be exported. Must be NT_GEO_GAUSSIANS_SPLAT.
+        ObjectRef gaussianSplatNode = 1;
+        // The full path of the file into which the gaussian splats shall be stored
+        string fileName = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiGaussianSplatting::exportAsSpz'
+    message exportAsSpzResponse
+    {
+        //     TRUE if the file was exported successfully, FALSE otherwise
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiGaussianSplatting' from 'apigaussiansplatting.h'
+service ApiGaussianSplattingService
+{
+    /// Creates a new node of the NT_GEO_GAUSSIAN_SPLAT type
+    rpc create(ApiGaussianSplatting.createRequest) returns (ApiGaussianSplatting.createResponse);
+    /// Writes the Gaussian splat PLY attribute arrays into the node attributes
+    rpc setAttributesFromPly(ApiGaussianSplatting.setAttributesFromPlyRequest) returns (ApiGaussianSplatting.setAttributesFromPlyResponse);
+    /// Saves gaussian splat cloud node's geometry to disk in compressed SPZ format
+    rpc exportAsSpz(ApiGaussianSplatting.exportAsSpzRequest) returns (ApiGaussianSplatting.exportAsSpzResponse);
+}

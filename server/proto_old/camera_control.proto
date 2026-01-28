@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "google/protobuf/empty.proto";
+
+// Basic camera control service for simpleGlGrpc
+service CameraControl {
+    // Set camera position
+    rpc SetCameraPosition(CameraPositionRequest) returns (google.protobuf.Empty);
+    
+    // Get camera position
+    rpc GetCameraPosition(google.protobuf.Empty) returns (CameraPositionResponse);
+    
+    // Set camera target (look at point)
+    rpc SetCameraTarget(CameraTargetRequest) returns (google.protobuf.Empty);
+    
+    // Get camera target
+    rpc GetCameraTarget(google.protobuf.Empty) returns (CameraTargetResponse);
+    
+    // Set camera up vector
+    rpc SetCameraUp(CameraUpRequest) returns (google.protobuf.Empty);
+    
+    // Get camera up vector
+    rpc GetCameraUp(google.protobuf.Empty) returns (CameraUpResponse);
+}
+
+// 3D vector message
+message Vector3 {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+// Camera position request
+message CameraPositionRequest {
+    Vector3 position = 1;
+}
+
+// Camera position response
+message CameraPositionResponse {
+    Vector3 position = 1;
+}
+
+// Camera target request
+message CameraTargetRequest {
+    Vector3 target = 1;
+}
+
+// Camera target response
+message CameraTargetResponse {
+    Vector3 target = 1;
+}
+
+// Camera up vector request
+message CameraUpRequest {
+    Vector3 up = 1;
+}
+
+// Camera up vector response
+message CameraUpResponse {
+    Vector3 up = 1;
+}

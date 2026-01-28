@@ -1,0 +1,73 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+message NodeGraphEditorArrayT
+{
+    repeated ApiNodeGraphEditor data = 1;
+}
+
+ // GRPC proto definitions for 'ApiNodeGraphEditor' class from 'apinodegrapheditor.h'
+message ApiNodeGraphEditor
+{
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphEditor::create'
+    message createRequest
+    {
+        ObjectRef content = 1;
+        bool unfold = 2;
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphEditor::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphEditor::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphEditor::setContentGraph'
+    message setContentGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Pointer to the node graph. Must not be NULL and must have the current version.
+        ObjectRef graph = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphEditor::addGraph'
+    message addGraphRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Pointer to the node graph. Must not be NULL and must have the current version.
+        ObjectRef graph = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiNodeGraphEditor' from 'apinodegrapheditor.h'
+service ApiNodeGraphEditorService
+{
+    rpc create(ApiNodeGraphEditor.createRequest) returns (ApiNodeGraphEditor.createResponse);
+    rpc destroy(ApiNodeGraphEditor.destroyRequest) returns (google.protobuf.Empty);
+    /// Sets the node graph of this ApiNodeGraphEditor
+    rpc setContentGraph(ApiNodeGraphEditor.setContentGraphRequest) returns (google.protobuf.Empty);
+    /// Opens another node graph in a different tab, and makes it visible
+    rpc addGraph(ApiNodeGraphEditor.addGraphRequest) returns (google.protobuf.Empty);
+}

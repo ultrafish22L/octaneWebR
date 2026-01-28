@@ -1,0 +1,149 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "apinodesystem_1.proto";
+import "apinodesystem_3.proto";
+import "apinodesystem_5.proto";
+import "apinodesystem_6.proto";
+import "apinodesystem_7.proto";
+import "apinodesystem_8.proto";
+
+ // GRPC proto definitions for 'ApiNodeArray' class from 'apinodearray.h'
+message ApiNodeArray
+{
+    ObjectRefArrayT nodes = 1;
+    uint32 size = 2;
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::size'
+    message sizeResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::get'
+    message getRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 index = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::get'
+    message getResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::items'
+    message itemsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::items'
+    message itemsResponse
+    {
+        
+        ObjectRefArrayT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::begin'
+    message beginRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::begin'
+    message beginResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::end'
+    message endRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::end'
+    message endResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::begin1'
+    message begin1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::begin1'
+    message begin1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::end1'
+    message end1Request
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeArray::end1'
+    message end1Response
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeArray::init'
+    message initRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        uint32 size = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiNodeArray' from 'apinodearray.h'
+service ApiNodeArrayService
+{
+    /// Returns the size of the item list
+    rpc size(ApiNodeArray.sizeRequest) returns (ApiNodeArray.sizeResponse);
+    /// Returns the item at the given index (or NULL)
+    rpc get(ApiNodeArray.getRequest) returns (ApiNodeArray.getResponse);
+    /// Returns the internal array (owned by this object)
+    rpc items(ApiNodeArray.itemsRequest) returns (ApiNodeArray.itemsResponse);
+    /// Begin function for constant range-based for loop
+    rpc begin1(ApiNodeArray.begin1Request) returns (ApiNodeArray.begin1Response);
+    /// End function for constant range-based for loop
+    rpc end1(ApiNodeArray.end1Request) returns (ApiNodeArray.end1Response);
+    /// Init function (only used internally)
+    rpc init(ApiNodeArray.initRequest) returns (google.protobuf.Empty);
+}

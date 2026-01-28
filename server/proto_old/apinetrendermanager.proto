@@ -1,0 +1,222 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octanenet.proto";
+
+ // GRPC proto definitions for 'ApiNetRenderManager' class from 'apinetrendermanager.h'
+message ApiNetRenderManager
+{
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::configure'
+    message configureRequest
+    {
+        // New network rendering settings.
+        NetRenderSettings settings = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::configure'
+    message configureResponse
+    {
+        //     TRUE if configuration was successful, FALSE if the configuration
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::configuration'
+    message configurationRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::configuration'
+    message configurationResponse
+    {
+        
+        NetRenderSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::enable'
+    message enableRequest
+    {
+        bool enable = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::isSupported'
+    message isSupportedRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::isSupported'
+    message isSupportedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::isEnabled'
+    message isEnabledRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::isEnabled'
+    message isEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::saveConfiguration'
+    message saveConfigurationRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::openOctanePreferences'
+    message openOctanePreferencesRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::networkInterfaceCount'
+    message networkInterfaceCountRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::networkInterfaceCount'
+    message networkInterfaceCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::networkInterface'
+    message networkInterfaceRequest
+    {
+        uint32 subnetIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::networkInterface'
+    message networkInterfaceResponse
+    {
+        //     network interface info
+        NetInterfaceInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::setNetStatusListener'
+    message setNetStatusListenerRequest
+    {
+        // callback function, set this to NULL if your not interested in
+        OnStatusUpdateT callback = 1;
+        // optional user data provided back with the callback.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::setNetStatusListener'
+    message setNetStatusListenerResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::status'
+    message statusRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::status'
+    message statusResponse
+    {
+        
+        NetRenderStatus result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::setDaemonListener'
+    message setDaemonListenerRequest
+    {
+        // callback function
+        OnDaemonUpdateT callback = 1;
+        // optional user data provided back with the callback
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::setDaemonListener'
+    message setDaemonListenerResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::bindDaemon'
+    message bindDaemonRequest
+    {
+        // Ip address of the daemon.
+        uint32 ipAddress = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::bindDaemon'
+    message bindDaemonResponse
+    {
+        //     TRUE on success, FALSE on failure.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::unbindDaemon'
+    message unbindDaemonRequest
+    {
+        uint32 ipAddress = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNetRenderManager::stealDaemon'
+    message stealDaemonRequest
+    {
+        // Ip address of the daemon.
+        uint32 ipAddress = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNetRenderManager::stealDaemon'
+    message stealDaemonResponse
+    {
+        //     TRUE on success, FALSE if we cannot bind or it is already bound to us.
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiNetRenderManager' from 'apinetrendermanager.h'
+service ApiNetRenderManagerService
+{
+    /// Configures network rendering
+    rpc configure(ApiNetRenderManager.configureRequest) returns (ApiNetRenderManager.configureResponse);
+    /// Returns the current net render configuration
+    rpc configuration(ApiNetRenderManager.configurationRequest) returns (ApiNetRenderManager.configurationResponse);
+    /// Enables/disables network rendering
+    rpc enable(ApiNetRenderManager.enableRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if network rendering is supported in this build
+    rpc isSupported(ApiNetRenderManager.isSupportedRequest) returns (ApiNetRenderManager.isSupportedResponse);
+    /// Checks if network rendering is enabled
+    rpc isEnabled(ApiNetRenderManager.isEnabledRequest) returns (ApiNetRenderManager.isEnabledResponse);
+    /// Stores the current network rendering configuration in the application preferences
+    rpc saveConfiguration(ApiNetRenderManager.saveConfigurationRequest) returns (google.protobuf.Empty);
+    /// Opens a modal dialog to allow the user to set the network render configuration
+    rpc openOctanePreferences(ApiNetRenderManager.openOctanePreferencesRequest) returns (google.protobuf.Empty);
+    /// Returns the number of network interfaces available on this computer
+    rpc networkInterfaceCount(ApiNetRenderManager.networkInterfaceCountRequest) returns (ApiNetRenderManager.networkInterfaceCountResponse);
+    /// Retrieves info about a specific network interface on this computer
+    rpc networkInterface(ApiNetRenderManager.networkInterfaceRequest) returns (ApiNetRenderManager.networkInterfaceResponse);
+    /// Registers a status update called
+    rpc setNetStatusListener(ApiNetRenderManager.setNetStatusListenerRequest) returns (ApiNetRenderManager.setNetStatusListenerResponse);
+    /// Returns the current net render status
+    rpc status(ApiNetRenderManager.statusRequest) returns (ApiNetRenderManager.statusResponse);
+    /// Register a daemon listeners
+    rpc setDaemonListener(ApiNetRenderManager.setDaemonListenerRequest) returns (ApiNetRenderManager.setDaemonListenerResponse);
+    /// Binds a daemon to this master
+    rpc bindDaemon(ApiNetRenderManager.bindDaemonRequest) returns (ApiNetRenderManager.bindDaemonResponse);
+    /// Unbinds a daemon from this master
+    rpc unbindDaemon(ApiNetRenderManager.unbindDaemonRequest) returns (google.protobuf.Empty);
+    /// Steals a daemon
+    rpc stealDaemon(ApiNetRenderManager.stealDaemonRequest) returns (ApiNetRenderManager.stealDaemonResponse);
+}

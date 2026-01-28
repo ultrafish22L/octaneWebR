@@ -1,0 +1,79 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiColorSwatch' class from 'apicolorswatch.h'
+message ApiColorSwatch
+{
+    // Request packet corresponding to '[in] parameters in ApiColorSwatch::create'
+    message createRequest
+    {
+        // TRUE if the colour picker should not apply any gamma correction. The value returned by
+        bool disableGammaCorrection = 1;
+        // Callback called when the color in the swatch changes.
+        ColorChangedT changeCallback = 2;
+        // Private data passed back unchanged in the callback.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiColorSwatch::create'
+    message createResponse
+    {
+        //     Pointer to the new color swatch.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiColorSwatch::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiColorSwatch::setColor'
+    message setColorRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ApiColorHdr color = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiColorSwatch::color'
+    message colorRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiColorSwatch::color'
+    message colorResponse
+    {
+        
+        ApiColorHdr result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiColorSwatch' from 'apicolorswatch.h'
+service ApiColorSwatchService
+{
+    /// Creates a new color swatch
+    rpc create(ApiColorSwatch.createRequest) returns (ApiColorSwatch.createResponse);
+    /// Destroys this color swatch
+    rpc destroy(ApiColorSwatch.destroyRequest) returns (google.protobuf.Empty);
+    /// Set the color displayed in the color swatch
+    rpc setColor(ApiColorSwatch.setColorRequest) returns (google.protobuf.Empty);
+    /// Returns the color selected in the color swatch
+    rpc color(ApiColorSwatch.colorRequest) returns (ApiColorSwatch.colorResponse);
+}

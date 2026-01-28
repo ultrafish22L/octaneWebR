@@ -1,0 +1,423 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneids.proto";
+
+    enum KeyModifierFlag 
+    {
+        option allow_alias = true;
+        NO_MODIFIERS = 0;
+        SHIFT_MODIFIER = 1;
+        CTRL_MODIFIER = 2;
+        COMMAND_MODIFIER = 2;
+        ALT_MODIFIER = 4;
+        CTRL_ALT_COMMAND_MODIFIERS = 6;
+        ALL_KEYBOARD_MODIFIERS = 7;
+        LEFT_BUTTON_MODIFIER = 16;
+        RIGHT_BUTTON_MODIFIER = 32;
+        POPUP_MENU_CLICK_MODIFIER = 32;
+        MIDDLE_BUTTON_MODIFIER = 64;
+        ALL_MOUSE_BUTTON_MODIFIERS = 112;
+    }
+
+ // GRPC proto definitions for 'ApiCommandModuleInfo' class from 'apimodule.h'
+message ApiCommandModuleInfo
+{
+    // Request packet corresponding to '[in] parameters in ApiCommandModuleInfo::create'
+    message createRequest
+    {
+        // Unique ID for this module. should start from 1000101.
+        ModuleIdT moduleId = 1;
+        // Name with categories that will be used to group it in the user interface.
+        string fullName = 2;
+        // Describes what the work pane module does.
+        string description = 3;
+        // Name of the author for this module.
+        string author = 4;
+        // Version number of the module.
+        uint32 versionNumber = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCommandModuleInfo::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCommandModuleInfo::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCommandModuleInfo::setRunFunction'
+    message setRunFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        CommandModuleRunFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCommandModuleInfo::setRunFunction'
+    message setRunFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCommandModuleInfo::setIcon'
+    message setIconRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        ObjectRef icon = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCommandModuleInfo::assignShortcutKey'
+    message assignShortcutKeyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Shortcut group which its belong to.
+        string shortcutGroupName = 2;
+        // A code that represents the key - this value must be one of special constants listed above
+        int32 shortcutKeyCode = 3;
+        // The modifiers to associate with the shortcut Keycode. The value is a combination of
+        int32 shortcutModifierKeyFlag = 4;
+    }
+
+}
+ // GRPC proto definitions for 'ApiWorkPaneModuleInfo' class from 'apimodule.h'
+message ApiWorkPaneModuleInfo
+{
+    // Request packet corresponding to '[in] parameters in ApiWorkPaneModuleInfo::create'
+    message createRequest
+    {
+        // Unique ID for this module. should start from 1000100
+        ModuleIdT moduleId = 1;
+        // Name with categories that will appear in the user interface.
+        string fullName = 2;
+        // Describes what the work pane module does.
+        string description = 3;
+        // Name of the author for this module.
+        string author = 4;
+        // Version number of the module.
+        uint32 versionNumber = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWorkPaneModuleInfo::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWorkPaneModuleInfo::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWorkPaneModuleInfo::setInitFunction'
+    message setInitFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        InitFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWorkPaneModuleInfo::setInitFunction'
+    message setInitFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWorkPaneModuleInfo::setCleanupFunction'
+    message setCleanupFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        CleanupFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWorkPaneModuleInfo::setCleanupFunction'
+    message setCleanupFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWorkPaneModuleInfo::setWorkPaneToolbarIds'
+    message setWorkPaneToolbarIdsRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        //  List containing command module ids.
+        ApiArrayModuleIdT toolbarModuleIds = 2;
+        //  Size of the toolbarModuleIds.
+        uint32 size = 3;
+    }
+
+}
+ // GRPC proto definitions for 'ApiNodeGraphModuleInfo' class from 'apimodule.h'
+message ApiNodeGraphModuleInfo
+{
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::create'
+    message createRequest
+    {
+        // Unique ID for this module. should start from 1000100
+        ModuleIdT moduleId = 1;
+        // Name with categories that will appear in the user interface.
+        string fullName = 2;
+        // Describes what the module node graph does.
+        string description = 3;
+        // Name of the author for this module.
+        string author = 4;
+        // Version number of the module.
+        uint32 versionNumber = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphModuleInfo::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::setCreateFunction'
+    message setCreateFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        CreateFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphModuleInfo::setCreateFunction'
+    message setCreateFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::setDestroyFunction'
+    message setDestroyFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        DestroyFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphModuleInfo::setDestroyFunction'
+    message setDestroyFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::setOnEvaluateFunction'
+    message setOnEvaluateFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        OnEvaluateFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphModuleInfo::setOnEvaluateFunction'
+    message setOnEvaluateFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::setOnTriggerFunction'
+    message setOnTriggerFunctionRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        OnTriggerFuncT func = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodeGraphModuleInfo::setOnTriggerFunction'
+    message setOnTriggerFunctionResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodeGraphModuleInfo::setOutType'
+    message setOutTypeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        NodePinType outType = 2;
+    }
+
+}
+ // GRPC proto definitions for 'ApiModuleGlobal' class from ''
+message ApiModuleGlobal
+{
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerCommandModule'
+    message registerCommandModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerCommandModule'
+    message registerCommandModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerWorkPaneModule'
+    message registerWorkPaneModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerWorkPaneModule'
+    message registerWorkPaneModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerNodeGraphModule'
+    message registerNodeGraphModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerNodeGraphModule'
+    message registerNodeGraphModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerStaticCommandModule'
+    message registerStaticCommandModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerStaticCommandModule'
+    message registerStaticCommandModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerStaticWorkPaneModule'
+    message registerStaticWorkPaneModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerStaticWorkPaneModule'
+    message registerStaticWorkPaneModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiModuleGlobal::registerStaticNodeGraphModule'
+    message registerStaticNodeGraphModuleRequest
+    {
+        ObjectRef moduleInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiModuleGlobal::registerStaticNodeGraphModule'
+    message registerStaticNodeGraphModuleResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiCommandModuleInfo' from 'apimodule.h'
+service ApiCommandModuleInfoService
+{
+    /// Creates info for Api command module
+    ///
+    /// 
+    rpc create(ApiCommandModuleInfo.createRequest) returns (ApiCommandModuleInfo.createResponse);
+    /// Destroys a ApiCommandModuleInfo object created by create()
+    rpc destroy(ApiCommandModuleInfo.destroyRequest) returns (google.protobuf.Empty);
+    /// Function to set the command module run function
+    rpc setRunFunction(ApiCommandModuleInfo.setRunFunctionRequest) returns (ApiCommandModuleInfo.setRunFunctionResponse);
+    /// Function to set icon for a command module
+    rpc setIcon(ApiCommandModuleInfo.setIconRequest) returns (google.protobuf.Empty);
+    /// Function to assign shortcut key for a command module
+    rpc assignShortcutKey(ApiCommandModuleInfo.assignShortcutKeyRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiModuleGlobal' from 'apimodule.h'
+service ApiModuleGlobalService
+{
+    rpc registerCommandModule(ApiModuleGlobal.registerCommandModuleRequest) returns (ApiModuleGlobal.registerCommandModuleResponse);
+    rpc registerWorkPaneModule(ApiModuleGlobal.registerWorkPaneModuleRequest) returns (ApiModuleGlobal.registerWorkPaneModuleResponse);
+    rpc registerNodeGraphModule(ApiModuleGlobal.registerNodeGraphModuleRequest) returns (ApiModuleGlobal.registerNodeGraphModuleResponse);
+    rpc registerStaticCommandModule(ApiModuleGlobal.registerStaticCommandModuleRequest) returns (ApiModuleGlobal.registerStaticCommandModuleResponse);
+    rpc registerStaticWorkPaneModule(ApiModuleGlobal.registerStaticWorkPaneModuleRequest) returns (ApiModuleGlobal.registerStaticWorkPaneModuleResponse);
+    rpc registerStaticNodeGraphModule(ApiModuleGlobal.registerStaticNodeGraphModuleRequest) returns (ApiModuleGlobal.registerStaticNodeGraphModuleResponse);
+}
+
+// GRPC interface definition for class 'ApiNodeGraphModuleInfo' from 'apimodule.h'
+service ApiNodeGraphModuleInfoService
+{
+    /// Creates info for Api node graph module
+    /// 
+    rpc create1(ApiNodeGraphModuleInfo.createRequest) returns (ApiNodeGraphModuleInfo.createResponse);
+    /// Destroys a ApiNodeGraphModuleInfo object created by create()
+    rpc destroy1(ApiNodeGraphModuleInfo.destroyRequest) returns (google.protobuf.Empty);
+    /// Function to set the create function callback for a node graph module
+    rpc setCreateFunction(ApiNodeGraphModuleInfo.setCreateFunctionRequest) returns (ApiNodeGraphModuleInfo.setCreateFunctionResponse);
+    /// Function to set the destroy function callback for a node graph module
+    rpc setDestroyFunction(ApiNodeGraphModuleInfo.setDestroyFunctionRequest) returns (ApiNodeGraphModuleInfo.setDestroyFunctionResponse);
+    /// Function to set the evaluate function callback for a node graph module
+    rpc setOnEvaluateFunction(ApiNodeGraphModuleInfo.setOnEvaluateFunctionRequest) returns (ApiNodeGraphModuleInfo.setOnEvaluateFunctionResponse);
+    /// Sets the function to call when the user clicks the trigger button in the node inspector
+    rpc setOnTriggerFunction(ApiNodeGraphModuleInfo.setOnTriggerFunctionRequest) returns (ApiNodeGraphModuleInfo.setOnTriggerFunctionResponse);
+    /// Sets the output type of the node graph
+    rpc setOutType(ApiNodeGraphModuleInfo.setOutTypeRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiWorkPaneModuleInfo' from 'apimodule.h'
+service ApiWorkPaneModuleInfoService
+{
+    /// Creates info for Api work pane
+    ///
+    /// 
+    rpc create2(ApiWorkPaneModuleInfo.createRequest) returns (ApiWorkPaneModuleInfo.createResponse);
+    /// Destroys a ApiWorkPaneModuleInfo object created by create()
+    rpc destroy2(ApiWorkPaneModuleInfo.destroyRequest) returns (google.protobuf.Empty);
+    /// Function to set the workpane module create function
+    rpc setInitFunction(ApiWorkPaneModuleInfo.setInitFunctionRequest) returns (ApiWorkPaneModuleInfo.setInitFunctionResponse);
+    /// Function to set the workpane module destroy function
+    rpc setCleanupFunction(ApiWorkPaneModuleInfo.setCleanupFunctionRequest) returns (ApiWorkPaneModuleInfo.setCleanupFunctionResponse);
+    /// Function to a set list of command modules ids that will be displayed in the toolbar
+    /// of work pane module
+    rpc setWorkPaneToolbarIds(ApiWorkPaneModuleInfo.setWorkPaneToolbarIdsRequest) returns (google.protobuf.Empty);
+}

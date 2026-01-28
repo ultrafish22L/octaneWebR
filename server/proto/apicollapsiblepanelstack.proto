@@ -1,0 +1,80 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiCollapsiblePanelStack' class from 'apicollapsiblepanelstack.h'
+message ApiCollapsiblePanelStack
+{
+    // Request packet corresponding to '[in] parameters in ApiCollapsiblePanelStack::create'
+    message createRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiCollapsiblePanelStack::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCollapsiblePanelStack::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCollapsiblePanelStack::addPanel'
+    message addPanelRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Caption that appears on the top of the panel.
+        string caption = 2;
+        // Component filling the panel. This component is not owned and should be valid as long
+        ObjectRef component = 3;
+        // TRUE to create the panel in the open state.
+        bool open = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCollapsiblePanelStack::setOpen'
+    message setOpenRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        int32 index = 2;
+        bool open = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiCollapsiblePanelStack::clear'
+    message clearRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiCollapsiblePanelStack' from 'apicollapsiblepanelstack.h'
+service ApiCollapsiblePanelStackService
+{
+    /// Creates a new collapsible panel stack that should be destroyed with destroy()
+    rpc create(ApiCollapsiblePanelStack.createRequest) returns (ApiCollapsiblePanelStack.createResponse);
+    /// Destroys the panel stack created with create()
+    rpc destroy(ApiCollapsiblePanelStack.destroyRequest) returns (google.protobuf.Empty);
+    /// Adds a new panel to the panel stack
+    rpc addPanel(ApiCollapsiblePanelStack.addPanelRequest) returns (google.protobuf.Empty);
+    /// Opens up a panel in the stack
+    rpc setOpen(ApiCollapsiblePanelStack.setOpenRequest) returns (google.protobuf.Empty);
+    /// Clears the panels on this component
+    rpc clear(ApiCollapsiblePanelStack.clearRequest) returns (google.protobuf.Empty);
+}

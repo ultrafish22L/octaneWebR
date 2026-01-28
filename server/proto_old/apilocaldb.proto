@@ -1,0 +1,466 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiLocalDB' class from 'apilocaldb.h'
+message ApiLocalDB
+{
+    enum UpdateType 
+    {
+        CATEGORY_ADDED = 0;
+        CATEGORY_REFRESHED = 1;
+        CATEGORY_DELETED = 2;
+        PACKAGE_SAVED = 3;
+        PACKAGE_CHANGED = 4;
+        PACKAGE_DELETED = 5;
+    }
+
+     // GRPC proto definitions for 'Package' class from 'apilocaldb.h'
+    message ApiLocalDB_Package
+    {
+    // Request packet corresponding to '[in] parameters in Package::name'
+        message nameRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Package::name'
+        message nameResponse
+    {
+            
+            string result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Package::fileName'
+        message fileNameRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Package::fileName'
+        message fileNameResponse
+    {
+            
+            string result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Package::hasThumbnail'
+        message hasThumbnailRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Package::hasThumbnail'
+        message hasThumbnailResponse
+    {
+            
+            bool result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Package::getThumbnail'
+        message getThumbnailRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Package::getThumbnail'
+        message getThumbnailResponse
+    {
+            
+            string result = 1;
+            // Will be set to the size of the image. The image will be 8-bit RGBA.
+            uint32_2 size = 2;
+        }
+
+    // Request packet corresponding to '[in] parameters in Package::loadPackage'
+        message loadPackageRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            ObjectRef destinationGraph = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Package::loadPackage'
+        message loadPackageResponse
+    {
+            
+            bool result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Package::free'
+        message freeRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    }
+     // GRPC proto definitions for 'Category' class from 'apilocaldb.h'
+    message ApiLocalDB_Category
+    {
+    // Request packet corresponding to '[in] parameters in Category::name'
+        message nameRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::name'
+        message nameResponse
+    {
+            
+            string result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::fileName'
+        message fileNameRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::fileName'
+        message fileNameResponse
+    {
+            
+            string result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::subCategoryCount'
+        message subCategoryCountRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::subCategoryCount'
+        message subCategoryCountResponse
+    {
+            
+            uint32 result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::subCategoryName'
+        message subCategoryNameRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            uint32 index = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::subCategoryName'
+        message subCategoryNameResponse
+    {
+            
+            string result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::subCategory'
+        message subCategoryRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            uint32 index = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::subCategory'
+        message subCategoryResponse
+    {
+            
+            ObjectRef result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::packageCount'
+        message packageCountRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::packageCount'
+        message packageCountResponse
+    {
+            
+            uint32 result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::package'
+        message packageRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            uint32 index = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::package'
+        message packageResponse
+    {
+            
+            ObjectRef result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::categoryByPath'
+        message categoryByPathRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The relative path from this category to the category.
+            string path = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::categoryByPath'
+        message categoryByPathResponse
+    {
+            
+            ObjectRef result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::packageByPath'
+        message packageByPathRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The relative path from this category to the package.
+            string path = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::packageByPath'
+        message packageByPathResponse
+    {
+            
+            ObjectRef result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::createCategory'
+        message createCategoryRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The name of the new category.
+            string name = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::createCategory'
+        message createCategoryResponse
+    {
+            //     The newly created category, or the existing category if a category with this name
+            ObjectRef result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::deleteCategory'
+        message deleteCategoryRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            string name = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::deleteCategory'
+        message deleteCategoryResponse
+    {
+            //     true if the category got deleted.
+            bool result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::savePackage'
+        message savePackageRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            // The name for this package. If a package with this name exists it will be
+            string name = 2;
+            // The graph to save.
+            ObjectRef graph = 3;
+            // The thumbnail to save, as a 8-bit RGBA buffer. Should be set to NULL if
+            Buffer thumbnail = 4;
+            int32 thumbnailSizeInBytes = 5;
+            // The size of the thumbnail image. May be set to (0, 0) to skip saving a thumbnail.
+            uint32_2 thumbnailSize = 6;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::savePackage'
+        message savePackageResponse
+    {
+            
+            bool result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::deletePackage'
+        message deletePackageRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+            string name = 2;
+        }
+
+    // Response packet corresponding to '[out] parameters in 'Category::deletePackage'
+        message deletePackageResponse
+    {
+            //     true if the category got deleted.
+            bool result = 1;
+        }
+
+    // Request packet corresponding to '[in] parameters in Category::free'
+        message freeRequest
+    {
+            // ID of the object on which to call the method
+            ObjectRef objectPtr = 1;
+        }
+
+    }
+    // Request packet corresponding to '[in] parameters in ApiLocalDB::isSupported'
+    message isSupportedRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLocalDB::isSupported'
+    message isSupportedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLocalDB::root'
+    message rootRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLocalDB::root'
+    message rootResponse
+    {
+        //     the root category or a NULL pointer if there was an error, in which case
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLocalDB::setRootDirectory'
+    message setRootDirectoryRequest
+    {
+        // The new localDB directory
+        string newPath = 1;
+        // if true, move all existing packages to the new location. If the original
+        bool moveFiles = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLocalDB::setRootDirectory'
+    message setRootDirectoryResponse
+    {
+        //     true if the operation was successful, false if the new location is not writable or
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLocalDB::addObserver'
+    message addObserverRequest
+    {
+        uint64 opaqueData = 1;
+        ObserverCallback callback = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLocalDB::addObserver'
+    message addObserverResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLocalDB::removeObserver'
+    message removeObserverRequest
+    {
+        uint64 opaqueData = 1;
+        ObserverCallback callback = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLocalDB::removeObserver'
+    message removeObserverResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiLocalDB' from 'apilocaldb.h'
+service ApiLocalDBService
+{
+    /// Tells whether 
+    rpc isSupported(ApiLocalDB.isSupportedRequest) returns (ApiLocalDB.isSupportedResponse);
+    /// Returns the root category of the local DB
+    ///
+    /// 
+    rpc root(ApiLocalDB.rootRequest) returns (ApiLocalDB.rootResponse);
+    /// Moves the localDb folder to a new location
+    rpc setRootDirectory(ApiLocalDB.setRootDirectoryRequest) returns (ApiLocalDB.setRootDirectoryResponse);
+    /// Add an observer to receive change notifications for localDB updates
+    rpc addObserver(ApiLocalDB.addObserverRequest) returns (ApiLocalDB.addObserverResponse);
+    /// Remove an observer to receive change notifications for localDB updates
+    rpc removeObserver(ApiLocalDB.removeObserverRequest) returns (ApiLocalDB.removeObserverResponse);
+}
+
+// GRPC interface definition for class 'ApiLocalDB_Category' from 'apilocaldb.h'
+service ApiLocalDB_CategoryService
+{
+    /// Get the name for this category
+    rpc name(ApiLocalDB.ApiLocalDB_Category.nameRequest) returns (ApiLocalDB.ApiLocalDB_Category.nameResponse);
+    /// Returns the directory where the files in this category are
+    rpc fileName(ApiLocalDB.ApiLocalDB_Category.fileNameRequest) returns (ApiLocalDB.ApiLocalDB_Category.fileNameResponse);
+    /// Returns the number of subcategories in this category
+    rpc subCategoryCount(ApiLocalDB.ApiLocalDB_Category.subCategoryCountRequest) returns (ApiLocalDB.ApiLocalDB_Category.subCategoryCountResponse);
+    /// returns the name of one of the subcategories in this category
+    rpc subCategoryName(ApiLocalDB.ApiLocalDB_Category.subCategoryNameRequest) returns (ApiLocalDB.ApiLocalDB_Category.subCategoryNameResponse);
+    /// returns one of the subcategories in this category
+    rpc subCategory(ApiLocalDB.ApiLocalDB_Category.subCategoryRequest) returns (ApiLocalDB.ApiLocalDB_Category.subCategoryResponse);
+    /// Returns the number of packages in this category
+    rpc packageCount(ApiLocalDB.ApiLocalDB_Category.packageCountRequest) returns (ApiLocalDB.ApiLocalDB_Category.packageCountResponse);
+    /// Returns one of the packages in this category
+    rpc package(ApiLocalDB.ApiLocalDB_Category.packageRequest) returns (ApiLocalDB.ApiLocalDB_Category.packageResponse);
+    /// Get a package
+    rpc categoryByPath(ApiLocalDB.ApiLocalDB_Category.categoryByPathRequest) returns (ApiLocalDB.ApiLocalDB_Category.categoryByPathResponse);
+    /// Get a package
+    rpc packageByPath(ApiLocalDB.ApiLocalDB_Category.packageByPathRequest) returns (ApiLocalDB.ApiLocalDB_Category.packageByPathResponse);
+    /// Creates a new category
+    rpc createCategory(ApiLocalDB.ApiLocalDB_Category.createCategoryRequest) returns (ApiLocalDB.ApiLocalDB_Category.createCategoryResponse);
+    /// Delete a child category of this category, including all subcategories and packages
+        /// inside it
+    rpc deleteCategory(ApiLocalDB.ApiLocalDB_Category.deleteCategoryRequest) returns (ApiLocalDB.ApiLocalDB_Category.deleteCategoryResponse);
+    /// Save a package in the localDB under this category
+        /// 
+    rpc savePackage(ApiLocalDB.ApiLocalDB_Category.savePackageRequest) returns (ApiLocalDB.ApiLocalDB_Category.savePackageResponse);
+    /// Delete a package in this category
+    rpc deletePackage(ApiLocalDB.ApiLocalDB_Category.deletePackageRequest) returns (ApiLocalDB.ApiLocalDB_Category.deletePackageResponse);
+    /// Releases any memory allocated for this category
+    rpc free(ApiLocalDB.ApiLocalDB_Category.freeRequest) returns (google.protobuf.Empty);
+}
+
+// GRPC interface definition for class 'ApiLocalDB_Package' from 'apilocaldb.h'
+service ApiLocalDB_PackageService
+{
+    /// Get the name for this package
+        /// The returned pointer will remain valid until this package object is freed
+    rpc name1(ApiLocalDB.ApiLocalDB_Package.nameRequest) returns (ApiLocalDB.ApiLocalDB_Package.nameResponse);
+    /// Get the file name for this package
+        /// The returned pointer will remain valid until this package object is freed
+        ///
+        /// Note: it is recommended to use Category::savePackage() and category::deletePackage()
+        /// to add and remove packages, this will raise the corresponding events
+    rpc fileName1(ApiLocalDB.ApiLocalDB_Package.fileNameRequest) returns (ApiLocalDB.ApiLocalDB_Package.fileNameResponse);
+    /// Check if a preview image embedded into this package
+    rpc hasThumbnail(ApiLocalDB.ApiLocalDB_Package.hasThumbnailRequest) returns (ApiLocalDB.ApiLocalDB_Package.hasThumbnailResponse);
+    /// Get the preview image embedded into this package
+    rpc getThumbnail(ApiLocalDB.ApiLocalDB_Package.getThumbnailRequest) returns (ApiLocalDB.ApiLocalDB_Package.getThumbnailResponse);
+    /// Loads this package into a root node graph
+    rpc loadPackage(ApiLocalDB.ApiLocalDB_Package.loadPackageRequest) returns (ApiLocalDB.ApiLocalDB_Package.loadPackageResponse);
+    /// Releases any memory allocated for this package
+    rpc free1(ApiLocalDB.ApiLocalDB_Package.freeRequest) returns (google.protobuf.Empty);
+}

@@ -1,0 +1,301 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "octaneenums.proto";
+
+    enum SaveImageBitDepth 
+    {
+        SAVE_IMAGE_BIT_DEPTH_INT_8 = 0;
+        SAVE_IMAGE_BIT_DEPTH_INT_16 = 1;
+        SAVE_IMAGE_BIT_DEPTH_FLOAT_16 = 2;
+        SAVE_IMAGE_BIT_DEPTH_FLOAT_32 = 3;
+    }
+
+    enum SaveImageFileType 
+    {
+        SAVE_IMAGE_FILE_TYPE_PNG = 0;
+        SAVE_IMAGE_FILE_TYPE_EXR = 1;
+        SAVE_IMAGE_FILE_TYPE_TIFF = 2;
+        SAVE_IMAGE_FILE_TYPE_JPEG = 3;
+    }
+
+ // GRPC proto definitions for 'ImageExportSettings' class from 'octaneimageexport.h'
+message ImageExportSettings
+{
+     // GRPC proto definitions for 'ExrExportSettings' class from 'octaneimageexport.h'
+    message ImageExportSettings_ExrExportSettings
+    {
+        ExrCompressionType compressionType = 1;
+        float compressionLevel = 2;
+    }
+     // GRPC proto definitions for 'TiffExportSettings' class from 'octaneimageexport.h'
+    message ImageExportSettings_TiffExportSettings
+    {
+        TiffCompressionType compressionType = 1;
+    }
+     // GRPC proto definitions for 'JpegExportSettings' class from 'octaneimageexport.h'
+    message ImageExportSettings_JpegExportSettings
+    {
+        float quality = 1;
+    }
+    SaveImageFileType fileType = 1;
+    ImageSaveFormat format = 2;
+    PremultipliedAlphaType premultipliedAlphaType = 3;
+    ImageExportSettings_ExrExportSettings exrSettings = 4;
+    ImageExportSettings_TiffExportSettings tiffSettings = 5;
+    ImageExportSettings_JpegExportSettings jpegSettings = 6;
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getExtension'
+    message getExtensionRequest
+    {
+        // the type of the image
+        SaveImageFileType type = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getExtension'
+    message getExtensionResponse
+    {
+        //     the returned extension is lowercase, doesn't include dot
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getBitsPerComponent'
+    message getBitsPerComponentRequest
+    {
+        // the bit depth enum value
+        SaveImageBitDepth bitDepth = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getBitsPerComponent'
+    message getBitsPerComponentResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getBitsPerComponent1'
+    message getBitsPerComponent1Request
+    {
+        // the image save format
+        ImageSaveFormat format = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getBitsPerComponent1'
+    message getBitsPerComponent1Response
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getBitDepth'
+    message getBitDepthRequest
+    {
+        // the image save format
+        ImageSaveFormat format = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getBitDepth'
+    message getBitDepthResponse
+    {
+        
+        SaveImageBitDepth result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getFormat'
+    message getFormatRequest
+    {
+        // the type of the image
+        SaveImageFileType type = 1;
+        // the bit depth enum value
+        SaveImageBitDepth bitDepth = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getFormat'
+    message getFormatResponse
+    {
+        
+        ImageSaveFormat result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::getType'
+    message getTypeRequest
+    {
+        // the image save format
+        ImageSaveFormat format = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::getType'
+    message getTypeResponse
+    {
+        
+        SaveImageFileType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makeFromOldSettings'
+    message makeFromOldSettingsRequest
+    {
+        // the image save format
+        ImageSaveFormat imageSaveFormat = 1;
+        // Premultiplied alpha setting
+        PremultipliedAlphaType premultipliedAlphaType = 2;
+        // compression type for EXR format
+        ExrCompressionType exrCompressionType = 3;
+        // compression level for EXR format
+        float exrCompressionLevel = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makeFromOldSettings'
+    message makeFromOldSettingsResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makeFromImageSaveFormat'
+    message makeFromImageSaveFormatRequest
+    {
+        // the image save format
+        ImageSaveFormat imageSaveFormat = 1;
+        // Premultiplied alpha setting. This should be PREMULTIPLIED_ALPHA_TYPE_NONE when saving
+        PremultipliedAlphaType premultipliedAlphaType = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makeFromImageSaveFormat'
+    message makeFromImageSaveFormatResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makeExr'
+    message makeExrRequest
+    {
+        // the bit depth enum value
+        SaveImageBitDepth bitDepth = 1;
+        // Whether the image should have premultiplied alpha
+        bool premultipliedAlpha = 2;
+        // compression type for EXR format
+        ExrCompressionType compressionType = 3;
+        // compression level for EXR format
+        float compressionLevel = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makeExr'
+    message makeExrResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makeTiff'
+    message makeTiffRequest
+    {
+        // the bit depth enum value
+        SaveImageBitDepth bitDepth = 1;
+        // Premultiplied alpha setting
+        PremultipliedAlphaType premultipliedAlphaType = 2;
+        // compression type for TIFF format
+        TiffCompressionType compressionType = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makeTiff'
+    message makeTiffResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makePng'
+    message makePngRequest
+    {
+        // the bit depth enum value
+        SaveImageBitDepth bitDepth = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makePng'
+    message makePngResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageExportSettings::makeJpeg'
+    message makeJpegRequest
+    {
+        // the JPEG compression quality. Valid range is [1..100].
+        float quality = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageExportSettings::makeJpeg'
+    message makeJpegResponse
+    {
+        
+        ImageExportSettings result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ImageExportSettings' from 'octaneimageexport.h'
+service ImageExportSettingsService
+{
+    /// Returns extension for the type
+    /// 
+    /// 
+    rpc getExtension(ImageExportSettings.getExtensionRequest) returns (ImageExportSettings.getExtensionResponse);
+    /// Returns number of bits per component for bit depth
+    /// 
+    /// 
+    rpc getBitsPerComponent(ImageExportSettings.getBitsPerComponentRequest) returns (ImageExportSettings.getBitsPerComponentResponse);
+    /// Returns number of bits per component for image format
+    /// 
+    /// 
+    rpc getBitsPerComponent1(ImageExportSettings.getBitsPerComponent1Request) returns (ImageExportSettings.getBitsPerComponent1Response);
+    /// Returns bit depth of the format
+    /// 
+    /// 
+    rpc getBitDepth(ImageExportSettings.getBitDepthRequest) returns (ImageExportSettings.getBitDepthResponse);
+    /// Returns image save format from file type and bit depth
+    ///
+    /// 
+    rpc getFormat(ImageExportSettings.getFormatRequest) returns (ImageExportSettings.getFormatResponse);
+    /// Returns image file type from the format
+    /// 
+    /// 
+    rpc getType(ImageExportSettings.getTypeRequest) returns (ImageExportSettings.getTypeResponse);
+    /// Creates ImageExportSettings from a set parameters used in older version of the API
+    /// 
+    rpc makeFromOldSettings(ImageExportSettings.makeFromOldSettingsRequest) returns (ImageExportSettings.makeFromOldSettingsResponse);
+    /// Creates ImageExportSettings from ImageSaveFormat
+    /// Any additional settings are set to the default values
+    /// 
+    /// 
+    rpc makeFromImageSaveFormat(ImageExportSettings.makeFromImageSaveFormatRequest) returns (ImageExportSettings.makeFromImageSaveFormatResponse);
+    /// Creates ImageExportSettings for writing EXR format
+    /// 
+    /// 
+    rpc makeExr(ImageExportSettings.makeExrRequest) returns (ImageExportSettings.makeExrResponse);
+    /// Creates ImageExportSettings for writing TIFF format
+    /// 
+    /// 
+    rpc makeTiff(ImageExportSettings.makeTiffRequest) returns (ImageExportSettings.makeTiffResponse);
+    /// Creates ImageExportSettings for writing PNG format
+    /// 
+    /// 
+    rpc makePng(ImageExportSettings.makePngRequest) returns (ImageExportSettings.makePngResponse);
+    /// Creates ImageExportSettings for writing JPEG format
+    /// 
+    /// 
+    rpc makeJpeg(ImageExportSettings.makeJpegRequest) returns (ImageExportSettings.makeJpegResponse);
+}
+
+// GRPC interface definition for class 'ImageExportSettings_ExrExportSettings' from 'octaneimageexport.h'
+
+// GRPC interface definition for class 'ImageExportSettings_JpegExportSettings' from 'octaneimageexport.h'
+
+// GRPC interface definition for class 'ImageExportSettings_TiffExportSettings' from 'octaneimageexport.h'

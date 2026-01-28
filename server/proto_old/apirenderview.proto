@@ -1,0 +1,44 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiRenderView' class from 'apirenderview.h'
+message ApiRenderView
+{
+    // Request packet corresponding to '[in] parameters in ApiRenderView::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderView::create'
+    message createRequest
+    {
+        uint64 privateData = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderView::create'
+    message createResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiRenderView' from 'apirenderview.h'
+service ApiRenderViewService
+{
+    rpc destroy(ApiRenderView.destroyRequest) returns (google.protobuf.Empty);
+    rpc create(ApiRenderView.createRequest) returns (ApiRenderView.createResponse);
+}

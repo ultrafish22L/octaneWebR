@@ -1,0 +1,2248 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octanerenderpasses.proto";
+import "octaneimageexport.proto";
+import "octaneenums.proto";
+
+
+message ApiArrayApiRenderImage
+{
+//ApiArray<ApiRenderImage 
+    repeated ApiRenderImage data = 1; // Temporary placeholder field.
+}
+
+ // GRPC proto definitions for 'ApiRenderImage' class from 'apirender.h'
+message ApiRenderImage
+{
+    ImageType type = 1;
+    NamedColorSpace colorSpace = 2;
+    bool isLinear = 3;
+    ObjectRef sharedSurface = 4;
+    uint32_2 size = 5;
+    uint32 pitch = 6;
+    Buffer buffer = 7;
+    RenderPassId renderPassId = 8;
+    float tonemappedSamplesPerPixel = 9;
+    float calculatedSamplesPerPixel = 10;
+    float regionSamplesPerPixel = 11;
+    float maxSamplesPerPixel = 12;
+    float samplesPerSecond = 13;
+    float renderTime = 14;
+    CLevelT changeLevel = 15;
+    bool hasPendingUpdates = 16;
+    SubSampleMode subSampling = 17;
+    bool hasAlpha = 18;
+    PremultipliedAlphaType premultipliedAlphaType = 19;
+    bool keepEnvironment = 20;
+    Buffer _mPrivate = 21;
+    // Request packet corresponding to '[in] parameters in ApiRenderImage::isEmpty'
+    message isEmptyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderImage::isEmpty'
+    message isEmptyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderImage::isHdr'
+    message isHdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderImage::isHdr'
+    message isHdrResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+ // GRPC proto definitions for 'ApiDeviceMemoryUsage' class from 'apirender.h'
+message ApiDeviceMemoryUsage
+{
+    uint64 usedDeviceMemory = 1;
+    uint64 freeDeviceMemory = 2;
+    uint64 totalDeviceMemory = 3;
+    uint64 outOfCoreMemory = 4;
+    uint64 peerToPeerBytesUsed = 5;
+}
+ // GRPC proto definitions for 'ApiDeviceResourceStatistics' class from 'apirender.h'
+message ApiDeviceResourceStatistics
+{
+    uint64 runtimeDataSize = 1;
+    uint64 filmDataSize = 2;
+    uint64 geometryDataSize = 3;
+    uint64 nodeSystemDataSize = 4;
+    uint64 imagesDataSize = 5;
+    uint64 compositorDataSize = 6;
+    uint64 denoiserDataSize = 7;
+}
+ // GRPC proto definitions for 'ApiDeviceSharedSurfaceInfo' class from 'apirender.h'
+message ApiDeviceSharedSurfaceInfo
+{
+}
+ // GRPC proto definitions for 'ApiGeometryStatistics' class from 'apirender.h'
+message ApiGeometryStatistics
+{
+    uint32 triCount = 1;
+    uint32 dispTriCount = 2;
+    uint32 hairSegCount = 3;
+    uint64 voxelCount = 4;
+    uint64 gaussianSplatCount = 5;
+    uint32 sphereCount = 6;
+    uint32 instanceCount = 7;
+    uint32 emitPriCount = 8;
+    uint32 emitInstanceCount = 9;
+    uint32 analyticLiCount = 10;
+}
+ // GRPC proto definitions for 'ApiTextureStatistics' class from 'apirender.h'
+message ApiTextureStatistics
+{
+    uint32 usedRgba32Textures = 1;
+    uint32 usedRgba64Textures = 2;
+    uint32 usedY8Textures = 3;
+    uint32 usedY16Textures = 4;
+    uint32 usedVirtualTextures = 5;
+}
+ // GRPC proto definitions for 'ApiRenderEngine' class from 'apirender.h'
+message ApiRenderEngine
+{
+    enum RenderPriority 
+    {
+        PRIORITY_LOW = 0;
+        PRIORITY_MEDIUM = 1;
+        PRIORITY_HIGH = 2;
+        PRIORITY_COUNT = 3;
+    }
+
+     // GRPC proto definitions for 'PickIntersection' class from 'apirender.h'
+    message ApiRenderEngine_PickIntersection
+    {
+        ObjectRef node = 1;
+        uint32 materialPinIx = 2;
+        float depth = 3;
+        float_3 position = 4;
+        float_3 geometricNormal = 5;
+        float_3 smoothedNormal = 6;
+        PrimitiveType primitiveType = 7;
+        Float3ArrayT primitiveVertices = 8;
+        float_3 positionOnPrimitive = 9;
+    }
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setRenderTargetNode'
+    message setRenderTargetNodeRequest
+    {
+        // In the regular use case you specify a render target node or NULL. If NULL is provided
+        ObjectRef targetNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setRenderTargetNode'
+    message setRenderTargetNodeResponse
+    {
+        //     FALSE if the specified node wasn't NULL or had an incorrect output type, i.e. its
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderTargetNode'
+    message getRenderTargetNodeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderTargetNode'
+    message getRenderTargetNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderGeometryNode'
+    message getRenderGeometryNodeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderGeometryNode'
+    message getRenderGeometryNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderCameraNode'
+    message getRenderCameraNodeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderCameraNode'
+    message getRenderCameraNodeResponse
+    {
+        
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setRenderRegion'
+    message setRenderRegionRequest
+    {
+        // If set to TRUE, the specified render region will be activated otherwise it will be
+        bool active = 1;
+        // The minimum coordinate of the render region, excluding the feather border.
+        uint32_2 regionMin = 2;
+        // The maximum coordinate of the render region, excluding the feather border.
+        uint32_2 regionMax = 3;
+        // The width of the additional feather border.
+        uint32 featherWidth = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderRegion'
+    message getRenderRegionRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderRegion'
+    message getRenderRegionResponse
+    {
+        // If set to TRUE, the specified render region will be activated otherwise it will be
+        bool active = 1;
+        // The currently set render region minimum (inclusive).
+        uint32_2 regionMin = 2;
+        // The currently set render region maximum (inclusive).
+        uint32_2 regionMax = 3;
+        // The currently set width of the additional feather border.
+        uint32 featherWidth = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setAsyncTonemapParams'
+    message setAsyncTonemapParamsRequest
+    {
+        // The format of the result buffers. The initial value before this function is called is
+        TonemapBufferType bufferType = 1;
+        // Whether to apply false color to cryptomatte passes (if there are any) for viewing as an
+        bool cryptomatteFalseColor = 2;
+        // The color space info for the results. Must not be null. This pointer only needs to
+        ObjectRef colorSpaceInfo = 3;
+        // The type of premultiplied alpha for the results to have. The initial value before this
+        PremultipliedAlphaType premultipliedAlphaType = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setAsyncTonemapParams1'
+    message setAsyncTonemapParams1Request
+    {
+        TonemapBufferType bufferType = 1;
+        bool cryptomatteFalseColor = 2;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 3;
+        PremultipliedAlphaType premultipliedAlphaType = 4;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapBufferType'
+    message asyncTonemapBufferTypeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::asyncTonemapBufferType'
+    message asyncTonemapBufferTypeResponse
+    {
+        
+        TonemapBufferType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapCryptomatteFalseColor'
+    message asyncTonemapCryptomatteFalseColorRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::asyncTonemapCryptomatteFalseColor'
+    message asyncTonemapCryptomatteFalseColorResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapOutputColorSpaceInfo'
+    message asyncTonemapOutputColorSpaceInfoRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::asyncTonemapOutputColorSpaceInfo'
+    message asyncTonemapOutputColorSpaceInfoResponse
+    {
+        //     Will not be null. This pointer will remain valid until the next time a method is called
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapColorSpace'
+    message asyncTonemapColorSpaceRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::asyncTonemapColorSpace'
+    message asyncTonemapColorSpaceResponse
+    {
+        
+        NamedColorSpace result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapPremultipliedAlphaType'
+    message asyncTonemapPremultipliedAlphaTypeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::asyncTonemapPremultipliedAlphaType'
+    message asyncTonemapPremultipliedAlphaTypeResponse
+    {
+        
+        PremultipliedAlphaType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setAsyncTonemapRenderPasses'
+    message setAsyncTonemapRenderPassesRequest
+    {
+        // Set of tonemap passes.
+        ApiArrayRenderPassId tonemapPasses = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setAsyncTonemapRenderPasses'
+    message setAsyncTonemapRenderPassesResponse
+    {
+        //     TRUE on success, FALSE on failure. This function will fail if the set is empty.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::asyncTonemapRenderPasses'
+    message asyncTonemapRenderPassesRequest
+    {
+        ApiArrayRenderPassId tonemapPasses = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getEnabledAovs'
+    message getEnabledAovsRequest
+    {
+        ObjectRef renderTargetNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getEnabledAovs'
+    message getEnabledAovsResponse
+    {
+        ApiArrayRenderPassId aovIds = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::freeTonemapPasses'
+    message freeTonemapPassesRequest
+    {
+        ApiArrayRenderPassId tonemapPasses = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::displayRenderPassId'
+    message displayRenderPassIdRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::displayRenderPassId'
+    message displayRenderPassIdResponse
+    {
+        
+        RenderPassId result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setSubSampleMode'
+    message setSubSampleModeRequest
+    {
+        SubSampleMode mode = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getSubSampleMode'
+    message getSubSampleModeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getSubSampleMode'
+    message getSubSampleModeResponse
+    {
+        
+        SubSampleMode result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setClayMode'
+    message setClayModeRequest
+    {
+        ClayMode mode = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::clayMode'
+    message clayModeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::clayMode'
+    message clayModeResponse
+    {
+        
+        ClayMode result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::fps'
+    message fpsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::fps'
+    message fpsResponse
+    {
+        
+        float result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setFps'
+    message setFpsRequest
+    {
+        float fps = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isCompiling'
+    message isCompilingRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isCompiling'
+    message isCompilingResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isCompressingTextures'
+    message isCompressingTexturesRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isCompressingTextures'
+    message isCompressingTexturesResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::hasPendingRenderData'
+    message hasPendingRenderDataRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::hasPendingRenderData'
+    message hasPendingRenderDataResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getCurrentChangeLevel'
+    message getCurrentChangeLevelRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getCurrentChangeLevel'
+    message getCurrentChangeLevelResponse
+    {
+        
+        CLevelT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderImageChangeLevel'
+    message getRenderImageChangeLevelRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderImageChangeLevel'
+    message getRenderImageChangeLevelResponse
+    {
+        
+        CLevelT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderRestartedChangeLevel'
+    message getRenderRestartedChangeLevelRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderRestartedChangeLevel'
+    message getRenderRestartedChangeLevelResponse
+    {
+        
+        CLevelT result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setAsyncUpdateCallback'
+    message setAsyncUpdateCallbackRequest
+    {
+        // Function called every time an update is finished.
+        AsyncUpdateCallbackT callback = 1;
+        // Opaque user data pointer passed as an argument to the callback.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setAsyncUpdateCallback'
+    message setAsyncUpdateCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::updatesAreAsync'
+    message updatesAreAsyncRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::updatesAreAsync'
+    message updatesAreAsyncResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isImageReady'
+    message isImageReadyRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isImageReady'
+    message isImageReadyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::resetImageReady'
+    message resetImageReadyRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isRenderFailure'
+    message isRenderFailureRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isRenderFailure'
+    message isRenderFailureResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::resetRenderFailure'
+    message resetRenderFailureRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setOnTileBlendedCallback'
+    message setOnTileBlendedCallbackRequest
+    {
+        // User provided callback funcion or NULL to unset the callback.
+        OnTileBlendedCallbackT callback = 1;
+        // Opaque pointer to userdata. This pointer is not touched by Octane. Can be a NULL pointer.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setOnTileBlendedCallback'
+    message setOnTileBlendedCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setOnNewStatisticsCallback'
+    message setOnNewStatisticsCallbackRequest
+    {
+        // User provided callback funcion or NULL to unset the callback.
+        OnNewStatisticsCallbackT callback = 1;
+        // Opaque pointer to userdata. This pointer is not touched by Octane. Can be a NULL pointer.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setOnNewStatisticsCallback'
+    message setOnNewStatisticsCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setOnNewImageCallback'
+    message setOnNewImageCallbackRequest
+    {
+        // User provided callback funcion or NULL to unset the callback.
+        OnNewImageCallbackT callback = 1;
+        // Opaque pointer to userdata. This pointer is not touched by Octane. Can be a NULL pointer.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setOnNewImageCallback'
+    message setOnNewImageCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setOnOcioErrorCallback'
+    message setOnOcioErrorCallbackRequest
+    {
+        // User provided callback function or null to unset the callback.
+        OnOcioErrorCallbackT callback = 1;
+        // Opaque pointer to user data. This pointer is not touched by Octane. Can be null.
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setOnOcioErrorCallback'
+    message setOnOcioErrorCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setOnRenderFailureCallback'
+    message setOnRenderFailureCallbackRequest
+    {
+        // User provided callback function or NULL to unset the callback.
+        OnRenderFailureCallbackT callback = 1;
+        // Opaque pointer to userdata. This pointer is not touched by
+        uint64 userData = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setOnRenderFailureCallback'
+    message setOnRenderFailureCallbackResponse
+    {
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setForceCallbacksInRenderThreads'
+    message setForceCallbacksInRenderThreadsRequest
+    {
+        bool enabled = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::grabRenderResult'
+    message grabRenderResultRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::grabRenderResult'
+    message grabRenderResultResponse
+    {
+        //     TRUE if there is a list of non-empty render results available. If this function
+        bool result = 1;
+        // Array of render images - 1 for each tonemapped render pass. These must be freed with
+        ApiArrayApiRenderImage renderImages = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::releaseRenderResult'
+    message releaseRenderResultRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::synchronousTonemap'
+    message synchronousTonemapRequest
+    {
+        // The render passes for which we like a tonemapped result. All the render passes in
+        ApiArrayRenderPassId passes = 1;
+        // The length of the passes array.
+        uint32 passesLength = 2;
+        // The format of the result buffers.
+        TonemapBufferType bufferType = 3;
+        // Whether to apply false color to cryptomatte passes (if there are any) for viewing as an
+        bool cryptomatteFalseColor = 4;
+        // The color space info for the results. Must not be null.
+        ObjectRef colorSpaceInfo = 5;
+        // The type of premultiplied alpha for the results to have.
+        PremultipliedAlphaType premultipliedAlphaType = 6;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::synchronousTonemap'
+    message synchronousTonemapResponse
+    {
+        //     TRUE if the result is not empty and FALSE if it is.
+        bool result = 1;
+        // The result images will be stored here if the function returns TRUE. These images must
+        ApiArrayApiRenderImage results = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::synchronousTonemap1'
+    message synchronousTonemap1Request
+    {
+        ApiArrayRenderPassId passes = 1;
+        uint32 passesLength = 2;
+        TonemapBufferType bufferType = 3;
+        bool cryptomatteFalseColor = 4;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 5;
+        PremultipliedAlphaType premultipliedAlphaType = 6;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::synchronousTonemap1'
+    message synchronousTonemap1Response
+    {
+        
+        bool result = 1;
+        ApiArrayApiRenderImage results = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::synchronousTonemapAllRenderPasses'
+    message synchronousTonemapAllRenderPassesRequest
+    {
+        // The format of the result buffers.
+        TonemapBufferType bufferType = 1;
+        // Whether to apply false color to cryptomatte passes (if there are any) for viewing as an
+        bool cryptomatteFalseColor = 2;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 3;
+        // The type of premultiplied alpha for the results to have.
+        PremultipliedAlphaType premultipliedAlphaType = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::synchronousTonemapAllRenderPasses'
+    message synchronousTonemapAllRenderPassesResponse
+    {
+        //     TRUE if we came back with results, FALSE otherwise.
+        bool result = 1;
+        // Array of render results. This array is allocated by the API and should
+        ApiArrayApiRenderImage results = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::synchronousTonemapAllRenderPasses1'
+    message synchronousTonemapAllRenderPasses1Request
+    {
+        TonemapBufferType bufferType = 1;
+        bool cryptomatteFalseColor = 2;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 3;
+        PremultipliedAlphaType premultipliedAlphaType = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::synchronousTonemapAllRenderPasses1'
+    message synchronousTonemapAllRenderPasses1Response
+    {
+        
+        bool result = 1;
+        ApiArrayApiRenderImage results = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::freeRenderImages'
+    message freeRenderImagesRequest
+    {
+        ApiArrayApiRenderImage results = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::freeRenderImages'
+    message freeRenderImagesResponse
+    {
+        ApiArrayApiRenderImage results = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderStatistics'
+    message getRenderStatisticsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderStatistics'
+    message getRenderStatisticsResponse
+    {
+        // statistics fetched from the latest render progress
+        RenderResultStatistics statistics = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRenderResultStatistics'
+    message getRenderResultStatisticsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRenderResultStatistics'
+    message getRenderResultStatisticsResponse
+    {
+        // statistics fetched from the latest asynchronous tomemap result
+        RenderResultStatistics statistics = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveImage'
+    message saveImageRequest
+    {
+        // The render pass to save out. This render pass MUST be enabled.
+        RenderPassId renderPassId = 1;
+        // The full path to the file name where the image will be stored. When the filename in the
+        string fullPath = 2;
+        // The format of the image file that should be saved.
+        ImageSaveFormat imageSaveFormat = 3;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 4;
+        // The type of premultiplied alpha for the image file to have. This should be
+        PremultipliedAlphaType premultipliedAlphaType = 5;
+        // Compression type of the OpenEXR file. Ignored if imageSaveFormat implies PNG.
+        ExrCompressionType exrCompressionType = 6;
+        // Compression factor if using OpenEXR with DWA compression. Default value is 45,
+        float exrCompressionLevel = 7;
+        // If true, then the image will be saved on a background thread, and this call always
+        bool asynchronous = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveImage'
+    message saveImageResponse
+    {
+        //     TRUE if the current result was saved successfully and FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveImage1'
+    message saveImage1Request
+    {
+        RenderPassId renderPassId = 1;
+        string fullPath = 2;
+        ImageSaveFormat imageSaveFormat = 3;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 4;
+        PremultipliedAlphaType premultipliedAlphaType = 5;
+        ExrCompressionType exrCompressionType = 6;
+        float exrCompressionLevel = 7;
+        bool asynchronous = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveImage1'
+    message saveImage1Response
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveImage2'
+    message saveImage2Request
+    {
+        // The render pass to save out. This render pass MUST be enabled.
+        RenderPassId renderPassId = 1;
+        // The full path to the file name where the image will be stored
+        string fullPath = 2;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 3;
+        // The settings that describe the output format and other parameters like compression or quality
+        ImageExportSettings exportSettings = 4;
+        // If true, then the image will be saved on a background thread, and this call always
+        bool asynchronous = 5;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveImage2'
+    message saveImage2Response
+    {
+        //     TRUE if the current result was saved successfully and FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPasses'
+    message saveRenderPassesRequest
+    {
+        // The full path to the output directory.
+        string outputDirectory = 1;
+        // Array with an export object for each pass to export. Passes that aren't enabled or
+        RenderPassExport passesToExport = 2;
+        // Length of the passesToExport array.
+        uint32 passesToExportLength = 3;
+        // The format of the image files that should be saved.
+        ImageSaveFormat imageSaveFormat = 4;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 5;
+        // The type of premultiplied alpha for the image files to have. This should be
+        PremultipliedAlphaType premultipliedAlphaType = 6;
+        // Compression type of the OpenEXR file. Ignored if imageSaveFormat implies PNG.
+        ExrCompressionType exrCompressionType = 7;
+        // Compression factor if using OpenEXR with DWA compression. Default value is 45,
+        float exrCompressionLevel = 8;
+        // Metadata for the file header. This is an array of consecutive key/value pairs.
+        StringArrayT metadata = 9;
+        // Length of the meta data array.
+        uint32 metadataLength = 10;
+        // If TRUE, then the image will be saved on a background thread, and this call returns TRUE
+        bool asynchronous = 11;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPasses'
+    message saveRenderPassesResponse
+    {
+        //     TRUE if all the passes could be saved successfully, FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPasses1'
+    message saveRenderPasses1Request
+    {
+        string outputDirectory = 1;
+        RenderPassExport passesToExport = 2;
+        uint32 passesToExportLength = 3;
+        ImageSaveFormat imageSaveFormat = 4;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 5;
+        PremultipliedAlphaType premultipliedAlphaType = 6;
+        ExrCompressionType exrCompressionType = 7;
+        float exrCompressionLevel = 8;
+        StringArrayT metadata = 9;
+        uint32 metadataLength = 10;
+        bool asynchronous = 11;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPasses1'
+    message saveRenderPasses1Response
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPasses2'
+    message saveRenderPasses2Request
+    {
+        // The full path to the output directory.
+        string outputDirectory = 1;
+        // Array with an export object for each pass to export. Passes that aren't enabled or
+        RenderPassExport passesToExport = 2;
+        // Length of the passesToExport array.
+        uint32 passesToExportLength = 3;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 4;
+        // The settings that describe the output format and other parameters like compression or
+        ImageExportSettings exportSettings = 5;
+        // Metadata for the file header. This is an array of consecutive key/value pairs.
+        StringArrayT metadata = 6;
+        // Length of the meta data array.
+        uint32 metadataLength = 7;
+        // If TRUE, then the image will be saved on a background thread, and this call returns TRUE
+        bool asynchronous = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPasses2'
+    message saveRenderPasses2Response
+    {
+        //     TRUE if all the passes could be saved successfully, FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPassesMultiExr'
+    message saveRenderPassesMultiExrRequest
+    {
+        // The full path to the file name where the image will be stored.
+        string fullPath = 1;
+        // Array with an export object for each pass to export. Passes that aren't enabled or
+        RenderPassExport passesToExport = 2;
+        // Length of the passesToExport array.
+        uint32 passesToExportLength = 3;
+        // Whether to save a 16-bit EXR instead of 32-bit.
+        bool useHalf = 4;
+        // The output color space info to use. Must not be null.
+        ObjectRef colorSpaceInfo = 5;
+        // Whether the image should have premultiplied alpha.
+        bool premultipliedAlpha = 6;
+        // Compression type of the OpenEXR file.
+        ExrCompressionType compressionType = 7;
+        // Compression factor if using OpenEXR with DWA compression. Default value is 45,
+        float exrCompressionLevel = 8;
+        // Meta data for the file header. This is an array of consecutive key/value pairs.
+        StringArrayT metadata = 9;
+        // Length of the meta data array.
+        uint32 metadataLength = 10;
+        // If TRUE, then the image will be saved on a background thread, and this call returns TRUE
+        bool asynchronous = 11;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPassesMultiExr'
+    message saveRenderPassesMultiExrResponse
+    {
+        //     TRUE if the current result was saved successfully and FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPassesMultiExr1'
+    message saveRenderPassesMultiExr1Request
+    {
+        string fullPath = 1;
+        RenderPassExport passesToExport = 2;
+        uint32 passesToExportLength = 3;
+        bool useHalf = 4;
+        // Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 5;
+        bool premultipliedAlpha = 6;
+        ExrCompressionType compressionType = 7;
+        float exrCompressionLevel = 8;
+        StringArrayT metadata = 9;
+        uint32 metadataLength = 10;
+        bool asynchronous = 11;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPassesMultiExr1'
+    message saveRenderPassesMultiExr1Response
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderPassesDeepExr'
+    message saveRenderPassesDeepExrRequest
+    {
+        // The full path to the file name where the image will be stored.
+        string fullPath = 1;
+        // Array with an export object for each pass to export. Passes that aren't enabled, haven't
+        RenderPassExport passesToExport = 2;
+        // Length of the passesToExport array.
+        uint32 passesToExportLength = 3;
+        // The output color space to use. Must not be NAMED_COLOR_SPACE_SRGB,
+        NamedColorSpace colorSpace = 4;
+        // Compression type of the OpenEXR file.
+        ExrCompressionType compressionType = 5;
+        // Meta data for the file header. This is an array of consecutive key/value pairs.
+        StringArrayT metadata = 6;
+        // Length of the meta data array.
+        uint32 metadataLength = 7;
+        // If TRUE, then the image will be saved on a background thread, and this call returns TRUE
+        bool asynchronous = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderPassesDeepExr'
+    message saveRenderPassesDeepExrResponse
+    {
+        //     TRUE if the current result was saved successfully and FALSE if not.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deepImageEnabled'
+    message deepImageEnabledRequest
+    {
+        // The render target node which settings will be returned.
+        ObjectRef renderTargetNode = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deepImageEnabled'
+    message deepImageEnabledResponse
+    {
+        
+        bool result = 1;
+        // It will be set to the maximum number of depth samples as specified in the kernel's
+        uint32 maxDepthSamples = 2;
+        // It will be set to the minimum number of samples required before the deep image can be
+        uint32 samplesBeforeCanSave = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deepImageEnabled1'
+    message deepImageEnabled1Request
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deepImageEnabled1'
+    message deepImageEnabled1Response
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deepPassesEnabled'
+    message deepPassesEnabledRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deepPassesEnabled'
+    message deepPassesEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::canSaveDeepImage'
+    message canSaveDeepImageRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::canSaveDeepImage'
+    message canSaveDeepImageResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveDeepImage'
+    message saveDeepImageRequest
+    {
+        // Absolute path to the destination file.
+        string fullPath = 1;
+        // The output color space to use. Must not be NAMED_COLOR_SPACE_SRGB,
+        NamedColorSpace colorSpace = 2;
+        // TRUE to save the image on a background thread.
+        bool saveAsync = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveDeepImage'
+    message saveDeepImageResponse
+    {
+        //     TRUE on if the image was saved sucessfully, FALSE otherwise.
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderState'
+    message saveRenderStateRequest
+    {
+        // The file name of the render state file.
+        string renderStateFileName = 1;
+        // The file name of the project that provided the render data that is currently being
+        string customProjectFileName = 2;
+        // The current time in the project, which may be needed to restore the state in an animated
+        float customProjectTime = 3;
+        // The version of the project in case there is additional versioning on the plugin side.
+        uint32 customVersion = 4;
+        // A pointer to some custom data that will be stored in the render state file. It can be
+        uint64 customData = 5;
+        // The size of the custom data. (can be zero)
+        uint32 customDataSize = 6;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::saveRenderState'
+    message saveRenderStateResponse
+    {
+        //     TRUE if the render state was saved successfully, FALSE if not in which case there
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::loadRenderState'
+    message loadRenderStateRequest
+    {
+        // The name of the render state file.
+        string renderStateFileName = 1;
+        // The callback that will restore the project and return the render target node that should
+        LoadRenderStateProjectT loadProjectCallback = 2;
+        // Private data that will be passed to the callback function. (can be NULL)
+        uint64 privateCallbackData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::loadRenderState'
+    message loadRenderStateResponse
+    {
+        //     TRUE if the render state and its referenced project have been loaded correctly, FALSE if
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::previewMaterial'
+    message previewMaterialRequest
+    {
+        // Pointer to the material or texture node that should be rendered (must not be NULL).
+        ObjectRef node = 1;
+        // The width in pixels the preview image should have.
+        uint32 sizeX = 2;
+        // The height in pixels the preview image should have.
+        uint32 sizeY = 3;
+        // The maximum samples per pixel that should be rendered in the preview.
+        uint32 maxSamples = 4;
+        // The size of the object that will have the material in the preview image (useful for
+        float objectSize = 5;
+        // The type of the object that should rendered.
+        PreviewType type = 6;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::previewMaterial'
+    message previewMaterialResponse
+    {
+        //     TRUE if the preview was rendered successfully, FALSE if not.
+        bool result = 1;
+        // Pointer to the RGBA buffer where the result will be stored (must not be NULL).
+        string buffer = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::previewMaterialHdr'
+    message previewMaterialHdrRequest
+    {
+        // Pointer to the material or texture node that should be rendered (must not be NULL).
+        ObjectRef node = 1;
+        // The width in pixels the preview image should have.
+        uint32 sizeX = 2;
+        // The height in pixels the preview image should have.
+        uint32 sizeY = 3;
+        // The maximum samples per pixel that should be rendered in the preview.
+        uint32 maxSamples = 4;
+        // The size of the object that will have the material in the preview image (useful for
+        float objectSize = 5;
+        // The type of the object that should rendered.
+        PreviewType type = 6;
+        // if TRUE the values will be linear and if FALSE  gamma correction for a gamma of 2.2
+        bool linear = 7;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::previewMaterialHdr'
+    message previewMaterialHdrResponse
+    {
+        //     TRUE if the preview was rendered successfully, FALSE if not.
+        bool result = 1;
+        // Pointer to the RGBA buffer where the result will be stored (must not be NULL).
+        FloatArrayT buffer = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::previewMaterial1'
+    message previewMaterial1Request
+    {
+        // Pointer to the material or texture node that should be rendered (must not be NULL).
+        ObjectRef node = 1;
+        // The width and height in pixels for the returned image
+        uint32_2 size = 2;
+        // The cropping to apply to the film plane. Given as {X, Y, width, height}, and as
+        float_4 crop = 3;
+        // The maximum samples per pixel that should be rendered in the preview.
+        uint32 maxSamples = 4;
+        // The size in meters of the object that will have the material in the preview image
+        float objectSize = 5;
+        // The type of the object that should rendered.
+        PreviewType type = 6;
+        // The format of the result buffer.
+        TonemapBufferType bufferType = 7;
+        // The output color space. Must not be NAMED_COLOR_SPACE_OCIO or NAMED_COLOR_SPACE_OTHER.
+        NamedColorSpace colorSpace = 8;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::previewMaterial1'
+    message previewMaterial1Response
+    {
+        //     TRUE if the preview was rendered successfully, FALSE if not.
+        bool result = 1;
+        // The format of the result buffer.
+        Buffer buffer = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getMemoryUsage'
+    message getMemoryUsageRequest
+    {
+        // THe device id
+        uint32 deviceIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getMemoryUsage'
+    message getMemoryUsageResponse
+    {
+        // Returns the memory usage of the device for the current scene. Returns all zero memory usage,
+        ApiDeviceMemoryUsage memUsage = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getResourceStatistics'
+    message getResourceStatisticsRequest
+    {
+        // The device id
+        uint32 deviceIx = 1;
+        // The location of the memory
+        MemoryLocation memoryLocation = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getResourceStatistics'
+    message getResourceStatisticsResponse
+    {
+        // Returns the resource statistics of the device for the current scene. Returns all zero resource
+        ApiDeviceResourceStatistics resourceStats = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getGeometryStatistics'
+    message getGeometryStatisticsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getGeometryStatistics'
+    message getGeometryStatisticsResponse
+    {
+        ApiGeometryStatistics stats = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getTexturesStatistics'
+    message getTexturesStatisticsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getTexturesStatistics'
+    message getTexturesStatisticsResponse
+    {
+        ApiTextureStatistics textureStats = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getSceneBounds'
+    message getSceneBoundsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getSceneBounds'
+    message getSceneBoundsResponse
+    {
+        
+        bool result = 1;
+        float_3 bboxMin = 2;
+        float_3 bboxMax = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getDeviceCount'
+    message getDeviceCountRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getDeviceCount'
+    message getDeviceCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getDeviceComputeModel'
+    message getDeviceComputeModelRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getDeviceComputeModel'
+    message getDeviceComputeModelResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getDeviceName'
+    message getDeviceNameRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getDeviceName'
+    message getDeviceNameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isSupportedDevice'
+    message isSupportedDeviceRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isSupportedDevice'
+    message isSupportedDeviceResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceCanRender'
+    message deviceCanRenderRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceCanRender'
+    message deviceCanRenderResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceCanDenoise'
+    message deviceCanDenoiseRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceCanDenoise'
+    message deviceCanDenoiseResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceSupportsHardwareRayTracing'
+    message deviceSupportsHardwareRayTracingRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceSupportsHardwareRayTracing'
+    message deviceSupportsHardwareRayTracingResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceSharedSurfaceInfo'
+    message deviceSharedSurfaceInfoRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceSharedSurfaceInfo'
+    message deviceSharedSurfaceInfoResponse
+    {
+        
+        ApiDeviceSharedSurfaceInfo result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getAvailablePeerToPeerPairs'
+    message getAvailablePeerToPeerPairsRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getAvailablePeerToPeerPairs'
+    message getAvailablePeerToPeerPairsResponse
+    {
+        //     An array of available peer-to-peer groups or NULL if none are available.
+        Uint2ArrayT result = 1;
+        // The number of available pairs that is stored in the returned array.
+        uint32 count = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setDevicesActivity'
+    message setDevicesActivityRequest
+    {
+        // Indices for those devices that should be enabled for rendering.
+        UintArrayT renderDeviceIxs = 1;
+        // Total number of elements to be used from @ref renderDeviceIxs.
+        uint32 renderDeviceCount = 2;
+        // Indices for those devices for which render priority should be enabled.
+        UintArrayT deviceIxsUsingPriority = 3;
+        // Total number of elements to be used from @ref deviceIxsUsingPriority.
+        uint32 deviceCountUsingPriority = 4;
+        // Index of the device to use for imaging. Use -1 to automatically select the first capable
+        int32 imageDeviceIx = 5;
+        // Indices for those devices that should be enabled for denoising.
+        UintArrayT denoiseDeviceIxs = 6;
+        // Total number of elements to be used from @ref denoiseDeviceIxs.
+        uint32 denoiseDeviceCount = 7;
+        // Pointer to an array of peer-to-peer groups (NVLink) that should be used or NULL if
+        Uint2ArrayT peerToPeerGroups = 8;
+        // The number of peer-to-peer groups in @ref peerToPeerGroups. If set to
+        uint32 peerToPeerGroupCount = 9;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::setDevicesActivity'
+    message setDevicesActivityResponse
+    {
+        //     TRUE if all the devices enabled. FALSE if failed able to enable one or more devices
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isDeviceUsedForRendering'
+    message isDeviceUsedForRenderingRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isDeviceUsedForRendering'
+    message isDeviceUsedForRenderingResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceUsesPriority'
+    message deviceUsesPriorityRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceUsesPriority'
+    message deviceUsesPriorityResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::deviceUsesHardwareRayTracing'
+    message deviceUsesHardwareRayTracingRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::deviceUsesHardwareRayTracing'
+    message deviceUsesHardwareRayTracingResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::imageDeviceIndex'
+    message imageDeviceIndexRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::imageDeviceIndex'
+    message imageDeviceIndexResponse
+    {
+        
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isDeviceUsedForDenoising'
+    message isDeviceUsedForDenoisingRequest
+    {
+        uint32 index = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isDeviceUsedForDenoising'
+    message isDeviceUsedForDenoisingResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::renderPriority'
+    message renderPriorityRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::renderPriority'
+    message renderPriorityResponse
+    {
+        
+        RenderPriority result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setRenderPriority'
+    message setRenderPriorityRequest
+    {
+        RenderPriority priority = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::currentPeerToPeerGroups'
+    message currentPeerToPeerGroupsRequest
+    {
+        uint32 groupCount = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::currentPeerToPeerGroups'
+    message currentPeerToPeerGroupsResponse
+    {
+        
+        Uint2ArrayT result = 1;
+        uint32 groupCount = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::openDeviceSettings'
+    message openDeviceSettingsRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::renderDeviceState'
+    message renderDeviceStateRequest
+    {
+        uint32 deviceIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::renderDeviceState'
+    message renderDeviceStateResponse
+    {
+        
+        RenderDeviceState result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::renderDeviceErrorCode'
+    message renderDeviceErrorCodeRequest
+    {
+        uint32 deviceIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::renderDeviceErrorCode'
+    message renderDeviceErrorCodeResponse
+    {
+        
+        RenderError result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::errorcodeToString'
+    message errorcodeToStringRequest
+    {
+        RenderError code = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::errorcodeToString'
+    message errorcodeToStringResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::renderDeviceErrorMessage'
+    message renderDeviceErrorMessageRequest
+    {
+        uint32 deviceIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::renderDeviceErrorMessage'
+    message renderDeviceErrorMessageResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::saveRenderDeviceConfig'
+    message saveRenderDeviceConfigRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::outOfCoreEnabled'
+    message outOfCoreEnabledRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::outOfCoreEnabled'
+    message outOfCoreEnabledResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::enableOutOfCore'
+    message enableOutOfCoreRequest
+    {
+        // Maximum number of bytes to be used by out-of-core textures and geometry.
+        uint64 limit = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::disableOutOfCore'
+    message disableOutOfCoreRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getOutOfCoreMemoryUsage'
+    message getOutOfCoreMemoryUsageRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getOutOfCoreMemoryUsage'
+    message getOutOfCoreMemoryUsageResponse
+    {
+        // Out-of-core memory used by Octane.
+        uint64 usedOutOfCore = 1;
+        // Out-of-core memory limit, as set up via the preferences. Will be set to the previous
+        uint64 maxOutOfCore = 2;
+        // Estimate of how much memory is currently in use by Octane (including the out-of-core
+        uint64 usedByOctane = 3;
+        // Estimate of the total amount of RAM in use.
+        uint64 totalUsed = 4;
+        // Total RAM size.
+        uint64 totalRam = 5;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setGpuHeadroom'
+    message setGpuHeadroomRequest
+    {
+        // GPU headroom size in bytes.
+        uint64 gpuHeadroom = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getGpuHeadroom'
+    message getGpuHeadroomRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getGpuHeadroom'
+    message getGpuHeadroomResponse
+    {
+        //     GPU headroom size in bytes.
+        uint64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setCoreLimit'
+    message setCoreLimitRequest
+    {
+        // Giving 0 will make Octane use all cores. If you provide a number larger than 0, the
+        uint32 maxCores = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::disableCoreLimit'
+    message disableCoreLimitRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::registerInputSharedSurface'
+    message registerInputSharedSurfaceRequest
+    {
+        // Details of the surface to register. This function increments the reference count of the
+        ObjectRef surface = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::registerInputSharedSurface'
+    message registerInputSharedSurfaceResponse
+    {
+        //     An nonzero ID for the shared surface, or zero if surface is null. This ID can be stored
+        int64 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::unregisterInputSharedSurface'
+    message unregisterInputSharedSurfaceRequest
+    {
+        // The ID that was returned when the shared surface was registered. It's safe to pass zero
+        int64 id = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::triggerAsyncTonemap'
+    message triggerAsyncTonemapRequest
+    {
+        // If this is true, any updates made in the past are guaranteed to be reflected in output
+        bool force = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::setSharedSurfaceOutputType'
+    message setSharedSurfaceOutputTypeRequest
+    {
+        // The desired shared surface output type, or SHARED_SURFACE_TYPE_NONE to disable shared
+        SharedSurfaceType type = 1;
+        // True to enable real time mode, false to disable real time mode. Real time mode is
+        bool realTime = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getSharedSurfaceOutputType'
+    message getSharedSurfaceOutputTypeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getSharedSurfaceOutputType'
+    message getSharedSurfaceOutputTypeResponse
+    {
+        
+        SharedSurfaceType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getRealTime'
+    message getRealTimeRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getRealTime'
+    message getRealTimeResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pauseRendering'
+    message pauseRenderingRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::continueRendering'
+    message continueRenderingRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isRenderingPaused'
+    message isRenderingPausedRequest
+    {
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isRenderingPaused'
+    message isRenderingPausedResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::restartRendering'
+    message restartRenderingRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::stopRendering'
+    message stopRenderingRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pick'
+    message pickRequest
+    {
+        // The X coordinate of the picking ray (in image space).
+        uint32 x = 1;
+        // The Y coordinate of the picking ray (in image space).
+        uint32 y = 2;
+        // If set to TRUE and there are several intersections with polygons mapping to the same
+        bool filterDuplicateMaterialPins = 3;
+        // The maximum number of intersections that can be stored in "intersections".
+        uint32 intersectionsSize = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::pick'
+    message pickResponse
+    {
+        //     The number of intersections stored in "intersections".
+        uint32 result = 1;
+        // Pointer to a C array where the intersections will be stored (must not be NULL).
+        ApiRenderEngine_PickIntersection intersections = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pickWhitePoint'
+    message pickWhitePointRequest
+    {
+        uint32 x = 1;
+        uint32 y = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::pickWhitePoint'
+    message pickWhitePointResponse
+    {
+        
+        bool result = 1;
+        float_3 whitePoint = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pickImagerWhitePoint'
+    message pickImagerWhitePointRequest
+    {
+        // The coordinates of the pixel to sample near.
+        uint32_2 position = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::pickImagerWhitePoint'
+    message pickImagerWhitePointResponse
+    {
+        //     True if the operation succeeded. False if there was an error.
+        bool result = 1;
+        // Will be set to the picked white point (in the linear sRGB color space) if this function
+        float_3 whitePoint = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::isOutputAovWhitePointPickable'
+    message isOutputAovWhitePointPickableRequest
+    {
+        // The index of the output AOV to check.
+        uint32 outputAovIndex = 1;
+        // The unique ID (as returned by ApiNode::uniqueId()) of the "Adjust white balance" output
+        uint32 nodeUniqueId = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::isOutputAovWhitePointPickable'
+    message isOutputAovWhitePointPickableResponse
+    {
+        //     True if the output AOV uses the pickable node identified by nodeUniqueId. False
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pickOutputAovWhitePoint'
+    message pickOutputAovWhitePointRequest
+    {
+        // The coordinates of the pixel to sample near.
+        uint32_2 position = 1;
+        // The pick is done in the context of the output AOV with this index.
+        uint32 outputAovIndex = 2;
+        // The unique ID (as returned by ApiNode::uniqueId()) of the "Adjust white balance" output
+        uint32 nodeUniqueId = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::pickOutputAovWhitePoint'
+    message pickOutputAovWhitePointResponse
+    {
+        //     True if the operation succeeded. False if there was an error.
+        bool result = 1;
+        // If this function returns true: will be set to the picked white point (in the linear sRGB
+        float_3 whitePoint = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::pickCryptomatteMatte'
+    message pickCryptomatteMatteRequest
+    {
+        // The X coordinate of the pixel to sample.
+        uint32 x = 1;
+        // The Y coordinate of the pixel to sample.
+        uint32 y = 2;
+        // The cryptomatte pass for which to pick the matte. This must be one of the
+        RenderPassId pass = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::pickCryptomatteMatte'
+    message pickCryptomatteMatteResponse
+    {
+        //     True if a matte was picked. False if no mattes had coverage for the given pixel, or the
+        bool result = 1;
+        // If this function returns true, the matte name that was picked will be written here. If
+        string matteName = 2;
+        // On input, the size of the buffer pointed to by matteName (including space for a
+        uint32 matteNameBufferSize = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::modifyCryptomatteMatteSelection'
+    message modifyCryptomatteMatteSelectionRequest
+    {
+        // The original value of the matte selection string. Must not be null.
+        string inputText = 1;
+        // The matte name to add to or remove from the selection. Must not be null.
+        string matteName = 2;
+        // True to ensure the matte name is included in the selection. False to ensure it is not
+        bool add = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::modifyCryptomatteMatteSelection'
+    message modifyCryptomatteMatteSelectionResponse
+    {
+        //     True if the operation succeeded. False if the operation failed because
+        bool result = 1;
+        // If this function returns true, the modified matte selection string will be written here.
+        string outputText = 2;
+        // On input, the size of the buffer pointed to by outputText (including space for a
+        uint32 outputTextBufferSize = 3;
+    }
+
+    // COMMENTED OUT: Conflicts with JavaScript Object.prototype.toString()
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::toString'
+    // message toStringRequest
+    // {
+    //     RenderPriority priority = 1;
+    // }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::toString'
+    // message toStringResponse
+    // {
+    //     
+    //     string result = 1;
+    // }
+
+    // Request packet corresponding to '[in] parameters in ApiRenderEngine::getDevicePciIds'
+    message getDevicePciIdsRequest
+    {
+        // device id
+        uint32 deviceIx = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiRenderEngine::getDevicePciIds'
+    message getDevicePciIdsResponse
+    {
+        // PCI bus id of the device
+        uint64 pciBusId = 1;
+        // PCI device id of the device
+        uint64 pciDeviceId = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiDeviceMemoryUsage' from 'apirender.h'
+
+// GRPC interface definition for class 'ApiDeviceResourceStatistics' from 'apirender.h'
+
+// GRPC interface definition for class 'ApiGeometryStatistics' from 'apirender.h'
+
+// GRPC interface definition for class 'ApiRenderEngine' from 'apirender.h'
+service ApiRenderEngineService
+{
+    /// Sets the render target node that should be rendered
+    rpc setRenderTargetNode(ApiRenderEngine.setRenderTargetNodeRequest) returns (ApiRenderEngine.setRenderTargetNodeResponse);
+    /// Returns render target node that's currently being rendered (can be NULL)
+    rpc getRenderTargetNode(ApiRenderEngine.getRenderTargetNodeRequest) returns (ApiRenderEngine.getRenderTargetNodeResponse);
+    /// Returns the geometry root node that's currently being rendered (can be NULL)
+    rpc getRenderGeometryNode(ApiRenderEngine.getRenderGeometryNodeRequest) returns (ApiRenderEngine.getRenderGeometryNodeResponse);
+    /// Returns the camera node that's currently being rendered (can be NULL)
+    rpc getRenderCameraNode(ApiRenderEngine.getRenderCameraNodeRequest) returns (ApiRenderEngine.getRenderCameraNodeResponse);
+    /// Sets the render region
+    rpc setRenderRegion(ApiRenderEngine.setRenderRegionRequest) returns (google.protobuf.Empty);
+    /// Fetches the current render region settings
+    rpc getRenderRegion(ApiRenderEngine.getRenderRegionRequest) returns (ApiRenderEngine.getRenderRegionResponse);
+    /// Sets parameters for asynchronous tonemapping
+    rpc setAsyncTonemapParams(ApiRenderEngine.setAsyncTonemapParamsRequest) returns (google.protobuf.Empty);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     setAsyncTonemapParams(
+    rpc setAsyncTonemapParams1(ApiRenderEngine.setAsyncTonemapParams1Request) returns (google.protobuf.Empty);
+    /// Returns the current asynchronous tonemap buffer type
+    rpc asyncTonemapBufferType(ApiRenderEngine.asyncTonemapBufferTypeRequest) returns (ApiRenderEngine.asyncTonemapBufferTypeResponse);
+    /// Returns the current value of whether to apply false color to cryptomatte passes for
+    /// asynchronous tonemapping
+    rpc asyncTonemapCryptomatteFalseColor(ApiRenderEngine.asyncTonemapCryptomatteFalseColorRequest) returns (ApiRenderEngine.asyncTonemapCryptomatteFalseColorResponse);
+    /// Returns the current asynchronous tonemap output color space info
+    rpc asyncTonemapOutputColorSpaceInfo(ApiRenderEngine.asyncTonemapOutputColorSpaceInfoRequest) returns (ApiRenderEngine.asyncTonemapOutputColorSpaceInfoResponse);
+    /// Returns the current asynchronous tonemap output color space
+    rpc asyncTonemapColorSpace(ApiRenderEngine.asyncTonemapColorSpaceRequest) returns (ApiRenderEngine.asyncTonemapColorSpaceResponse);
+    /// Returns the current asynchronous tonemap premultiplied alpha type
+    rpc asyncTonemapPremultipliedAlphaType(ApiRenderEngine.asyncTonemapPremultipliedAlphaTypeRequest) returns (ApiRenderEngine.asyncTonemapPremultipliedAlphaTypeResponse);
+    /// Sets the render passes that are tonemapped all the time
+    rpc setAsyncTonemapRenderPasses(ApiRenderEngine.setAsyncTonemapRenderPassesRequest) returns (ApiRenderEngine.setAsyncTonemapRenderPassesResponse);
+    /// Returns the set of tonemap render passes
+    rpc asyncTonemapRenderPasses(ApiRenderEngine.asyncTonemapRenderPassesRequest) returns (google.protobuf.Empty);
+    /// Returns the render AOVs and output AOVs that are enabled in the specified render target
+    /// node as a set of render pass IDs
+    rpc getEnabledAovs(ApiRenderEngine.getEnabledAovsRequest) returns (ApiRenderEngine.getEnabledAovsResponse);
+    /// Frees the set of tonemap passes returned by 
+    rpc freeTonemapPasses(ApiRenderEngine.freeTonemapPassesRequest) returns (google.protobuf.Empty);
+    /// Returns the display pass in the current render
+    rpc displayRenderPassId(ApiRenderEngine.displayRenderPassIdRequest) returns (ApiRenderEngine.displayRenderPassIdResponse);
+    /// Sets the sub-sampling mode
+    rpc setSubSampleMode(ApiRenderEngine.setSubSampleModeRequest) returns (google.protobuf.Empty);
+    /// Returns the current sub-sampling mode
+    rpc getSubSampleMode(ApiRenderEngine.getSubSampleModeRequest) returns (ApiRenderEngine.getSubSampleModeResponse);
+    /// Sets the current clay render mode
+    rpc setClayMode(ApiRenderEngine.setClayModeRequest) returns (google.protobuf.Empty);
+    /// Returns the current clay mode
+    rpc clayMode(ApiRenderEngine.clayModeRequest) returns (ApiRenderEngine.clayModeResponse);
+    /// Returns the current fps
+    rpc fps(ApiRenderEngine.fpsRequest) returns (ApiRenderEngine.fpsResponse);
+    /// Sets the current fps
+    rpc setFps(ApiRenderEngine.setFpsRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if the render engine is currently running a compilation job
+    rpc isCompiling(ApiRenderEngine.isCompilingRequest) returns (ApiRenderEngine.isCompilingResponse);
+    /// Deprecated, this returns the same value as hasPendingRenderData()
+    rpc isCompressingTextures(ApiRenderEngine.isCompressingTexturesRequest) returns (ApiRenderEngine.isCompressingTexturesResponse);
+    /// Returns TRUE if there is render data that has not finished compiling
+    rpc hasPendingRenderData(ApiRenderEngine.hasPendingRenderDataRequest) returns (ApiRenderEngine.hasPendingRenderDataResponse);
+    /// Returns the change level after the last update
+    rpc getCurrentChangeLevel(ApiRenderEngine.getCurrentChangeLevelRequest) returns (ApiRenderEngine.getCurrentChangeLevelResponse);
+    /// Returns the change level of the last rendered image, which can be lower than
+    /// getCurrentChangeLevel()
+    rpc getRenderImageChangeLevel(ApiRenderEngine.getRenderImageChangeLevelRequest) returns (ApiRenderEngine.getRenderImageChangeLevelResponse);
+    /// Returns the change level of the last time the rendering was restarted
+    rpc getRenderRestartedChangeLevel(ApiRenderEngine.getRenderRestartedChangeLevelRequest) returns (ApiRenderEngine.getRenderRestartedChangeLevelResponse);
+    /// Registers an asynchronous update callback
+    rpc setAsyncUpdateCallback(ApiRenderEngine.setAsyncUpdateCallbackRequest) returns (ApiRenderEngine.setAsyncUpdateCallbackResponse);
+    /// Checks if updates are done asynchronously
+    rpc updatesAreAsync(ApiRenderEngine.updatesAreAsyncRequest) returns (ApiRenderEngine.updatesAreAsyncResponse);
+    /// 
+    rpc isImageReady(ApiRenderEngine.isImageReadyRequest) returns (ApiRenderEngine.isImageReadyResponse);
+    rpc resetImageReady(ApiRenderEngine.resetImageReadyRequest) returns (google.protobuf.Empty);
+    rpc isRenderFailure(ApiRenderEngine.isRenderFailureRequest) returns (ApiRenderEngine.isRenderFailureResponse);
+    rpc resetRenderFailure(ApiRenderEngine.resetRenderFailureRequest) returns (google.protobuf.Empty);
+    /// Registers a callback with the render target that is called when a tile was blended in one
+    /// of the two render films and the render statistics did not change
+    rpc setOnTileBlendedCallback(ApiRenderEngine.setOnTileBlendedCallbackRequest) returns (ApiRenderEngine.setOnTileBlendedCallbackResponse);
+    /// Registers a callback with the render target that is called when the statistics in the
+    /// render target changed
+    rpc setOnNewStatisticsCallback(ApiRenderEngine.setOnNewStatisticsCallbackRequest) returns (ApiRenderEngine.setOnNewStatisticsCallbackResponse);
+    /// Registers a callback with the render target that is called when a new tonemapped result
+    /// is available
+    rpc setOnNewImageCallback(ApiRenderEngine.setOnNewImageCallbackRequest) returns (ApiRenderEngine.setOnNewImageCallbackResponse);
+    /// Registers a callback with the render target that is called when OCIO errors are encountered
+    /// when updating render data
+    rpc setOnOcioErrorCallback(ApiRenderEngine.setOnOcioErrorCallbackRequest) returns (ApiRenderEngine.setOnOcioErrorCallbackResponse);
+    /// Registers a callback with the render target that is called when rendering fails
+    rpc setOnRenderFailureCallback(ApiRenderEngine.setOnRenderFailureCallbackRequest) returns (ApiRenderEngine.setOnRenderFailureCallbackResponse);
+    /// Forces render engine callbacks to be made in render threads instead of the main message
+    /// thread
+    rpc setForceCallbacksInRenderThreads(ApiRenderEngine.setForceCallbacksInRenderThreadsRequest) returns (google.protobuf.Empty);
+    /// Grabs the latest render result in the passed in array
+    rpc grabRenderResult(ApiRenderEngine.grabRenderResultRequest) returns (ApiRenderEngine.grabRenderResultResponse);
+    /// Releases the results again so that the engine can reuse it
+    rpc releaseRenderResult(ApiRenderEngine.releaseRenderResultRequest) returns (google.protobuf.Empty);
+    /// Runs a synchronous tonemap and returns the result
+    rpc synchronousTonemap(ApiRenderEngine.synchronousTonemapRequest) returns (ApiRenderEngine.synchronousTonemapResponse);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     auto result = synchronousTonemap(
+    rpc synchronousTonemap1(ApiRenderEngine.synchronousTonemap1Request) returns (ApiRenderEngine.synchronousTonemap1Response);
+    /// Runs a synchronous tonemap for all render passes that are already started by the render 
+    /// engine and returns the results
+    rpc synchronousTonemapAllRenderPasses(ApiRenderEngine.synchronousTonemapAllRenderPassesRequest) returns (ApiRenderEngine.synchronousTonemapAllRenderPassesResponse);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     auto result = synchronousTonemapAllRenderPasses(
+    rpc synchronousTonemapAllRenderPasses1(ApiRenderEngine.synchronousTonemapAllRenderPasses1Request) returns (ApiRenderEngine.synchronousTonemapAllRenderPasses1Response);
+    /// Returns the statistics for the current render progress
+    rpc getRenderStatistics(ApiRenderEngine.getRenderStatisticsRequest) returns (ApiRenderEngine.getRenderStatisticsResponse);
+    /// Returns the statistics for the render results
+    rpc getRenderResultStatistics(ApiRenderEngine.getRenderResultStatisticsRequest) returns (ApiRenderEngine.getRenderResultStatisticsResponse);
+    /// Saves the current result of the render target to the specified file
+    rpc saveImage(ApiRenderEngine.saveImageRequest) returns (ApiRenderEngine.saveImageResponse);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     auto result = saveImage(
+    rpc saveImage1(ApiRenderEngine.saveImage1Request) returns (ApiRenderEngine.saveImage1Response);
+    /// Saves the current result of the render target to the specified file using provided export settings
+    ///
+    /// 
+    rpc saveImage2(ApiRenderEngine.saveImage2Request) returns (ApiRenderEngine.saveImage2Response);
+    /// Saves the render passes as discrete files in the provided output directory
+    rpc saveRenderPasses(ApiRenderEngine.saveRenderPassesRequest) returns (ApiRenderEngine.saveRenderPassesResponse);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     auto result = saveRenderPasses(
+    rpc saveRenderPasses1(ApiRenderEngine.saveRenderPasses1Request) returns (ApiRenderEngine.saveRenderPasses1Response);
+    /// Saves the render passes as discrete files in the provided output directory
+    rpc saveRenderPasses2(ApiRenderEngine.saveRenderPasses2Request) returns (ApiRenderEngine.saveRenderPasses2Response);
+    /// Saves the render passes in a multi layer EXR file
+    rpc saveRenderPassesMultiExr(ApiRenderEngine.saveRenderPassesMultiExrRequest) returns (ApiRenderEngine.saveRenderPassesMultiExrResponse);
+    /// Convenience overload that does the same thing as:
+    ///
+    ///     auto info = ApiOutputColorSpaceInfo::createKnownColorSpace(colorSpace, false);
+    ///     auto result = saveRenderPassesMultiExr(
+    rpc saveRenderPassesMultiExr1(ApiRenderEngine.saveRenderPassesMultiExr1Request) returns (ApiRenderEngine.saveRenderPassesMultiExr1Response);
+    /// Saves the render passes in a deep image EXR file
+    rpc saveRenderPassesDeepExr(ApiRenderEngine.saveRenderPassesDeepExrRequest) returns (ApiRenderEngine.saveRenderPassesDeepExrResponse);
+    /// Checks whether the provided render target both supports and has enabled deep pixel rendering
+    rpc deepImageEnabled(ApiRenderEngine.deepImageEnabledRequest) returns (ApiRenderEngine.deepImageEnabledResponse);
+    /// Checks if deep image rendering is enabled for the current render task
+    rpc deepImageEnabled1(ApiRenderEngine.deepImageEnabled1Request) returns (ApiRenderEngine.deepImageEnabled1Response);
+    /// Checks if deep image rendering and deep render AOVs are enabled for the current render task
+    rpc deepPassesEnabled(ApiRenderEngine.deepPassesEnabledRequest) returns (ApiRenderEngine.deepPassesEnabledResponse);
+    /// Checks if we can save a deep image
+    rpc canSaveDeepImage(ApiRenderEngine.canSaveDeepImageRequest) returns (ApiRenderEngine.canSaveDeepImageResponse);
+    /// Saves the current render as a deep image
+    rpc saveDeepImage(ApiRenderEngine.saveDeepImageRequest) returns (ApiRenderEngine.saveDeepImageResponse);
+    /// Saves the current render state plus a reference to the project file
+    rpc saveRenderState(ApiRenderEngine.saveRenderStateRequest) returns (ApiRenderEngine.saveRenderStateResponse);
+    /// Loads an Octane render state file
+    rpc loadRenderState(ApiRenderEngine.loadRenderStateRequest) returns (ApiRenderEngine.loadRenderStateResponse);
+    /// Renders a preview image of a texture / material node
+    rpc previewMaterial(ApiRenderEngine.previewMaterialRequest) returns (ApiRenderEngine.previewMaterialResponse);
+    /// Same as above but return HDR buffer
+    ///
+    /// 
+    rpc previewMaterialHdr(ApiRenderEngine.previewMaterialHdrRequest) returns (ApiRenderEngine.previewMaterialHdrResponse);
+    /// Preview a material or texture node
+    ///
+    /// 
+    rpc previewMaterial1(ApiRenderEngine.previewMaterial1Request) returns (ApiRenderEngine.previewMaterial1Response);
+    /// Returns the overall memory usage of a device
+    rpc getMemoryUsage(ApiRenderEngine.getMemoryUsageRequest) returns (ApiRenderEngine.getMemoryUsageResponse);
+    /// Returns memory usage statistics for a device
+    ///
+    /// 
+    rpc getResourceStatistics(ApiRenderEngine.getResourceStatisticsRequest) returns (ApiRenderEngine.getResourceStatisticsResponse);
+    /// Returns the geometry statistics of the current scene
+    rpc getGeometryStatistics(ApiRenderEngine.getGeometryStatisticsRequest) returns (ApiRenderEngine.getGeometryStatisticsResponse);
+    /// Returns the texture usage
+    rpc getTexturesStatistics(ApiRenderEngine.getTexturesStatisticsRequest) returns (ApiRenderEngine.getTexturesStatisticsResponse);
+    /// If the currently rendered scene contains geometry, its bounding box is stored in the
+    /// provided vectors and TRUE is returned
+    rpc getSceneBounds(ApiRenderEngine.getSceneBoundsRequest) returns (ApiRenderEngine.getSceneBoundsResponse);
+    /// Returns the number of render devices (GPUs) in this machine
+    rpc getDeviceCount(ApiRenderEngine.getDeviceCountRequest) returns (ApiRenderEngine.getDeviceCountResponse);
+    /// Returns the compute model of the device
+    rpc getDeviceComputeModel(ApiRenderEngine.getDeviceComputeModelRequest) returns (ApiRenderEngine.getDeviceComputeModelResponse);
+    /// Returns the name of the device
+    rpc getDeviceName(ApiRenderEngine.getDeviceNameRequest) returns (ApiRenderEngine.getDeviceNameResponse);
+    /// Returns TRUE if the device with the provided index is supported by Octane, i
+    rpc isSupportedDevice(ApiRenderEngine.isSupportedDeviceRequest) returns (ApiRenderEngine.isSupportedDeviceResponse);
+    /// Returns TRUE if the device with the provided index can be used for rendering
+    rpc deviceCanRender(ApiRenderEngine.deviceCanRenderRequest) returns (ApiRenderEngine.deviceCanRenderResponse);
+    /// Returns TRUE if the device with the provided index can be used for denoising
+    rpc deviceCanDenoise(ApiRenderEngine.deviceCanDenoiseRequest) returns (ApiRenderEngine.deviceCanDenoiseResponse);
+    /// Returns TRUE if the device with the provided index supports hardware ray-tracing
+    rpc deviceSupportsHardwareRayTracing(ApiRenderEngine.deviceSupportsHardwareRayTracingRequest) returns (ApiRenderEngine.deviceSupportsHardwareRayTracingResponse);
+    /// Returns details of the shared surface capabilities of the device with the provided index
+    rpc deviceSharedSurfaceInfo(ApiRenderEngine.deviceSharedSurfaceInfoRequest) returns (ApiRenderEngine.deviceSharedSurfaceInfoResponse);
+    /// Returns an array of available peer-to-peer (NVlink) pairs
+    rpc getAvailablePeerToPeerPairs(ApiRenderEngine.getAvailablePeerToPeerPairsRequest) returns (ApiRenderEngine.getAvailablePeerToPeerPairsResponse);
+    /// List of devices to enable for rendering and denoising
+    rpc setDevicesActivity(ApiRenderEngine.setDevicesActivityRequest) returns (ApiRenderEngine.setDevicesActivityResponse);
+    /// Returns TRUE if the device is used for rendering
+    rpc isDeviceUsedForRendering(ApiRenderEngine.isDeviceUsedForRenderingRequest) returns (ApiRenderEngine.isDeviceUsedForRenderingResponse);
+    /// Returns TRUE if the device with index uses render priority
+    rpc deviceUsesPriority(ApiRenderEngine.deviceUsesPriorityRequest) returns (ApiRenderEngine.deviceUsesPriorityResponse);
+    /// Returns TRUE if the device at the provided index is using hardware ray-tracing
+    rpc deviceUsesHardwareRayTracing(ApiRenderEngine.deviceUsesHardwareRayTracingRequest) returns (ApiRenderEngine.deviceUsesHardwareRayTracingResponse);
+    /// Returns the index of the device used for imaging, or -1 if no device is capable
+    rpc imageDeviceIndex(ApiRenderEngine.imageDeviceIndexRequest) returns (ApiRenderEngine.imageDeviceIndexResponse);
+    /// Returns TRUE if the device is used for denoising
+    rpc isDeviceUsedForDenoising(ApiRenderEngine.isDeviceUsedForDenoisingRequest) returns (ApiRenderEngine.isDeviceUsedForDenoisingResponse);
+    /// Returns the current render priority
+    rpc renderPriority(ApiRenderEngine.renderPriorityRequest) returns (ApiRenderEngine.renderPriorityResponse);
+    /// Sets the current render priority
+    rpc setRenderPriority(ApiRenderEngine.setRenderPriorityRequest) returns (google.protobuf.Empty);
+    /// Returns the current peer-to-peer configuration
+    rpc currentPeerToPeerGroups(ApiRenderEngine.currentPeerToPeerGroupsRequest) returns (ApiRenderEngine.currentPeerToPeerGroupsResponse);
+    /// Opens a modal dialog to allow the user to set devices configuration
+    rpc openDeviceSettings(ApiRenderEngine.openDeviceSettingsRequest) returns (google.protobuf.Empty);
+    /// Returns the state of the device
+    rpc renderDeviceState(ApiRenderEngine.renderDeviceStateRequest) returns (ApiRenderEngine.renderDeviceStateResponse);
+    /// Returns the error state of a device or RENDER_ERROR_NONE if the device has not failed or
+    /// is not active
+    rpc renderDeviceErrorCode(ApiRenderEngine.renderDeviceErrorCodeRequest) returns (ApiRenderEngine.renderDeviceErrorCodeResponse);
+    /// Returns the error state of a device as string or an empty string if the device is not in an
+    /// error state or is not active
+    rpc errorcodeToString(ApiRenderEngine.errorcodeToStringRequest) returns (ApiRenderEngine.errorcodeToStringResponse);
+    /// Returns the (low-level) error message that triggered the device to fail or an empty string
+    /// if it hasn't failed or isn't active
+    rpc renderDeviceErrorMessage(ApiRenderEngine.renderDeviceErrorMessageRequest) returns (ApiRenderEngine.renderDeviceErrorMessageResponse);
+    /// Saves the current render device configuration (device activity and priority usage in the
+    /// Octane preferences, which are shared between Octane Standalone and all plugins)
+    rpc saveRenderDeviceConfig(ApiRenderEngine.saveRenderDeviceConfigRequest) returns (google.protobuf.Empty);
+    /// Returns true if out-of-core textures are enabled
+    rpc outOfCoreEnabled(ApiRenderEngine.outOfCoreEnabledRequest) returns (ApiRenderEngine.outOfCoreEnabledResponse);
+    /// Enable out-of-core textures and geometry, or update the maximum amount of system memory
+    /// to allow for use
+    rpc enableOutOfCore(ApiRenderEngine.enableOutOfCoreRequest) returns (google.protobuf.Empty);
+    /// Disables out-of-core
+    rpc disableOutOfCore(ApiRenderEngine.disableOutOfCoreRequest) returns (google.protobuf.Empty);
+    /// Returns RAM usage by out-of-core textures
+    rpc getOutOfCoreMemoryUsage(ApiRenderEngine.getOutOfCoreMemoryUsageRequest) returns (ApiRenderEngine.getOutOfCoreMemoryUsageResponse);
+    /// To run the render kernels successfully, there needs to be some amount of free GPU memory
+    rpc setGpuHeadroom(ApiRenderEngine.setGpuHeadroomRequest) returns (google.protobuf.Empty);
+    /// Gets the GPU headroom value
+    rpc getGpuHeadroom(ApiRenderEngine.getGpuHeadroomRequest) returns (ApiRenderEngine.getGpuHeadroomResponse);
+    /// Sets the maximum number of system cores to use for the following subsystems:
+    /// 1
+    rpc setCoreLimit(ApiRenderEngine.setCoreLimitRequest) returns (google.protobuf.Empty);
+    /// Disables the core limit, meaning Octane will use all cores available for the subsystems
+    /// listed in the comments above on setCoreLimit()
+    rpc disableCoreLimit(ApiRenderEngine.disableCoreLimitRequest) returns (google.protobuf.Empty);
+    /// Registers a shared surface to be used for compositor input
+    rpc registerInputSharedSurface(ApiRenderEngine.registerInputSharedSurfaceRequest) returns (ApiRenderEngine.registerInputSharedSurfaceResponse);
+    /// Unregisters an input shared surface that was registered with registerInputSharedSurface
+    rpc unregisterInputSharedSurface(ApiRenderEngine.unregisterInputSharedSurfaceRequest) returns (google.protobuf.Empty);
+    /// Causes an asynchronous tonemap operation to run even if one wouldn't otherwise have been
+    /// run
+    rpc triggerAsyncTonemap(ApiRenderEngine.triggerAsyncTonemapRequest) returns (google.protobuf.Empty);
+    /// Sets the shared surface output type and whether to use real time mode
+    rpc setSharedSurfaceOutputType(ApiRenderEngine.setSharedSurfaceOutputTypeRequest) returns (google.protobuf.Empty);
+    /// Gets the current shared surface output type
+    rpc getSharedSurfaceOutputType(ApiRenderEngine.getSharedSurfaceOutputTypeRequest) returns (ApiRenderEngine.getSharedSurfaceOutputTypeResponse);
+    /// Gets whether the renderer is in real time mode
+    rpc getRealTime(ApiRenderEngine.getRealTimeRequest) returns (ApiRenderEngine.getRealTimeResponse);
+    /// Pauses rendering
+    rpc pauseRendering(ApiRenderEngine.pauseRenderingRequest) returns (google.protobuf.Empty);
+    /// Continues rendering
+    rpc continueRendering(ApiRenderEngine.continueRenderingRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if rendering is currently paused
+    rpc isRenderingPaused(ApiRenderEngine.isRenderingPausedRequest) returns (ApiRenderEngine.isRenderingPausedResponse);
+    /// Restarts the rendering, i
+    rpc restartRendering(ApiRenderEngine.restartRenderingRequest) returns (google.protobuf.Empty);
+    /// Stops the rendering completely, i
+    rpc stopRendering(ApiRenderEngine.stopRenderingRequest) returns (google.protobuf.Empty);
+    /// Shoots a viewing ray from the camera through the specified pixel and records all
+    /// intersections with the scene ordered by distance from camera
+    rpc pick(ApiRenderEngine.pickRequest) returns (ApiRenderEngine.pickResponse);
+    /// 
+    rpc pickWhitePoint(ApiRenderEngine.pickWhitePointRequest) returns (ApiRenderEngine.pickWhitePointResponse);
+    /// Determines the average color around a specified location in the main beauty pass and
+    /// calculates the required color to white balance those pixels, i
+    rpc pickImagerWhitePoint(ApiRenderEngine.pickImagerWhitePointRequest) returns (ApiRenderEngine.pickImagerWhitePointResponse);
+    /// Checks whether a white point is pickable for a given output AOV and "Adjust white balance"
+    /// output AOV layer node
+    rpc isOutputAovWhitePointPickable(ApiRenderEngine.isOutputAovWhitePointPickableRequest) returns (ApiRenderEngine.isOutputAovWhitePointPickableResponse);
+    /// Determines the average color around a specified location before applying an "Adjust white
+    /// balance" output AOV layer while compositing an output AOV, and calculates the required white
+    /// point to use for the layer so that it will make that location neutral
+    rpc pickOutputAovWhitePoint(ApiRenderEngine.pickOutputAovWhitePointRequest) returns (ApiRenderEngine.pickOutputAovWhitePointResponse);
+    /// Gets the name of the cryptomatte matte with the most coverage at a given position
+    rpc pickCryptomatteMatte(ApiRenderEngine.pickCryptomatteMatteRequest) returns (ApiRenderEngine.pickCryptomatteMatteResponse);
+    /// Modifies a cryptomatte matte selection string (e
+    rpc modifyCryptomatteMatteSelection(ApiRenderEngine.modifyCryptomatteMatteSelectionRequest) returns (ApiRenderEngine.modifyCryptomatteMatteSelectionResponse);
+    /// COMMENTED OUT: Conflicts with JavaScript Object.prototype.toString()
+    /// Returns a human readable string for a render priority
+    // rpc toString(ApiRenderEngine.toStringRequest) returns (ApiRenderEngine.toStringResponse);
+    /// Returns PCI bus and device ids of the device
+    ///
+    /// 
+    rpc getDevicePciIds(ApiRenderEngine.getDevicePciIdsRequest) returns (ApiRenderEngine.getDevicePciIdsResponse);
+}
+
+// GRPC interface definition for class 'ApiRenderEngine_PickIntersection' from 'apirender.h'
+
+// GRPC interface definition for class 'ApiRenderImage' from 'apirender.h'
+service ApiRenderImageService
+{
+    /// Little convenience function to check if this buffer is empty
+    rpc isEmpty(ApiRenderImage.isEmptyRequest) returns (ApiRenderImage.isEmptyResponse);
+    /// Little convenience function to check if a render result is LDR (1 byte per channel) or HDR
+    /// (2 or 4 bytes per channel)
+    rpc isHdr(ApiRenderImage.isHdrRequest) returns (ApiRenderImage.isHdrResponse);
+}
+
+// GRPC interface definition for class 'ApiTextureStatistics' from 'apirender.h'

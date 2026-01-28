@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "google/protobuf/empty.proto";
+
+message ApiControl
+{
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::startBlockingOperation'
+    message StartBlockingRequest
+    {
+        string uniqueModuleId = 1;
+        string message = 2;
+    }
+
+    message ApiLogRequest
+    {
+        bool saveToTextFile = 1;
+        string filePath = 2;
+    }
+
+    message ControlResponse
+    {
+        bool success = 1;
+    }
+
+    message WebRTCStatusResponse
+    {
+        bool   running = 1;
+        string signalServerAddress = 2;
+        string ourId = 3; 
+    }
+}
+
+// GRPC interface definition for class 'ApiWindow' from 'apiwindow.h'
+service ApiControlService
+{
+    /// Method to block UI so thaty multiple RPC calls can be made by the module without the suer interfering
+    rpc startBlockingOperation(ApiControl.StartBlockingRequest) returns (ApiControl.ControlResponse);
+    /// Method to istnruct ApiLog class  (used by GRPC calls) to save to a text file
+    rpc setApiLogFilePath(ApiControl.ApiLogRequest) returns (ApiControl.ControlResponse);
+    /// Return data about the WebRTC service inside Octane
+    rpc getWebRTCStatus(google.protobuf.Empty) returns (ApiControl.WebRTCStatusResponse);
+    /// Attempt to close Octane
+    rpc closeOctane(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

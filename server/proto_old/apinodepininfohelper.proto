@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "octaneinfos.proto";
+import "common.proto";
+
+message ApiNodePinInfoEx
+{
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::createApiNodePinInfoArray'
+    message CreateNodePinInfoArrayRequest
+    {
+        repeated ApiNodePinInfo nodePinInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfoEx::createApiNodePinInfoArray'
+    message CreateNodePinInfoArrayResponse
+    {
+        repeated ObjectRef nodePinInfoRefs = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfoEx::createApiNodePinInfo'
+    message CreateNodePinInfoRequest
+    {
+        ApiNodePinInfo nodePinInfo = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfoEx::createApiNodePinInfo'
+    message CreateNodePinInfoResponse
+    {
+        ObjectRef nodePinInfoRef = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiNodePinInfo::create'
+    message DeleteNodePinInfoRequest
+    {
+        ObjectRef nodePinInfoRef = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiNodePinInfo::create'
+    message DeleteNodePinInfoResponse
+    {
+        bool success = 1;
+    }
+
+    message UpdateNodePinInfoRequest
+    {
+        ObjectRef nodePinInfoRef = 1;
+        ApiNodePinInfo nodePinInfo = 2;
+    }
+
+    message UpdateNodePinInfoResponse
+    {
+        bool success = 1;
+    }
+
+    message GetNodePinInfoRequest
+    {
+       ObjectRef nodePinInfoRef = 1;
+    }
+
+    message GetNodePinInfoResponse
+    {
+        bool success = 1;
+        ApiNodePinInfo nodePinInfo = 2;
+    }
+}
+
+
+// GRPC interface definition for class 'ApiWindow' from 'apiwindow.h'
+service ApiNodePinInfoExService
+{
+    /// Creates a ApiNodePinInfo object on the server
+    rpc createApiNodePinInfoArray(ApiNodePinInfoEx.CreateNodePinInfoArrayRequest) returns (ApiNodePinInfoEx.CreateNodePinInfoArrayResponse);
+
+    /// Creates a ApiNodePinInfo object on the server
+    rpc createApiNodePinInfo(ApiNodePinInfoEx.CreateNodePinInfoRequest) returns (ApiNodePinInfoEx.CreateNodePinInfoResponse);
+
+    /// Deletes a ApiNodePinInfo object on the server
+    rpc deleteApiNodePinInfo(ApiNodePinInfoEx.DeleteNodePinInfoRequest) returns (ApiNodePinInfoEx.DeleteNodePinInfoResponse);
+
+    /// Modifies a ApiNodePinInfo object on the server
+    rpc updateApiNodePinInfo(ApiNodePinInfoEx.UpdateNodePinInfoRequest) returns (ApiNodePinInfoEx.UpdateNodePinInfoResponse);
+
+    /// Returns a ApiNodePinInfo struct from the server
+    rpc getApiNodePinInfo(ApiNodePinInfoEx.GetNodePinInfoRequest) returns (ApiNodePinInfoEx.GetNodePinInfoResponse);
+}

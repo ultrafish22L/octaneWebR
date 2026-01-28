@@ -1,0 +1,164 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiLogManager' class from 'apilogmanager.h'
+message ApiLogManager
+{
+    enum LogMessageType 
+    {
+        LOG_INFO = 0;
+        LOG_ERROR = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::registerLogCallbackProc'
+    message registerLogCallbackProcRequest
+    {
+        ApiLogCallbackProc proc = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLogManager::registerLogCallbackProc'
+    message registerLogCallbackProcResponse
+    {
+        
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::unregisterLogCallbackProc'
+    message unregisterLogCallbackProcRequest
+    {
+        ApiLogCallbackProc proc = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLogManager::unregisterLogCallbackProc'
+    message unregisterLogCallbackProcResponse
+    {
+        
+        bool result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::openOctaneLogWindow'
+    message openOctaneLogWindowRequest
+    {
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::log'
+    message logRequest
+    {
+        string text = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::logError'
+    message logErrorRequest
+    {
+        string errorMsg = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::logFmt'
+    message logFmtRequest
+    {
+        string fmt = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::logErrorFmt'
+    message logErrorFmtRequest
+    {
+        string fmt = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::isFlagRegistered'
+    message isFlagRegisteredRequest
+    {
+        string name = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLogManager::isFlagRegistered'
+    message isFlagRegisteredResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::setFlag'
+    message setFlagRequest
+    {
+        // Name of the flag to update
+        string name = 1;
+        int32 value = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLogManager::setFlag'
+    message setFlagResponse
+    {
+        //     The value the flag used to have before
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::__registerLogFlag'
+    message __registerLogFlagRequest
+    {
+        // Reference to the logging flag variable.
+        int32 flag = 1;
+        // Prefix string for log lines that correspond to this flag.
+        string prefix = 2;
+        // Name of the log flag.
+        string name = 3;
+        // Description of the log flag.
+        string description = 4;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiLogManager::__registerLogFlag'
+    message __registerLogFlagResponse
+    {
+        //     Value of the log flag. 0 when disabled, 1 when the log flag was found in
+        int32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiLogManager::__logFmtPrefix'
+    message __logFmtPrefixRequest
+    {
+        string prefix = 1;
+        string fmt = 2;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiLogManager' from 'apilogmanager.h'
+service ApiLogManagerService
+{
+    /// Registers a callback that gets called every time there is a log message
+    rpc registerLogCallbackProc(ApiLogManager.registerLogCallbackProcRequest) returns (ApiLogManager.registerLogCallbackProcResponse);
+    /// Removes a previously registered log callback
+    rpc unregisterLogCallbackProc(ApiLogManager.unregisterLogCallbackProcRequest) returns (ApiLogManager.unregisterLogCallbackProcResponse);
+    /// Opens the Octane log into a separate window
+    rpc openOctaneLogWindow(ApiLogManager.openOctaneLogWindowRequest) returns (google.protobuf.Empty);
+    /// Writes the specified text to the Octane log
+    rpc log(ApiLogManager.logRequest) returns (google.protobuf.Empty);
+    /// Writes the specified text to the Octane log
+    rpc logError(ApiLogManager.logErrorRequest) returns (google.protobuf.Empty);
+    /// Writes the specified text to the Octane log
+    rpc logFmt(ApiLogManager.logFmtRequest) returns (google.protobuf.Empty);
+    /// Writes the specified text to the Octane log
+    rpc logErrorFmt(ApiLogManager.logErrorFmtRequest) returns (google.protobuf.Empty);
+    /// Returns TRUE if a flag with the passed in name was registered
+    rpc isFlagRegistered(ApiLogManager.isFlagRegisteredRequest) returns (ApiLogManager.isFlagRegisteredResponse);
+    /// Sets a log flag to the specified value
+    rpc setFlag(ApiLogManager.setFlagRequest) returns (ApiLogManager.setFlagResponse);
+    /// Registers a new log flag
+    rpc __registerLogFlag(ApiLogManager.__registerLogFlagRequest) returns (ApiLogManager.__registerLogFlagResponse);
+    /// You should not call this function directly
+    rpc __logFmtPrefix(ApiLogManager.__logFmtPrefixRequest) returns (google.protobuf.Empty);
+}

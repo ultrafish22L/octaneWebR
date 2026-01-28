@@ -1,0 +1,114 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+ // GRPC proto definitions for 'ApiWindow' class from 'apiwindow.h'
+message ApiWindow
+{
+    // Request packet corresponding to '[in] parameters in ApiWindow::create'
+    message createRequest
+    {
+        // Title displayed on the window.
+        string title = 1;
+        // Close callback, this callback is called when the user closes the window. The window
+        OnWindowCloseCallbackT closeCallback = 2;
+        // Optional data, passed back when the callback is called.
+        uint64 privateData = 3;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWindow::create'
+    message createResponse
+    {
+        //     Pointer to the window created.
+        ObjectRef result = 1;
+        // Id of the callback function allocated by the server and sent to the client
+        uint32 callbackId = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::destroy'
+    message destroyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::addContentComponent'
+    message addContentComponentRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Content component that is displayed in the window. The window doesn't take ownership
+        ObjectRef contentComponent = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::show'
+    message showRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::hide'
+    message hideRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::visible'
+    message visibleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWindow::visible'
+    message visibleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ApiWindow::nativeHandle'
+    message nativeHandleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ApiWindow::nativeHandle'
+    message nativeHandleResponse
+    {
+        
+        uint64 result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ApiWindow' from 'apiwindow.h'
+service ApiWindowService
+{
+    /// Creates a new ApiWindow
+    rpc create(ApiWindow.createRequest) returns (ApiWindow.createResponse);
+    /// Destroys this window
+    rpc destroy(ApiWindow.destroyRequest) returns (google.protobuf.Empty);
+    /// Windows only have a single content component
+    rpc addContentComponent(ApiWindow.addContentComponentRequest) returns (google.protobuf.Empty);
+    /// Shows this window
+    rpc show(ApiWindow.showRequest) returns (google.protobuf.Empty);
+    /// Hides this window again
+    rpc hide(ApiWindow.hideRequest) returns (google.protobuf.Empty);
+    /// Returns whether this window is visible
+    rpc visible(ApiWindow.visibleRequest) returns (ApiWindow.visibleResponse);
+    /// Returns the native window handle of the window
+    rpc nativeHandle(ApiWindow.nativeHandleRequest) returns (ApiWindow.nativeHandleResponse);
+}

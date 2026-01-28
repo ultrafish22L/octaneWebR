@@ -1,0 +1,266 @@
+//////////////////////////////////////////////////////////////////////////////
+// WARNING: This code is machine generated. Manual changes will be overridden.
+
+syntax = "proto3";
+
+package octaneapi;
+
+option optimize_for = CODE_SIZE;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "octaneenums.proto";
+
+ // GRPC proto definitions for 'LayerInfo' class from 'apiimageinfo.h'
+message LayerInfo
+{
+    string name = 1;
+    ImageType type = 2;
+    bool hasTransparancy = 3;
+    // Request packet corresponding to '[in] parameters in LayerInfo::hasTransparency'
+    message hasTransparencyRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::hasTransparency'
+    message hasTransparencyResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::isGrayscale'
+    message isGrayscaleRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::isGrayscale'
+    message isGrayscaleResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::name'
+    message nameRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::name'
+    message nameResponse
+    {
+        
+        string result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::type'
+    message typeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::type'
+    message typeResponse
+    {
+        
+        ImageType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::prefCompressType'
+    message prefCompressTypeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // A flag indicating if the high quality option needs to be returned
+        bool needHQ = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::prefCompressType'
+    message prefCompressTypeResponse
+    {
+        
+        ImageType result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::allCompressTypes'
+    message allCompressTypesRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::allCompressTypes'
+    message allCompressTypesResponse
+    {
+        //     An array of supported compression types
+        ApiArrayImageTypeT result = 1;
+        // The count of supported types
+        uint32 entryCount = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in LayerInfo::allCompressInfo'
+    message allCompressInfoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'LayerInfo::allCompressInfo'
+    message allCompressInfoResponse
+    {
+        //     An array of supported compression types info
+        StringArrayT result = 1;
+        // The count of supported types
+        uint32 entryCount = 2;
+    }
+
+}
+ // GRPC proto definitions for 'ImageInfo' class from 'apiimageinfo.h'
+message ImageInfo
+{
+    ObjectRef layerInfos = 1;
+    uint32 layerCount = 2;
+    uint32_2 size = 3;
+    bool isHdr = 4;
+    bool isCompressed = 5;
+    // Request packet corresponding to '[in] parameters in ImageInfo::initFromFile'
+    message initFromFileRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // Absolute path to the image file, which is supposed to be encoded in UTF8.
+        string pathUTF8 = 2;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::initFromBuffer'
+    message initFromBufferRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The data buffer pointer
+        uint64 data = 2;
+        // The length of the data buffer
+        uint32 length = 3;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::layerInfo'
+    message layerInfoRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+        // The index of the layer
+        uint32 layerIx = 2;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageInfo::layerInfo'
+    message layerInfoResponse
+    {
+        //     SUCCESS, the pointer to the matching layer info
+        ObjectRef result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::layerCount'
+    message layerCountRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageInfo::layerCount'
+    message layerCountResponse
+    {
+        
+        uint32 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::size'
+    message sizeRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageInfo::size'
+    message sizeResponse
+    {
+        
+        uint32_2 result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::isHdr'
+    message isHdrRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageInfo::isHdr'
+    message isHdrResponse
+    {
+        
+        bool result = 1;
+    }
+
+    // Request packet corresponding to '[in] parameters in ImageInfo::isCompressed'
+    message isCompressedRequest
+    {
+        // ID of the object on which to call the method
+        ObjectRef objectPtr = 1;
+    }
+
+    // Response packet corresponding to '[out] parameters in 'ImageInfo::isCompressed'
+    message isCompressedResponse
+    {
+        
+        bool result = 1;
+    }
+
+}
+
+
+// GRPC interface definition for class 'ImageInfo' from 'apiimageinfo.h'
+service ImageInfoService
+{
+    /// Initializes the current ImageInfo object with the image file at the given path
+        ///
+        /// 
+    rpc initFromFile(ImageInfo.initFromFileRequest) returns (google.protobuf.Empty);
+    /// Initializes the current ImageInfo object from the given buffer with the given length
+        ///
+        /// 
+    rpc initFromBuffer(ImageInfo.initFromBufferRequest) returns (google.protobuf.Empty);
+    /// Gets the layer info using the given layer index
+        ///
+        /// 
+    rpc layerInfo(ImageInfo.layerInfoRequest) returns (ImageInfo.layerInfoResponse);
+    /// Gets the layer count of the current image
+    rpc layerCount(ImageInfo.layerCountRequest) returns (ImageInfo.layerCountResponse);
+    /// Gets the size of the image in pixel
+    rpc size(ImageInfo.sizeRequest) returns (ImageInfo.sizeResponse);
+    /// Checks if the current image is a HDR image
+    rpc isHdr(ImageInfo.isHdrRequest) returns (ImageInfo.isHdrResponse);
+    /// Checks if the current image is compressed
+    rpc isCompressed(ImageInfo.isCompressedRequest) returns (ImageInfo.isCompressedResponse);
+}
+
+// GRPC interface definition for class 'LayerInfo' from 'apiimageinfo.h'
+service LayerInfoService
+{
+    /// Checks if the current layer has alpha data
+    rpc hasTransparency(LayerInfo.hasTransparencyRequest) returns (LayerInfo.hasTransparencyResponse);
+    /// Checks if the current layer is gray scale data
+    rpc isGrayscale(LayerInfo.isGrayscaleRequest) returns (LayerInfo.isGrayscaleResponse);
+    /// Gets the name of this layer
+    rpc name(LayerInfo.nameRequest) returns (LayerInfo.nameResponse);
+    /// Gets the type of this layer's data
+    rpc type(LayerInfo.typeRequest) returns (LayerInfo.typeResponse);
+    /// Gets the preferred BC compression type
+    rpc prefCompressType(LayerInfo.prefCompressTypeRequest) returns (LayerInfo.prefCompressTypeResponse);
+}
