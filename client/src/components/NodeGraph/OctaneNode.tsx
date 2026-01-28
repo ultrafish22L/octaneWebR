@@ -182,7 +182,7 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
 
   return (
     <div
-      className="octane-node"
+      className="node"
       onContextMenu={handleContextMenu}
       style={{
         width: calculatedWidth,

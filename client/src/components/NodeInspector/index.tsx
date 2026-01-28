@@ -328,7 +328,7 @@ function NodeParameter({
           <div className="parameter-checkbox-container">
             <input 
               type="checkbox" 
-              className="octane-checkbox parameter-control" 
+              className="checkbox parameter-control" 
               checked={boolValue}
               onChange={(e) => handleValueChange(e.target.checked)}
               id={`checkbox-${node.handle}`}
@@ -351,7 +351,7 @@ function NodeParameter({
             <div className="parameter-number-with-spinner">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={floatValue || 0}
                 step={step}
                 onChange={(e) => handleValueChange(formatFloat(parseFloat(e.target.value)))}
@@ -393,7 +393,7 @@ function NodeParameter({
             <div className="parameter-control-container">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={formatFloat(x)}
                 step={step}
                 onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y })}
@@ -403,7 +403,7 @@ function NodeParameter({
               {dimCount >= 2 && (
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={formatFloat(y)}
                   step={step}
                   onChange={(e) => handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)) })}
@@ -432,7 +432,7 @@ function NodeParameter({
               <div className="parameter-control-container">
                 <input 
                   type="color" 
-                  className="octane-color-input parameter-control" 
+                  className="color-input parameter-control" 
                   value={hexColor}
                   style={{ background: hexColor, color: hexColor }}
                   onChange={(e) => {
@@ -452,7 +452,7 @@ function NodeParameter({
               <div className="parameter-control-container">
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={formatFloat(x)}
                   step={step}
                   onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z })}
@@ -462,7 +462,7 @@ function NodeParameter({
                 {dimCount >= 2 && (
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(y)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z })}
@@ -473,7 +473,7 @@ function NodeParameter({
                 {dimCount >= 3 && (
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(z)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)) })}
@@ -502,7 +502,7 @@ function NodeParameter({
                 <div className="parameter-control-container">
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(x)}
                     step={step}
                     onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })}
@@ -517,7 +517,7 @@ function NodeParameter({
                 <div className="parameter-control-container">
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(x)}
                     step={step}
                     onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })}
@@ -526,7 +526,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(y)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })}
@@ -541,7 +541,7 @@ function NodeParameter({
                 <div className="parameter-control-container">
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(x)}
                     step={step}
                     onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })}
@@ -550,7 +550,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(y)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })}
@@ -559,7 +559,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(z)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })}
@@ -574,7 +574,7 @@ function NodeParameter({
                 <div className="parameter-control-container">
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(x)}
                     step={step}
                     onChange={(e) => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })}
@@ -583,7 +583,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(y)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })}
@@ -592,7 +592,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(z)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })}
@@ -601,7 +601,7 @@ function NodeParameter({
                   />
                   <input 
                     type="number" 
-                    className="octane-number-input parameter-control" 
+                    className="number-input parameter-control" 
                     value={formatFloat(w)}
                     step={step}
                     onChange={(e) => handleValueChange({ x, y, z, w: formatFloat(parseFloat(e.target.value)) })}
@@ -625,7 +625,7 @@ function NodeParameter({
           controlHtml = (
             <div className="parameter-control-container">
               <select 
-                className="octane-dropdown parameter-control" 
+                className="dropdown parameter-control" 
                 value={intValue || 0}
                 onChange={(e) => handleValueChange(parseInt(e.target.value))}
                                           name="octane-dropdown-18"
@@ -648,7 +648,7 @@ function NodeParameter({
               <div className="parameter-number-with-spinner">
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={intValue || 0}
                   step={step}
                   onChange={(e) => handleValueChange(parseInt(e.target.value))}
@@ -691,7 +691,7 @@ function NodeParameter({
             <div className="parameter-control-container">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={x || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x: parseInt(e.target.value), y })}
@@ -701,7 +701,7 @@ function NodeParameter({
               {dimCount >= 2 && (
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={y || 0}
                   step={step}
                   onChange={(e) => handleValueChange({ x, y: parseInt(e.target.value) })}
@@ -726,7 +726,7 @@ function NodeParameter({
             <div className="parameter-control-container">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={x || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x: parseInt(e.target.value), y, z })}
@@ -736,7 +736,7 @@ function NodeParameter({
               {dimCount >= 2 && (
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={y || 0}
                   step={step}
                   onChange={(e) => handleValueChange({ x, y: parseInt(e.target.value), z })}
@@ -747,7 +747,7 @@ function NodeParameter({
               {dimCount >= 3 && (
                 <input 
                   type="number" 
-                  className="octane-number-input parameter-control" 
+                  className="number-input parameter-control" 
                   value={z || 0}
                   step={step}
                   onChange={(e) => handleValueChange({ x, y, z: parseInt(e.target.value) })}
@@ -774,7 +774,7 @@ function NodeParameter({
               <input 
                 key="x"
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={x || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x: parseInt(e.target.value), y, z, w })}
@@ -788,7 +788,7 @@ function NodeParameter({
               <input 
                 key="y"
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={y || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x, y: parseInt(e.target.value), z, w })}
@@ -802,7 +802,7 @@ function NodeParameter({
               <input 
                 key="z"
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={z || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x, y, z: parseInt(e.target.value), w })}
@@ -816,7 +816,7 @@ function NodeParameter({
               <input 
                 key="w"
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={w || 0}
                 step={step}
                 onChange={(e) => handleValueChange({ x, y, z, w: parseInt(e.target.value) })}
@@ -842,7 +842,7 @@ function NodeParameter({
             <div className="parameter-number-with-spinner">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={longValue || 0}
                 step="1"
                 onChange={(e) => handleValueChange(parseInt(e.target.value))}
@@ -878,7 +878,7 @@ function NodeParameter({
             <div className="parameter-control-container">
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={x || 0}
                 step="1"
                 onChange={(e) => handleValueChange({ x: parseInt(e.target.value), y })}
@@ -887,7 +887,7 @@ function NodeParameter({
               />
               <input 
                 type="number" 
-                className="octane-number-input parameter-control" 
+                className="number-input parameter-control" 
                 value={y || 0}
                 step="1"
                 onChange={(e) => handleValueChange({ x, y: parseInt(e.target.value) })}
@@ -905,7 +905,7 @@ function NodeParameter({
         controlHtml = (
           <input 
             type="text" 
-            className="octane-text-input parameter-control" 
+            className="text-input parameter-control" 
             value={stringValue}
             onChange={(e) => handleValueChange(e.target.value)}
                                   autoComplete="off"
@@ -921,7 +921,7 @@ function NodeParameter({
         controlHtml = (
           <input 
             type="text" 
-            className="octane-text-input parameter-control" 
+            className="text-input parameter-control" 
             value={stringValue}
             onChange={(e) => handleValueChange(e.target.value)}
                                   autoComplete="off"
@@ -1019,12 +1019,12 @@ function NodeParameter({
             <span className="node-title">{name}</span>
             {showDropdown && (
               <div 
-                className="octane-inspector-dropdown-inline"
+                className="inspector-dropdown-inline"
                 onClick={(e) => e.stopPropagation()}
               >
                 <select 
-                  className="octane-inspector-target-select"
-                  name="octane-inspector-target-select"
+                  className="inspector-target-select"
+                  name="inspector-target-select"
                   autoComplete="off"
                   value={currentNodeType}
                   onChange={handleNodeTypeChange}
@@ -1276,7 +1276,7 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   return (
     <div className="node-inspector" onContextMenu={handleContextMenu}>
       {/* Content */}
-      <div className="octane-inspector-content">
+      <div className="inspector-content">
         <NodeParameter 
           node={node} 
           level={0} 

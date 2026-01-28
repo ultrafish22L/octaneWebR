@@ -169,6 +169,9 @@
     font-size: var(--font-size-normal);
 }
 
+/* Duplicate .inspector-dropdown removed (unused, keeping octane- version below) */
+/* Duplicate .inspector-target-select removed (unused, keeping octane- version below) */
+
 .inspector-dropdown {
     display: flex;
     align-items: center;
@@ -187,32 +190,14 @@
     min-width: 120px;
 }
 
-.octane-inspector-dropdown {
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-
-.octane-inspector-target-select {
-    background-color: var(--octane-border-dark);
-    border: 1px solid var(--octane-bg-header);
-    color: var(--octane-text-primary);
-    padding: 2px 20px 2px 6px;
-    font-size: var(--font-size-small);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    appearance: none;
-    min-width: 120px;
-}
-
-.octane-inspector-dropdown-inline {
+.inspector-dropdown-inline {
     display: inline-flex;
     align-items: center;
     position: relative;
     margin-left: auto;
 }
 
-.octane-inspector-content {
+.inspector-content {
     flex: 1;
     overflow-y: auto;
     padding: 0 0;
@@ -223,18 +208,8 @@
     color: var(--octane-text-primary);
 }
 
-/* Removed duplicate - see line ~598 for .inspector-dropdown container styles */
-
-.inspector-target-select {
-    background-color: var(--octane-bg-secondary);
-    color: var(--octane-text-primary);
-    padding: 2px 20px 2px 6px;
-    font-size: var(--font-size-small);
-    cursor: pointer;
-    appearance: none;
-    min-width: 120px;
-}
-
+/* Removed duplicate .inspector-dropdown - see octane- version above */
+/* Removed duplicate .inspector-target-select - see octane- version above */
 /* .inspector-content moved to layout.css (consolidated) */
 
 /* Parameter Sections */
@@ -1042,7 +1017,7 @@
 
 
 /* Individual control styles - Match Octane Studio with 3D recessed effect */
-.octane-checkbox {
+.checkbox {
     width: 14px;
     height: 14px;
     display: flex;
@@ -1060,12 +1035,12 @@
     position: relative;
 }
 
-.octane-checkbox:checked {
+.checkbox:checked {
     background: var(--octane-bg-primary);
     border-color: var(--octane-accent);
 }
 
-.octane-checkbox:checked::after {
+.checkbox:checked::after {
     content: '✓';
     color: var(--octane-accent);
     font-size: var(--font-size-xxs);
@@ -1076,7 +1051,7 @@
     transform: translate(-50%, -50%);
 }
 
-.octane-number-input {
+.number-input {
     flex: 1;
     min-width: 36px;
     height: 18px;
@@ -1094,7 +1069,7 @@
     -moz-appearance: none;
 }
 
-.octane-number-input:focus {
+.number-input:focus {
     outline: none;
     border-color: var(--octane-accent);
     background: var(--octane-border-dark);
@@ -1110,7 +1085,7 @@
     flex: 1;
 }
 
-.parameter-number-with-spinner .octane-number-input {
+.parameter-number-with-spinner .number-input {
     border-radius: var(--border-radius-base) 0 0 var(--border-radius-base);
     border-right: none;
 }
@@ -1152,7 +1127,7 @@
     background: var(--octane-border-light);
 }
 
-.octane-text-input {
+.text-input {
     width: 80px;
     height: 18px;
     background: var(--octane-bg-primary);
@@ -1168,14 +1143,14 @@
     -moz-appearance: none;
 }
 
-.octane-text-input:focus {
+.text-input:focus {
     outline: none;
     border-color: var(--octane-accent);
     background: var(--octane-border-dark);
     box-shadow: inset 0 1px 3px var(--octane-shadow-heavy), 0 0 0 1px var(--octane-accent);
 }
 
-.octane-color-input {
+.color-input {
     width: 180px;
     min-width: 60px;
     height: 18px;
@@ -1190,16 +1165,16 @@
     -moz-appearance: none;
 }
 
-.octane-color-input::-webkit-color-swatch-wrapper {
+.color-input::-webkit-color-swatch-wrapper {
     padding: 0;
 }
 
-.octane-color-input::-webkit-color-swatch {
+.color-input::-webkit-color-swatch {
     border: none;
     border-radius: var(--border-radius-xs);
 }
 
-.octane-dropdown {
+.dropdown {
     height: 18px;
     background: var(--octane-bg-primary);
     border: 1px solid var(--octane-bg-header);
@@ -1217,7 +1192,7 @@
     -moz-appearance: none;
 }
 
-.octane-dropdown:focus {
+.dropdown:focus {
     outline: none;
     border-color: var(--octane-accent);
     background: var(--octane-border-dark);
