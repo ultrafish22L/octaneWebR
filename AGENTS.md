@@ -283,6 +283,34 @@ export const USE_ALPHA5_API = true;  // Change from false to true
 3. `ApiService.callApi()` applies both before making gRPC request
 4. All existing code continues to use Beta 2 style (no changes needed)
 
+### Server Logging Control (Jan 2025) ✅
+**What**: Debug flag to control server-side logging with clear tagging  
+**Where**: `vite-plugin-octane-grpc.ts` (lines 22-42)  
+**Flag**: `DEBUG_SERVER_LOGS` (default: `false`)  
+**Tag**: All server logs prefixed with `[OCTANE-SERVER]`  
+**Functions**: `serverLog()`, `serverError()`, `serverWarn()`, `serverInfo()`  
+**Status**: Complete (63 server logs controlled, CLIENT logs always visible)
+
+**Usage**:
+```typescript
+// In vite-plugin-octane-grpc.ts
+const DEBUG_SERVER_LOGS = true;  // Change from false to enable logs
+// Restart dev server to apply changes
+```
+
+**Key Benefits**:
+- **Cleaner Console**: Server logs hidden by default, only client logs visible
+- **Easy Toggle**: Single flag to enable/disable all server logs
+- **Clear Tagging**: `[OCTANE-SERVER]` prefix makes source obvious when enabled
+- **Preserved CLIENT Logs**: Client-side forwarded logs always visible regardless of flag
+
+**Example Output (when enabled)**:
+```
+[OCTANE-SERVER] 📡 Vite gRPC Plugin: Connected to Octane at host.docker.internal:51022
+[OCTANE-SERVER] 🐳 Using Docker networking (sandbox environment detected)
+[OCTANE-SERVER] 📦 Proto files ready for lazy loading from: /workspace/project/octaneWebR/server/proto
+```
+
 ---
 
 ## Skills System (On-Demand Knowledge)
