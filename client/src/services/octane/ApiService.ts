@@ -6,6 +6,7 @@
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
 import { BaseService } from './BaseService';
 import Logger from '../../utils/Logger';
+import { getCompatibleMethodName, transformRequestParams, getApiVersion } from '../../config/apiVersionConfig';
 
 /**
  * Request body structure for API calls
@@ -40,9 +41,16 @@ export class ApiService extends BaseService {
     handle?: string | number | Record<string, unknown> | null, 
     params: Record<string, unknown> = {}
   ): Promise<any> {
-    const url = `${this.serverUrl}/api/grpc/${service}/${method}`;
+    // Apply API version compatibility: translate method name if needed
+    const compatibleMethod = getCompatibleMethodName(service, method);
     
-    Logger.api(service, method, handle);
+    if (method !== compatibleMethod) {
+      Logger.debug(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
+    }
+    
+    const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
+    
+    Logger.api(service, compatibleMethod, handle);
     
     /**
      * Request body construction follows Octane's gRPC conventions:
@@ -67,8 +75,19 @@ export class ApiService extends BaseService {
     }
     
     if (params && Object.keys(params).length > 0) {
-      body = { ...body, ...params };
-      Logger.debug('Added params:', params);
+      // Apply parameter transformation if needed for API version compatibility
+      const transformedParams = transformRequestParams(service, method, params);
+      
+      // Log if parameters were transformed
+      const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
+      if (paramsChanged) {
+        Logger.debug(`🔄 API Compatibility: Parameter transformation applied`);
+        Logger.debug(`   Original:`, params);
+        Logger.debug(`   Transformed:`, transformedParams);
+      }
+      
+      body = { ...body, ...transformedParams };
+      Logger.debug('Added params:', transformedParams);
     }
     
     Logger.debug('Request body:', JSON.stringify(body));

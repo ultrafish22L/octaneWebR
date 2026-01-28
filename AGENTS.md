@@ -256,6 +256,33 @@ async replaceNode(oldHandle: number, newType: string): Promise<number> {
 }
 ```
 
+### API Version Compatibility Layer (Jan 2025) ✅
+**What**: Static code flag system to support both Beta 2 and Alpha 5 gRPC APIs  
+**Where**: `client/src/config/apiVersionConfig.ts`, `ApiService.ts`  
+**How**: Single flag (`USE_ALPHA5_API`) triggers automatic method name translation and parameter transformation  
+**Files Added**: `apiVersionConfig.ts`, `API_VERSION_COMPATIBILITY.md`  
+**Files Modified**: `ApiService.ts`  
+**Status**: Complete and documented
+
+**Key Differences**:
+- **Method Names**: `getPinValueByPinID` (Beta 2) → `getPinValue` (Alpha 5)
+- **Parameters**: `pin_id` → `id`, `bool_value` → `value`, removes `expected_type`
+- **Logging**: Console shows `🔄 API Compatibility:` when transformations occur
+
+**Usage**:
+```typescript
+// To switch to Alpha 5:
+// In client/src/config/apiVersionConfig.ts
+export const USE_ALPHA5_API = true;  // Change from false to true
+// Rebuild and restart
+```
+
+**How It Works**:
+1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
+2. `transformRequestParams()` converts parameter structure
+3. `ApiService.callApi()` applies both before making gRPC request
+4. All existing code continues to use Beta 2 style (no changes needed)
+
 ---
 
 ## Skills System (On-Demand Knowledge)
