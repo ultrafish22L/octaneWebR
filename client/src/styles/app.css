@@ -429,15 +429,6 @@ body.resizing .react-flow__edge-interaction {
     transition: all 0.15s ease;
 }
 
-/* Selected node - slightly more prominent */
-.octane-node.selected {
-    box-shadow: 
-        inset 0 1px 0 var(--octane-highlight),
-        inset 0 -1px 0 var(--octane-shadow-light),
-        0 0 0 2px var(--octane-accent-yellow),
-        0 2px 4px var(--octane-shadow-heavy);
-}
-
 /* ReactFlow Edge (Connection Line) Styling - Vibrant Colors */
 .react-flow__edge path {
     /* No filter - use vibrant colors like Octane */
@@ -728,11 +719,6 @@ body.drag-over * {
     text-align: center;
     color: var(--octane-text-primary);
 }
-
-.octane-logo-large {
-    margin-bottom: 20px;
-}
-
 
 @keyframes spin {
     from { transform: rotate(0deg); }

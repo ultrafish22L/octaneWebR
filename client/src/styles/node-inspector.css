@@ -187,15 +187,6 @@
     min-width: 120px;
 }
 
-.inspector-dropdown-arrow {
-    position: absolute;
-    right: 4px;
-    pointer-events: none;
-    font-size: var(--font-size-tiny);
-    color: var(--octane-text-disabled);
-}
-
-
 .octane-inspector-dropdown {
     display: flex;
     align-items: center;
@@ -212,14 +203,6 @@
     cursor: pointer;
     appearance: none;
     min-width: 120px;
-}
-
-.octane-inspector-dropdown-arrow {
-    position: absolute;
-    right: 4px;
-    pointer-events: none;
-    font-size: var(--font-size-tiny);
-    color: var(--octane-text-disabled);
 }
 
 .octane-inspector-dropdown-inline {
@@ -250,14 +233,6 @@
     cursor: pointer;
     appearance: none;
     min-width: 120px;
-}
-
-.inspector-dropdown-arrow {
-    position: absolute;
-    right: 4px;
-    pointer-events: none;
-    font-size: var(--font-size-tiny);
-    color: var(--octane-text-muted);
 }
 
 /* .inspector-content moved to layout.css (consolidated) */
@@ -1412,19 +1387,6 @@
 }
 
 /* Octane-style sections and parameter groups */
-.octane-section {
-    margin-bottom: 4px;
-}
-
-
-
-
-
-.octane-subsection {
-    padding: 8px;
-    border-bottom: 1px solid var(--octane-border);
-}
-
 
 .node-inspector {
     height: 100%;
