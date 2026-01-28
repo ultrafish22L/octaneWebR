@@ -24,7 +24,7 @@ All operations communicate directly with Octane Render via the LiveLink gRPC API
 See **[QUICKSTART.md](./QUICKSTART.md)** for detailed setup instructions.
 
 ### Prerequisites
-- **Octane Render** installed and running
+- **Octane Render gRPC build** installed and running
 - **LiveLink enabled** in Octane (Help → LiveLink menu)
 - **Node.js 18+** installed
 
