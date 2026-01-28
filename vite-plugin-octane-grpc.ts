@@ -24,7 +24,7 @@ import { IncomingMessage } from 'http';
 // ============================================================================
 // Set to true to enable detailed server-side logging
 // Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = false;  // Alpha 5 fix confirmed working, disabled for cleaner output
+const DEBUG_SERVER_LOGS = true;  // Enabled to debug render callback image data
 
 // ============================================================================
 // API VERSION CONFIGURATION
@@ -358,35 +358,29 @@ class OctaneGrpcClient {
             serverLog('🖼️  OnNewImage callback received');
             serverLog('   user_data:', callbackRequest.newImage.user_data);
             
-            // The stream notification doesn't contain image data - we need to call grabRenderResult
-            serverLog('📡 Calling grabRenderResult to fetch render images...');
-            try {
-              const renderResult = await this.callMethod('ApiRenderEngine', 'grabRenderResult', {});
+            // Proto verification: OnNewImageRequest contains render_images field directly
+            // No need to call grabRenderResult - images are already in the callback
+            const renderImages = callbackRequest.newImage.render_images;
+            
+            serverLog('📡 Callback contains render_images:', {
+              hasRenderImages: !!renderImages,
+              imageCount: renderImages?.data?.length || 0
+            });
+            
+            if (renderImages && renderImages.data && renderImages.data.length > 0) {
+              serverLog('✅ Got', renderImages.data.length, 'render images from callback');
               
-              serverLog('📡 grabRenderResult response:', {
-                hasResult: !!renderResult,
-                resultFlag: renderResult?.result,
-                hasRenderImages: !!renderResult?.renderImages,
-                imageCount: renderResult?.renderImages?.length || 0
-              });
+              // Build the image data to send to frontend
+              const imageData = {
+                callback_source: callbackRequest.newImage.callback_source || 'grpc',
+                callback_id: callbackRequest.newImage.callback_id || this.callbackId,
+                user_data: callbackRequest.newImage.user_data,
+                render_images: renderImages
+              };
               
-              if (renderResult && renderResult.result && renderResult.renderImages && renderResult.renderImages.length > 0) {
-                serverLog('✅ Got render result with', renderResult.renderImages.length, 'images');
-                
-                // Build the image data to send to frontend
-                const imageData = {
-                  callback_source: 'grpc',
-                  callback_id: this.callbackId,
-                  user_data: callbackRequest.newImage.user_data,
-                  render_images: renderResult.renderImages
-                };
-                
-                this.notifyCallbacks(imageData);
-              } else {
-                serverLog('⚠️  grabRenderResult returned no images (result flag:', renderResult?.result, ')');
-              }
-            } catch (error: any) {
-              serverError('❌ Failed to grab render result:', error.message);
+              this.notifyCallbacks(imageData);
+            } else {
+              serverLog('⚠️  Callback has no render_images data');
             }
           } else if (callbackRequest.renderFailure) {
             serverLog('❌ Render failure callback received');

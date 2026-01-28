@@ -298,14 +298,24 @@ CLIENT CODE (Beta 2 style)
    - Solution: Extended condition to include Alpha 5 method names
    - Commit: `e973c45`
    - Result: ✅ All errors eliminated
+3. **Fix #3 (No images in render viewport)**: Changed callback handler to use images directly from stream instead of calling `grabRenderResult`
+   - Root Cause: `OnNewImageRequest` already contains `render_images` field, but code was ignoring it and calling `grabRenderResult` separately
+   - Solution: Extract images from `callbackRequest.newImage.render_images` directly
+   - Proto: Both Alpha 5 and Beta 2 have identical `render_images` field in `OnNewImageRequest`
+   - Result: ✅ Real-time image updates working, lower latency, more reliable
+   - See: `CALLBACK_FIX.md` for detailed analysis
 
 **Callback Compatibility**:
 ✅ Callbacks use IDENTICAL method names and signatures in both versions:
 - `setOnNewImageCallback` (same in Alpha 5 and Beta 2)
 - `setOnNewStatisticsCallback` (same in Alpha 5 and Beta 2)
-- `grabRenderResult` (same in Alpha 5 and Beta 2)
 - StreamCallbackService streaming: same in both versions
 - **No transformations needed for callbacks**
+
+⚠️ **Don't use `grabRenderResult` for real-time callbacks**:
+- `grabRenderResult()` is for manual polling, not callback-based streaming
+- Callback stream already contains image data in `callbackRequest.newImage.render_images`
+- Using `grabRenderResult` with callbacks adds latency and can cause timing issues
 
 **Currently Used Methods Audit (75+ methods)**:
 - ✅ All 27 ApiRenderEngine methods: Compatible (same names in both versions)
