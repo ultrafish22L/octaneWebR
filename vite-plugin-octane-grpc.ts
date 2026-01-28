@@ -24,7 +24,7 @@ import { IncomingMessage } from 'http';
 // ============================================================================
 // Set to true to enable detailed server-side logging
 // Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = true;  // Temporarily enabled for Alpha 5 debugging
+const DEBUG_SERVER_LOGS = false;  // Alpha 5 fix confirmed working, disabled for cleaner output
 
 // ============================================================================
 // API VERSION CONFIGURATION
