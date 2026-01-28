@@ -24,7 +24,7 @@ import { IncomingMessage } from 'http';
 // ============================================================================
 // Set to true to enable detailed server-side logging
 // Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = false;
+const DEBUG_SERVER_LOGS = true;  // Temporarily enabled for Alpha 5 debugging
 
 // ============================================================================
 // API VERSION CONFIGURATION
@@ -686,8 +686,11 @@ export function octaneGrpcPlugin(): Plugin {
                 if (service === 'ApiNodePinInfoEx' && method === 'getApiNodePinInfo') {
                   // GetNodePinInfoRequest uses nodePinInfoRef instead of objectPtr
                   params = { nodePinInfoRef: params.objectPtr };
-                } else if (method === 'getValueByAttrID' || method === 'setValueByAttrID' || method === 'getValue') {
+                } else if (method === 'getValueByAttrID' || method === 'setValueByAttrID' || method === 'getValue' ||
+                           method === 'getByAttrID' || method === 'setByAttrID') {
                   // ApiItem methods use item_ref instead of objectPtr
+                  // Both Beta 2 names (getValueByAttrID) and Alpha 5 names (getByAttrID) need transformation
+                  serverLog(`🔄 Transform: objectPtr → item_ref for ${service}.${method}`);
                   params = { item_ref: params.objectPtr, ...params };
                   delete params.objectPtr;
                 } else if (method === 'getPinValueByIx' || method === 'getPinValueByPinID' || method === 'getPinValueByName' ||
