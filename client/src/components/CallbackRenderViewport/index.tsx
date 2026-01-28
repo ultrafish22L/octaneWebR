@@ -74,6 +74,17 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
   const [status, setStatus] = useState('Initializing...');
   const [isRendering, setIsRendering] = useState(false);
   
+  // Component mount logging
+  useEffect(() => {
+    console.log('🎯 [VIEWPORT] CallbackRenderViewport component MOUNTED');
+    console.log('🎯 [VIEWPORT] Initial connected state:', connected);
+    console.log('🎯 [VIEWPORT] Canvas ref available:', !!canvasRef.current);
+    console.log('🎯 [VIEWPORT] Viewport ref available:', !!viewportRef.current);
+    return () => {
+      console.log('🎯 [VIEWPORT] CallbackRenderViewport component UNMOUNTED');
+    };
+  }, []);
+  
   // Region selection state (for render region picking)
   const [isSelectingRegion, setIsSelectingRegion] = useState(false);
   const [regionStart, setRegionStart] = useState<{ x: number; y: number } | null>(null);
@@ -376,17 +387,41 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
    * CRITICAL: Direct port of octaneWeb buffer processing logic
    */
   const displayCallbackImage = useCallback((imageData: OctaneImageData) => {
+    console.log('🎯🎯🎯 [VIEWPORT] displayCallbackImage CALLED');
+    console.log('📊 [VIEWPORT] Image data:', {
+      hasSize: !!imageData.size,
+      width: imageData.size?.x,
+      height: imageData.size?.y,
+      hasBuffer: !!imageData.buffer,
+      bufferSize: imageData.buffer?.size,
+      type: imageData.type
+    });
+    
     try {
       const canvas = canvasRef.current;
+      console.log('🎯 [VIEWPORT] Canvas ref:', !!canvas);
+      
       if (!canvas) {
-        Logger.debug('[displayCallbackImage] Canvas ref is null');
+        console.error('❌ [VIEWPORT] Canvas ref is null - cannot display image!');
         return;
       }
 
-      setFrameCount(prev => prev + 1);
+      console.log('📊 [VIEWPORT] Canvas element:', {
+        width: canvas.width,
+        height: canvas.height,
+        offsetWidth: canvas.offsetWidth,
+        offsetHeight: canvas.offsetHeight,
+        parentElement: !!canvas.parentElement
+      });
+
+      setFrameCount(prev => {
+        const newCount = prev + 1;
+        console.log('🎬 [VIEWPORT] Frame count incremented to:', newCount);
+        return newCount;
+      });
 
       if (!imageData.buffer || !imageData.buffer.data) {
-        Logger.debug('[displayCallbackImage] No image buffer in callback data');
+        console.error('❌ [VIEWPORT] No image buffer in callback data');
         return;
       }
 
@@ -435,18 +470,23 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
       }
 
       // Convert buffer to RGBA format for canvas
+      console.log('🎨 [VIEWPORT] Converting buffer to canvas format...');
       convertBufferToCanvas(bytes, imageData, canvasImageData);
+      console.log('✅ [VIEWPORT] Buffer conversion complete');
 
+      console.log('🎨 [VIEWPORT] Rendering to canvas...');
       ctx.putImageData(canvasImageData, 0, 0);
+      console.log('✅ [VIEWPORT] Image rendered to canvas successfully!');
 
       // Update status
-      setStatus(
-        `${width}x${height} | ` +
+      const newStatus = `${width}x${height} | ` +
         `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
-        `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`
-      );
+        `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
+      setStatus(newStatus);
+      console.log('📊 [VIEWPORT] Status updated:', newStatus);
     } catch (error: any) {
-      Logger.debug('[displayCallbackImage] Error displaying callback image:', error);
+      console.error('❌ [VIEWPORT] Error displaying callback image:', error);
+      console.error('❌ [VIEWPORT] Stack:', error.stack);
     }
   }, []);
 
@@ -593,29 +633,40 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
    * Trigger initial render when connected
    */
   useEffect(() => {
+    console.log('🎯 [VIEWPORT] Initialization useEffect triggered, connected:', connected);
+    
     if (!connected) {
+      console.log('⚠️  [VIEWPORT] Not connected, skipping initialization');
       setStatus('Disconnected from Octane');
       return;
     }
 
     const initializeRendering = async () => {
       try {
+        console.log('🎯 [VIEWPORT] Starting initialization...');
+        console.log('🎯 [VIEWPORT] Canvas ref at init:', !!canvasRef.current);
+        console.log('🎯 [VIEWPORT] Viewport ref at init:', !!viewportRef.current);
+        
         setStatus('Initializing camera...');
         
         // Initialize camera from Octane's current state
+        console.log('📷 [VIEWPORT] Initializing camera from Octane...');
         await initializeCameraFromOctane();
+        console.log('✅ [VIEWPORT] Camera initialized');
         
         setStatus('Triggering initial render...');
         
         // Trigger initial render via ApiChangeManager
+        console.log('🎬 [VIEWPORT] Triggering initial render...');
         await triggerOctaneUpdate();
+        console.log('✅ [VIEWPORT] Initial render triggered');
         
         setIsRendering(true);
         setStatus('Waiting for render...');
         
-        Logger.debug('Render viewport initialized');
+        console.log('✅ [VIEWPORT] Render viewport initialized');
       } catch (error: any) {
-        Logger.error('Failed to initialize rendering:', error);
+        console.error('❌ [VIEWPORT] Failed to initialize rendering:', error);
         setStatus(`Error: ${error.message}`);
       }
     };
@@ -627,21 +678,36 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
    * Setup callback listener for OnNewImage events
    */
   useEffect(() => {
+    console.log('🎯 [VIEWPORT] OnNewImage listener useEffect triggered, connected:', connected);
+    
     if (!connected) {
+      console.log('⚠️  [VIEWPORT] Not connected, skipping callback listener setup');
       return;
     }
 
     const handleNewImage = (data: CallbackData) => {
+      console.log('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
+      console.log('📊 [VIEWPORT] Callback data:', {
+        hasRenderImages: !!(data.render_images),
+        hasData: !!(data.render_images?.data),
+        imageCount: data.render_images?.data?.length || 0
+      });
+      
       if (data.render_images && data.render_images.data && data.render_images.data.length > 0) {
+        console.log('✅ [VIEWPORT] Valid image data received, calling displayCallbackImage');
         displayCallbackImage(data.render_images.data[0]);
       } else {
-        Logger.debug('[CallbackViewport] No valid image data in callback');
+        console.warn('⚠️  [VIEWPORT] No valid image data in callback');
+        console.warn('   [VIEWPORT] data:', data);
       }
     };
 
+    console.log('📡 [VIEWPORT] Registering OnNewImage listener with client');
     client.on('OnNewImage', handleNewImage);
+    console.log('✅ [VIEWPORT] OnNewImage listener registered');
 
     return () => {
+      console.log('🔌 [VIEWPORT] Unregistering OnNewImage listener');
       client.off('OnNewImage', handleNewImage);
     };
   }, [connected, client, displayCallbackImage]);
@@ -650,16 +716,31 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
    * Setup mouse controls for camera manipulation
    */
   useEffect(() => {
+    console.log('🎯 [VIEWPORT] Mouse controls useEffect triggered');
+    console.log('📊 [VIEWPORT] Canvas available:', !!canvasRef.current);
+    console.log('📊 [VIEWPORT] Connected:', connected);
+    
     const canvas = canvasRef.current;
-    if (!canvas || !connected) return;
+    if (!canvas || !connected) {
+      console.log('⚠️  [VIEWPORT] Skipping mouse controls setup (canvas or not connected)');
+      return;
+    }
+    
+    console.log('🖱️  [VIEWPORT] Setting up mouse event handlers...');
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (viewportLocked) return; // Viewport locked - ignore mouse input
+      console.log('🖱️  [VIEWPORT] handleMouseDown CALLED', { button: e.button, x: e.clientX, y: e.clientY });
+      
+      if (viewportLocked) {
+        console.log('🔒 [VIEWPORT] Viewport locked, ignoring mouse input');
+        return;
+      }
       
       // Get canvas-relative coordinates
       const rect = canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
+      console.log('📊 [VIEWPORT] Canvas coords:', { canvasX, canvasY });
       
       if (e.button === 0) { // Left button
         // CTRL+LEFT: 2D Canvas Pan (Octane SE Manual: Control key + left mouse button pans the rendered display)
@@ -997,6 +1078,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
     canvas.addEventListener('mouseleave', handleMouseUp);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('contextmenu', handleContextMenu);
+    console.log('✅ [VIEWPORT] All mouse event listeners attached');
     
     // Set cursor based on viewport lock state and picking mode
     if (viewportLocked) {
@@ -1006,6 +1088,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
     } else {
       canvas.style.cursor = 'grab';
     }
+    console.log('🖱️  [VIEWPORT] Cursor style set to:', canvas.style.cursor);
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);

@@ -93,23 +93,39 @@ export class ConnectionService extends BaseService {
       };
       
       this.ws.onmessage = (event: MessageEvent) => {
+        console.log('🎯🎯🎯 [ConnectionService] WebSocket message received');
+        console.log('📊 [ConnectionService] Raw event.data length:', event.data?.length);
+        
         try {
           const message = JSON.parse(event.data as string);
+          console.log('📊 [ConnectionService] Parsed message type:', message.type);
+          console.log('📊 [ConnectionService] Has data:', !!message.data);
           
           if (message.type === 'newImage') {
+            console.log('🖼️  [ConnectionService] newImage message received');
+            console.log('📊 [ConnectionService] Image data:', {
+              hasRenderImages: !!message.data?.render_images,
+              hasData: !!message.data?.render_images?.data,
+              imageCount: message.data?.render_images?.data?.length || 0
+            });
+            console.log('📤 [ConnectionService] Emitting OnNewImage event...');
             this.emit('OnNewImage', message.data);
+            console.log('✅ [ConnectionService] OnNewImage event emitted');
           } else if (message.type === 'newStatistics') {
-            Logger.debug('📊 [ConnectionService] Received newStatistics callback');
+            console.log('📊 [ConnectionService] Received newStatistics callback');
             this.emit('OnNewStatistics', message.data);
           } else if (message.type === 'renderFailure') {
-            Logger.error('❌ [ConnectionService] Received renderFailure callback');
+            console.error('❌ [ConnectionService] Received renderFailure callback');
             this.emit('OnRenderFailure', message.data);
           } else if (message.type === 'projectManagerChanged') {
-            Logger.debug('📁 [ConnectionService] Received projectManagerChanged callback');
+            console.log('📁 [ConnectionService] Received projectManagerChanged callback');
             this.emit('OnProjectManagerChanged', message.data);
+          } else {
+            console.warn('⚠️  [ConnectionService] Unknown message type:', message.type);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error('❌ [ConnectionService] WebSocket message error:', errorMessage);
           Logger.error('WebSocket message error:', errorMessage);
         }
       };
