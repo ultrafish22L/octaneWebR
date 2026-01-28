@@ -404,21 +404,7 @@ input:checked + .slider:before {
 }
 
 /* ===== NODE PALETTE ===== */
-.node-palette {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 180px;
-    background: var(--octane-bg-semi-transparent);
-    border: 1px solid var(--octane-border);
-    border-radius: var(--border-radius-base);
-    padding: 10px;
-    z-index: var(--z-dropdown);
-    /* Added from octane-theme.css: */
-    background-color: var(--octane-bg-secondary);
-    left: 8px;
-}
-
+/* REMOVED: .node-palette - Dead code, overridden by node-graph.css (loads after) */
 
 .node-type-selector {
     display: flex;

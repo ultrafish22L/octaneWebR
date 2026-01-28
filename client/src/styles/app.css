@@ -62,13 +62,7 @@ body {
 }
 
 /* Main Content */
-.viewport-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--octane-bg-primary);
-  position: relative;
-}
+/* REMOVED: .viewport-container - Dead code, overridden by viewport.css (loads after) */
 
 #render-canvas {
   max-width: 100%;
@@ -82,35 +76,18 @@ body {
 /* Component Styles */
 /* .callback-render-viewport - consolidated in octane-theme.css:824 (superset with background) */
 
-.viewport-canvas-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--octane-border-primary);
-}
+/* REMOVED: .viewport-canvas-container - Dead code, overridden by viewport.css (loads after) */
 
 /* Scene Outliner */
 /* .scene-outliner - consolidated in octane-theme.css:470 (superset with color, font, overflow, position) */
 
-.tree-node {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  cursor: pointer;
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-medium);
-}
+/* REMOVED: .tree-node - Dead code, overridden by scene-outliner.css (loads after) */
 
 /* .tree-node:hover moved to scene-outliner.css (domain-specific) */
 /* .tree-node.selected moved to scene-outliner.css (domain-specific) */
 
 /* Node Inspector */
-.node-inspector {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
+/* REMOVED: .node-inspector - Dead code, overridden by node-inspector.css (loads after) */
 
 .node-inspector h3 {
   margin: 0 0 10px 0;
@@ -207,14 +184,7 @@ body.resizing .panel-splitter {
     pointer-events: none;
 }
 
-
-.inspector-content {
-    flex: 1;
-    overflow: auto;
-    padding: 8px;
-    background: var(--octane-bg-primary);
-    border-radius: var(--border-radius-base);
-}
+/* REMOVED: .inspector-content - Dead code, overridden by node-inspector.css (loads after) */
 
 /* .scene-tree moved to scene-outliner.css (domain-specific) */
 
@@ -426,11 +396,7 @@ body.resizing .react-flow__edge-interaction {
 
 /* Context menu item styles moved to octane-theme.css for consistency */
 
-.context-menu-separator {
-    height: 1px;
-    background-color: var(--octane-border);
-    margin: 4px 0;
-}
+/* REMOVED: .context-menu-separator - Dead code, overridden by node-graph.css (loads after) */
 
 .context-menu-icon {
     width: 16px;
@@ -490,19 +456,7 @@ body.drag-over * {
 
 
 /* Modal Dialog Components */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--octane-overlay-semi);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--z-context-menu);
-    pointer-events: auto;
-}
+/* REMOVED: .modal-overlay - Dead code, overridden by node-graph.css (loads after) */
 
 .modal-dialog {
     background-color: var(--octane-bg-secondary);
@@ -639,32 +593,8 @@ body.drag-over * {
 
 /* ===== OFFICIAL OTOY CONTROL BARS ===== */
 
-.control-btn {
-    background: var(--octane-bg-secondary);
-    border: 1px solid var(--octane-border);
-    color: var(--octane-text-secondary);
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-small);
-    width: 18px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s ease;
-}
+/* REMOVED: .control-btn - Dead code, overridden by viewport.css (loads after) */
 
-.control-btn:hover {
-    background: var(--octane-bg-hover);
-    color: var(--octane-text-primary);
-    border-color: var(--octane-accent-blue);
-}
-
-.control-btn:active {
-    background: var(--octane-accent-blue);
-    color: white;
-}
 /* ===== EXTRACTED FROM octane-theme.css ===== */
 
 /* Loading Screen */

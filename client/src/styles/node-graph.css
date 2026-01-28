@@ -1037,15 +1037,7 @@
   transform: translateY(-2px);
 }
 
-.material-preview {
-  width: 100%;
-  aspect-ratio: 1;
-  background: var(--octane-border-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid var(--octane-border-dark);
-}
+/* REMOVED: .material-preview - Dead code, overridden by viewport.css (loads after) */
 
 .material-preview img {
   width: 100%;
