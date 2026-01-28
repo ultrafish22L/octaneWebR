@@ -40,15 +40,17 @@
 // ============================================================================
 
 /**
- * Import API version setting from centralized config.
+ * API version setting injected at build time by Vite.
  * 
  * ⭐ TO SWITCH API VERSIONS: Edit api-version.config.js at project root!
  * 
  * This ensures both client and server use identical settings.
  * Previous bugs were caused by mismatched configurations.
+ * 
+ * The __USE_ALPHA5_API__ constant is injected by vite.config.mts at build time.
  */
-import { USE_ALPHA5_API as _USE_ALPHA5_API } from './apiVersionImport';
-export const USE_ALPHA5_API = _USE_ALPHA5_API;
+declare const __USE_ALPHA5_API__: boolean;
+export const USE_ALPHA5_API = __USE_ALPHA5_API__;
 
 // ============================================================================
 // METHOD NAME MAPPINGS

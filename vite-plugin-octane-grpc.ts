@@ -37,8 +37,7 @@ const DEBUG_SERVER_LOGS = true;  // Enabled to debug render callback image data
  * This ensures both client and server use the same API version settings.
  * Previous bugs were caused by mismatched client/server configs.
  */
-const apiVersionConfig = require('./api-version.config.js');
-const USE_ALPHA5_API = apiVersionConfig.USE_ALPHA5_API;
+import { USE_ALPHA5_API, getProtoDir } from './api-version.config.js';
 
 // Server log helper functions with clear tagging
 const serverLog = (...args: any[]) => {
@@ -105,7 +104,7 @@ class OctaneGrpcClient {
   }
 
   async initialize(): Promise<void> {
-    const PROTO_DIR = USE_ALPHA5_API ? 'proto_old' : 'proto';
+    const PROTO_DIR = getProtoDir();
     const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
     
     // Check if proto directory exists
@@ -123,7 +122,7 @@ class OctaneGrpcClient {
   }
   
   private loadServiceProto(serviceName: string): any {
-    const PROTO_DIR = USE_ALPHA5_API ? 'proto_old' : 'proto';
+    const PROTO_DIR = getProtoDir();
     const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
     
     const serviceToProtoMap: Record<string, string> = {
@@ -513,7 +512,7 @@ class OctaneGrpcClient {
     console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.length);
     console.log('📊 [NOTIFY] Data keys:', Object.keys(data));
     
-    this.callbacks.forEach((callback, index) => {
+    this.callbacks.forEach((callback, index: number) => {
       try {
         console.log(`📤 [NOTIFY] Calling callback ${index + 1}/${this.callbacks.length}...`);
         callback(data);

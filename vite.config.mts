@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { octaneGrpcPlugin } from './vite-plugin-octane-grpc'
+import { USE_ALPHA5_API } from './api-version.config.js'
 
 export default defineConfig({
   plugins: [
@@ -8,6 +9,10 @@ export default defineConfig({
     octaneGrpcPlugin()
   ],
   root: 'client',
+  // Inject API version config as global constants for client-side code
+  define: {
+    '__USE_ALPHA5_API__': JSON.stringify(USE_ALPHA5_API),
+  },
   server: {
     port: parseInt(process.env.WORKER_1 || '43929'),
     host: '0.0.0.0',

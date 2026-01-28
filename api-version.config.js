@@ -27,8 +27,9 @@ const USE_ALPHA5_API = false;  // ⭐ CHANGE ONLY THIS LINE
 // EXPORTS (Do not modify below)
 // ============================================================================
 
-module.exports = {
+export {
   USE_ALPHA5_API,
-  getApiVersionName: () => USE_ALPHA5_API ? 'Alpha 5 (2026.1)' : 'Beta 2 (2026.1)',
-  getProtoDir: () => USE_ALPHA5_API ? 'proto_old' : 'proto',
 };
+
+export const getApiVersionName = () => USE_ALPHA5_API ? 'Alpha 5 (2026.1)' : 'Beta 2 (2026.1)';
+export const getProtoDir = () => USE_ALPHA5_API ? 'proto_old' : 'proto';
