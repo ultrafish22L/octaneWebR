@@ -5,8 +5,14 @@
 
 /* Node Inspector Styling */
 .node-inspector-header {
-    padding: 8px 12px;
-    background-color: var(--octane-bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    background-color: var(--octane-bg-primary);
+    border-bottom: 1px solid var(--octane-bg-header);
+    font-size: var(--font-size-small);
+    color: var(--octane-text-primary);
 }
 
 .node-inspector-header h3 {
@@ -46,12 +52,14 @@
 }
 
 .parameter-label {
+    display: flex;
+    align-items: center;
     flex: 1;
     font-size: var(--font-size-small);
     color: var(--octane-text-primary);
-    margin-right: 6px;
+    margin-right: 12px;
     font-weight: var(--font-weight-normal);
-    min-width: 80px;
+    min-width: 120px;
 }
 
 .parameter-value {
@@ -159,16 +167,7 @@
 /* Removed duplicate - consolidated at line ~2760 */
 
 /* Node Inspector Components - Professional Octane Style */
-.node-inspector-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 8px;
-    background-color: var(--octane-bg-primary);
-    border-bottom: 1px solid var(--octane-bg-header);
-    font-size: var(--font-size-small);
-    color: var(--octane-text-primary);
-}
+/* Duplicate .node-inspector-header removed - see line 7 */
 
 .inspector-icon {
     margin-right: 4px;
@@ -182,6 +181,13 @@
     display: flex;
     align-items: center;
     position: relative;
+    background: var(--octane-bg-primary);
+    border: 1px solid var(--octane-border);
+    color: var(--octane-text-primary);
+    font-size: var(--font-size-small);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-sm);
+    min-width: 120px;
 }
 
 .inspector-target-select {
@@ -210,7 +216,8 @@
 }
 
 .inspector-title {
-    font-weight: var(--font-weight-normal);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-header);
     color: var(--octane-text-primary);
 }
 
@@ -264,19 +271,7 @@
 
 
 /* Parameter Number Inputs (matching reference screenshot exactly) */
-.parameter-number-input {
-    background-color: var(--octane-viewport-bg);
-    border: 1px solid var(--octane-node-bg);
-    color: var(--octane-text-primary);
-    padding: 0px 3px;
-    font-size: var(--font-size-xs);
-    border-radius: var(--border-radius-xs);
-    width: 50px;
-    text-align: right;
-    font-family: var(--font-family-mono);
-    height: 14px;
-    line-height: var(--line-height-none);
-}
+/* Duplicate .parameter-number-input removed - see line 144 */
 
 .parameter-number-input:focus {
     outline: none;
@@ -326,6 +321,7 @@
 .parameter-controls {
     display: flex;
     flex-direction: column;
+    gap: var(--spacing-xxs);
     margin-left: -14px;
     z-index: var(--z-low);
 }
@@ -340,9 +336,12 @@
 
 .parameter-slider {
     position: relative;
+    width: 100%;
     height: 4px;
-    background-color: var(--octane-border);
+    background: var(--octane-bg-secondary);
     border-radius: var(--border-radius-sm);
+    outline: none;
+    appearance: none;
     cursor: pointer;
 }
 
@@ -460,21 +459,9 @@
     align-items: center;
 }
 
-.inspector-title {
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-header);
-    color: var(--octane-text-primary);
-}
+/* Duplicate .inspector-title removed - see line 219 */
 
-.inspector-dropdown {
-    background: var(--octane-bg-primary);
-    border: 1px solid var(--octane-border);
-    color: var(--octane-text-primary);
-    font-size: var(--font-size-small);
-    padding: 2px 6px;
-    border-radius: var(--border-radius-sm);
-    min-width: 120px;
-}
+/* Duplicate .inspector-dropdown removed - see line 181 */
 
 .section-header {
     padding: 4px 8px;
@@ -623,21 +610,9 @@
 /* Parameter Rows */
 /* .parameter-row moved to layout.css (consolidated) */
 
-.parameter-label {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 120px;
-    margin-right: 12px;
-}
+/* Duplicate .parameter-label removed - see line 54 */
 
-.parameter-icon {
-    margin-right: 6px;
-    font-size: var(--font-size-small);
-    color: var(--octane-text-secondary);
-    width: 16px;
-    text-align: center;
-}
+/* Duplicate .parameter-icon removed - see line 37 */
 
 .parameter-name {
     font-size: var(--font-size-small);
@@ -653,16 +628,7 @@
 
 /* Numeric Slider Controls */
 
-
-.parameter-slider {
-    width: 100%;
-    height: 4px;
-    background: var(--octane-bg-secondary);
-    border-radius: var(--border-radius-sm);
-    outline: none;
-    appearance: none;
-    cursor: pointer;
-}
+/* Duplicate .parameter-slider removed - see line 337 */
 
 .parameter-slider::-webkit-slider-thumb {
     appearance: none;
@@ -690,11 +656,7 @@
 
 /* Removed duplicate - consolidated in Numeric Input Controls section at line ~3588 */
 
-.parameter-controls {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xxs);
-}
+/* Duplicate .parameter-controls removed - see line 331 */
 
 .param-increment,
 
@@ -1293,16 +1255,7 @@
 }
 
 
-.node-selector {
-    background-color: var(--octane-bg-primary);
-    border: 1px solid var(--octane-border);
-    color: var(--octane-text-primary);
-    padding: 4px 8px;
-    font-size: var(--font-size-small);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    width: 100%;
-}
+/* Duplicate .node-selector removed - see line 25 */
 
 /* Octane-style sections and parameter groups */
 

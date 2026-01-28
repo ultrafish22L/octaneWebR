@@ -120,10 +120,10 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--octane-bg-secondary);
-    border: 1px solid var(--octane-border);
-    transition: .3s;
-    border-radius: var(--border-radius-3xl);
+    background-color: var(--octane-bg-header);
+    border: 1px solid var(--octane-text-disabled);
+    border-radius: var(--border-radius-2xl);
+    transition: all 0.2s ease;
 }
 
 .slider:before {
@@ -454,17 +454,7 @@ input:checked + .slider:before {
     height: 0;
 }
 
-.slider {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--octane-bg-header);
-    border: 1px solid var(--octane-text-disabled);
-    border-radius: var(--border-radius-2xl);
-    transition: all 0.2s ease;
-}
+/* Duplicate .slider removed - see line 116 */
 
 .slider:before {
     position: absolute;
