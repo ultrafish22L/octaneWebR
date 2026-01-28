@@ -177,8 +177,11 @@ export function transformRequestParams(
   // getValueByAttrID / setValueByAttrID transformations
   // -------------------------------------------------------------------------
   if (methodName === 'getValueByAttrID' || methodName === 'setValueByAttrID') {
-    // Similar transformations may be needed here if parameter names differ
-    // Add mappings as needed based on proto analysis
+    // ✅ NO CLIENT-SIDE TRANSFORMATIONS NEEDED
+    // Proto verification (2025-01-31): Both Alpha 5 and Beta 2 use identical
+    // parameter structures (item_ref, attribute_id, value oneof).
+    // Server-side handles objectPtr → item_ref transformation at HTTP boundary.
+    // See COMPATIBILITY_VERIFICATION.md for full proto structure analysis.
   }
   
   return transformed;
