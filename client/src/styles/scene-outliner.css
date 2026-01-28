@@ -9,7 +9,6 @@
     font-size: var(--font-size-small);
     line-height: var(--line-height-tight);
     color: var(--octane-text-primary);
-    /* Added from octane-theme.css: */
     background-color: var(--octane-bg-secondary);
     contain: layout style;
     display: flex;
@@ -544,18 +543,7 @@ input:checked + .slider:before {
     border-color: var(--octane-accent);
 }
 
-.scene-tree {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background-color: var(--octane-bg-secondary);
-    min-height: 0; /* Allow flex item to shrink below content size */
-    max-height: 100%; /* Prevent tree from exceeding container */
-    position: relative; /* Establish positioning context */
-    contain: layout style; /* CSS containment for performance and boundaries */
-    display: flex;
-    flex-direction: column; /* Stack tree nodes vertically */
-}
+/* Duplicate .scene-tree removed - see line 7 for consolidated definition */
 
 .tree-node {
     display: flex;

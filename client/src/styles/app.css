@@ -767,12 +767,7 @@ body.drag-over * {
 
 
 /* Connection Status */
-/* Connection Status */
-.connection-status {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-4xl);
-}
+/* Duplicate .connection-status removed - see line 28 for definition */
 
 .status-indicator {
     display: flex;

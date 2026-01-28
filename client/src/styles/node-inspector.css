@@ -99,6 +99,7 @@
     border-radius: var(--border-radius-none);
     transition: all 0.15s ease;
     font-family: var(--font-family-mono);
+    user-select: none;
 }
 
 .parameter-spinner-btn:first-child {
@@ -117,14 +118,19 @@
 }
 
 .parameter-dropdown {
+    width: 100%;
+    height: 22px;
     min-width: 80px;
-    padding: 1px 4px;
-    background: var(--octane-bg-primary);
+    padding: 0 20px 0 6px;
+    background: var(--octane-bg-secondary);
     border: 1px solid var(--octane-border);
     border-radius: var(--border-radius-sm);
     color: var(--octane-text-primary);
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-normal);
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .parameter-number-input {
@@ -324,19 +330,7 @@
     z-index: var(--z-low);
 }
 
-.parameter-spinner-btn {
-    background: none;
-    border: none;
-    color: var(--octane-text-disabled);
-    font-size: var(--font-size-nano);
-    width: 12px;
-    height: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: var(--line-height-none);
-}
+/* Duplicate .parameter-spinner-btn removed - see line 88 for definition */
 
 .parameter-spinner-btn:hover {
     color: var(--octane-text-muted);
@@ -364,17 +358,7 @@
 
 /* Removed duplicate - consolidated at line ~3600 */
 
-/* Parameter Dropdowns */
-.parameter-dropdown {
-    background-color: var(--octane-bg-secondary);
-    border: 1px solid var(--octane-border);
-    color: var(--octane-text-primary);
-    padding: 2px 6px;
-    font-size: var(--font-size-small);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    min-width: 140px;
-}
+/* Parameter Dropdowns - see line 119 for .parameter-dropdown definition */
 
 .parameter-dropdown:focus {
     outline: none;
@@ -731,20 +715,7 @@
 
 /* Removed duplicate - consolidated at line ~3570 */
 
-/* Dropdown Controls */
-
-.parameter-dropdown {
-    width: 100%;
-    height: 22px;
-    background: var(--octane-bg-secondary);
-    border: 1px solid var(--octane-border);
-    border-radius: var(--border-radius-md);
-    color: var(--octane-text-primary);
-    font-size: var(--font-size-small);
-    padding: 0 20px 0 6px;
-    appearance: none;
-    cursor: pointer;
-}
+/* Dropdown Controls - see line 119 for .parameter-dropdown definition */
 
 .parameter-dropdown:focus {
     outline: none;
@@ -770,9 +741,7 @@
 /* .parameter-row consolidated in layout.css:223 */
 
 .parameter-number-input,
-.parameter-dropdown {
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-}
+/* Duplicate .parameter-dropdown removed - transition already in main definition at line 119 */
 
 /* Parameter Value Indicators */
 .parameter-row[data-type="checkbox"] .parameter-checkbox:checked ~ .parameter-label .parameter-name {
@@ -1096,21 +1065,7 @@
     gap: var(--spacing-none);
 }
 
-.parameter-spinner-btn {
-    width: 14px;
-    height: 9px;
-    background: var(--octane-border);
-    border: 1px solid var(--octane-text-disabled);
-    color: var(--octane-text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-tiny);
-    transition: all 0.15s ease;
-    font-family: var(--font-family-mono);
-    user-select: none;
-}
+/* Duplicate .parameter-spinner-btn removed - see line 88 for definition */
 
 .parameter-spinner-btn:first-child {
     border-bottom: none;
