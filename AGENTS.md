@@ -528,6 +528,40 @@ api-version.config.js (ROOT - Single Source)
 
 ---
 
+## Recent Development Status
+
+### API Version Compatibility Layer (2025-01-31)
+
+**Status**: ✅ COMPLETED - Centralized configuration working
+
+**Implementation**:
+- Single source of truth: `api-version.config.js` (ES module)
+- Vite injects `__USE_ALPHA5_API__` constant at build time
+- Server uses direct ES import from config file
+- Both Alpha 5 and Beta 2 supported by changing ONE line in config
+
+**Key Changes**:
+- Converted `api-version.config.js` from CommonJS → ES modules
+- Removed `apiVersionImport.ts` (obsolete)
+- Server plugin uses `getProtoDir()` helper function
+- TypeScript strict typing enforced (no implicit `any`)
+
+**To Switch API Versions**:
+1. Edit `api-version.config.js` line 24: `const USE_ALPHA5_API = true/false`
+2. Restart dev server: `npm run dev`
+3. Both client and server automatically sync
+
+**Testing Status**:
+- ✅ Beta 2: Working (render canvas displays)
+- 🔄 Alpha 5: Awaiting user verification
+
+**Commits**:
+- `af1609b` - Fix: Convert API version config to ES modules and fix TypeScript errors
+- `4249989` - Add quick-start guide for API version switching
+- `df63f18` - Fix API version compatibility with centralized configuration
+
+---
+
 ## Updating This File
 
 **When to update AGENTS.md**:
@@ -566,7 +600,7 @@ api-version.config.js (ROOT - Single Source)
 
 ---
 
-**Last Updated**: 2025-01-30  
+**Last Updated**: 2025-01-31  
 **Version**: v1.0.0  
 **Status**: Active development
 
