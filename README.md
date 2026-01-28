@@ -38,6 +38,22 @@ Open **http://localhost:57341** in your browser.
 
 **Connection**: Application connects to Octane at `localhost:51022` (LiveLink default port).
 
+### API Version Support
+
+octaneWebR supports both **Alpha 5** and **Beta 2** Octane gRPC APIs with a centralized configuration system:
+
+```javascript
+// Edit api-version.config.js line 24:
+const USE_ALPHA5_API = false;  // false = Beta 2, true = Alpha 5
+```
+
+After changing the version, restart the dev server:
+```bash
+npm run dev
+```
+
+See **[QUICK_START_API_VERSION.md](./QUICK_START_API_VERSION.md)** for details.
+
 ---
 
 ## ✨ Features
@@ -156,7 +172,8 @@ octaneWebR communicates with Octane via gRPC-Web with a custom Vite plugin:
 
 **Architecture**:
 - **Vite Plugin** (`vite-plugin-octane-grpc.ts`): Embedded proxy server, no separate backend needed
-- **Proto Files**: 30+ .proto definitions in `server/proto/` (TypeScript types auto-generated)
+- **Proto Files**: 30+ .proto definitions in `server/proto/` (Beta 2) and `server/proto_old/` (Alpha 5)
+- **API Version Config** (`api-version.config.js`): Centralized configuration for Alpha 5/Beta 2 compatibility
 - **Callback Streaming**: WebSocket-based streaming for render updates and scene changes
 - **ObjectPtr Convention**: Some gRPC services require `{ objectPtr: { handle, type } }` wrapper
 - **Type Safety**: Full TypeScript coverage—no 'any' types in service layer
@@ -227,7 +244,8 @@ octaneWebR/
 │   │   └── icons/                    # Node type icons (PNG)
 │   └── index.html                    # HTML template
 ├── server/                           # gRPC proxy server
-│   ├── proto/                        # Compiled proto files
+│   ├── proto/                        # Beta 2 proto files (2026.1)
+│   ├── proto_old/                    # Alpha 5 proto files (2026.1)
 │   └── src/
 │       ├── grpc/client.ts            # gRPC client wrapper
 │       ├── api/websocket.ts          # WebSocket server
@@ -235,13 +253,15 @@ octaneWebR/
 │       └── index.ts                  # Server entry point
 ├── scripts/                          # Build and utility scripts
 ├── package-for-dist/                 # Distribution packaging scripts
+├── api-version.config.js             # API version configuration (Alpha 5/Beta 2)
 ├── vite-plugin-octane-grpc.ts        # Vite plugin (embedded proxy)
 ├── vite.config.mts                   # Vite configuration
 ├── tsconfig.json                     # TypeScript configuration
 ├── package.json                      # Dependencies and scripts
 ├── README.md                         # This file
 ├── QUICKSTART.md                     # Setup guide
-└── DEVELOPMENT.md                    # Development guide & architecture
+├── DEVELOPMENT.md                    # Development guide & architecture
+└── QUICK_START_API_VERSION.md        # API version switching guide
 ```
 
 ---
@@ -397,10 +417,10 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2025-01-30  
+**Last Updated**: 2025-01-31  
 **Version**: 1.0.0  
 **Status**: Production-ready  
 **Recent Changes**: 
-- Code review: Converted 400+ console.* to Logger.* with appropriate log levels
-- Documentation: Enhanced 7 core service files with architectural comments
-- Cleaned up redundant comments, added design rationale documentation
+- API Version Support: Centralized configuration for Alpha 5 and Beta 2 compatibility
+- ES Module Conversion: Fixed browser compatibility issues with config loading
+- Documentation: Added API version switching guide and updated core docs

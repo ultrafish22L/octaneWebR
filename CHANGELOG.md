@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - API Version Compatibility (2025-01-31)
+- **Centralized API Configuration**: Single source of truth for Alpha 5/Beta 2 API versions
+  - `api-version.config.js` - ES module configuration file
+  - Switch between Alpha 5 (proto_old) and Beta 2 (proto) by editing one line
+  - Vite `define` feature injects `__USE_ALPHA5_API__` constant at build time
+  - Server uses direct ES imports, client uses injected constant
+  - Guaranteed sync between client and server configurations
+- **API Version Documentation**:
+  - `QUICK_START_API_VERSION.md` - Quick reference for switching versions
+  - `API_VERSION_SWITCHING.md` - Detailed technical documentation
+  - Updated `AGENTS.md` with Recent Development Status section
+  - Updated `README.md` with API Version Support section
+
+### Changed - Module System (2025-01-31)
+- **ES Module Conversion**: Fixed browser compatibility issues
+  - Converted `api-version.config.js` from CommonJS to ES modules
+  - Removed `apiVersionImport.ts` bridge (obsolete with Vite define approach)
+  - Server plugin (`vite-plugin-octane-grpc.ts`) uses ES imports
+  - Client code (`apiVersionConfig.ts`) uses Vite-injected global constant
+- **TypeScript Strict Typing**: Fixed implicit `any` type errors
+  - Explicitly typed `forEach` callback parameter: `(callback, index: number) => ...`
+  - All code passes strict TypeScript compilation
+
+### Fixed - Browser Errors (2025-01-31)
+- **Module Error**: Fixed `module is not defined` error in browser
+  - Root cause: CommonJS `module.exports` not supported in browser
+  - Solution: Convert to ES module `export` statements
+- **API Version Desync**: Fixed client/server configuration mismatch
+  - Previous: Separate configs could get out of sync causing "Method not found" errors
+  - Current: Single config file ensures both client and server use same settings
+
+### Commits (2025-01-31)
+- `bcf7574` - Docs: Update AGENTS.md with API version configuration status
+- `af1609b` - Fix: Convert API version config to ES modules and fix TypeScript errors
+- `4249989` - Add quick-start guide for API version switching
+- `df63f18` - Fix API version compatibility with centralized configuration
+
+---
+
 ### Added - Code Quality (2025-01-30)
 - **Logger System**: Centralized multi-level logging (670+ calls)
   - `Logger.debug()`, `Logger.error()`, `Logger.warn()`, `Logger.info()`, `Logger.success()`

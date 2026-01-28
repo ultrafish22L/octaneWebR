@@ -50,12 +50,14 @@ octaneWebR/
 │   ├── hooks/            - Custom React hooks
 │   ├── utils/            - Helper functions, formatters
 │   ├── constants/        - Enums, icon mappings, node types
-│   ├── config/           - Application configuration
+│   ├── config/           - Application configuration (API version, etc.)
 │   ├── types/            - TypeScript type definitions
 │   └── App.tsx           - Root component
 ├── server/
-│   ├── proto/            - Compiled protobuf definitions
+│   ├── proto/            - Beta 2 protobuf definitions (2026.1)
+│   ├── proto_old/        - Alpha 5 protobuf definitions (2026.1)
 │   └── src/              - gRPC proxy server
+├── api-version.config.js - API version configuration (Alpha 5/Beta 2)
 └── vite-plugin-octane-grpc.ts - Embedded proxy plugin
 ```
 
@@ -177,7 +179,7 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
 ## gRPC Integration
 
 ### Proto Files
-Located in `server/proto/`, these define the gRPC API:
+Located in `server/proto/` (Beta 2) and `server/proto_old/` (Alpha 5):
 ```
 apinodesystem_3.proto  - Node operations (create, delete, connect)
 scenetree.proto        - Scene tree queries
@@ -185,6 +187,37 @@ viewport.proto         - Camera controls
 render.proto           - Render control
 callback.proto         - Streaming callbacks
 ```
+
+### API Version Configuration
+octaneWebR supports both **Alpha 5** and **Beta 2** Octane gRPC APIs:
+
+**Configuration File**: `api-version.config.js` (project root)
+```javascript
+// Single line to edit:
+const USE_ALPHA5_API = false;  // false = Beta 2, true = Alpha 5
+```
+
+**Architecture**:
+- **Build Time**: Vite injects `__USE_ALPHA5_API__` constant into client bundle
+- **Server Runtime**: Direct ES import from config file
+- **Client Runtime**: Uses Vite-injected constant (no module loading)
+- **Guaranteed Sync**: Both client and server always use same version
+
+**Key Differences**:
+| Aspect | Beta 2 (proto/) | Alpha 5 (proto_old/) |
+|--------|-----------------|---------------------|
+| Methods | `getPinValueByPinID` | `getPinValue` |
+|         | `setPinValueByPinID` | `setPinValue` |
+|         | `getValueByAttrID` | `getByAttrID` |
+| Params  | `pin_id`, `expected_type` | `id` (no expected_type) |
+| Values  | Typed fields (`bool_value`, `int_value`, etc.) | Generic `value` field |
+
+**How to Switch**:
+1. Edit `api-version.config.js` line 24
+2. Restart dev server: `npm run dev`
+3. Both client and server automatically sync
+
+See `QUICK_START_API_VERSION.md` for step-by-step guide.
 
 ### API Call Pattern
 ```typescript
