@@ -403,6 +403,31 @@ For detailed domain knowledge, see `.openhands/skills/`:
 
 ## Recent Important Fixes
 
+### Beta 2 API Configuration (2025-01-31)
+**Problem**: "Method not found" errors when testing Beta 2 Octane (`getPinValueByPinID`, `getValueByAttrID`)  
+**Root Cause**: Both client and server configured for Alpha 5 while testing Beta 2  
+**Files**: `vite-plugin-octane-grpc.ts` line 35, `client/src/config/apiVersionConfig.ts` line 46
+
+**Critical Rule**: `USE_ALPHA5_API` must match in BOTH files!
+
+```typescript
+// ❌ MISMATCH - causes method resolution failures
+// Server: USE_ALPHA5_API = true   (Alpha 5 protos)
+// Client: USE_ALPHA5_API = false  (Beta 2 method names)
+
+// ✅ CORRECT - both must be the same
+// Alpha 5: Set BOTH to true
+// Beta 2:  Set BOTH to false
+```
+
+**API Differences**:
+- Beta 2: `getPinValueByPinID`, `getValueByAttrID`
+- Alpha 5: `getPinValue`, `getByAttrID`
+
+**Documentation**: See `BETA2_ANALYSIS.md` for full compatibility details.
+
+---
+
 ### Callback Streaming Fix (2025-01-31)
 **Problem**: Render callback images weren't displaying; mouse camera controls not working  
 **Root Cause**: `StreamCallbackService` mapped to non-existent `callbackstream.proto` instead of `callback.proto`  
