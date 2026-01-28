@@ -142,8 +142,11 @@ function NodeParameter({
       const valueTypes = ['PT_BOOL', 'PT_INT', 'PT_FLOAT', 'PT_STRING', 'PT_ENUM'];
       
       if (!node.outType || !valueTypes.includes(node.outType)) {
+        Logger.debug(`🚫 Skipping getValueByAttrID for ${node.name} (outType: ${node.outType}) - not a simple value type`);
         return;  // Skip nodes that aren't simple value types
       }
+      
+      Logger.debug(`✅ Calling getValueByAttrID for ${node.name} (outType: ${node.outType}) - is a simple value type`);
       
       // Logger.debug(`🔍 Fetching value for end node: "${node.name}"`);
       // Logger.debug(`  - handle: ${node.handle}`);
