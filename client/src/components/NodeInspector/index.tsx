@@ -958,7 +958,7 @@ function NodeParameter({
               width={20}
               height={20}
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/icons/CATEGORY.png';
+                (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
               }}
             />
           </div>
@@ -1003,7 +1003,7 @@ function NodeParameter({
             width={20}
             height={20}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/icons/CATEGORY.png';
+              (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
             }}
           />
         </div>

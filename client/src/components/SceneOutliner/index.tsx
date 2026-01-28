@@ -88,6 +88,7 @@ function SceneTreeItem({ node, depth, onSelect, onContextMenu, selectedHandle, e
           ) : (
             <span className="node-spacer"></span>
           )}
+
           <img 
             src={getNodeIcon(node)} 
             alt="" 
@@ -96,7 +97,7 @@ function SceneTreeItem({ node, depth, onSelect, onContextMenu, selectedHandle, e
             height={16}
             onError={(e) => {
               // Fallback to category icon if specific icon not found
-              (e.target as HTMLImageElement).src = '/icons/CATEGORY.png';
+              (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
             }}
           />
           <span className="node-name">{node.name}</span>

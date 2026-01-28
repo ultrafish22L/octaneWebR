@@ -40,7 +40,7 @@ import { NodeContextMenu } from './NodeContextMenu';
 import { SearchDialog } from './SearchDialog';
 import { NodeType } from '../../constants/OctaneTypes';
 import { EditCommands } from '../../commands/EditCommands';
-import { getPinIconInfo } from '../../constants/PinTypes';
+import { getPinTypeInfo } from '../../constants/PinTypes';
 import Logger from '../../utils/Logger';
 
 /**
@@ -58,13 +58,17 @@ function getPinColor(pinInfo: any): string {
   // Fall back to local color mapping by type (from PinTypes.ts - C++ source colors)
   if (pinInfo?.type) {
     try {
-      const pinIconInfo = getPinIconInfo(pinInfo.type);
-      return pinIconInfo.color;
+      const info = getPinTypeInfo(pinInfo.type);
+
+      if (info) {
+        return info.color;
+      }
     } catch (e) {
       // Type not found in mapping, continue to default
+      // Final fallback to amber
+      return '#ffc107';      
     }
-  }
-  
+  }  
   // Final fallback to amber
   return '#ffc107';
 }

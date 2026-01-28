@@ -1236,11 +1236,13 @@ export const nodeIconMapping: IconMapping = {
  * @returns path to icon file
  */
 export function getNodeIconPath(nodeType: string): string {
-  const iconFile = nodeIconMapping[nodeType];
-  if (iconFile) {
-    return `/icons/${iconFile}`;
+  if (hasIconMapping(nodeType)) {
+    const iconFile = nodeIconMapping[nodeType];
+    if (iconFile) {
+      return `/icons/${iconFile}`;
+    }
   }
-  return '/icons/CATEGORY.png';
+  return '/icons/EMPTY.png';
 }
 
 /**
