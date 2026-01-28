@@ -284,14 +284,21 @@ const USE_ALPHA5_API = true;  // Must match client setting
 
 **Critical Fix #1 (Jan 2025)**: Added `USE_ALPHA5_API` flag to `vite-plugin-octane-grpc.ts` to ensure server loads correct proto files (`proto_old/` for Alpha 5). Without this, server was loading Beta 2 proto definitions while client was calling Alpha 5 methods, causing "Method getByAttrID not found" errors.
 
-**Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors in Alpha 5 by completely disabling `getValueByAttrID`/`getByAttrID` calls when `USE_ALPHA5_API = true`. Alpha 5's `getByAttrID` method has fundamentally different behavior than Beta 2's `getValueByAttrID` and all calls were failing (558 errors during scene load). Value fetching is temporarily disabled for Alpha 5 until proper implementation approach is determined. Scene tree and UI continue to function correctly without value fetching.
+**Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors (558 occurrences) by implementing proper Alpha 5 parameter transformation. 
+- **Root Cause**: Alpha 5's `getValueByIDRequest` expects `item_ref` field, not `objectPtr`
+- **Solution**: Server-side transformation in `server/src/index.ts` (lines 120-147) converts `objectPtr` → `item_ref` for ApiItem methods before gRPC call
+- **Method Names**: Client conditionally uses `getByAttrID` (Alpha 5) vs `getValueByAttrID` (Beta 2)
+- **Reference**: Based on old `vite-plugin-octane-grpc.ts` parameter remapping logic (lines 360-368)
+- **Result**: Alpha 5 value fetching now works correctly for simple types (PT_BOOL, PT_INT, PT_FLOAT, PT_STRING, PT_ENUM)
 
 **How It Works**:
 1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
 2. `transformRequestParams()` converts parameter structure
 3. `ApiService.callApi()` applies both before making gRPC request
-4. NodeInspector filters nodes by `outType` before calling `getValueByAttrID`
-5. All existing code continues to use Beta 2 style (no changes needed)
+4. **Server proxy** transforms `objectPtr` → `item_ref` for Alpha 5 ApiItem methods
+5. NodeInspector conditionally calls `getByAttrID` (Alpha 5) or `getValueByAttrID` (Beta 2)
+6. NodeInspector filters nodes by `outType` to only fetch values for simple types
+7. All existing code continues to use Beta 2 style (no changes needed)
 
 ### Server Logging Control (Jan 2025) ✅
 **What**: Debug flag to control server-side logging with clear tagging  

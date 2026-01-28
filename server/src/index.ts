@@ -115,7 +115,36 @@ app.get('/api/device/info', async (req, res) => {
 // POST /api/grpc/:service/:method
 app.post('/api/grpc/:service/:method', async (req, res) => {
   const { service, method } = req.params;
-  const params = req.body || {};
+  let params = req.body || {};
+  
+  // ========== Alpha 5 API Compatibility Transformations ==========
+  // Alpha 5 proto files use different parameter names than Beta 2
+  // These transformations match the behavior from the old vite-plugin-octane-grpc.ts
+  
+  // Transform objectPtr → item_ref for ApiItem methods
+  // Alpha 5's getValueByIDRequest expects 'item_ref' field, not 'objectPtr'
+  if (params.objectPtr && (
+    method === 'getByAttrID' || 
+    method === 'setByAttrID' || 
+    method === 'getValue'
+  )) {
+    console.log(`🔄 Alpha 5 transform: objectPtr → item_ref for ${service}.${method}`);
+    params = {
+      item_ref: params.objectPtr,
+      ...params
+    };
+    delete params.objectPtr;
+  }
+  
+  // Transform objectPtr → nodePinInfoRef for ApiNodePinInfoEx
+  if (params.objectPtr && service === 'ApiNodePinInfoEx' && method === 'getApiNodePinInfo') {
+    console.log(`🔄 Alpha 5 transform: objectPtr → nodePinInfoRef for ${service}.${method}`);
+    params = {
+      nodePinInfoRef: params.objectPtr,
+      ...params
+    };
+    delete params.objectPtr;
+  }
   
   try {
     const response = await grpcClient.callMethod(service, method, params);

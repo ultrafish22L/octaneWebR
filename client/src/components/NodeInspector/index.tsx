@@ -137,44 +137,37 @@ function NodeParameter({
         return;  // Skip without verbose logging
       }
       
-      // TEMPORARY: Disable value fetching for Alpha 5 API entirely
-      // Alpha 5's getByAttrID has different behavior and fails with "Invalid object type" errors
-      // TODO: Investigate proper Alpha 5 value fetching approach (might need different method or parameters)
-      if (USE_ALPHA5_API) {
-        Logger.debug(`🚫 Skipping getValueByAttrID for ${node.name} - Alpha 5 value fetching not yet supported`);
-        return;
-      }
-      
-      // Only call getValueByAttrID on simple value types (not complex nodes like geometry, materials, etc.)
-      // Alpha 5 API is stricter and rejects getByAttrID calls on non-value nodes
+      // Only call value fetch on simple value types (not complex nodes like geometry, materials, etc.)
+      // Both APIs are stricter with non-value nodes
       // These PT_ types match PinTypeId enum from octaneids.proto - only primitive value nodes
       const valueTypes = ['PT_BOOL', 'PT_INT', 'PT_FLOAT', 'PT_STRING', 'PT_ENUM'];
       
       if (!node.outType || !valueTypes.includes(node.outType)) {
-        Logger.debug(`🚫 Skipping getValueByAttrID for ${node.name} (outType: ${node.outType}) - not a simple value type`);
+        Logger.debug(`🚫 Skipping value fetch for ${node.name} (outType: ${node.outType}) - not a simple value type`);
         return;  // Skip nodes that aren't simple value types
       }
       
-      Logger.debug(`✅ Calling getValueByAttrID for ${node.name} (outType: ${node.outType}) - is a simple value type`);
-      
-      // Logger.debug(`🔍 Fetching value for end node: "${node.name}"`);
-      // Logger.debug(`  - handle: ${node.handle}`);
-      // Logger.debug(`  - attrInfo.type: ${node.attrInfo.type}`);
-      // Logger.debug(`  - AttributeId.A_VALUE: ${AttributeId.A_VALUE}`);
+      // Alpha 5 uses 'getByAttrID', Beta 2 uses 'getValueByAttrID'
+      const methodName = USE_ALPHA5_API ? 'getByAttrID' : 'getValueByAttrID';
+      Logger.debug(`✅ Calling ${methodName} for ${node.name} (outType: ${node.outType})`);
 
       try {
         // attrInfo.type is already a STRING like "AT_FLOAT3" from the API
         // Use it directly, no conversion needed
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
         
-        // Logger.debug(`🔍 Calling getByAttrID for ${node.name}:`);
-        // Logger.debug(`  - attribute_id: ${AttributeId.A_VALUE}`);
-        // Logger.debug(`  - expected_type: ${expectedType}`);
+        if (USE_ALPHA5_API) {
+          Logger.debug(`🔍 Alpha 5 API call: ApiItem.${methodName}`);
+          Logger.debug(`  - handle: ${node.handle}`);
+          Logger.debug(`  - attribute_id: ${AttributeId.A_VALUE} (A_VALUE)`);
+          Logger.debug(`  - expected_type: ${expectedType} (${node.attrInfo.type})`);
+        }
 
         // Pass just the handle string - callApi will wrap it in objectPtr automatically
+        // Server-side will transform objectPtr → item_ref for Alpha 5's getByAttrID
         const response = await client.callApi(
           'ApiItem',
-          'getValueByAttrID',
+          methodName,  // Use correct method name for API version
           node.handle,  // Pass handle as string
           {
             attribute_id: AttributeId.A_VALUE, // 185 - Use constant instead of hardcoded value
@@ -183,21 +176,26 @@ function NodeParameter({
         );
         
         if (response) {
-          // Logger.debug(`✅ Got value for ${node.name}:`, response);
           // Extract the actual value from the response
           // API returns format like: {float_value: 2, value: "float_value"}
           // We need to get the value from the field indicated by response.value
           const valueField = response.value || Object.keys(response)[0];
           const actualValue = response[valueField];
           
+          if (USE_ALPHA5_API) {
+            Logger.debug(`✅ Alpha 5 value fetch SUCCESS for ${node.name}: ${actualValue}`);
+          }
+          
           setParamValue({
             value: actualValue,
             type: expectedType
           });
         }
-      } catch (error) {
-        // Silently ignore - not all end nodes have values
-        // Logger.debug(`❌ No value for ${node.name}:`, error);
+      } catch (error: any) {
+        // Log Alpha 5 errors for debugging, silently ignore Beta 2 errors
+        if (USE_ALPHA5_API) {
+          Logger.error(`❌ Alpha 5 ${methodName} error for ${node.name}: ${error.message || error}`);
+        }
       }
     };
     
