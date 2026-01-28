@@ -509,16 +509,16 @@ class OctaneGrpcClient {
 
   private notifyCallbacks(data: any): void {
     console.log('🎯 [NOTIFY] notifyCallbacks called');
-    console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.length);
+    console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.size);
     console.log('📊 [NOTIFY] Data keys:', Object.keys(data));
     
-    this.callbacks.forEach((callback, index: number) => {
+    this.callbacks.forEach((callback, index) => {
       try {
-        console.log(`📤 [NOTIFY] Calling callback ${index + 1}/${this.callbacks.length}...`);
+        console.log(`📤 [NOTIFY] Calling callback ${((index as unknown) as number) + 1}/${this.callbacks.size}...`);
         callback(data);
-        console.log(`✅ [NOTIFY] Callback ${index + 1} completed`);
+        console.log(`✅ [NOTIFY] Callback ${((index as unknown) as number) + 1} completed`);
       } catch (error) {
-        console.error(`❌ [NOTIFY] Error in callback ${index + 1}:`, error);
+        console.error(`❌ [NOTIFY] Error in callback ${((index as unknown) as number) + 1}:`, error);
       }
     });
     
