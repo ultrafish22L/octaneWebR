@@ -26,6 +26,14 @@ import { IncomingMessage } from 'http';
 // Set to false (default) to suppress server logs for cleaner console output
 const DEBUG_SERVER_LOGS = false;
 
+// ============================================================================
+// API VERSION CONFIGURATION
+// ============================================================================
+// Set to true to use Alpha 5 API (proto_old)
+// Set to false to use Beta 2 API (proto) - default
+// NOTE: This must match the USE_ALPHA5_API setting in client/src/config/apiVersionConfig.ts
+const USE_ALPHA5_API = true;
+
 // Server log helper functions with clear tagging
 const serverLog = (...args: any[]) => {
   if (DEBUG_SERVER_LOGS) console.log('[OCTANE-SERVER]', ...args);
@@ -91,7 +99,8 @@ class OctaneGrpcClient {
   }
 
   async initialize(): Promise<void> {
-    const PROTO_PATH = path.resolve(__dirname, './server/proto');
+    const PROTO_DIR = USE_ALPHA5_API ? 'proto_old' : 'proto';
+    const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
     
     // Check if proto directory exists
     if (!fs.existsSync(PROTO_PATH)) {
@@ -99,15 +108,17 @@ class OctaneGrpcClient {
       return;
     }
     
+    const apiVersion = USE_ALPHA5_API ? 'Alpha 5 (2026.1)' : 'Beta 2 (2026.1)';
     serverLog(`📦 Proto files ready for lazy loading from:`, PROTO_PATH);
-    serverLog('✅ Proto definitions will be loaded on-demand per service');
+    serverLog(`✅ Proto definitions will be loaded on-demand per service (${apiVersion})`);
     
     // Note: We use lazy loading to avoid duplicate name conflicts
     // Each service loads its own proto file when first accessed
   }
   
   private loadServiceProto(serviceName: string): any {
-    const PROTO_PATH = path.resolve(__dirname, './server/proto');
+    const PROTO_DIR = USE_ALPHA5_API ? 'proto_old' : 'proto';
+    const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
     
     const serviceToProtoMap: Record<string, string> = {
       'ApiProjectManager': 'apiprojectmanager.proto',
