@@ -282,13 +282,16 @@ const USE_ALPHA5_API = true;  // Must match client setting
 // 3. Rebuild and restart
 ```
 
-**Critical Fix (Jan 2025)**: Added `USE_ALPHA5_API` flag to `vite-plugin-octane-grpc.ts` to ensure server loads correct proto files (`proto_old/` for Alpha 5). Without this, server was loading Beta 2 proto definitions while client was calling Alpha 5 methods, causing "Method getByAttrID not found" errors.
+**Critical Fix #1 (Jan 2025)**: Added `USE_ALPHA5_API` flag to `vite-plugin-octane-grpc.ts` to ensure server loads correct proto files (`proto_old/` for Alpha 5). Without this, server was loading Beta 2 proto definitions while client was calling Alpha 5 methods, causing "Method getByAttrID not found" errors.
+
+**Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors in Alpha 5 by filtering `getValueByAttrID`/`getByAttrID` calls to only simple value node types (PT_FLOAT, PT_INT, PT_RGB, etc.). Alpha 5 API is stricter than Beta 2 and rejects these calls on complex nodes like geometries, materials, cameras. Fix in `client/src/components/NodeInspector/index.tsx` checks `node.outType` before calling the API.
 
 **How It Works**:
 1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
 2. `transformRequestParams()` converts parameter structure
 3. `ApiService.callApi()` applies both before making gRPC request
-4. All existing code continues to use Beta 2 style (no changes needed)
+4. NodeInspector filters nodes by `outType` before calling `getValueByAttrID`
+5. All existing code continues to use Beta 2 style (no changes needed)
 
 ### Server Logging Control (Jan 2025) ✅
 **What**: Debug flag to control server-side logging with clear tagging  

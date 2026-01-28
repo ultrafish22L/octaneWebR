@@ -136,6 +136,15 @@ function NodeParameter({
         return;  // Skip without verbose logging
       }
       
+      // Only call getValueByAttrID on simple value types (not complex nodes like geometry, materials, etc.)
+      // Alpha 5 API is stricter and rejects getByAttrID calls on non-value nodes
+      // These PT_ types match PinTypeId enum from octaneids.proto - only primitive value nodes
+      const valueTypes = ['PT_BOOL', 'PT_INT', 'PT_FLOAT', 'PT_STRING', 'PT_ENUM'];
+      
+      if (!node.outType || !valueTypes.includes(node.outType)) {
+        return;  // Skip nodes that aren't simple value types
+      }
+      
       // Logger.debug(`🔍 Fetching value for end node: "${node.name}"`);
       // Logger.debug(`  - handle: ${node.handle}`);
       // Logger.debug(`  - attrInfo.type: ${node.attrInfo.type}`);
