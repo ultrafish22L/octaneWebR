@@ -258,24 +258,31 @@ async replaceNode(oldHandle: number, newType: string): Promise<number> {
 
 ### API Version Compatibility Layer (Jan 2025) ✅
 **What**: Static code flag system to support both Beta 2 and Alpha 5 gRPC APIs  
-**Where**: `client/src/config/apiVersionConfig.ts`, `ApiService.ts`  
-**How**: Single flag (`USE_ALPHA5_API`) triggers automatic method name translation and parameter transformation  
+**Where**: `client/src/config/apiVersionConfig.ts`, `vite-plugin-octane-grpc.ts`, `ApiService.ts`  
+**How**: Synchronized flags in both client and server trigger automatic method name translation, parameter transformation, and proto file selection  
 **Files Added**: `apiVersionConfig.ts`, `API_VERSION_COMPATIBILITY.md`  
-**Files Modified**: `ApiService.ts`  
-**Status**: Complete and documented
+**Files Modified**: `ApiService.ts`, `vite-plugin-octane-grpc.ts`  
+**Status**: Complete and fully functional
 
 **Key Differences**:
 - **Method Names**: `getPinValueByPinID` (Beta 2) → `getPinValue` (Alpha 5)
+- **ApiItem Methods**: `getValueByAttrID` (Beta 2) → `getByAttrID` (Alpha 5)
 - **Parameters**: `pin_id` → `id`, `bool_value` → `value`, removes `expected_type`
+- **Proto Files**: `server/proto/` (Beta 2) ↔ `server/proto_old/` (Alpha 5)
 - **Logging**: Console shows `🔄 API Compatibility:` when transformations occur
 
-**Usage**:
+**Usage** (Must sync BOTH files):
 ```typescript
-// To switch to Alpha 5:
-// In client/src/config/apiVersionConfig.ts
+// 1. In client/src/config/apiVersionConfig.ts
 export const USE_ALPHA5_API = true;  // Change from false to true
-// Rebuild and restart
+
+// 2. In vite-plugin-octane-grpc.ts (line ~35)
+const USE_ALPHA5_API = true;  // Must match client setting
+
+// 3. Rebuild and restart
 ```
+
+**Critical Fix (Jan 2025)**: Added `USE_ALPHA5_API` flag to `vite-plugin-octane-grpc.ts` to ensure server loads correct proto files (`proto_old/` for Alpha 5). Without this, server was loading Beta 2 proto definitions while client was calling Alpha 5 methods, causing "Method getByAttrID not found" errors.
 
 **How It Works**:
 1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
