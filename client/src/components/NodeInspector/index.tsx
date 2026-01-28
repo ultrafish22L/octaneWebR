@@ -18,6 +18,7 @@ import { useOctane } from '../../hooks/useOctane';
 import { AttributeId, AttrType } from '../../constants/OctaneTypes';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
+import { USE_ALPHA5_API } from '../../config/apiVersionConfig';
 import { formatColorValue, formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
@@ -134,6 +135,14 @@ function NodeParameter({
       
       if (!node.attrInfo || !node.handle || !isEndNode) {
         return;  // Skip without verbose logging
+      }
+      
+      // TEMPORARY: Disable value fetching for Alpha 5 API entirely
+      // Alpha 5's getByAttrID has different behavior and fails with "Invalid object type" errors
+      // TODO: Investigate proper Alpha 5 value fetching approach (might need different method or parameters)
+      if (USE_ALPHA5_API) {
+        Logger.debug(`🚫 Skipping getValueByAttrID for ${node.name} - Alpha 5 value fetching not yet supported`);
+        return;
       }
       
       // Only call getValueByAttrID on simple value types (not complex nodes like geometry, materials, etc.)
