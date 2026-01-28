@@ -401,6 +401,30 @@ For detailed domain knowledge, see `.openhands/skills/`:
 
 ---
 
+## Recent Important Fixes
+
+### Callback Streaming Fix (2025-01-31)
+**Problem**: Render callback images weren't displaying; mouse camera controls not working  
+**Root Cause**: `StreamCallbackService` mapped to non-existent `callbackstream.proto` instead of `callback.proto`  
+**Location**: `vite-plugin-octane-grpc.ts` line 139
+
+```typescript
+// ❌ WRONG - file doesn't exist
+'StreamCallbackService': 'callbackstream.proto',
+
+// ✅ CORRECT - service defined in callback.proto
+'StreamCallbackService': 'callback.proto',
+```
+
+**Key Discovery**: Canvas visibility controlled by `frameCount > 0`
+- No callbacks → frameCount stays 0 → canvas hidden (`display: 'none'`)
+- Hidden canvas = no mouse interactions
+- Fix proto mapping → callbacks flow → frameCount increments → canvas visible
+
+**Lesson**: Always verify proto file mappings match actual service definitions in `.proto` files.
+
+---
+
 ## Common Quick Tasks
 
 ### Add gRPC Service Method
