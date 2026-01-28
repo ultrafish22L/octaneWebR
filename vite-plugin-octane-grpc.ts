@@ -32,7 +32,7 @@ const DEBUG_SERVER_LOGS = true;  // Enabled to debug render callback image data
 // Set to true to use Alpha 5 API (proto_old)
 // Set to false to use Beta 2 API (proto) - default
 // NOTE: This must match the USE_ALPHA5_API setting in client/src/config/apiVersionConfig.ts
-const USE_ALPHA5_API = true;
+const USE_ALPHA5_API = false;
 
 // Server log helper functions with clear tagging
 const serverLog = (...args: any[]) => {

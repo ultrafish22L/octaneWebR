@@ -43,7 +43,7 @@
  * Set to true to use Alpha 5 API (proto_old)
  * Set to false to use Beta 2 API (proto)
  */
-export const USE_ALPHA5_API = true;
+export const USE_ALPHA5_API = false;
 
 // ============================================================================
 // METHOD NAME MAPPINGS
