@@ -40,10 +40,15 @@
 // ============================================================================
 
 /**
- * Set to true to use Alpha 5 API (proto_old)
- * Set to false to use Beta 2 API (proto)
+ * Import API version setting from centralized config.
+ * 
+ * ⭐ TO SWITCH API VERSIONS: Edit api-version.config.js at project root!
+ * 
+ * This ensures both client and server use identical settings.
+ * Previous bugs were caused by mismatched configurations.
  */
-export const USE_ALPHA5_API = false;
+import { USE_ALPHA5_API as _USE_ALPHA5_API } from './apiVersionImport';
+export const USE_ALPHA5_API = _USE_ALPHA5_API;
 
 // ============================================================================
 // METHOD NAME MAPPINGS
@@ -69,11 +74,11 @@ export const METHOD_NAME_MAP: Record<string, string> = {
 
 /**
  * Get the actual method name to use based on current API version
- * @param serviceName - The gRPC service name
+ * @param _serviceName - The gRPC service name (reserved for future use)
  * @param methodName - The method name (Beta 2 version)
  * @returns The method name to use for the current API version
  */
-export function getCompatibleMethodName(serviceName: string, methodName: string): string {
+export function getCompatibleMethodName(_serviceName: string, methodName: string): string {
   if (!USE_ALPHA5_API) {
     // Using Beta 2, no translation needed
     return methodName;
@@ -97,7 +102,7 @@ export function getApiVersion(): string {
  * @returns true if feature is supported
  */
 export function isFeatureSupported(featureName: string): boolean {
-  const alpha5UnsupportedFeatures = [
+  const alpha5UnsupportedFeatures: string[] = [
     // Add any features that only work in Beta 2
   ];
   
@@ -114,13 +119,13 @@ export function isFeatureSupported(featureName: string): boolean {
 
 /**
  * Transform request parameters if needed for compatibility
- * @param serviceName - The gRPC service name
+ * @param _serviceName - The gRPC service name (reserved for future use)
  * @param methodName - The method name (Beta 2 version)
  * @param params - The request parameters (Beta 2 format)
  * @returns The parameters transformed for the current API version
  */
 export function transformRequestParams(
-  serviceName: string,
+  _serviceName: string,
   methodName: string,
   params: any
 ): any {

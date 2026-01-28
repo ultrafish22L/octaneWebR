@@ -142,7 +142,7 @@ function NodeParameter({
       // These PT_ types match PinTypeId enum from octaneids.proto - only primitive value nodes
       const valueTypes = ['PT_BOOL', 'PT_INT', 'PT_FLOAT', 'PT_STRING', 'PT_ENUM'];
       
-      if (!node.outType || !valueTypes.includes(node.outType)) {
+      if (!node.outType || !valueTypes.includes(String(node.outType))) {
         Logger.debug(`🚫 Skipping value fetch for ${node.name} (outType: ${node.outType}) - not a simple value type`);
         return;  // Skip nodes that aren't simple value types
       }

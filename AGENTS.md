@@ -403,7 +403,63 @@ For detailed domain knowledge, see `.openhands/skills/`:
 
 ## Recent Important Fixes
 
-### Beta 2 API Configuration (2025-01-31)
+### Centralized API Version Config (2025-01-31) ⭐ LATEST
+**Problem**: When switching between Alpha 5 and Beta 2, users had to edit TWO config files. Mismatched configs caused "Method not found" errors.  
+**Root Cause**: Client and server had separate `USE_ALPHA5_API` constants that could get out of sync.  
+**Solution**: Created single source of truth in `api-version.config.js` at project root.
+
+**Files Changed**:
+- **NEW**: `api-version.config.js` - Single source of truth (line 22)
+- **NEW**: `client/src/config/apiVersionImport.ts` - ES module bridge
+- **UPDATED**: `vite-plugin-octane-grpc.ts` (line 40) - Now imports from centralized config
+- **UPDATED**: `client/src/config/apiVersionConfig.ts` (line 50) - Now imports from centralized config
+- **NEW**: `API_VERSION_SWITCHING.md` - Complete switching guide
+
+**How to Switch API Versions** (Old Way ❌ vs New Way ✅):
+
+```bash
+# ❌ OLD WAY - Error prone, had to edit 2 files
+# Edit vite-plugin-octane-grpc.ts line 35
+# Edit client/src/config/apiVersionConfig.ts line 46
+# Easy to forget one, causing version mismatch
+
+# ✅ NEW WAY - Edit ONE file only!
+# Edit api-version.config.js line 22:
+const USE_ALPHA5_API = true;   // Alpha 5
+const USE_ALPHA5_API = false;  // Beta 2
+
+# Then rebuild and restart
+npm run build && npm run dev
+```
+
+**Architecture**:
+```
+api-version.config.js (ROOT - Single Source)
+     ├──> Server (vite-plugin-octane-grpc.ts)
+     └──> Client (apiVersionImport.ts → apiVersionConfig.ts)
+```
+
+**What Gets Synchronized**:
+- ✅ Proto file directory selection (server/proto vs server/proto_old)
+- ✅ Method name transformation (getPinValueByPinID → getPinValue)
+- ✅ Parameter transformation (pin_id → id, expected_type removal)
+
+**Previous Bug Pattern** (Now Impossible):
+- Alpha 5 in client + Beta 2 in server = "Method getPinValue not found" ❌
+- Beta 2 in client + Alpha 5 in server = "Method getPinValueByPinID not found" ❌
+- Now: Always synchronized automatically ✅
+
+**Verification**: After switching, check logs:
+```
+[OCTANE-SERVER] API Version: Alpha 5 (2026.1)
+[OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto_old
+```
+
+**Documentation**: See `API_VERSION_SWITCHING.md` for complete guide.
+
+---
+
+### Beta 2 API Configuration (2025-01-31) [SUPERSEDED BY CENTRALIZED CONFIG]
 **Problem**: "Method not found" errors when testing Beta 2 Octane (`getPinValueByPinID`, `getValueByAttrID`)  
 **Root Cause**: Both client and server configured for Alpha 5 while testing Beta 2  
 **Files**: `vite-plugin-octane-grpc.ts` line 35, `client/src/config/apiVersionConfig.ts` line 46
