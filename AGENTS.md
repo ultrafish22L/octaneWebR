@@ -286,19 +286,26 @@ const USE_ALPHA5_API = true;  // Must match client setting
 
 **Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors (558 occurrences) by implementing proper Alpha 5 parameter transformation. 
 - **Root Cause**: Alpha 5's `getValueByIDRequest` expects `item_ref` field, not `objectPtr`
-- **Solution**: Server-side transformation in `server/src/index.ts` (lines 120-147) converts `objectPtr` → `item_ref` for ApiItem methods before gRPC call
+- **Solution**: Parameter transformation in `vite-plugin-octane-grpc.ts` (lines 689-695) converts `objectPtr` → `item_ref` for ApiItem methods
+- **Critical Discovery**: App uses **vite-plugin-octane-grpc.ts** as server, NOT `server/src/index.ts`! Initial fix was applied to wrong file.
+- **Actual Fix (commit e973c45)**: Added Alpha 5 method names (`getByAttrID`, `setByAttrID`) to existing transformation condition in vite plugin
 - **Method Names**: Client conditionally uses `getByAttrID` (Alpha 5) vs `getValueByAttrID` (Beta 2)
-- **Reference**: Based on old `vite-plugin-octane-grpc.ts` parameter remapping logic (lines 360-368)
+- **Reference**: Based on old `vite-plugin-octane-grpc.ts` parameter remapping logic (lines 683-699)
 - **Result**: Alpha 5 value fetching now works correctly for simple types (PT_BOOL, PT_INT, PT_FLOAT, PT_STRING, PT_ENUM)
 
 **How It Works**:
 1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
 2. `transformRequestParams()` converts parameter structure
 3. `ApiService.callApi()` applies both before making gRPC request
-4. **Server proxy** transforms `objectPtr` → `item_ref` for Alpha 5 ApiItem methods
+4. **Vite plugin proxy** transforms `objectPtr` → `item_ref` for Alpha 5 ApiItem methods (lines 689-695)
 5. NodeInspector conditionally calls `getByAttrID` (Alpha 5) or `getValueByAttrID` (Beta 2)
 6. NodeInspector filters nodes by `outType` to only fetch values for simple types
 7. All existing code continues to use Beta 2 style (no changes needed)
+
+**⚠️ IMPORTANT - Server Architecture**:
+- The app uses **`vite-plugin-octane-grpc.ts`** as the gRPC proxy server (embedded in Vite dev server)
+- The `server/` directory contains a separate Express server implementation, but it's **NOT USED** by `npm run dev`
+- All API transformations and gRPC logic must be implemented in the **vite plugin**, not in `server/src/index.ts`
 
 ### Server Logging Control (Jan 2025) ✅
 **What**: Debug flag to control server-side logging with clear tagging  
