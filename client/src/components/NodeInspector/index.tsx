@@ -1274,7 +1274,7 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   buildHasGroupMap(node, 0, hasGroupMap);
 
   return (
-    <div className="octane-node-inspector" onContextMenu={handleContextMenu}>
+    <div className="node-inspector" onContextMenu={handleContextMenu}>
       {/* Content */}
       <div className="octane-inspector-content">
         <NodeParameter 

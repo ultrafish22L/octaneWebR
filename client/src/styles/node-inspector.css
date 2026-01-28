@@ -516,11 +516,6 @@
 }
 
 /* Octane-Style Node Inspector */
-.octane-node-inspector {
-    height: 100%;
-    overflow-y: visible;
-    font-size: var(--font-size-small);
-}
 
 .inspector-header {
     padding: 6px 8px;
@@ -936,8 +931,7 @@
 }
 
 /* Level-based indentation system with consistent 24px increments - ONLY for Node Inspector */
-.node-inspector .node-indent-0,
-.octane-node-inspector .node-indent-0 {
+.node-inspector .node-indent-0 {
     background-color: var(--octane-bg-primary);
     border: 1px solid var(--octane-parameter-bg);
     border-radius: var(--border-radius-lg); 
@@ -945,8 +939,7 @@
     padding: 0 0 0 0;
 }
 
-.node-inspector .node-indent,
-.octane-node-inspector .node-indent {
+.node-inspector .node-indent {
     background-color: var(--octane-bg-secondary);
     border: 1px solid var(--octane-parameter-bg);
     border-radius: var(--border-radius-lg); 
@@ -954,8 +947,7 @@
     padding: 0 0 0 0;
 }
 
-.node-inspector .node-indent-done,
-.octane-node-inspector .node-indent-done {
+.node-inspector .node-indent-done {
     background-color: var(--octane-bg-secondary);
     border: 1px solid var(--octane-parameter-bg);
     border-radius: var(--border-radius-lg); 
@@ -963,16 +955,14 @@
     padding: 0 0 0 0; 
 }
 
-.node-inspector .node-toggle-content,
-.octane-node-inspector .node-toggle-content {
+.node-inspector .node-toggle-content {
     background-color: var(--octane-bg-secondary);
     padding: 0;
     margin: 0;
 }
 
 /* Icon box with better visibility and positioning - ONLY for Node Inspector */
-.node-inspector .node-icon-box,
-.octane-node-inspector .node-icon-box {
+.node-inspector .node-icon-box {
     position: absolute;
     left: -8px; 
     width: 20px;
@@ -988,8 +978,7 @@
 }
 
 /* Node content area with improved spacing - ONLY for Node Inspector */
-.node-inspector .node-content,
-.octane-node-inspector .node-content {
+.node-inspector .node-content {
     flex: 1;
     padding: 0 0 0 18px; /* Increased padding for better spacing */
     min-height: 10px;
@@ -1000,16 +989,14 @@
 }
 
 /* Node parameters container - ONLY for Node Inspector */
-.node-inspector .node-parameters,
-.octane-node-inspector .node-parameters {
+.node-inspector .node-parameters {
     width: 100%;
     margin-top: 4px;
     padding-left: 0;
 }
 
 /* Node header with improved spacing and alignment - ONLY for Node Inspector */
-.node-inspector .node-label,
-.octane-node-inspector .node-label {
+.node-inspector .node-label {
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -1019,14 +1006,12 @@
     gap: var(--spacing-none);
 }
 
-.node-inspector .node-label:hover,
-.octane-node-inspector .node-label:hover {
+.node-inspector .node-label:hover {
     background: var(--octane-bg-hover);
 }
 
 /* Collapse/expand icon styling - ONLY for Node Inspector */
-.node-inspector .node-collapse-icon,
-.octane-node-inspector .node-collapse-icon {
+.node-inspector .node-collapse-icon {
     font-size: var(--font-size-small);
     color: var(--octane-text-secondary);
     transition: transform 0.2s ease;
@@ -1034,14 +1019,12 @@
     text-align: center;
 }
 
-.node-inspector .node-collapse-icon:hover,
-.octane-node-inspector .node-collapse-icon:hover {
+.node-inspector .node-collapse-icon:hover {
     color: var(--octane-text-primary);
 }
 
 /* Node title styling - ONLY for Node Inspector */
-.node-inspector .node-title,
-.octane-node-inspector .node-title {
+.node-inspector .node-title {
     padding: 0px 0px 0px 0px;
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-light);
@@ -1052,8 +1035,7 @@
 }
 
 /* Node parameter controls with better spacing - ONLY for Node Inspector */
-.node-inspector .node-parameter-controls,
-.octane-node-inspector .node-parameter-controls {
+.node-inspector .node-parameter-controls {
     margin-left: 12px; /* Space between title and dropdown */
     flex: 1; /* Fill remaining space to the right */
     display: flex;
@@ -1061,8 +1043,7 @@
     gap: var(--spacing-none);
 }
 
-.node-inspector .node-parameter-controls .parameter-dropdown,
-.octane-node-inspector .node-parameter-controls .parameter-dropdown {
+.node-inspector .node-parameter-controls .parameter-dropdown {
     background: var(--octane-bg-primary);
     border: 1px solid var(--octane-bg-header);
     border-radius: var(--border-radius-lg);
@@ -1074,12 +1055,10 @@
     transition: border-color 0.2s ease;
 }
 
-.node-inspector .node-parameter-controls .parameter-dropdown:hover,
-.octane-node-inspector .node-parameter-controls .parameter-dropdown:hover {
+.node-inspector .node-parameter-controls .parameter-dropdown:hover {
 }
 
-.node-inspector .node-parameter-controls .parameter-dropdown:focus,
-.octane-node-inspector .node-parameter-controls .parameter-dropdown:focus {
+.node-inspector .node-parameter-controls .parameter-dropdown:focus {
     outline: none;
     border-color: var(--octane-accent);
     box-shadow: 0 0 0 2px var(--octane-warning-bg-alpha);
@@ -1447,12 +1426,9 @@
 }
 
 
-.octane-node-icon {
-    font-size: var(--font-size-normal);
-}
-
-
 .node-inspector {
+    height: 100%;
+    overflow-y: visible;
     color: var(--octane-text-primary);
     font-size: var(--font-size-small);
 }
