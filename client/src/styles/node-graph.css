@@ -49,17 +49,7 @@
     z-index: var(--z-dialog-overlay);
 }
 
-.modal-dialog {
-    background: var(--octane-bg-primary);
-    border: 1px solid var(--octane-border);
-    border-radius: var(--border-radius-lg);
-    box-shadow: 0 8px 24px var(--octane-overlay-dark);
-    min-width: 400px;
-    max-width: 600px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
+/* .modal-dialog consolidated in app.css (shared component) */
 
 .modal-header {
     display: flex;

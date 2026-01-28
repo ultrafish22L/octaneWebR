@@ -393,11 +393,7 @@ input:checked + .slider:before {
     font-style: italic;
 }
 
-/* Spin animation for refresh button */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+/* @keyframes spin consolidated in app.css (shared animation) */
 
 /* Scene Tree Loading States */
 .scene-loading {
@@ -700,13 +696,5 @@ input:checked + .slider:before {
     color: var(--octane-text-primary);
 }
 
-/* Toolbar icon spin animation for refresh button */
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
+/* @keyframes spin consolidated in app.css (shared animation) */
 

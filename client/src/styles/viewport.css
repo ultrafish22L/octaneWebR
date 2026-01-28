@@ -991,10 +991,7 @@
     transition: all 0.15s ease;
 }
 
-.control-btn:hover {
-    background-color: var(--octane-bg-hover);
-    color: var(--octane-text-primary);
-}
+/* .control-btn:hover consolidated in app.css (shared component) */
 
 .render-info {
     display: flex;

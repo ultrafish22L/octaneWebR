@@ -70,39 +70,14 @@ body {
   position: relative;
 }
 
-.render-viewport {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--octane-border-primary);
-  position: relative;
-}
-
 #render-canvas {
   max-width: 100%;
   max-height: 100%;
   border: 1px solid var(--octane-border);
 }
 
-.viewport-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--octane-overlay-dark);
-}
-
-.scene-tree {
-  min-height: 200px;
-  padding: 10px;
-  background: var(--octane-bg-secondary);
-  border-radius: var(--border-radius-base);
-}
+/* .render-viewport moved to viewport.css (domain-specific) */
+/* .viewport-overlay moved to viewport.css (domain-specific) */
 
 /* Component Styles */
 /* .callback-render-viewport - consolidated in octane-theme.css:824 (superset with background) */
@@ -127,14 +102,8 @@ body {
   font-size: var(--font-size-medium);
 }
 
-.tree-node:hover {
-  background: var(--octane-viewport-bg);
-}
-
-.tree-node.selected {
-  background: var(--octane-node-bg);
-  border-left: 3px solid var(--octane-accent);
-}
+/* .tree-node:hover moved to scene-outliner.css (domain-specific) */
+/* .tree-node.selected moved to scene-outliner.css (domain-specific) */
 
 /* Node Inspector */
 .node-inspector {
@@ -247,10 +216,7 @@ body.resizing .panel-splitter {
     border-radius: var(--border-radius-base);
 }
 
-
-.scene-tree {
-    font-size: var(--font-size-small);
-}
+/* .scene-tree moved to scene-outliner.css (domain-specific) */
 
 /* Node Graph Layout */
 
