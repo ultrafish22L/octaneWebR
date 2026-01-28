@@ -284,7 +284,7 @@ const USE_ALPHA5_API = true;  // Must match client setting
 
 **Critical Fix #1 (Jan 2025)**: Added `USE_ALPHA5_API` flag to `vite-plugin-octane-grpc.ts` to ensure server loads correct proto files (`proto_old/` for Alpha 5). Without this, server was loading Beta 2 proto definitions while client was calling Alpha 5 methods, causing "Method getByAttrID not found" errors.
 
-**Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors in Alpha 5 by filtering `getValueByAttrID`/`getByAttrID` calls to only simple value node types (PT_FLOAT, PT_INT, PT_RGB, etc.). Alpha 5 API is stricter than Beta 2 and rejects these calls on complex nodes like geometries, materials, cameras. Fix in `client/src/components/NodeInspector/index.tsx` checks `node.outType` before calling the API.
+**Critical Fix #2 (Jan 2025)**: Fixed "Invalid object type for ApiItem" errors in Alpha 5 by completely disabling `getValueByAttrID`/`getByAttrID` calls when `USE_ALPHA5_API = true`. Alpha 5's `getByAttrID` method has fundamentally different behavior than Beta 2's `getValueByAttrID` and all calls were failing (558 errors during scene load). Value fetching is temporarily disabled for Alpha 5 until proper implementation approach is determined. Scene tree and UI continue to function correctly without value fetching.
 
 **How It Works**:
 1. `getCompatibleMethodName()` translates method names (Beta 2 → Alpha 5)
