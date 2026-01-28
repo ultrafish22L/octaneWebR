@@ -163,48 +163,10 @@ export const RenderToolbar = React.memo(function RenderToolbar({ className = '',
     initializeRenderSettings();
   }, [connected, client]);
 
-  // Fetch system info (GPU, memory, version, primitives) on mount
-  useEffect(() => {
-    if (!connected) return;
-
-    const fetchSystemInfo = async () => {
-      try {
-        const response = await fetch('http://localhost:45769/api/system/info');
-        if (response.ok) {
-          const systemInfo = await response.json();
-          Logger.debug('📊 System info received:', systemInfo);
-
-          // Update render stats with system info
-          setRenderStats(prev => ({
-            ...prev,
-            primitiveCount: systemInfo.primitiveCount || 0,
-            meshCount: systemInfo.meshCount || 1,
-            gpu: systemInfo.hasHardwareRT 
-              ? `${systemInfo.gpuName} (RT)` 
-              : systemInfo.gpuName,
-            version: systemInfo.octaneVersion || 'Unknown',
-            memory: `${systemInfo.totalMemoryGB.toFixed(1)} GB`
-          }));
-        }
-      } catch (error) {
-        Logger.error('Failed to fetch system info:', error);
-      }
-    };
-
-    // Fetch on mount and when connection changes
-    fetchSystemInfo();
-
-    // Also fetch when render starts (to update geometry stats)
-    const handleRenderStart = () => {
-      fetchSystemInfo();
-    };
-
-    client.on('OnRenderStart', handleRenderStart);
-
-    return () => {
-      client.off('OnRenderStart', handleRenderStart);
-    };
-  }, [connected, client]);
+  // Note: System info endpoint removed (was calling non-existent Express server on port 45769)
+  // GPU data (version, GPU name, memory) is already fetched via fetchGPUData above using gRPC
+  // Primitive/mesh counts remain at default values (0 pri, 1 mesh) until implemented via gRPC
+  // TODO: If needed, implement primitive/mesh count fetching using ApiRenderEngine gRPC methods
 
   // Listen for real-time render statistics from WebSocket callbacks
   useEffect(() => {
