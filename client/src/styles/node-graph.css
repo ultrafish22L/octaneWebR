@@ -607,8 +607,8 @@
   stroke: #2a2a2a !important; /* Dark grid lines on lighter background */
 }
 
-/* NodeGraphEditor takes full remaining space after toolbar */
-.node-graph-tabgraph > div:not(.node-graph-toolbar) {
+/* NodeGraphEditor takes full remaining space after toolbar and tabs */
+.node-graph-tabgraph > div:not(.node-graph-toolbar):not(.node-graph-tabs) {
   flex: 1;
   position: relative;
 }
@@ -1413,14 +1413,14 @@
  * ======================================== */
 /* Node Graph Editor Tabs - Matching Scene Outliner Style */
 .node-graph-tabs {
-    display:block;
+    display: block;
     background: var(--octane-bg-primary);
     border-bottom: 1px solid var(--octane-border);
     padding: 3px 3px 0 3px;
     gap: 0;
     align-items: stretch;
     position: relative;
-    height: 22;
+    flex: 0 0 auto; /* Don't grow, only take needed space for tabs */
 }
 
 .node-graph-tab {
