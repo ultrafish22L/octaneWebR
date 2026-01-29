@@ -642,6 +642,8 @@ export class SceneService extends BaseService {
       item.children = children;
       
       if (children.length === 0) {
+        // Try to fetch attrInfo for leaf nodes (parameter nodes)
+        // Some nodes may not support attrInfo (invalid object reference) - this is expected
         try {
           const attrInfoResponse = await this.apiService.callApi(
             'ApiItem',
@@ -655,7 +657,8 @@ export class SceneService extends BaseService {
             Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
           }
         } catch (attrError: any) {
-          Logger.debug(`  ℹ️ No attrInfo for ${item.name}`);
+          // Expected for some node types that don't have A_VALUE attribute
+          Logger.debug(`  ℹ️ No attrInfo for ${item.name} (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
         }
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);

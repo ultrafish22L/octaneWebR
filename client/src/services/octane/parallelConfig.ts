@@ -13,7 +13,7 @@ export const PARALLEL_CONFIG = {
    * 
    * Progressive UI updates: Both modes now emit updates as levels complete
    */
-  ENABLED: true,  // ✅ Re-enabled with progressive UI updates + children building fix
+  ENABLED: true,  // ✅ Re-enabled with diagnostic logging for attrInfo failures
   
   /**
    * Maximum concurrent API requests
