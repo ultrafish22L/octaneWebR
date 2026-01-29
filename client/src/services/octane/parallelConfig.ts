@@ -10,8 +10,10 @@ export const PARALLEL_CONFIG = {
    * - false: Use sequential loading (slower but simpler)
    * 
    * Tested with 7424-node scenes: parallel loads in ~48s vs ~180s sequential
+   * 
+   * Progressive UI updates: Both modes now emit updates as levels complete
    */
-  ENABLED: false,  // TEMPORARY: Disabled due to Node Inspector bug (needs investigation)
+  ENABLED: true,  // ✅ Re-enabled with progressive UI updates + children building fix
   
   /**
    * Maximum concurrent API requests

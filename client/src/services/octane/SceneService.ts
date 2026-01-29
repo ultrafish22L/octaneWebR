@@ -265,6 +265,10 @@ export class SceneService extends BaseService {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           Logger.debug(`✅ Finished building children for all level 1 items`);
+          
+          // 🎯 PROGRESSIVE UPDATE: Emit after level 1 completes
+          Logger.debug(`📡 Sequential: Emitting progressive update after level ${level}`);
+          this.emit('sceneTreeUpdated', this.scene);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -395,6 +399,12 @@ export class SceneService extends BaseService {
           await this.addItemChildren(item);
         });
         Logger.debug(`✅ Finished building children for ${sceneItems.length} level ${level} items`);
+        
+        // 🎯 PROGRESSIVE UPDATE: Emit after each level completes (for top levels only)
+        if (level <= 2) {
+          Logger.debug(`📡 Parallel: Emitting progressive update after level ${level} (NodeGraph)`);
+          this.emit('sceneTreeUpdated', this.scene);
+        }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
         Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle} (parallel mode)`);
@@ -449,6 +459,20 @@ export class SceneService extends BaseService {
             if (result) {
               await this.addSceneItem(sceneItems, result.connectedNode, result.pinInfo, level);
             }
+          }
+          
+          // ⚡ PARALLEL: Build children for all items at this level concurrently
+          // Matches graph logic - ensures all nodes get children populated
+          Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items (parallel)`);
+          await parallelLimit(sceneItems, PARALLEL_CONFIG.MAX_CONCURRENT, async (item) => {
+            await this.addItemChildren(item);
+          });
+          Logger.debug(`✅ Finished building children for ${sceneItems.length} level ${level} items`);
+          
+          // 🎯 PROGRESSIVE UPDATE: Emit after each level completes (for top levels only)
+          if (level <= 2) {
+            Logger.debug(`📡 Parallel: Emitting progressive update after level ${level} (Regular nodes)`);
+            this.emit('sceneTreeUpdated', this.scene);
           }
         } catch (pinCountError: any) {
           Logger.error(`  ❌ Failed to get pin count:`, pinCountError.message);
