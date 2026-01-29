@@ -7,7 +7,6 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  /* Added from theme-octane.css: */
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
@@ -164,16 +163,11 @@ body.resizing .panel-splitter {
     pointer-events: none;
 }
 
-/* REMOVED: .inspector-content - Dead code, overridden by node-inspector.css (loads after) */
-
-/* .scene-tree moved to scene-outliner.css (domain-specific) */
-
 /* Node Graph Layout */
 
 @media (max-width: 1400px) {
     .app-layout {
         grid-template-columns: 180px 1fr 280px;
-        /* Added from theme-octane.css: */
         grid-template-columns: 150px 1fr 200px;
         grid-template-rows: 1fr 200px;
 }
@@ -230,7 +224,6 @@ body.resizing .panel-splitter {
 @media print {
     .app-container {
         display: block;
-        /* Added from theme-octane.css: */
         background-color: var(--bg-primary);
         grid-template-rows: var(--menu-height) 1fr var(--status-bar-height);
         height: 100vh;
@@ -253,7 +246,6 @@ body.resizing .panel-splitter {
         border: 1px solid var(--text-primary);
         margin-bottom: 20px;
         break-inside: avoid;
-        /* Added from theme-octane.css: */
         background-color: var(--bg-secondary);
         display: flex;
         flex-direction: column;
@@ -374,10 +366,6 @@ body.resizing .react-flow__edge-interaction {
     pointer-events: auto;
 }
 
-/* Context menu item styles moved to theme-octane.css for consistency */
-
-/* REMOVED: .context-menu-separator - Dead code, overridden by node-graph.css (loads after) */
-
 .context-menu-icon {
     width: 16px;
     height: 16px;
@@ -436,7 +424,6 @@ body.drag-over * {
 
 
 /* Modal Dialog Components */
-/* REMOVED: .modal-overlay - Dead code, overridden by node-graph.css (loads after) */
 
 .modal-dialog {
     background-color: var(--bg-secondary);
@@ -449,8 +436,6 @@ body.drag-over * {
     display: flex;
     flex-direction: column;
 }
-
-/* Removed duplicate - consolidated .modal-header at line ~3762 (later definition applies due to CSS cascade) */
 
 .modal-title {
     font-size: var(--font-size-small);
@@ -480,8 +465,6 @@ body.drag-over * {
     overflow: auto;
     color: var(--text-primary);
 }
-
-/* Removed duplicate - consolidated .modal-footer at line ~3808 (later definition applies due to CSS cascade) */
 
 .modal-button {
     background-color: var(--bg-header);

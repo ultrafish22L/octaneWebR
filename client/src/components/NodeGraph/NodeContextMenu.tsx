@@ -5,7 +5,6 @@
  * 
  * ReactFlow v12 Best Practices:
  * - Uses createPortal for proper rendering outside parent DOM
- * - Uses CSS classes from theme-octane.css (no inline styles)
  * - Screen boundary detection to keep menu visible
  * - Standardized click event handling
  * - Proper disabled state prevents clicks

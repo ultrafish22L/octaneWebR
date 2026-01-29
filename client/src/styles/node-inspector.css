@@ -163,18 +163,12 @@
     border-color: var(--accent-blue);
 }
 
-/* Removed duplicate - consolidated at line ~2760 */
-
 /* Node Inspector Components - Professional Octane Style */
-/* Duplicate .node-inspector-header removed - see line 7 */
 
 .inspector-icon {
     margin-right: 4px;
     font-size: var(--font-size-normal);
 }
-
-/* Duplicate .inspector-dropdown removed (unused, keeping octane- version below) */
-/* Duplicate .inspector-target-select removed (unused, keeping octane- version below) */
 
 .inspector-dropdown {
     display: flex;
@@ -219,10 +213,6 @@
     font-weight: var(--font-weight-header);
     color: var(--text-primary);
 }
-
-/* Removed duplicate .inspector-dropdown - see octane- version above */
-/* Removed duplicate .inspector-target-select - see octane- version above */
-/* .inspector-content moved to layout.css (consolidated) */
 
 /* Parameter Sections */
 .parameter-section {
@@ -354,8 +344,6 @@
     cursor: pointer;
 }
 
-/* Removed duplicate - consolidated at line ~3600 */
-
 /* Parameter Dropdowns - see line 119 for .parameter-dropdown definition */
 
 .parameter-dropdown:focus {
@@ -364,8 +352,6 @@
 }
 
 /* Color Parameter Controls (matching reference screenshot) */
-
-
 
 
 
@@ -632,9 +618,6 @@
 
 /* Numeric Input Controls */
 
-/* Removed duplicate - consolidated in Numeric Input Controls section at line ~3588 */
-
-/* Duplicate .parameter-controls removed - see line 331 */
 
 .param-increment,
 
@@ -644,9 +627,6 @@
 
 .param-increment:active,
 
-/* Checkbox Controls - see line 1058 for .parameter-checkbox-container */
-
-/* Removed duplicate - consolidated at line ~3570 */
 
 /* Dropdown Controls - see line 119 for .parameter-dropdown definition */
 
@@ -656,19 +636,6 @@
     background: var(--bg-primary);
 }
 
-
-/* Color Picker Controls */
-
-
-
-
-
-/* Vector Input Controls */
-
-
-/* Text Input Controls */
-
-/* Removed duplicate - overridden by multi-selector at line ~3605 in Numeric Input Controls section */
 
 /* Parameter Animation Effects */
 /* .parameter-row consolidated in layout.css:223 */
@@ -1128,8 +1095,6 @@
     padding-left: 0;
 }
 
-/* Pin group specific styles */
-
 
 /* Parameter specific styles */
 .parameter {
@@ -1140,8 +1105,6 @@
 .parameter .node-label {
     justify-content: space-between;
 }
-
-/* Removed duplicate - consolidated at line ~2760 */
 
 /* Hover states */
 

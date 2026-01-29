@@ -4,7 +4,6 @@
  */
 
 /* Node Graph Components */
-/* Node graph toolbar - consolidated from theme-octane.css and components.css duplicates */
 .node-graph-toolbar {
   display: flex;
   flex-direction: column;
@@ -1090,7 +1089,6 @@
 .material-database-content::-webkit-scrollbar-thumb:hover {
   background: var(--border);
 }
-/* ===== EXTRACTED FROM theme-octane.css ===== */
 
 /* Node Graph */
 /* Bottom Panel - Node Graph Editor */

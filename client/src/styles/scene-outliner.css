@@ -404,7 +404,6 @@ input:checked + .slider:before {
 }
 
 /* ===== NODE PALETTE ===== */
-/* REMOVED: .node-palette - Dead code, overridden by node-graph.css (loads after) */
 
 .node-type-selector {
     display: flex;
