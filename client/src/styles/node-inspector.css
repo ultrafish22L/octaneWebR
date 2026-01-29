@@ -125,9 +125,10 @@
 }
 
 .parameter-dropdown {
-    width: 100%;
+    width: 160px; /* Consistent width matching Octane */
+    min-width: 160px;
+    max-width: 160px;
     height: 22px;
-    min-width: 80px;
     padding: 0 20px 0 6px;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
@@ -192,7 +193,9 @@
     border-radius: var(--border-radius-sm);
     cursor: pointer;
     appearance: none;
-    min-width: 120px;
+    width: 160px; /* Consistent width matching Octane */
+    min-width: 160px;
+    max-width: 160px;
 }
 
 .inspector-dropdown-inline {
@@ -843,11 +846,12 @@
 
 /* Node parameter controls with better spacing - ONLY for Node Inspector */
 .node-inspector .node-parameter-controls {
-    margin-left: 12px; /* Space between title and dropdown */
-    flex: 1; /* Fill remaining space to the right */
+    margin-left: auto; /* Push dropdowns to right side */
+    flex: 0 0 auto; /* Don't grow or shrink - maintain consistent width */
     display: flex;
     align-items: center;
     gap: var(--spacing-none);
+    min-width: 160px; /* Consistent dropdown area width matching Octane */
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown {
@@ -1037,7 +1041,9 @@
     color: var(--bg-header);
     font-size: var(--font-size-small);
     padding: 0 4px;
-    min-width: 80px;
+    width: 160px; /* Consistent width matching Octane */
+    min-width: 160px;
+    max-width: 160px;
     cursor: pointer;
     display: grid;
     text-align: right;
@@ -1127,7 +1133,7 @@
 /* Parameter Control Styles for Interactive Node Inspector */
 .parameter-control-container {
     display: inline-flex;
-    width: 100%; /* Stretch to fill parent node-parameter-controls */
+    width: auto; /* Let content determine width, not parent */
     align-items: center;
     gap: var(--spacing-md);
 }
