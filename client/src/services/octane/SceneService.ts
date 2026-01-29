@@ -450,6 +450,27 @@ export class SceneService extends BaseService {
         return existing;
       }
       
+      // 🔒 PARALLEL MODE FIX: Reserve this handle immediately to prevent race conditions
+      // Without this, multiple threads can pass the existence check above simultaneously,
+      // then all fetch data and create duplicates.
+      // Create a minimal placeholder that other threads will find in the map.
+      const placeholder: SceneNode = {
+        level,
+        name: itemName,
+        handle: item.handle,
+        type: outType,
+        typeEnum: 0,
+        outType: outType,
+        icon: '',
+        visible: true,
+        graphInfo: undefined,
+        nodeInfo: undefined,
+        pinInfo: pinInfo,
+        children: [],
+        position: undefined
+      };
+      this.scene.map.set(handleNum, placeholder);
+      
       try {
         const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
         itemName = nameResponse?.result || 'Unnamed';
@@ -489,42 +510,54 @@ export class SceneService extends BaseService {
       } catch (error: any) {
         Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
       }
-    } else {
-      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
-    }
-    
-    const displayName = pinInfo?.staticLabel || itemName;
-    const icon = this.getNodeIcon(outType, displayName);
-    
-    const entry: SceneNode = {
-      level,
-      name: displayName,
-      handle: item?.handle,
-      type: outType,
-      typeEnum: typeof outType === 'number' ? outType : 0,
-      outType: outType,
-      icon,
-      visible: true,
-      graphInfo,
-      nodeInfo,
-      pinInfo,
-      children: [],
-      position
-    };
-    
-    sceneItems.push(entry);
-    
-    if (item != null && item.handle != 0) {
-      const handleNum = Number(item.handle);
-      this.scene.map.set(handleNum, entry);
+      
+      // Update the placeholder with full data
+      const displayName = pinInfo?.staticLabel || itemName;
+      const icon = this.getNodeIcon(outType, displayName);
+      
+      placeholder.name = displayName;
+      placeholder.type = outType;
+      placeholder.typeEnum = typeof outType === 'number' ? outType : 0;
+      placeholder.outType = outType;
+      placeholder.icon = icon;
+      placeholder.graphInfo = graphInfo;
+      placeholder.nodeInfo = nodeInfo;
+      placeholder.position = position;
+      
+      sceneItems.push(placeholder);
+      
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
       
       if (level > 1) {
-        await this.addItemChildren(entry);
+        await this.addItemChildren(placeholder);
       }
+      
+      return placeholder;
+    } else {
+      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
+      
+      const displayName = pinInfo?.staticLabel || itemName;
+      const icon = this.getNodeIcon(outType, displayName);
+      
+      const entry: SceneNode = {
+        level,
+        name: displayName,
+        handle: item?.handle,
+        type: outType,
+        typeEnum: typeof outType === 'number' ? outType : 0,
+        outType: outType,
+        icon,
+        visible: true,
+        graphInfo: undefined,
+        nodeInfo: undefined,
+        pinInfo,
+        children: [],
+        position: undefined
+      };
+      
+      sceneItems.push(entry);
+      return entry;
     }
-    
-    return entry;
   }
 
   private async addItemChildren(item: SceneNode): Promise<void> {
