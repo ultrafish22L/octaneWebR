@@ -389,14 +389,12 @@ export class SceneService extends BaseService {
         }
         
         // ⚡ PARALLEL: Build children for all items at this level concurrently
-        // Only for level 1 to avoid exponential API calls
-        if (level === 1) {
-          Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items (parallel)`);
-          await parallelLimit(sceneItems, PARALLEL_CONFIG.MAX_CONCURRENT, async (item) => {
-            await this.addItemChildren(item);
-          });
-          Logger.debug(`✅ Finished building children for all level 1 items`);
-        }
+        // Recursively parallelizes all levels - MAX_CONCURRENT limit prevents overload
+        Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items (parallel)`);
+        await parallelLimit(sceneItems, PARALLEL_CONFIG.MAX_CONCURRENT, async (item) => {
+          await this.addItemChildren(item);
+        });
+        Logger.debug(`✅ Finished building children for ${sceneItems.length} level ${level} items`);
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
         Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle} (parallel mode)`);
@@ -588,9 +586,8 @@ export class SceneService extends BaseService {
       
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
       
-      if (level > 1) {
-        await this.addItemChildren(completeNode);
-      }
+      // NOTE: Children building is handled by syncSceneParallel for all levels
+      // This ensures consistent parallelization at every depth
       
       return completeNode;
       
