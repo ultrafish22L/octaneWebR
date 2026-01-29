@@ -24,7 +24,7 @@ octaneWebR communicates with Octane via the LiveLink gRPC API.
 3. Set **GRPC API/Enable GRPC Server : true**
 4. Set **GRPC API/GRPC Server Address: 127.0.0.1:51022** and OK
 5. Restart Octane
-6. Load sample scene (teapot.orbx), click on the Render Target
+6. Load sample scene (ORBX/teapot.orbx), click on the Render Target
 
 ---
 
