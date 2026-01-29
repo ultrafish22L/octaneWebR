@@ -37,11 +37,11 @@
 
 :root {
     /* Octane Studio Color Palette - Matched to Octane SE screenshot */
-    --bg-primary: #252525;      /* Main background - matches Octane SE */
-    --bg-secondary: #454545;    /* Panel backgrounds */
+    --bg-primary: #400e79;      /* Main background - matches Octane SE */
+    --bg-secondary: #571c1c;    /* Panel backgrounds */
     --bg-tertiary: #3a3a3a;     /* Tertiary background (darker than secondary) */
     --bg-parameter: #4c4c4c;    /* Panel backgrounds */
-    --bg-lighter: #808080;      /* Render viewport Panel background */
+    --bg-lighter: #ecf0c8;      /* Render viewport Panel background */
     --bg-header: #454545;       /* Header/menu backgrounds - matches Octane SE */
     --bg-hover: #484848;        /* Hover states */
     --bg-active: #525252;       /* Active/pressed states - slightly lighter than hover */
@@ -54,7 +54,7 @@
     --text-disabled: #666666;   /* Disabled text */
     
     /* Octane Accent Colors */
-    --accent: #ff8c00;          /* Primary accent - Octane orange */
+    --accent: #e0e40b;          /* Primary accent - Octane orange */
     --accent-yellow: #ffc107;   /* Selection yellow/gold - matches Octane */
     --accent-yellow-hover: #ffcd38; /* Yellow hover state */
     --accent-green: #5cb85c;    /* Success green */
