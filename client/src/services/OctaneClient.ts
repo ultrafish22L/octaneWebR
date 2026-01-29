@@ -45,6 +45,7 @@ export type {
  */
 export class OctaneClient extends EventEmitter {
   private serverUrl: string;
+  private isSceneSyncing: boolean = false; // Track if scene sync is in progress
   
   // Service modules
   private apiService: ApiService;
@@ -93,6 +94,25 @@ export class OctaneClient extends EventEmitter {
 
   isConnected(): boolean {
     return this.connectionService.isConnected();
+  }
+
+  // ==================== Scene Sync State ====================
+  
+  /**
+   * Set scene syncing state (called by SceneService)
+   * Used to prevent attribute loading during scene sync
+   */
+  setSceneSyncing(syncing: boolean): void {
+    this.isSceneSyncing = syncing;
+    Logger.debug(`🔄 Scene syncing state: ${syncing}`);
+  }
+
+  /**
+   * Check if scene sync is in progress
+   * Used by NodeInspector to skip attribute loading during sync
+   */
+  getIsSceneSyncing(): boolean {
+    return this.isSceneSyncing;
   }
 
   // ==================== API Methods ====================

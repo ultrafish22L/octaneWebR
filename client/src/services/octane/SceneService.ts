@@ -135,6 +135,9 @@ export class SceneService extends BaseService {
     
     Logger.info(`🌳 Building scene tree (${mode} MODE)...`);
     
+    // Mark scene sync as in progress (prevents attribute loading during sync)
+    this.client.setSceneSyncing(true);
+    
     // Reset progress tracking (Phase 2 - optional)
     if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
       this.loadingProgress = {
@@ -210,10 +213,17 @@ export class SceneService extends BaseService {
       this.emit('sceneTreeUpdated', this.scene);
       Logger.debug('✅ SceneTreeUpdated event emitted');
       
+      // Mark scene sync as complete (allows attribute loading to resume)
+      this.client.setSceneSyncing(false);
+      
       return this.scene.tree;
     } catch (error: any) {
       Logger.error('❌ Failed to build scene tree:', error.message);
       Logger.error('❌ Error stack:', error.stack);
+      
+      // Mark scene sync as complete even on error
+      this.client.setSceneSyncing(false);
+      
       throw error;
     }
   }

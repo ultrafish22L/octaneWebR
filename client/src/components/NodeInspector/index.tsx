@@ -133,6 +133,12 @@ function NodeParameter({
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
   useEffect(() => {
     const fetchValue = async () => {
+      // Skip attribute loading during scene sync to prevent browser resource exhaustion
+      if (client.getIsSceneSyncing()) {
+        Logger.debug(`⏸️  Skipping value fetch for "${node.name}" - scene sync in progress`);
+        return;
+      }
+      
       // Verbose parameter logging (commented out to reduce log flooding)
       // Log every node to understand the tree structure
       // if (level < 3) {  // Only log first 3 levels to avoid spam
