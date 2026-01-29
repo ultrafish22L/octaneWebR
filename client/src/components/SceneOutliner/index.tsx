@@ -5,6 +5,7 @@
 
 import { Logger } from '../../utils/Logger';
 import React, { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useOctane } from '../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../services/OctaneClient';
 import { getIconForType } from '../../constants/PinTypes';
@@ -719,9 +720,14 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
     };
 
     const handleSceneTreeUpdated = (scene: any) => {
-      Logger.debug('🌲 SceneOutliner: Full scene tree update');
+      Logger.debug('🌲 SceneOutliner: Full scene tree update (forcing immediate render)');
       const tree = scene.tree || [];
-      setSceneTree(tree);
+      // Use flushSync to force React to render immediately (not batched)
+      // This ensures progressive UI updates are visible during scene loading
+      flushSync(() => {
+        setSceneTree(tree);
+      });
+      Logger.debug('✅ SceneOutliner: UI updated with', tree.length, 'top-level nodes');
       // Schedule parent callback after state update completes
       setTimeout(() => onSceneTreeChange?.(tree), 0);
     };

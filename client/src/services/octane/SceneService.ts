@@ -22,11 +22,11 @@ import { parallelLimitSettled } from '../../utils/parallelAsync';
  */
 const PARALLEL_CONFIG = {
   /** Maximum concurrent API calls for localhost gRPC */
-  MAX_CONCURRENT_REQUESTS: 50,
+  MAX_CONCURRENT_REQUESTS: 6,
   /** Maximum concurrent owned items to fetch in parallel */
-  MAX_CONCURRENT_ITEMS: 50,
+  MAX_CONCURRENT_ITEMS: 10,
   /** Maximum concurrent pins to fetch in parallel */
-  MAX_CONCURRENT_PINS: 30,
+  MAX_CONCURRENT_PINS: 6,
   /** Maximum recursion depth (safety limit to prevent infinite loops) */
   MAX_RECURSION_DEPTH: 15,
   
@@ -386,6 +386,9 @@ export class SceneService extends BaseService {
         if (level === 1 && PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
           Logger.debug(`📢 Emitting progressive UI update: ${this.scene.tree.length} top-level nodes visible`);
           this.emit('sceneTreeUpdated', this.scene);
+          // Give UI a chance to render before continuing (prevents blocking the UI thread)
+          await new Promise(resolve => setTimeout(resolve, 10));
+          Logger.debug(`✅ UI render time elapsed, continuing with children...`);
         }
         
         // Batch build children for better parallelization (when parallel loading enabled)
