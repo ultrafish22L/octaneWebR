@@ -88,7 +88,7 @@ octaneWebR/
 │   │   ├── PinTypes.ts      # Pin-to-node-type compatibility (PT_TO_NT)
 │   │   └── IconMapping.ts   # Icon path mappings
 │   ├── styles/
-│   │   └── octane-theme.css # 134 CSS variables (--octane-*)
+│   │   └── octane-theme.css # 126 CSS variables (no prefix: --bg-primary, --text-primary)
 │   └── App.tsx
 ├── server/proto/            # gRPC proto definitions
 ├── .openhands/skills/       # On-demand knowledge (see below)
@@ -530,6 +530,39 @@ api-version.config.js (ROOT - Single Source)
 
 ## Recent Development Status
 
+### CSS Theme Refactor & UI Polish (2025-02-01)
+
+**Status**: ✅ COMPLETED - All CSS variables renamed, UI bugs fixed
+
+**CSS Variable Naming**:
+- Removed `octane-` prefix from all 126 theme variables (753 occurrences)
+- New naming: `--bg-primary`, `--text-primary`, `--accent-blue` (no prefix)
+- CSS bundle reduced 5.26 KB (104.44 KB → 99.18 kB)
+- Zero naming conflicts verified with existing utility variables
+
+**UI Improvements**:
+- Fixed React Flow "container needs width/height" error
+- Fixed browser context menu appearing over custom menus
+- Simplified node pin tooltips (name only, no type/description clutter)
+- Added descriptive tooltips to node inspector parameters
+
+**CSS Cleanup**:
+- Removed 6 unused CSS variables
+- Removed 5 dead CSS selectors with broken references
+- Fixed 10+ duplicate CSS definitions
+- Replaced all hardcoded colors with theme variables
+
+**Files Modified**: 7 CSS/TSX files across styles/ and components/
+
+**Key Commits**:
+- `5bebfcd` - Fix React Flow parent container sizing error
+- `20f1c5b` - Remove 'octane-' prefix from all CSS theme variables
+- `3c97abd` - Add descriptive tooltips to node inspector items
+- `01320b2` - Simplify node pin tooltips to show name only
+- `e0f3a83` - Fix browser context menu bug
+
+---
+
 ### API Version Compatibility Layer (2025-01-31)
 
 **Status**: ✅ COMPLETED - Centralized configuration working
@@ -553,7 +586,7 @@ api-version.config.js (ROOT - Single Source)
 
 **Testing Status**:
 - ✅ Beta 2: Working (render canvas displays)
-- 🔄 Alpha 5: Awaiting user verification
+- ✅ Alpha 5: Set as default
 
 **Commits**:
 - `af1609b` - Fix: Convert API version config to ES modules and fix TypeScript errors
@@ -600,7 +633,7 @@ api-version.config.js (ROOT - Single Source)
 
 ---
 
-**Last Updated**: 2025-01-31  
+**Last Updated**: 2025-02-01  
 **Version**: v1.0.0  
 **Status**: Active development
 
