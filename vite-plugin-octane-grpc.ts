@@ -24,7 +24,7 @@ import { IncomingMessage } from 'http';
 // ============================================================================
 // Set to true to enable detailed server-side logging
 // Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = true;  // Enabled to debug render callback image data
+const DEBUG_SERVER_LOGS = false;  // Enabled to debug render callback image data
 
 // ============================================================================
 // API VERSION CONFIGURATION
