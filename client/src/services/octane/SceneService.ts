@@ -413,22 +413,22 @@ export class SceneService extends BaseService {
                                          (level === 1 || PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING);
         
         if (shouldBatchBuildChildren && sceneItems.length > 0) {
-          Logger.debug(`🔄 Batch building children for ${sceneItems.length} level ${level} items in parallel...`);
+          Logger.warn(`🔄 BATCH BUILDING children for ${sceneItems.length} level ${level} items...`);
           
           // ⚡ PARALLEL OPTIMIZATION: Build all children concurrently
           const childResults = await parallelLimitSettled(
             sceneItems,
             PARALLEL_CONFIG.MAX_CONCURRENT_ITEMS,
             async (item) => {
-              Logger.debug(`📍 Building children for ${item.name} (handle: ${item.handle})`);
+              Logger.debug(`📍 Batch: ${item.name} (level ${item.level}, childrenLoaded=${item.childrenLoaded})`);
               await this.addItemChildren(item); // Sets childrenLoaded internally
-              Logger.debug(`📍 Finished ${item.name}, children: ${item.children?.length || 0}`);
+              Logger.debug(`📍 Batch finished: ${item.name}, children: ${item.children?.length || 0}`);
               return item;
             }
           );
           
           const successCount = childResults.filter(r => r.status === 'fulfilled').length;
-          Logger.debug(`✅ Finished batch building children: ${successCount}/${sceneItems.length} successful`);
+          Logger.warn(`✅ BATCH BUILD DONE for level ${level}: ${successCount}/${sceneItems.length} successful`);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -696,7 +696,9 @@ export class SceneService extends BaseService {
       // - Level 2+ regular Node (pin) children need individual building
       // addItemChildren now checks childrenLoaded flag internally
       if (level > 1 && !entry.childrenLoaded) {
+        Logger.warn(`🔨 INDIVIDUAL BUILD for ${entry.name} (level ${level}, childrenLoaded=${entry.childrenLoaded})`);
         await this.addItemChildren(entry);
+        Logger.warn(`✅ INDIVIDUAL BUILD DONE for ${entry.name} (now childrenLoaded=${entry.childrenLoaded})`);
         // childrenLoaded is set inside addItemChildren
       }
     }
@@ -706,14 +708,17 @@ export class SceneService extends BaseService {
 
   private async addItemChildren(item: SceneNode): Promise<void> {
     if (!item || !item.handle) {
+      Logger.warn(`⚠️ addItemChildren: Invalid item (no handle)`);
       return;
     }
     
     // Skip if children already loaded (prevents duplication)
     if (item.childrenLoaded) {
-      Logger.debug(`  ⏭️  Skipping ${item.name} - children already loaded`);
+      Logger.warn(`⏭️ SKIPPING ${item.name} (level ${item.level}) - children already loaded (childrenLoaded=${item.childrenLoaded})`);
       return;
     }
+    
+    Logger.debug(`🔨 Building children for ${item.name} (level ${item.level}, childrenLoaded=${item.childrenLoaded})`);
     
     const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
     
@@ -721,6 +726,7 @@ export class SceneService extends BaseService {
       const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       item.childrenLoaded = true; // Mark as loaded here too
+      Logger.debug(`✅ Finished building children for ${item.name} - now childrenLoaded=${item.childrenLoaded}, children count=${children.length}`);
       
       if (children.length === 0) {
         try {
