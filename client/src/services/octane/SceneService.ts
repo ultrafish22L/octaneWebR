@@ -535,7 +535,10 @@ export class SceneService extends BaseService {
     const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
     
     try {
-      const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
+      // Call the appropriate recursive method based on configuration
+      const children = PARALLEL_CONFIG.ENABLED
+        ? await this.syncSceneParallel(item.handle, null, isGraph, item.level || 1)
+        : await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       
       if (children.length === 0) {

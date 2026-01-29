@@ -95,7 +95,7 @@ export async function parallelLimitSettled<T, R>(
     if (executing.length >= limit) {
       await Promise.race(executing);
       // Remove completed promises from executing array
-      const completedIndex = executing.findIndex((p) => 
+      const completedIndex = executing.findIndex(() => 
         results.some((r, i) => i < index && r !== undefined)
       );
       if (completedIndex !== -1) {
