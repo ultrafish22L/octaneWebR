@@ -308,6 +308,8 @@ export class SceneService extends BaseService {
     
     level = level + 1;
     
+    Logger.warn(`🔍 syncSceneRecurse called at level ${level}, itemHandle=${itemHandle}, isGraph=${isGraph}`);
+    
     // Safety limit: Prevent runaway recursion in circular graphs
     if (level > PARALLEL_CONFIG.MAX_RECURSION_DEPTH) {
       Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_RECURSION_DEPTH})`);
@@ -667,6 +669,14 @@ export class SceneService extends BaseService {
     
     if (item != null && item.handle != 0) {
       const handleNum = Number(item.handle);
+      
+      // Check for duplicate handle (indicates same node being created multiple times)
+      if (this.scene.map.has(handleNum)) {
+        const existing = this.scene.map.get(handleNum);
+        Logger.warn(`⚠️ DUPLICATE HANDLE ${handleNum}: "${itemName}" (level ${level}) already exists as "${existing?.name}" (level ${existing?.level})`);
+        Logger.warn(`   Current parent context: ${item.handle} at recursion level ${level}`);
+      }
+      
       this.scene.map.set(handleNum, entry);
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
       
