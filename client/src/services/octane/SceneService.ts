@@ -64,6 +64,7 @@ const PARALLEL_CONFIG = {
 export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
+  private client: any; // Reference to OctaneClient for scene syncing state
   
   // Progressive loading tracking (Phase 2)
   private loadingProgress = {
@@ -75,6 +76,7 @@ export class SceneService extends BaseService {
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
     this.apiService = apiService;
+    this.client = emitter; // Store reference to OctaneClient
     this.scene = {
       tree: [],
       map: new Map(),
