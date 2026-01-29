@@ -1181,7 +1181,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
               width: `${Math.abs(regionEnd.x - regionStart.x)}px`,
               height: `${Math.abs(regionEnd.y - regionStart.y)}px`,
               border: '2px solid #00ff00',
-              backgroundColor: 'rgba(0, 255, 0, 0.1)',
+              backgroundColor: 'var(--octane-selection-overlay)',
               pointerEvents: 'none',
               zIndex: 20,
               boxSizing: 'border-box'
