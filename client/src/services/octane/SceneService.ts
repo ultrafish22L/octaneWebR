@@ -338,12 +338,14 @@ export class SceneService extends BaseService {
         
         Logger.debug(`✅ Level ${level}: Added ${validItems.length}/${size} owned items`);
         
-        // Phase 4: Build children after all siblings when prioritized loading enabled
-        // Phase 1-3: Only build children for level 1 (original behavior)
-        const shouldBuildChildren = PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING || level === 1;
+        // Batch build children for better parallelization
+        // - Always batch build for level 1 (optimization from Phase 1)
+        // - When ENABLE_PRIORITIZED_LOADING=true: batch build all levels (breadth-first from Phase 4)
+        // - When ENABLE_PRIORITIZED_LOADING=false: only batch build level 1, others build individually
+        const shouldBatchBuildChildren = level === 1 || PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING;
         
-        if (shouldBuildChildren && sceneItems.length > 0) {
-          Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items in parallel...`);
+        if (shouldBatchBuildChildren && sceneItems.length > 0) {
+          Logger.debug(`🔄 Batch building children for ${sceneItems.length} level ${level} items in parallel...`);
           
           // ⚡ PARALLEL OPTIMIZATION: Build all children concurrently
           const childResults = await parallelLimitSettled(
@@ -352,13 +354,14 @@ export class SceneService extends BaseService {
             async (item) => {
               Logger.debug(`📍 Building children for ${item.name} (handle: ${item.handle})`);
               await this.addItemChildren(item);
+              item.childrenLoaded = true; // Mark as loaded to prevent redundant individual building
               Logger.debug(`📍 Finished ${item.name}, children: ${item.children?.length || 0}`);
               return item;
             }
           );
           
           const successCount = childResults.filter(r => r.status === 'fulfilled').length;
-          Logger.debug(`✅ Finished building children: ${successCount}/${sceneItems.length} successful`);
+          Logger.debug(`✅ Finished batch building children: ${successCount}/${sceneItems.length} successful`);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -553,10 +556,14 @@ export class SceneService extends BaseService {
         }
       }
       
-      // Phase 4: DEFER children building when prioritized loading is enabled
-      // Children will be built in batch after all siblings (breadth-first)
-      if (level > 1 && !PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING) {
+      // Build children for level > 1 (if not already batch-built)
+      // - Level 1 children are always batch-built at line 347-364
+      // - Level 2+ NodeGraph children are batch-built when ENABLE_PRIORITIZED_LOADING=true
+      // - Level 2+ regular Node (pin) children need individual building
+      // Use childrenLoaded flag to avoid redundant work
+      if (level > 1 && !entry.childrenLoaded) {
         await this.addItemChildren(entry);
+        entry.childrenLoaded = true;
       }
     }
     
