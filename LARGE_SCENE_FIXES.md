@@ -260,39 +260,42 @@ export class ApiService extends BaseService {
 
 **Problem**: Scene outliner showed **duplicate nodes** (7424 total instead of ~3661). Node count was almost exactly **double**! React warned about duplicate keys (`node_0`).
 
-**Root Cause**: Nodes at level 2+ were having their children created **TWICE**:
-1. **Individual building** (from `addSceneItem` line 700)
-2. **Batch building** (from parallel optimization line 424)
+**Root Cause**: With `ENABLE_PRIORITIZED_LOADING=true`, **both individual AND batch building were running for the same nodes**:
 
-Both called `addItemChildren()` → `syncSceneRecurse()` → created duplicate child nodes with different handles → all added to `scene.map`.
+1. **Individual building** (line 700 in `addSceneItem`): 
+   - When level 2+ node is created, immediately calls `addItemChildren()` 
+   - Builds level 3 children → adds to `scene.map`
+   
+2. **Batch building** (line 416 in `syncSceneRecurse`):
+   - After all level 2 nodes created, batch builds ALL their children
+   - Builds level 3 children AGAIN → adds to `scene.map` AGAIN
+   
+3. **Result**: Each child created twice = 7424 nodes instead of 3661!
 
-**Solution**: Add `childrenLoaded` check inside `addItemChildren()` to skip if already loaded.
+**Why It Happened**: Individual building was meant for when batch building is disabled. But with `ENABLE_PRIORITIZED_LOADING=true`, batch building runs for ALL levels, so individual building became redundant and caused duplication.
+
+**Solution**: Only do individual building when batch building **won't** handle it:
 
 **Implementation**:
 
 ```typescript
-// client/src/services/octane/SceneService.ts
-private async addItemChildren(item: SceneNode): Promise<void> {
-  if (!item || !item.handle) {
-    return;
-  }
-  
-  // Skip if children already loaded (prevents duplication)
-  if (item.childrenLoaded) {
-    Logger.debug(`  ⏭️  Skipping ${item.name} - children already loaded`);
-    return;
-  }
-  
-  const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
-  
-  try {
-    const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
-    item.children = children;
-    item.childrenLoaded = true; // Mark as loaded
-    // ...
-  }
+// client/src/services/octane/SceneService.ts (in addSceneItem method)
+
+// Build children for level > 1 ONLY if batch building won't handle it
+const willBatchBuildChildren = PARALLEL_CONFIG.ENABLE_PARALLEL_LOADING && 
+                               (level === 1 || PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING);
+
+// Only do individual building when batch building is disabled for this level
+if (level > 1 && !entry.childrenLoaded && !willBatchBuildChildren) {
+  await this.addItemChildren(entry); // Only if batch won't do it
 }
 ```
+
+**Key Logic**:
+- `willBatchBuildChildren` checks if batch building will run for this level
+- Same condition as `shouldBatchBuildChildren` in `syncSceneRecurse`
+- If batch will run → skip individual building
+- If batch won't run → do individual building
 
 **Result**:
 - ✅ **Each node's children created exactly once**
@@ -301,8 +304,19 @@ private async addItemChildren(item: SceneNode): Promise<void> {
 - ✅ No React key warnings
 - ✅ Clean, correct scene tree structure
 
-**Why It Happened**:
-With breadth-first loading enabled, the batch building optimization processes all nodes at each level. But individual nodes at level 2+ were also triggering their own `addItemChildren` call, causing double creation. The flag existed but wasn't checked inside `addItemChildren` itself.
+**Flow After Fix**:
+
+With `ENABLE_PRIORITIZED_LOADING=true`:
+1. ✅ Level 1 nodes created → batch build their children (level 2)
+2. ✅ Level 2 nodes created → **skip individual build**, batch build their children (level 3)
+3. ✅ Level 3 nodes created → **skip individual build**, batch build their children (level 4)
+4. ✅ Each node's children built **exactly once** via batch building
+
+With `ENABLE_PRIORITIZED_LOADING=false`:
+1. ✅ Level 1 nodes created → batch build their children (level 2)
+2. ✅ Level 2 nodes created → **individual build** their children (level 3)
+3. ✅ Level 3 nodes created → **individual build** their children (level 4)
+4. ✅ Each node's children built **exactly once** via individual building
 
 ---
 
