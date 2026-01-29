@@ -22,33 +22,40 @@ export async function parallelLimit<T, R>(
   limit: number,
   fn: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
-  const results: R[] = [];
-  const executing: Promise<void>[] = [];
+  const results: R[] = new Array(items.length);
+  let activeCount = 0;
+  let index = 0;
 
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index];
-
-    // Create promise for this item
-    const promise = fn(item, index).then((result) => {
-      results[index] = result;
-    });
-
-    // Add to executing pool
-    executing.push(promise);
-
-    // If we've hit the limit, wait for one to complete before continuing
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-      // Remove completed promises from executing array
-      executing.splice(
-        0,
-        executing.findIndex((p) => p === promise) + 1
-      );
+  // Process items with concurrency limit
+  const processNext = async (): Promise<void> => {
+    if (index >= items.length) {
+      return;
     }
-  }
 
-  // Wait for all remaining promises
-  await Promise.all(executing);
+    const currentIndex = index++;
+    const item = items[currentIndex];
+    
+    activeCount++;
+    
+    try {
+      results[currentIndex] = await fn(item, currentIndex);
+    } catch (error) {
+      // Store undefined for errors (matches original behavior where errors are caught by caller)
+      results[currentIndex] = undefined as any;
+    } finally {
+      activeCount--;
+      // Process next item after this one completes
+      if (index < items.length) {
+        await processNext();
+      }
+    }
+  };
+
+  // Start initial batch of concurrent operations
+  const initialBatch = Array.from({ length: Math.min(limit, items.length) }, () => processNext());
+  
+  // Wait for all operations to complete
+  await Promise.all(initialBatch);
 
   return results;
 }
@@ -73,39 +80,36 @@ export async function parallelLimitSettled<T, R>(
   limit: number,
   fn: (item: T, index: number) => Promise<R>
 ): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  const executing: Promise<void>[] = [];
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let index = 0;
 
-  for (let index = 0; index < items.length; index++) {
-    const item = items[index];
-
-    // Create promise for this item that never rejects
-    const promise = fn(item, index)
-      .then((result) => {
-        results[index] = { status: 'fulfilled', value: result };
-      })
-      .catch((error) => {
-        results[index] = { status: 'rejected', reason: error };
-      });
-
-    // Add to executing pool
-    executing.push(promise);
-
-    // If we've hit the limit, wait for one to complete before continuing
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-      // Remove completed promises from executing array
-      const completedIndex = executing.findIndex(() => 
-        results.some((r, i) => i < index && r !== undefined)
-      );
-      if (completedIndex !== -1) {
-        executing.splice(0, 1);
-      }
+  // Process items with concurrency limit
+  const processNext = async (): Promise<void> => {
+    if (index >= items.length) {
+      return;
     }
-  }
 
-  // Wait for all remaining promises
-  await Promise.all(executing);
+    const currentIndex = index++;
+    const item = items[currentIndex];
+    
+    try {
+      const result = await fn(item, currentIndex);
+      results[currentIndex] = { status: 'fulfilled', value: result };
+    } catch (error) {
+      results[currentIndex] = { status: 'rejected', reason: error };
+    }
+    
+    // Process next item after this one completes
+    if (index < items.length) {
+      await processNext();
+    }
+  };
+
+  // Start initial batch of concurrent operations
+  const initialBatch = Array.from({ length: Math.min(limit, items.length) }, () => processNext());
+  
+  // Wait for all operations to complete
+  await Promise.all(initialBatch);
 
   return results;
 }
