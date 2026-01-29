@@ -15,6 +15,7 @@ import { parallelLimit } from './parallelUtils';
 export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
+  private abortController: AbortController | null = null;
 
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -32,6 +33,16 @@ export class SceneService extends BaseService {
    *                        If omitted, performs full scene tree rebuild
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
+    // Abort any previous build operation
+    if (this.abortController) {
+      Logger.debug('🚫 Cancelling previous scene tree build');
+      this.abortController.abort();
+    }
+    
+    // Create new abort controller for this operation
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+    
     if (newNodeHandle !== undefined) {
       Logger.debug('➕ Building new node metadata:', newNodeHandle);
       
@@ -53,8 +64,9 @@ export class SceneService extends BaseService {
         }
         
         return this.scene.tree;
-      } catch (error: any) {
-        Logger.error('❌ Failed to build new node metadata:', error.message);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        Logger.error('❌ Failed to build new node metadata:', message);
         throw error;
       }
     }
@@ -72,6 +84,11 @@ export class SceneService extends BaseService {
     };
     
     try {
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
+      
       Logger.debug('🔍 Step 1: Getting root node graph...');
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
@@ -81,10 +98,20 @@ export class SceneService extends BaseService {
       const rootHandle = rootResponse.result.handle;
       Logger.debug('📍 Root handle:', rootHandle);
       
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
+      
       Logger.debug('🔍 Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
+      
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
       
       // Choose sync strategy based on configuration
       const startTime = performance.now();
@@ -107,9 +134,18 @@ export class SceneService extends BaseService {
       Logger.debug('✅ SceneTreeUpdated event emitted');
       
       return this.scene.tree;
-    } catch (error: any) {
-      Logger.error('❌ Failed to build scene tree:', error.message);
-      Logger.error('❌ Error stack:', error.stack);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      
+      // Don't log cancellation as error
+      if (message.includes('cancelled')) {
+        Logger.debug('🚫 Scene tree build cancelled');
+      } else {
+        Logger.error('❌ Failed to build scene tree:', message);
+        if (error instanceof Error && error.stack) {
+          Logger.error('❌ Error stack:', error.stack);
+        }
+      }
       throw error;
     }
   }
@@ -434,120 +470,23 @@ export class SceneService extends BaseService {
     pinInfo: any,
     level: number
   ): Promise<SceneNode | undefined> {
-    let itemName = item?.name || pinInfo?.staticLabel || 'Unnamed';
-    let outType = pinInfo?.outType || '';
-    let graphInfo = null;
-    let nodeInfo = null;
-    let isGraph = false;
-    let position: { x: number; y: number } | null = null;
+    const initialName = item?.name || pinInfo?.staticLabel || 'Unnamed';
+    const initialType = pinInfo?.outType || '';
     
-    if (item != null && item.handle != 0) {
-      const handleNum = Number(item.handle);
-      const existing = this.scene.map.get(handleNum);
-      if (existing && existing.handle) {
-        existing.pinInfo = pinInfo;
-        if (level > 1) {
-          sceneItems.push(existing);
-        }
-        return existing;
-      }
+    // Handle unconnected pins (handle = 0)
+    if (item == null || item.handle == 0) {
+      Logger.debug(`  ⚪ Unconnected pin: ${initialName}`);
       
-      // 🔒 PARALLEL MODE FIX: Reserve this handle immediately to prevent race conditions
-      // Without this, multiple threads can pass the existence check above simultaneously,
-      // then all fetch data and create duplicates.
-      // Create a minimal placeholder that other threads will find in the map.
-      const placeholder: SceneNode = {
-        level,
-        name: itemName,
-        handle: item.handle,
-        type: outType,
-        typeEnum: 0,
-        outType: outType,
-        icon: '',
-        visible: true,
-        graphInfo: undefined,
-        nodeInfo: undefined,
-        pinInfo: pinInfo,
-        children: [],
-        position: undefined
-      };
-      this.scene.map.set(handleNum, placeholder);
-      
-      try {
-        const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
-        itemName = nameResponse?.result || 'Unnamed';
-        
-        const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
-        outType = outTypeResponse?.result || '';
-        
-        Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
-        
-        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
-        isGraph = isGraphResponse?.result || false;
-        
-        // Fetch position for top-level nodes (level 1)
-        if (level === 1) {
-          try {
-            const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
-            if (posResponse?.result) {
-              position = {
-                x: posResponse.result.x || 0,
-                y: posResponse.result.y || 0
-              };
-              Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
-            }
-          } catch (posError: any) {
-            Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, posError.message);
-          }
-        }
-        
-        if (isGraph) {
-          const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
-          graphInfo = infoResponse?.result || null;
-        } else {
-          const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
-          nodeInfo = infoResponse?.result || null;
-        }
-        
-      } catch (error: any) {
-        Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
-      }
-      
-      // Update the placeholder with full data
-      const displayName = pinInfo?.staticLabel || itemName;
-      const icon = this.getNodeIcon(outType, displayName);
-      
-      placeholder.name = displayName;
-      placeholder.type = outType;
-      placeholder.typeEnum = typeof outType === 'number' ? outType : 0;
-      placeholder.outType = outType;
-      placeholder.icon = icon;
-      placeholder.graphInfo = graphInfo;
-      placeholder.nodeInfo = nodeInfo;
-      placeholder.position = position;
-      
-      sceneItems.push(placeholder);
-      
-      Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
-      
-      if (level > 1) {
-        await this.addItemChildren(placeholder);
-      }
-      
-      return placeholder;
-    } else {
-      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
-      
-      const displayName = pinInfo?.staticLabel || itemName;
-      const icon = this.getNodeIcon(outType, displayName);
+      const displayName = pinInfo?.staticLabel || initialName;
+      const icon = this.getNodeIcon(initialType, displayName);
       
       const entry: SceneNode = {
         level,
         name: displayName,
         handle: item?.handle,
-        type: outType,
-        typeEnum: typeof outType === 'number' ? outType : 0,
-        outType: outType,
+        type: initialType,
+        typeEnum: typeof initialType === 'number' ? initialType : 0,
+        outType: initialType,
         icon,
         visible: true,
         graphInfo: undefined,
@@ -559,6 +498,108 @@ export class SceneService extends BaseService {
       
       sceneItems.push(entry);
       return entry;
+    }
+    
+    // Check if node already exists
+    const handleNum = Number(item.handle);
+    const existing = this.scene.map.get(handleNum);
+    if (existing && existing.handle && !(existing as any)._reserved) {
+      // Update pinInfo if needed and return existing node
+      if (pinInfo) {
+        existing.pinInfo = pinInfo;
+      }
+      if (level > 1) {
+        sceneItems.push(existing);
+      }
+      return existing;
+    }
+    
+    // 🔒 Reserve this handle with minimal marker to prevent race conditions
+    // Other threads will see _reserved: true and know this node is being processed
+    const reservationMarker = { handle: item.handle, _reserved: true } as any;
+    this.scene.map.set(handleNum, reservationMarker);
+    
+    try {
+      // ⚡ Fetch all basic data in parallel
+      const [nameResponse, outTypeResponse, isGraphResponse] = await Promise.all([
+        this.apiService.callApi('ApiItem', 'name', item.handle),
+        this.apiService.callApi('ApiItem', 'outType', item.handle),
+        this.apiService.callApi('ApiItem', 'isGraph', item.handle)
+      ]);
+      
+      const itemName = nameResponse?.result || 'Unnamed';
+      const outType = outTypeResponse?.result || '';
+      const isGraph = isGraphResponse?.result || false;
+      
+      Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
+      
+      // Fetch additional data based on node type
+      let position: { x: number; y: number } | undefined = undefined;
+      let graphInfo = undefined;
+      let nodeInfo = undefined;
+      
+      if (level === 1) {
+        try {
+          const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
+          if (posResponse?.result) {
+            position = {
+              x: posResponse.result.x || 0,
+              y: posResponse.result.y || 0
+            };
+            Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
+          }
+        } catch (posError: unknown) {
+          const message = posError instanceof Error ? posError.message : String(posError);
+          Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, message);
+        }
+      }
+      
+      if (isGraph) {
+        const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
+        graphInfo = infoResponse?.result || null;
+      } else {
+        const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
+        nodeInfo = infoResponse?.result || null;
+      }
+      
+      // ✅ Build complete immutable node object
+      const displayName = pinInfo?.staticLabel || itemName;
+      const icon = this.getNodeIcon(outType, displayName);
+      
+      const completeNode: SceneNode = {
+        level,
+        name: displayName,
+        handle: item.handle,
+        type: outType,
+        typeEnum: typeof outType === 'number' ? outType : 0,
+        outType: outType,
+        icon,
+        visible: true,
+        graphInfo,
+        nodeInfo,
+        pinInfo,
+        children: [],
+        position
+      };
+      
+      // ✅ Replace reservation with complete node (atomic operation)
+      this.scene.map.set(handleNum, completeNode);
+      sceneItems.push(completeNode);
+      
+      Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
+      
+      if (level > 1) {
+        await this.addItemChildren(completeNode);
+      }
+      
+      return completeNode;
+      
+    } catch (error: unknown) {
+      // ✅ Cleanup: Remove failed reservation
+      this.scene.map.delete(handleNum);
+      const message = error instanceof Error ? error.message : String(error);
+      Logger.error('❌ addSceneItem failed to fetch item data:', message);
+      throw error;
     }
   }
 
