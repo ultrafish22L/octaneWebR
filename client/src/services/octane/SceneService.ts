@@ -690,16 +690,17 @@ export class SceneService extends BaseService {
         }
       }
       
-      // Build children for level > 1 (if not already batch-built)
-      // - Level 1 children are always batch-built at line 347-364
-      // - Level 2+ NodeGraph children are batch-built when ENABLE_PRIORITIZED_LOADING=true
-      // - Level 2+ regular Node (pin) children need individual building
-      // addItemChildren now checks childrenLoaded flag internally
-      if (level > 1 && !entry.childrenLoaded) {
-        Logger.warn(`🔨 INDIVIDUAL BUILD for ${entry.name} (level ${level}, childrenLoaded=${entry.childrenLoaded})`);
+      // Build children for level > 1 ONLY if batch building won't handle it
+      // - Level 1 children are ALWAYS batch-built (line 416)
+      // - Level 2+ children are batch-built when ENABLE_PRIORITIZED_LOADING=true
+      // - Only do individual building when batch building is disabled for this level
+      const willBatchBuildChildren = PARALLEL_CONFIG.ENABLE_PARALLEL_LOADING && 
+                                     (level === 1 || PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING);
+      
+      if (level > 1 && !entry.childrenLoaded && !willBatchBuildChildren) {
+        Logger.warn(`🔨 INDIVIDUAL BUILD for ${entry.name} (level ${level}, batch disabled)`);
         await this.addItemChildren(entry);
-        Logger.warn(`✅ INDIVIDUAL BUILD DONE for ${entry.name} (now childrenLoaded=${entry.childrenLoaded})`);
-        // childrenLoaded is set inside addItemChildren
+        Logger.warn(`✅ INDIVIDUAL BUILD DONE for ${entry.name}`);
       }
     }
     
