@@ -3,16 +3,6 @@
  * Part of octaneWebR CSS reorganization
  */
 
-
-
-
-.preview-btn.active {
-    background: var(--octane-success);
-    color: white;
-    border-color: var(--octane-success);
-}
-
-
 /* Material Preview Component - Official OTOY Preview Functionality */
 .material-preview {
     background: var(--octane-bg-secondary);

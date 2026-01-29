@@ -39,16 +39,17 @@
     /* Octane Studio Color Palette - Matched to Octane SE screenshot */
     --octane-bg-primary: #252525;      /* Main background - matches Octane SE */
     --octane-bg-secondary: #454545;    /* Panel backgrounds */
+    --octane-bg-tertiary: #3a3a3a;     /* Tertiary background (darker than secondary) */
     --octane-bg-parameter: #4c4c4c;    /* Panel backgrounds */
-    --octane-bg-lighter: #808080;    /* Render viewport Panel background */
+    --octane-bg-lighter: #808080;      /* Render viewport Panel background */
     --octane-bg-header: #454545;       /* Header/menu backgrounds - matches Octane SE */
-    --octane-bg-selected: #4a4a4a;     /* Selected items */
     --octane-bg-hover: #484848;        /* Hover states */
     --octane-bg-active: #525252;       /* Active/pressed states - slightly lighter than hover */
     
     /* Octane Text Colors */
     --octane-text-primary: #ffffff;    /* Primary text */
     --octane-text-secondary: #cccccc;  /* Secondary text */
+    --octane-text-tertiary: #b0b0b0;   /* Tertiary text (between secondary and muted) */
     --octane-text-muted: #999999;      /* Muted text */
     --octane-text-disabled: #666666;   /* Disabled text */
     
@@ -57,8 +58,10 @@
     --octane-accent-yellow: #ffc107;   /* Selection yellow/gold - matches Octane */
     --octane-accent-orange: #ff8c00;   /* Warning/active orange */
     --octane-accent-green: #5cb85c;    /* Success green */
+    --octane-success: #5cb85c;         /* Success state (alias of accent-green) */
     --octane-accent-red: #d9534f;      /* Error red */
     --octane-accent-blue: #3a9bd9;     /* Info/link blue */
+    --octane-accent-blue-dim: #2a6a9a; /* Dimmed blue for subtle highlights */
     --octane-selection-highlight: #9a6000; /* Subtle dark orange for scene outliner selection - matches Octane SE */
     
     /* Octane UI Elements */
@@ -66,11 +69,13 @@
     
     /* Panel Resize Variables */
     --splitter-size: 4px;              /* Resize handle thickness */
-    --left-panel-min-width: 140px;         /* Scene outliner width */
+    --left-panel-min-width: 140px;     /* Scene outliner width */
     --octane-border-light: #666666;    /* Light borders */
     --octane-border-dark: #333333;     /* Dark borders */
-    --octane-border-primary: #1a1a1a;   /* primary borders/backgrounds */
+    --octane-border-primary: #1a1a1a;  /* primary borders/backgrounds */
     --octane-border-medium: #555555;   /* Medium borders (same as --octane-border) */
+    --octane-border-subtle: #444444;   /* Subtle borders (dimmer than dark) */
+    --octane-border-hover: #777777;    /* Border hover state (lighter than standard) */
     --octane-shadow: rgba(0, 0, 0, 0.3); /* Drop shadows */
     
     /* Error States */
@@ -101,11 +106,11 @@
     
     /* White Highlights & Glows */
     --octane-highlight-medium: rgba(255, 255, 255, 0.2);  /* Medium highlights */
-    --octane-highlight: rgba(255, 255, 255, 0.15);        /* Standard highlights */
+    --octane-accent-hover: rgba(255, 255, 255, 0.15);     /* Accent hover state (renamed from highlight) */
     --octane-highlight-soft: rgba(255, 255, 255, 0.05);   /* Soft highlights */
     --octane-highlight-subtle: rgba(255, 255, 255, 0.053); /* Subtle highlights */
     --octane-highlight-ultra-subtle: rgba(255, 255, 255, 0.042); /* Ultra-subtle highlights */
-    --octane-highlight-barely: rgba(255, 255, 255, 0.03); /* Barely visible highlights */
+    --octane-accent-bg: rgba(255, 255, 255, 0.03);        /* Accent background (renamed from highlight-barely) */
     
     /* State-Based Transparent Colors */
     --octane-error-bg-alpha: rgba(220, 53, 69, 0.1);     /* Error background overlay */
