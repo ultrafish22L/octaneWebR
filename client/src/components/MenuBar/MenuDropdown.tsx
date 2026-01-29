@@ -33,18 +33,16 @@ export function MenuDropdown({
     const rect = anchorElement.getBoundingClientRect();
     const dropdown = dropdownRef.current;
 
+    // Position dropdown below menu item
+    dropdown.style.position = 'fixed';
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.top = `${rect.bottom}px`;
+    dropdown.style.zIndex = '10000';
+    dropdown.style.background = getComputedStyle(document.documentElement).getPropertyValue('--octane-bg-primary').trim();
+
     if (isSubmenu) {
       // Position submenu to the right of parent item
-      dropdown.style.position = 'fixed';
-      dropdown.style.left = `${rect.right}px`;
-      dropdown.style.top = `${rect.top}px`;
       dropdown.style.zIndex = '10001';
-    } else {
-      // Position dropdown below menu item
-      dropdown.style.position = 'fixed';
-      dropdown.style.left = `${rect.left}px`;
-      dropdown.style.top = `${rect.bottom}px`;
-      dropdown.style.zIndex = '10000';
     }
 
     // Adjust if dropdown would go off-screen
