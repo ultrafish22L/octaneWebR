@@ -105,7 +105,7 @@ export class ApiService extends BaseService {
       }
       
       const data = await response.json();
-      Logger.info(`${service}.${method} success`);
+      Logger.debug(`${service}.${method} success`);
       return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -75,7 +75,7 @@ export class SceneService extends BaseService {
      * Full rebuild: Clears scene state and reconstructs entire tree from root.
      * Used on initial connection or when incremental updates aren't sufficient.
      */
-    Logger.debug('🌳 Building scene tree...');
+    Logger.info('🌳 Building scene tree...');
     
     this.scene = {
       tree: [],
@@ -131,7 +131,7 @@ export class SceneService extends BaseService {
       
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
       this.emit('sceneTreeUpdated', this.scene);
-      Logger.debug('✅ SceneTreeUpdated event emitted');
+      Logger.info('✅ SceneTreeUpdated event emitted');
       
       return this.scene.tree;
     } catch (error: unknown) {

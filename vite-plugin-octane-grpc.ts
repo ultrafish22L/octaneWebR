@@ -691,15 +691,13 @@ export function octaneGrpcPlugin(): Plugin {
               // Also log to console with appropriate emoji based on level
               const logLevel = logData.level.toLowerCase();
               if (logLevel === 'error') {
-                console.error('🔴 CLIENT:', logData.message);
+                console.error('🔴 ', logData.message);
               } else if (logLevel === 'warn') {
-                console.warn('🟡 CLIENT:', logData.message);
-              } else if (logLevel === 'debug') {
-                console.log('🔍 CLIENT:', logData.message);
+                console.warn('🟡 ', logData.message);
               } else if (logLevel === 'info') {
-                console.info('ℹ️  CLIENT:', logData.message);
-              } else {
-                console.log('🟢 CLIENT:', logData.message);
+                console.info('  ', logData.message);
+              }  else { // if (logLevel === 'debug') {
+                console.log('  ', logData.message);
               }
               
               res.setHeader('Content-Type', 'application/json');
