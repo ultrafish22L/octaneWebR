@@ -951,6 +951,15 @@ function NodeParameter({
   // Determine collapse/expand icon
   const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '▶') : '';
 
+  // Build tooltip with detailed description
+  const buildTooltip = () => {
+    // Priority: pinInfo.description > attrInfo.description > nodeInfo.description
+    const description = node.pinInfo?.description || 
+                       node.attrInfo?.description || 
+                       node.nodeInfo?.description;
+    return description || name;
+  };
+
   // Render as parameter node (end node with attrInfo)
   if (node.attrInfo) {
     return (
@@ -971,7 +980,7 @@ function NodeParameter({
           <div className="node-content">
             <div className="node-label" onClick={hasChildren ? handleToggle : undefined}>
               {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-              <span className="node-title">{name}</span>
+              <span className="node-title" title={buildTooltip()}>{name}</span>
               {renderParameterControl()}
             </div>
           </div>
@@ -1016,7 +1025,7 @@ function NodeParameter({
         <div className="node-content">
           <div className="node-label" onClick={hasChildren ? handleToggle : undefined}>
             {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-            <span className="node-title">{name}</span>
+            <span className="node-title" title={buildTooltip()}>{name}</span>
             {showDropdown && (
               <div 
                 className="inspector-dropdown-inline"
