@@ -366,38 +366,38 @@ class OctaneGrpcClient {
       console.log('✅ [CALLBACK-STREAM] Callback stream opened');
 
       this.callbackStream.on('data', async (callbackRequest: any) => {
-        console.log('🎯🎯🎯 [CALLBACK-STREAM] ========== DATA EVENT FIRED ==========');
+//        console.log('🎯🎯🎯 [CALLBACK-STREAM] ========== DATA EVENT FIRED ==========');
         try {
           // DEBUG: Log the entire callback request to see what we're actually receiving
           // console.log('📡 [CALLBACK-STREAM] Stream data received:', JSON.stringify(callbackRequest, null, 2));
-          console.log('📡 [CALLBACK-STREAM] Callback request keys:', Object.keys(callbackRequest));
+//          console.log('📡 [CALLBACK-STREAM] Callback request keys:', Object.keys(callbackRequest));
           
           // StreamCallbackRequest has oneof payload: newImage, renderFailure, newStatistics, projectManagerChanged
           if (callbackRequest.newImage) {
-            console.log('🖼️  [CALLBACK-STREAM] OnNewImage callback received');
-            console.log('   [CALLBACK-STREAM] user_data:', callbackRequest.newImage.user_data);
-            console.log('   [CALLBACK-STREAM] callback_source:', callbackRequest.newImage.callback_source);
-            console.log('   [CALLBACK-STREAM] callback_id:', callbackRequest.newImage.callback_id);
+//            console.log('🖼️  [CALLBACK-STREAM] OnNewImage callback received');
+//            console.log('   [CALLBACK-STREAM] user_data:', callbackRequest.newImage.user_data);
+//            console.log('   [CALLBACK-STREAM] callback_source:', callbackRequest.newImage.callback_source);
+//            console.log('   [CALLBACK-STREAM] callback_id:', callbackRequest.newImage.callback_id);
             
             // Proto verification: OnNewImageRequest contains render_images field directly
             // No need to call grabRenderResult - images are already in the callback
             const renderImages = callbackRequest.newImage.render_images;
             
-            console.log('📡 [CALLBACK-STREAM] Callback contains render_images:', {
-              hasRenderImages: !!renderImages,
-              imageCount: renderImages?.data?.length || 0,
-              hasData: !!(renderImages?.data)
-            });
+//            console.log('📡 [CALLBACK-STREAM] Callback contains render_images:', {
+//              hasRenderImages: !!renderImages,
+//              imageCount: renderImages?.data?.length || 0,
+//              hasData: !!(renderImages?.data)
+//            });
             
             if (renderImages && renderImages.data && renderImages.data.length > 0) {
-              console.log('✅ [CALLBACK-STREAM] Got', renderImages.data.length, 'render images from callback');
-              console.log('📊 [CALLBACK-STREAM] First image info:', {
-                type: renderImages.data[0]?.type,
-                width: renderImages.data[0]?.size?.x,
-                height: renderImages.data[0]?.size?.y,
-                hasBuffer: !!renderImages.data[0]?.buffer,
-                bufferSize: renderImages.data[0]?.buffer?.size
-              });
+//              console.log('✅ [CALLBACK-STREAM] Got', renderImages.data.length, 'render images from callback');
+//              console.log('📊 [CALLBACK-STREAM] First image info:', {
+//                type: renderImages.data[0]?.type,
+//                width: renderImages.data[0]?.size?.x,
+//                height: renderImages.data[0]?.size?.y,
+//                hasBuffer: !!renderImages.data[0]?.buffer,
+//                bufferSize: renderImages.data[0]?.buffer?.size
+//              });
               
               // Build the image data to send to frontend
               const imageData = {
@@ -407,17 +407,17 @@ class OctaneGrpcClient {
                 render_images: renderImages
               };
               
-              console.log('📤 [CALLBACK-STREAM] Calling notifyCallbacks with image data');
+//              console.log('📤 [CALLBACK-STREAM] Calling notifyCallbacks with image data');
               this.notifyCallbacks(imageData);
-              console.log('✅ [CALLBACK-STREAM] notifyCallbacks completed');
+//              console.log('✅ [CALLBACK-STREAM] notifyCallbacks completed');
             } else {
-              console.warn('⚠️  [CALLBACK-STREAM] Callback has no render_images data');
-              console.warn('   [CALLBACK-STREAM] renderImages:', renderImages);
+//              console.warn('⚠️  [CALLBACK-STREAM] Callback has no render_images data');
+//              console.warn('   [CALLBACK-STREAM] renderImages:', renderImages);
             }
           } else if (callbackRequest.renderFailure) {
             console.log('❌ [CALLBACK-STREAM] Render failure callback received');
           } else if (callbackRequest.newStatistics) {
-            console.log('📊 [CALLBACK-STREAM] OnNewStatistics callback received');
+//            console.log('📊 [CALLBACK-STREAM] OnNewStatistics callback received');
             // OnNewStatisticsRequest contains render statistics
             const statsData = {
               callback_source: 'grpc',
@@ -508,21 +508,21 @@ class OctaneGrpcClient {
   }
 
   private notifyCallbacks(data: any): void {
-    console.log('🎯 [NOTIFY] notifyCallbacks called');
-    console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.size);
-    console.log('📊 [NOTIFY] Data keys:', Object.keys(data));
+//    console.log('🎯 [NOTIFY] notifyCallbacks called');
+//    console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.size);
+//    console.log('📊 [NOTIFY] Data keys:', Object.keys(data));
     
     this.callbacks.forEach((callback, index) => {
       try {
-        console.log(`📤 [NOTIFY] Calling callback ${((index as unknown) as number) + 1}/${this.callbacks.size}...`);
+//        console.log(`📤 [NOTIFY] Calling callback ${((index as unknown) as number) + 1}/${this.callbacks.size}...`);
         callback(data);
-        console.log(`✅ [NOTIFY] Callback ${((index as unknown) as number) + 1} completed`);
+//        console.log(`✅ [NOTIFY] Callback ${((index as unknown) as number) + 1} completed`);
       } catch (error) {
         console.error(`❌ [NOTIFY] Error in callback ${((index as unknown) as number) + 1}:`, error);
       }
     });
     
-    console.log('✅ [NOTIFY] All callbacks notified');
+//    console.log('✅ [NOTIFY] All callbacks notified');
   }
 
   private notifyStatisticsCallbacks(data: any): void {
@@ -587,15 +587,15 @@ export function octaneGrpcPlugin(): Plugin {
         console.log('📊 [WSS] Client ready state:', ws.readyState);
         
         const callbackHandler = (data: any) => {
-          console.log('🎯🎯🎯 [WSS] callbackHandler CALLED');
-          console.log('📊 [WSS] Has render_images:', !!data.render_images);
-          console.log('📊 [WSS] WebSocket ready state:', ws.readyState);
+//          console.log('🎯🎯🎯 [WSS] callbackHandler CALLED');
+//          console.log('📊 [WSS] Has render_images:', !!data.render_images);
+//          console.log('📊 [WSS] WebSocket ready state:', ws.readyState);
           
           try {
             const message = JSON.stringify({ type: 'newImage', data });
-            console.log('📤 [WSS] Sending message, length:', message.length);
+//            console.log('📤 [WSS] Sending message, length:', message.length);
             ws.send(message);
-            console.log('✅ [WSS] Message sent successfully');
+//            console.log('✅ [WSS] Message sent successfully');
           } catch (error) {
             console.error('❌ [WSS] Error sending WebSocket message:', error);
           }
@@ -603,7 +603,7 @@ export function octaneGrpcPlugin(): Plugin {
         
         const statisticsHandler = (data: any) => {
           try {
-            ws.send(JSON.stringify({ type: 'newStatistics', data }));
+//            ws.send(JSON.stringify({ type: 'newStatistics', data }));
           } catch (error) {
             serverError('❌ Error sending statistics WebSocket message:', error);
           }

@@ -387,8 +387,8 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
    * CRITICAL: Direct port of octaneWeb buffer processing logic
    */
   const displayCallbackImage = useCallback((imageData: OctaneImageData) => {
-    console.log('🎯🎯🎯 [VIEWPORT] displayCallbackImage CALLED');
-    console.log('📊 [VIEWPORT] Image data:', {
+    console.debug('🎯🎯🎯 [VIEWPORT] displayCallbackImage CALLED');
+    console.debug('📊 [VIEWPORT] Image data:', {
       hasSize: !!imageData.size,
       width: imageData.size?.x,
       height: imageData.size?.y,
@@ -399,14 +399,14 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
     
     try {
       const canvas = canvasRef.current;
-      console.log('🎯 [VIEWPORT] Canvas ref:', !!canvas);
+      console.debug('🎯 [VIEWPORT] Canvas ref:', !!canvas);
       
       if (!canvas) {
         console.error('❌ [VIEWPORT] Canvas ref is null - cannot display image!');
         return;
       }
 
-      console.log('📊 [VIEWPORT] Canvas element:', {
+      console.debug('📊 [VIEWPORT] Canvas element:', {
         width: canvas.width,
         height: canvas.height,
         offsetWidth: canvas.offsetWidth,
@@ -416,7 +416,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
 
       setFrameCount(prev => {
         const newCount = prev + 1;
-        console.log('🎬 [VIEWPORT] Frame count incremented to:', newCount);
+//        console.log('🎬 [VIEWPORT] Frame count incremented to:', newCount);
         return newCount;
       });
 
@@ -470,20 +470,20 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
       }
 
       // Convert buffer to RGBA format for canvas
-      console.log('🎨 [VIEWPORT] Converting buffer to canvas format...');
+      console.debug('🎨 [VIEWPORT] Converting buffer to canvas format...');
       convertBufferToCanvas(bytes, imageData, canvasImageData);
-      console.log('✅ [VIEWPORT] Buffer conversion complete');
+      console.debug('✅ [VIEWPORT] Buffer conversion complete');
 
-      console.log('🎨 [VIEWPORT] Rendering to canvas...');
+      console.debug('🎨 [VIEWPORT] Rendering to canvas...');
       ctx.putImageData(canvasImageData, 0, 0);
-      console.log('✅ [VIEWPORT] Image rendered to canvas successfully!');
+      console.debug('✅ [VIEWPORT] Image rendered to canvas successfully!');
 
       // Update status
       const newStatus = `${width}x${height} | ` +
         `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
         `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
       setStatus(newStatus);
-      console.log('📊 [VIEWPORT] Status updated:', newStatus);
+      console.debug('📊 [VIEWPORT] Status updated:', newStatus);
     } catch (error: any) {
       console.error('❌ [VIEWPORT] Error displaying callback image:', error);
       console.error('❌ [VIEWPORT] Stack:', error.stack);
@@ -686,15 +686,15 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
     }
 
     const handleNewImage = (data: CallbackData) => {
-      console.log('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
-      console.log('📊 [VIEWPORT] Callback data:', {
+      console.debug('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
+      console.debug('📊 [VIEWPORT] Callback data:', {
         hasRenderImages: !!(data.render_images),
         hasData: !!(data.render_images?.data),
         imageCount: data.render_images?.data?.length || 0
       });
       
       if (data.render_images && data.render_images.data && data.render_images.data.length > 0) {
-        console.log('✅ [VIEWPORT] Valid image data received, calling displayCallbackImage');
+        console.debug('✅ [VIEWPORT] Valid image data received, calling displayCallbackImage');
         displayCallbackImage(data.render_images.data[0]);
       } else {
         console.warn('⚠️  [VIEWPORT] No valid image data in callback');

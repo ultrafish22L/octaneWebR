@@ -93,26 +93,26 @@ export class ConnectionService extends BaseService {
       };
       
       this.ws.onmessage = (event: MessageEvent) => {
-        console.log('🎯🎯🎯 [ConnectionService] WebSocket message received');
-        console.log('📊 [ConnectionService] Raw event.data length:', event.data?.length);
+        console.debug('🎯🎯🎯 [ConnectionService] WebSocket message received');
+        console.debug('📊 [ConnectionService] Raw event.data length:', event.data?.length);
         
         try {
           const message = JSON.parse(event.data as string);
-          console.log('📊 [ConnectionService] Parsed message type:', message.type);
-          console.log('📊 [ConnectionService] Has data:', !!message.data);
+          console.debug('📊 [ConnectionService] Parsed message type:', message.type);
+          console.debug('📊 [ConnectionService] Has data:', !!message.data);
           
           if (message.type === 'newImage') {
-            console.log('🖼️  [ConnectionService] newImage message received');
-            console.log('📊 [ConnectionService] Image data:', {
+            console.debug('🖼️  [ConnectionService] newImage message received');
+            console.debug('📊 [ConnectionService] Image data:', {
               hasRenderImages: !!message.data?.render_images,
               hasData: !!message.data?.render_images?.data,
               imageCount: message.data?.render_images?.data?.length || 0
             });
-            console.log('📤 [ConnectionService] Emitting OnNewImage event...');
+            console.debug('📤 [ConnectionService] Emitting OnNewImage event...');
             this.emit('OnNewImage', message.data);
-            console.log('✅ [ConnectionService] OnNewImage event emitted');
+            console.debug('✅ [ConnectionService] OnNewImage event emitted');
           } else if (message.type === 'newStatistics') {
-            console.log('📊 [ConnectionService] Received newStatistics callback');
+            console.debug('📊 [ConnectionService] Received newStatistics callback');
             this.emit('OnNewStatistics', message.data);
           } else if (message.type === 'renderFailure') {
             console.error('❌ [ConnectionService] Received renderFailure callback');
