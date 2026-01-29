@@ -109,7 +109,15 @@ export class ApiService extends BaseService {
       return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Logger.error(`${service}.${method} error:`, errorMessage);
+      
+      // attrInfo failures are expected for some node types (e.g., nodes without A_VALUE attribute)
+      // Log them at WARN level instead of ERROR to reduce noise
+      if (method === 'attrInfo' && errorMessage.includes('invalid object reference')) {
+        Logger.warn(`${service}.${method}: Node does not support attrInfo (expected for some types)`);
+      } else {
+        Logger.error(`${service}.${method} error:`, errorMessage);
+      }
+      
       throw error;
     }
   }

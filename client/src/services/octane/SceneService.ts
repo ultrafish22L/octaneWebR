@@ -658,7 +658,8 @@ export class SceneService extends BaseService {
           }
         } catch (attrError: any) {
           // Expected for some node types that don't have A_VALUE attribute
-          Logger.debug(`  ℹ️ No attrInfo for ${item.name} (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
+          // Log at WARN level so it's visible even with DEBUG suppressed (for diagnostics)
+          Logger.warn(`  ℹ️ No attrInfo for "${item.name}" (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
         }
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);
