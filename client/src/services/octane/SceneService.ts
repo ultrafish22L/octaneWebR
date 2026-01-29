@@ -22,11 +22,13 @@ import { parallelLimitSettled } from '../../utils/parallelAsync';
  */
 const PARALLEL_CONFIG = {
   /** Maximum concurrent API calls for localhost gRPC */
-  MAX_CONCURRENT_REQUESTS: 220,
+  MAX_CONCURRENT_REQUESTS: 50,
   /** Maximum concurrent owned items to fetch in parallel */
-  MAX_CONCURRENT_ITEMS: 150,
+  MAX_CONCURRENT_ITEMS: 50,
   /** Maximum concurrent pins to fetch in parallel */
-  MAX_CONCURRENT_PINS: 150,
+  MAX_CONCURRENT_PINS: 30,
+  /** Maximum recursion depth (safety limit to prevent infinite loops) */
+  MAX_RECURSION_DEPTH: 15,
   
   /**
    * 🔧 Phase 1: Enable Parallel Loading
@@ -295,8 +297,8 @@ export class SceneService extends BaseService {
     level = level + 1;
     
     // Safety limit: Prevent runaway recursion in circular graphs
-    if (level > 5) {
-      Logger.warn(`⚠️ Recursion depth limit reached at level ${level}`);
+    if (level > PARALLEL_CONFIG.MAX_RECURSION_DEPTH) {
+      Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_RECURSION_DEPTH})`);
       return sceneItems;
     }
     
@@ -379,6 +381,12 @@ export class SceneService extends BaseService {
         }
         
         Logger.debug(`✅ Level ${level}: Added ${validItems.length}/${size} owned items`);
+        
+        // Emit progressive UI update for level 1 (so top-level nodes appear immediately)
+        if (level === 1 && PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+          Logger.debug(`📢 Emitting progressive UI update: ${this.scene.tree.length} top-level nodes visible`);
+          this.emit('sceneTreeUpdated', this.scene);
+        }
         
         // Batch build children for better parallelization (when parallel loading enabled)
         // - When ENABLE_PARALLEL_LOADING=true:

@@ -104,11 +104,11 @@ function SceneTreeItem({ node, depth, onSelect, onContextMenu, selectedHandle, e
         </div>
       </div>
       {expanded && hasChildren && node.children!.map((child, index) => {
-        // Generate unique key: use handle + pin index for NO_ITEM nodes (handle=0)
-        // Pin index comes from pinInfo.ix, fallback to array index
+        // Generate unique key: use handle for normal nodes, 
+        // For NO_ITEM nodes (handle=0), use parent handle + pin index + array index for uniqueness
         const uniqueKey = child.handle !== 0 
-          ? child.handle 
-          : `${node.handle}_pin${child.pinInfo?.ix ?? index}`;
+          ? `node_${child.handle}` 
+          : `${node.handle}_pin${child.pinInfo?.ix ?? 'none'}_${index}`;
         
         return (
           <SceneTreeItem
