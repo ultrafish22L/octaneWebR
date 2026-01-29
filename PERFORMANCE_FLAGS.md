@@ -9,9 +9,9 @@ This document describes all available performance optimization flags in octaneWe
 
 ```typescript
 const PARALLEL_CONFIG = {
-  MAX_CONCURRENT_REQUESTS: 50,        // Reduced to prevent overwhelming gRPC
-  MAX_CONCURRENT_ITEMS: 50,           // Balanced for large scenes
-  MAX_CONCURRENT_PINS: 30,            // Conservative limit
+  MAX_CONCURRENT_REQUESTS: 6,         // Browser-safe (respects 6-10 connection limit)
+  MAX_CONCURRENT_ITEMS: 10,           // Balanced for large scenes
+  MAX_CONCURRENT_PINS: 6,             // Conservative browser-safe limit
   MAX_RECURSION_DEPTH: 15,            // For deep node hierarchies
   
   ENABLE_PARALLEL_LOADING: true,      // Phase 1 ⚡
@@ -406,14 +406,23 @@ ENABLE_PRIORITIZED_LOADING: true,
 
 ## Concurrency Tuning for Large Scenes
 
+### ⚠️ Critical: Browser Connection Pool Limits
+
+**Important**: Browsers limit concurrent connections to **6-10 per domain**. Exceeding this causes:
+- `ERR_INSUFFICIENT_RESOURCES` errors
+- `Failed to fetch` errors
+- Browser connection pool exhaustion
+
+**Rule of Thumb**: Keep `REQUESTS + ITEMS + PINS` under **20-25 total**
+
 ### Understanding the Limits
 
 The `PARALLEL_CONFIG` includes several tunable parameters:
 
 ```typescript
-MAX_CONCURRENT_REQUESTS: 50   // Total concurrent gRPC calls
-MAX_CONCURRENT_ITEMS: 50      // Owned items fetched in parallel
-MAX_CONCURRENT_PINS: 30       // Pin data fetched in parallel
+MAX_CONCURRENT_REQUESTS: 6    // Total concurrent gRPC calls (browser-safe)
+MAX_CONCURRENT_ITEMS: 10      // Owned items fetched in parallel
+MAX_CONCURRENT_PINS: 6        // Pin data fetched in parallel
 MAX_RECURSION_DEPTH: 15       // Max depth for node hierarchies
 ```
 
@@ -421,41 +430,44 @@ MAX_RECURSION_DEPTH: 15       // Max depth for node hierarchies
 
 If you see these errors, **reduce the concurrency limits**:
 
+❌ **`ERR_INSUFFICIENT_RESOURCES`** ← **Browser connection pool exhausted!**  
 ❌ `⚠️ Failed to load pin X: TypeError: Failed to fetch`  
 ❌ Too many gRPC connection errors  
-❌ Server becomes unresponsive  
-❌ Browser tab crashes or freezes  
+❌ Browser tab becomes unresponsive  
 
-**Solution**: Reduce limits by 50%:
+**Solution**: Reduce to minimum browser-safe values:
 ```typescript
-MAX_CONCURRENT_REQUESTS: 25
-MAX_CONCURRENT_ITEMS: 25
-MAX_CONCURRENT_PINS: 15
+MAX_CONCURRENT_REQUESTS: 4
+MAX_CONCURRENT_ITEMS: 6
+MAX_CONCURRENT_PINS: 4
 ```
 
 ### Symptoms of Too Low Concurrency
 
-If you see these symptoms, **increase the concurrency limits**:
+If you see these symptoms, **increase the concurrency limits carefully**:
 
 ⚠️ Slow scene loading (> 30s for 300-node scene)  
 ⚠️ Long pauses between levels  
 ⚠️ No errors but poor performance  
 
-**Solution**: Increase limits by 50%:
+**Solution**: Increase slightly (stay under browser limit):
 ```typescript
-MAX_CONCURRENT_REQUESTS: 75
-MAX_CONCURRENT_ITEMS: 75
-MAX_CONCURRENT_PINS: 45
+MAX_CONCURRENT_REQUESTS: 8
+MAX_CONCURRENT_ITEMS: 12
+MAX_CONCURRENT_PINS: 8
 ```
+
+**Warning**: Don't exceed ~10 concurrent connections total!
 
 ### Optimal Settings by Scene Size
 
+**Note**: All values respect browser connection pool limits
+
 | Scene Size | Nodes | Concurrency Recommendation |
 |------------|-------|---------------------------|
-| **Small** | < 100 | `REQUESTS: 100, ITEMS: 100, PINS: 50` |
-| **Medium** | 100-1000 | `REQUESTS: 50, ITEMS: 50, PINS: 30` ⭐ **Default** |
-| **Large** | 1000-5000 | `REQUESTS: 30, ITEMS: 30, PINS: 20` |
-| **Very Large** | > 5000 | `REQUESTS: 20, ITEMS: 20, PINS: 10` |
+| **Small** | < 100 | `REQUESTS: 10, ITEMS: 20, PINS: 10` |
+| **Medium/Large** | 100-5000 | `REQUESTS: 6, ITEMS: 10, PINS: 6` ⭐ **Default** |
+| **Very Large** | > 5000 | `REQUESTS: 4, ITEMS: 8, PINS: 4` |
 
 ### Recursion Depth Limit
 
