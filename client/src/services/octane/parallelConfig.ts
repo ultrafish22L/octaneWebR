@@ -24,5 +24,5 @@ export const PARALLEL_CONFIG = {
    * Maximum recursion depth for scene tree
    * Prevents infinite loops in circular graphs
    */
-  MAX_DEPTH: 5
+  MAX_DEPTH: 65
 };
