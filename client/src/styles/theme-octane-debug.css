@@ -5,7 +5,7 @@
  * All selectors and component styles have been moved to their respective files:
  * - app.css: Application-level UI (loading, menu, panels, status bar, etc.)
  * - scene-outliner.css: Scene outliner and tree view styles
- * - viewport.css: Viewport, render canvas, and toolbar styles
+ * - render-viewport.css: Viewport, render canvas, and toolbar styles
  * - node-graph.css: Node graph editor, context menus, and node palette
  * - node-inspector.css: Node inspector and parameter controls
  * 

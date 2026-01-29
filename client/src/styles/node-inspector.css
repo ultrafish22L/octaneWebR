@@ -28,7 +28,6 @@
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-size: var(--font-size-small);
-    /* Added from octane-theme.css: */
     border: 1px solid var(--border);
     border-radius: var(--border-radius);
     cursor: pointer;
@@ -1209,7 +1208,6 @@
     font-weight: var(--font-weight-bold);
     color: var(--accent);
 }
-/* ===== EXTRACTED FROM octane-theme.css ===== */
 
 /* Right Panel - Node Inspector */
 .right-panel {

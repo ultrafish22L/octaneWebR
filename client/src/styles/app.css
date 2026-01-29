@@ -7,7 +7,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  /* Added from octane-theme.css: */
+  /* Added from theme-octane.css: */
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
@@ -62,7 +62,6 @@ body {
 }
 
 /* Main Content */
-/* REMOVED: .viewport-container - Dead code, overridden by viewport.css (loads after) */
 
 #render-canvas {
   max-width: 100%;
@@ -70,30 +69,11 @@ body {
   border: 1px solid var(--border);
 }
 
-/* .render-viewport moved to viewport.css (domain-specific) */
-/* .viewport-overlay moved to viewport.css (domain-specific) */
-
-/* Component Styles */
-/* .callback-render-viewport - consolidated in octane-theme.css:824 (superset with background) */
-
-/* REMOVED: .viewport-canvas-container - Dead code, overridden by viewport.css (loads after) */
-
-/* Scene Outliner */
-/* .scene-outliner - consolidated in octane-theme.css:470 (superset with color, font, overflow, position) */
-
-/* REMOVED: .tree-node - Dead code, overridden by scene-outliner.css (loads after) */
-
-/* .tree-node:hover moved to scene-outliner.css (domain-specific) */
-/* .tree-node.selected moved to scene-outliner.css (domain-specific) */
-
 /* Node Inspector */
-/* REMOVED: .node-inspector - Dead code, overridden by node-inspector.css (loads after) */
 
 .node-inspector h3 {
   margin: 0 0 10px 0;
 }
-
-/* .inspector-content moved to layout.css (consolidated) */
 
 /* ========================================
    LAYOUT SYSTEM (merged from layout.css)
@@ -193,7 +173,7 @@ body.resizing .panel-splitter {
 @media (max-width: 1400px) {
     .app-layout {
         grid-template-columns: 180px 1fr 280px;
-        /* Added from octane-theme.css: */
+        /* Added from theme-octane.css: */
         grid-template-columns: 150px 1fr 200px;
         grid-template-rows: 1fr 200px;
 }
@@ -250,7 +230,7 @@ body.resizing .panel-splitter {
 @media print {
     .app-container {
         display: block;
-        /* Added from octane-theme.css: */
+        /* Added from theme-octane.css: */
         background-color: var(--bg-primary);
         grid-template-rows: var(--menu-height) 1fr var(--status-bar-height);
         height: 100vh;
@@ -273,7 +253,7 @@ body.resizing .panel-splitter {
         border: 1px solid var(--text-primary);
         margin-bottom: 20px;
         break-inside: avoid;
-        /* Added from octane-theme.css: */
+        /* Added from theme-octane.css: */
         background-color: var(--bg-secondary);
         display: flex;
         flex-direction: column;
@@ -394,7 +374,7 @@ body.resizing .react-flow__edge-interaction {
     pointer-events: auto;
 }
 
-/* Context menu item styles moved to octane-theme.css for consistency */
+/* Context menu item styles moved to theme-octane.css for consistency */
 
 /* REMOVED: .context-menu-separator - Dead code, overridden by node-graph.css (loads after) */
 
@@ -590,12 +570,6 @@ body.drag-over * {
     text-align: center;
     margin-top: 4px;
 }
-
-/* ===== OFFICIAL OTOY CONTROL BARS ===== */
-
-/* REMOVED: .control-btn - Dead code, overridden by viewport.css (loads after) */
-
-/* ===== EXTRACTED FROM octane-theme.css ===== */
 
 /* Loading Screen */
 .loading-screen {

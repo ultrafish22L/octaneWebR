@@ -4,7 +4,7 @@
  */
 
 /* Node Graph Components */
-/* Node graph toolbar - consolidated from octane-theme.css and components.css duplicates */
+/* Node graph toolbar - consolidated from theme-octane.css and components.css duplicates */
 .node-graph-toolbar {
   display: flex;
   flex-direction: column;
@@ -1037,8 +1037,6 @@
   transform: translateY(-2px);
 }
 
-/* REMOVED: .material-preview - Dead code, overridden by viewport.css (loads after) */
-
 .material-preview img {
   width: 100%;
   height: 100%;
@@ -1092,7 +1090,7 @@
 .material-database-content::-webkit-scrollbar-thumb:hover {
   background: var(--border);
 }
-/* ===== EXTRACTED FROM octane-theme.css ===== */
+/* ===== EXTRACTED FROM theme-octane.css ===== */
 
 /* Node Graph */
 /* Bottom Panel - Node Graph Editor */

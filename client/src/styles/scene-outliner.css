@@ -425,8 +425,6 @@ input:checked + .slider:before {
     flex: 1;
 }
 
-/* ===== EXTRACTED FROM octane-theme.css ===== */
-
 /* Left Panel - Scene Outliner */
 .left-panel {
     background-color: var(--bg-secondary);

@@ -4,10 +4,10 @@
 echo "🔍 Verifying CSS Refactoring..."
 echo ""
 
-# Check 1: octane-theme.css only has :root
-echo "✓ Checking octane-theme.css structure..."
-if grep -qE '^\s*\.[a-zA-Z]|^\s*#[a-zA-Z]|^\s*[a-zA-Z]+[^:].*\{' client/src/styles/octane-theme.css 2>/dev/null; then
-    echo "  ❌ FAIL: Found non-:root selectors in octane-theme.css"
+# Check 1: theme-octane.css only has :root
+echo "✓ Checking theme-octane.css structure..."
+if grep -qE '^\s*\.[a-zA-Z]|^\s*#[a-zA-Z]|^\s*[a-zA-Z]+[^:].*\{' client/src/styles/theme-octane.css 2>/dev/null; then
+    echo "  ❌ FAIL: Found non-:root selectors in theme-octane.css"
     exit 1
 else
     echo "  ✅ PASS: Only :root variables found"
@@ -29,16 +29,16 @@ echo "  ✅ PASS: All CSS files have balanced braces"
 
 # Check 3: main.tsx imports theme first
 echo "✓ Checking import order..."
-if head -15 client/src/main.tsx | grep -q "octane-theme.css"; then
-    echo "  ✅ PASS: octane-theme.css imported in main.tsx"
+if head -15 client/src/main.tsx | grep -q "theme-octane.css"; then
+    echo "  ✅ PASS: theme-octane.css imported in main.tsx"
 else
-    echo "  ❌ FAIL: octane-theme.css not found in main.tsx imports"
+    echo "  ❌ FAIL: theme-octane.css not found in main.tsx imports"
     exit 1
 fi
 
 # Check 4: Backup exists
 echo "✓ Checking backup..."
-if [ -f "client/src/styles/octane-theme.css.backup" ]; then
+if [ -f "client/src/styles/theme-octane.css.backup" ]; then
     echo "  ✅ PASS: Backup file exists"
 else
     echo "  ⚠️  WARNING: No backup file found"
