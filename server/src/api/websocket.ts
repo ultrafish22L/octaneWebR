@@ -22,7 +22,8 @@ export function setupCallbackStreaming(
     const forwardNewImage = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          console.log('📡 [WebSocket] Forwarding OnNewImage to client');
+          // High-frequency logging commented out to reduce console spam during rendering
+          // console.log('📡 [WebSocket] Forwarding OnNewImage to client');
           ws.send(JSON.stringify({
             type: 'newImage',
             data,
@@ -38,7 +39,8 @@ export function setupCallbackStreaming(
     const forwardNewStatistics = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          console.log('📊 [WebSocket] Forwarding OnNewStatistics to client (FULL DATA):', JSON.stringify(data, null, 2));
+          // High-frequency logging commented out to reduce console spam during rendering
+          // console.log('📊 [WebSocket] Forwarding OnNewStatistics to client (FULL DATA):', JSON.stringify(data, null, 2));
           ws.send(JSON.stringify({
             type: 'newStatistics',
             data,

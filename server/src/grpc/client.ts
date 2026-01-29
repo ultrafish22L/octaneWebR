@@ -349,19 +349,19 @@ export class OctaneGrpcClient extends EventEmitter {
       
       stream.on('data', (response: any) => {
         try {
-          // Debug: Log what we receive from the stream
-          console.log('📥 [Stream] Received callback data:', {
-            hasResponse: !!response,
-            responseType: typeof response,
-            keys: Object.keys(response || {}),
-            hasNewImage: !!response.newImage,
-            newImageKeys: response.newImage ? Object.keys(response.newImage) : [],
-            hasRenderImages: !!response.render_images,
-            hasRenderimages: !!response.renderimages,
-            hasRenderFailure: !!response.renderFailure,
-            hasNewStatistics: !!response.newStatistics,
-            hasProjectManagerChanged: !!response.projectManagerChanged
-          });
+          // High-frequency logging commented out to reduce console spam during rendering
+          // console.log('📥 [Stream] Received callback data:', {
+          //   hasResponse: !!response,
+          //   responseType: typeof response,
+          //   keys: Object.keys(response || {}),
+          //   hasNewImage: !!response.newImage,
+          //   newImageKeys: response.newImage ? Object.keys(response.newImage) : [],
+          //   hasRenderImages: !!response.render_images,
+          //   hasRenderimages: !!response.renderimages,
+          //   hasRenderFailure: !!response.renderFailure,
+          //   hasNewStatistics: !!response.newStatistics,
+          //   hasProjectManagerChanged: !!response.projectManagerChanged
+          // });
           
           // Check if callback contains image data (various possible locations)
           let renderImages = null;
@@ -385,15 +385,16 @@ export class OctaneGrpcClient extends EventEmitter {
           
           // If we found image data in the callback, emit it directly
           if (renderImages) {
-            const firstImage = renderImages.data[0];
-            console.log(`✅ [Stream] Found render images in callback (${imageSource}):`, {
-              count: renderImages.data.length,
-              firstImageSize: firstImage?.size,
-              firstImageType: firstImage?.type,
-              firstImageBufferSize: firstImage?.buffer?.size,
-              firstImageBufferDataType: typeof firstImage?.buffer?.data,
-              firstImageBufferDataLength: firstImage?.buffer?.data?.length
-            });
+            // High-frequency logging commented out to reduce console spam during rendering
+            // const firstImage = renderImages.data[0];
+            // console.log(`✅ [Stream] Found render images in callback (${imageSource}):`, {
+            //   count: renderImages.data.length,
+            //   firstImageSize: firstImage?.size,
+            //   firstImageType: firstImage?.type,
+            //   firstImageBufferSize: firstImage?.buffer?.size,
+            //   firstImageBufferDataType: typeof firstImage?.buffer?.data,
+            //   firstImageBufferDataLength: firstImage?.buffer?.data?.length
+            // });
             
             this.emit('OnNewImage', {
               render_images: renderImages,
@@ -403,18 +404,19 @@ export class OctaneGrpcClient extends EventEmitter {
           }
           // If no image data in callback, fall back to grabRenderResult()
           else if (response.newImage) {
-            console.log('🖼️  OnNewImage callback received without image data - calling grabRenderResult()');
+            // High-frequency logging commented out to reduce console spam during rendering
+            // console.log('🖼️  OnNewImage callback received without image data - calling grabRenderResult()');
             
             this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
               .then((grabResponse: any) => {
                 // Check result field first (indicates if render data is available)
                 if (!grabResponse) {
-                  console.warn('⚠️  grabRenderResult returned null/undefined response');
+                  // console.warn('⚠️  grabRenderResult returned null/undefined response');
                   return;
                 }
                 
                 if (grabResponse.result === false) {
-                  console.log('ℹ️  No render result available (result=false) - render may be initializing');
+                  // console.log('ℹ️  No render result available (result=false) - render may be initializing');
                   return;
                 }
                 
@@ -422,15 +424,16 @@ export class OctaneGrpcClient extends EventEmitter {
                 const grabbedImages = grabResponse.renderImages || grabResponse.renderimages;
                 
                 if (grabbedImages && grabbedImages.data && grabbedImages.data.length > 0) {
-                  const firstImage = grabbedImages.data[0];
-                  console.log('✅ Got render images from grabRenderResult:', {
-                    count: grabbedImages.data.length,
-                    firstImageSize: firstImage?.size,
-                    firstImageType: firstImage?.type,
-                    firstImageBufferSize: firstImage?.buffer?.size,
-                    firstImageBufferDataType: typeof firstImage?.buffer?.data,
-                    firstImageBufferDataLength: firstImage?.buffer?.data?.length
-                  });
+                  // High-frequency logging commented out
+                  // const firstImage = grabbedImages.data[0];
+                  // console.log('✅ Got render images from grabRenderResult:', {
+                  //   count: grabbedImages.data.length,
+                  //   firstImageSize: firstImage?.size,
+                  //   firstImageType: firstImage?.type,
+                  //   firstImageBufferSize: firstImage?.buffer?.size,
+                  //   firstImageBufferDataType: typeof firstImage?.buffer?.data,
+                  //   firstImageBufferDataLength: firstImage?.buffer?.data?.length
+                  // });
                   
                   this.emit('OnNewImage', {
                     render_images: grabbedImages,
@@ -438,14 +441,15 @@ export class OctaneGrpcClient extends EventEmitter {
                     user_data: response.newImage?.user_data
                   });
                 } else {
-                  console.warn('⚠️  grabRenderResult returned 0 images (result=true but no data):', {
-                    result: grabResponse.result,
-                    hasRenderImages: !!grabResponse.renderImages,
-                    hasRenderimages: !!grabResponse.renderimages,
-                    renderImagesData: grabResponse.renderImages?.data || 'undefined',
-                    dataLength: grabResponse.renderImages?.data?.length || 0,
-                    responseKeys: Object.keys(grabResponse)
-                  });
+                  // High-frequency warning commented out
+                  // console.warn('⚠️  grabRenderResult returned 0 images (result=true but no data):', {
+                  //   result: grabResponse.result,
+                  //   hasRenderImages: !!grabResponse.renderImages,
+                  //   hasRenderimages: !!grabResponse.renderimages,
+                  //   renderImagesData: grabResponse.renderImages?.data || 'undefined',
+                  //   dataLength: grabResponse.renderImages?.data?.length || 0,
+                  //   responseKeys: Object.keys(grabResponse)
+                  // });
                 }
               })
               .catch((error: any) => {
@@ -454,13 +458,15 @@ export class OctaneGrpcClient extends EventEmitter {
           }
           // Handle OnStatisticsData callback
           else if (response.newStatistics) {
-            console.log('📊 OnStatisticsData callback received:', JSON.stringify(response.newStatistics, null, 2));
+            // High-frequency logging commented out to reduce console spam during rendering
+            // console.log('📊 OnStatisticsData callback received:', JSON.stringify(response.newStatistics, null, 2));
             
             // Fetch full statistics data from Octane
             this.callMethod('ApiRenderEngine', 'getRenderStatistics', {})
               .then((statsResponse: any) => {
                 if (statsResponse?.statistics) {
-                  console.log('✅ Got render statistics (FULL RESPONSE):', JSON.stringify(statsResponse.statistics, null, 2));
+                  // High-frequency logging commented out
+                  // console.log('✅ Got render statistics (FULL RESPONSE):', JSON.stringify(statsResponse.statistics, null, 2));
                   
                   this.emit('OnNewStatistics', {
                     statistics: statsResponse.statistics,
@@ -468,7 +474,8 @@ export class OctaneGrpcClient extends EventEmitter {
                     timestamp: Date.now()
                   });
                 } else {
-                  console.warn('⚠️  getRenderStatistics returned no data');
+                  // High-frequency warning commented out
+                  // console.warn('⚠️  getRenderStatistics returned no data');
                 }
               })
               .catch((error: any) => {
