@@ -56,7 +56,7 @@
     /* Octane Accent Colors */
     --octane-accent: #ff8c00;          /* Primary accent - Octane orange */
     --octane-accent-yellow: #ffc107;   /* Selection yellow/gold - matches Octane */
-    --octane-accent-orange: #ff8c00;   /* Warning/active orange */
+    --octane-accent-yellow-hover: #ffcd38; /* Yellow hover state */
     --octane-accent-green: #5cb85c;    /* Success green */
     --octane-accent-red: #d9534f;      /* Error red */
     --octane-accent-blue: #3a9bd9;     /* Info/link blue */
@@ -72,7 +72,6 @@
     --octane-border-light: #666666;    /* Light borders */
     --octane-border-dark: #333333;     /* Dark borders */
     --octane-border-primary: #1a1a1a;  /* primary borders/backgrounds */
-    --octane-border-medium: #555555;   /* Medium borders (same as --octane-border) */
     --octane-border-subtle: #444444;   /* Subtle borders (dimmer than dark) */
     --octane-border-hover: #777777;    /* Border hover state (lighter than standard) */
     --octane-shadow: rgba(0, 0, 0, 0.3); /* Drop shadows */
@@ -83,7 +82,7 @@
     
     /* Octane Specific Colors */
     --octane-viewport-bg: #2a2a2a;     /* Viewport background */
-    --octane-node-bg: #3a3a3a;         /* Node backgrounds */
+    --octane-node-bg: var(--octane-bg-tertiary); /* Node backgrounds (aliased to tertiary background) */
     --octane-connection-line: #888888; /* Node connections */
     --octane-parameter-bg: #2a2a2a;    /* Parameter backgrounds - LIGHTENED to match Octane SE */
     

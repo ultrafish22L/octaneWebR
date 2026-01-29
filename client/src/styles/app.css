@@ -720,7 +720,7 @@ body.drag-over * {
 }
 
 .status-dot.connecting {
-    background-color: var(--octane-accent-orange);
+    background-color: var(--octane-accent);
     animation: pulse 1s infinite;
 }
 

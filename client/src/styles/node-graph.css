@@ -1046,7 +1046,7 @@
 }
 
 .material-preview-placeholder {
-  color: var(--octane-border-medium);
+  color: var(--octane-border);
   font-size: var(--font-size-normal);
   text-align: center;
 }
