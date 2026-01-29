@@ -642,25 +642,20 @@ export class SceneService extends BaseService {
       item.children = children;
       
       if (children.length === 0) {
-        // Only fetch attrInfo for valid, non-zero handles
-        if (item.handle && item.handle !== 0) {
-          try {
-            const attrInfoResponse = await this.apiService.callApi(
-              'ApiItem',
-              'attrInfo',
-              item.handle,
-              { id: AttributeId.A_VALUE }
-            );
-            
-            if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
-              item.attrInfo = attrInfoResponse.result;
-              Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
-            }
-          } catch (attrError: any) {
-            Logger.debug(`  ℹ️ No attrInfo for ${item.name} (handle: ${item.handle})`);
+        try {
+          const attrInfoResponse = await this.apiService.callApi(
+            'ApiItem',
+            'attrInfo',
+            item.handle,
+            { id: AttributeId.A_VALUE }
+          );
+          
+          if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+            item.attrInfo = attrInfoResponse.result;
+            Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
           }
-        } else {
-          Logger.debug(`  ⚠️ Skipping attrInfo for ${item.name} (invalid handle: ${item.handle})`);
+        } catch (attrError: any) {
+          Logger.debug(`  ℹ️ No attrInfo for ${item.name}`);
         }
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);
