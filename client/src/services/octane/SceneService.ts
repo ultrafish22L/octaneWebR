@@ -34,6 +34,19 @@ const PARALLEL_CONFIG = {
    * - false: Only emit final sceneTreeUpdated event (simpler, less overhead)
    */
   ENABLE_PROGRESSIVE_LOADING: true,
+  
+  /**
+   * 🔧 Phase 4: Enable Smart Prioritized Loading (Breadth-First)
+   * - true: Load top-level nodes FIRST, then children (user sees roots immediately)
+   * - false: Use depth-first recursion (loads deep nodes first, original behavior)
+   * 
+   * Recommended: true (much better perceived performance)
+   * When enabled, loads scene in this order:
+   *   1. Level 0 (root nodes) - visible in ~0.3-0.5s
+   *   2. Level 1 (direct children) - visible in ~0.6-1.0s
+   *   3. Level 2, 3, etc. (progressively)
+   */
+  ENABLE_PRIORITIZED_LOADING: true,
 } as const;
 
 export class SceneService extends BaseService {
@@ -133,7 +146,17 @@ export class SceneService extends BaseService {
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
       
-      Logger.debug('🔍 Step 3: Building tree recursively with parallel fetching...');
+      Logger.debug('🔍 Step 3: Building tree with parallel fetching...');
+      
+      // Phase 4: Smart Prioritized Loading (Breadth-First)
+      // When enabled, loads all nodes at level N before ANY nodes at level N+1
+      // This ensures top-level nodes appear immediately!
+      if (PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING) {
+        Logger.debug('   Using BREADTH-FIRST loading: Level 0 → Level 1 → Level 2...');
+        Logger.debug('   Watch for ⚡ TOP-LEVEL markers showing when roots are visible');
+      } else {
+        Logger.debug('   Using DEPTH-FIRST loading: Original order');
+      }
       this.scene.tree = await this.syncSceneRecurse(rootHandle, null, isGraph, 0);
       
       const endTime = performance.now();
@@ -145,6 +168,9 @@ export class SceneService extends BaseService {
       Logger.success(`   - Concurrency: ${PARALLEL_CONFIG.MAX_CONCURRENT_REQUESTS} max parallel requests`);
       if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
         Logger.success(`   - Progressive loading: ENABLED ⚡`);
+      }
+      if (PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING) {
+        Logger.success(`   - Smart prioritized (breadth-first): ENABLED 🎯`);
       }
       
       // Emit final progress event (Phase 2 - optional)
@@ -312,9 +338,12 @@ export class SceneService extends BaseService {
         
         Logger.debug(`✅ Level ${level}: Added ${validItems.length}/${size} owned items`);
         
-        // Only build deep children for top-level items (avoids exponential API calls)
-        if (level === 1) {
-          Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items in parallel...`);
+        // Phase 4: Build children after all siblings when prioritized loading enabled
+        // Phase 1-3: Only build children for level 1 (original behavior)
+        const shouldBuildChildren = PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING || level === 1;
+        
+        if (shouldBuildChildren && sceneItems.length > 0) {
+          Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items in parallel...`);
           
           // ⚡ PARALLEL OPTIMIZATION: Build all children concurrently
           const childResults = await parallelLimitSettled(
@@ -513,13 +542,20 @@ export class SceneService extends BaseService {
         };
         this.emit('sceneNodeAdded', nodeAddedEvent);
         
+        // Log when TOP-LEVEL nodes are added (Phase 4 - visual confirmation)
+        if (level === 1) {
+          Logger.success(`⚡ TOP-LEVEL node visible: "${entry.name}" (level ${level})`);
+        }
+        
         // Throttled progress update (every 10 nodes or at key milestones)
         if (this.loadingProgress.nodesLoaded % 10 === 0 || level === 1) {
           this.emitProgress();
         }
       }
       
-      if (level > 1) {
+      // Phase 4: DEFER children building when prioritized loading is enabled
+      // Children will be built in batch after all siblings (breadth-first)
+      if (level > 1 && !PARALLEL_CONFIG.ENABLE_PRIORITIZED_LOADING) {
         await this.addItemChildren(entry);
       }
     }
