@@ -40,19 +40,25 @@ Open **http://localhost:57341** in your browser.
 
 ### API Version Support
 
-octaneWebR supports both **Alpha 5** and **Beta 2** Octane gRPC APIs with a centralized configuration system:
+octaneWebR supports both **Alpha 5 (2026.1)** and **Beta 2 (2026.1)** Octane gRPC APIs with automatic compatibility.
 
+**Quick Switch**: Edit `api-version.config.js` (line 22):
 ```javascript
-// Edit api-version.config.js line 24:
-const USE_ALPHA5_API = false;  // false = Beta 2, true = Alpha 5
+const USE_ALPHA5_API = false;  // false = Beta 2 (default), true = Alpha 5
 ```
 
-After changing the version, restart the dev server:
+Then rebuild and restart:
 ```bash
-npm run dev
+npm run build && npm run dev
 ```
 
-See **[QUICK_START_API_VERSION.md](./QUICK_START_API_VERSION.md)** for details.
+**What's Included**:
+- ✅ Automatic method name translation (Beta 2 ↔ Alpha 5)
+- ✅ Automatic parameter structure transformation
+- ✅ Single config file for both client and server
+- ✅ Console logs show active API version
+
+See **[DEVELOPMENT.md](./DEVELOPMENT.md#api-version-configuration)** for detailed information on switching, verification, and troubleshooting.
 
 ---
 

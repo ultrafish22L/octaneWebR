@@ -530,6 +530,31 @@ api-version.config.js (ROOT - Single Source)
 
 ## Recent Development Status
 
+### Documentation Consolidation (2025-02-01)
+
+**Status**: ✅ COMPLETED - API version docs merged into main documentation
+
+**Changes**:
+- Merged `QUICK_START_API_VERSION.md` → `README.md` (brief section)
+- Merged `API_VERSION_SWITCHING.md` → `DEVELOPMENT.md` (detailed section)
+- Deleted separate API version documentation files
+- Updated cross-references in all documentation
+
+**New Documentation Structure**:
+- **README.md**: Quick overview of API version switching (5 lines of code)
+- **DEVELOPMENT.md**: Complete guide with architecture, troubleshooting, and verification steps
+- **QUICKSTART.md**: First-time setup (no API version info needed)
+- **CHANGELOG.md**: Version history
+- **AGENTS.md**: AI assistant memory (this file)
+
+**Benefits**:
+- ✅ Fewer files to maintain (7 docs instead of 9)
+- ✅ Single source of truth per topic
+- ✅ Easier to find information (no separate mini-docs)
+- ✅ Better organization (brief in README, detailed in DEVELOPMENT)
+
+---
+
 ### CSS Theme Refactor & UI Polish (2025-02-01)
 
 **Status**: ✅ COMPLETED - All CSS variables renamed, UI bugs fixed
@@ -627,9 +652,20 @@ api-version.config.js (ROOT - Single Source)
 
 ## Reference Documentation
 
-**For humans**: See `README.md`, `QUICKSTART.md`, `DEVELOPMENT.md`, `CHANGELOG.md`  
-**For AI skills**: See `.openhands/skills/` directory  
-**Octane manual**: https://docs.otoy.com/standaloneSE/
+**Main Documentation** (7 files):
+- `README.md` - Project overview, features, quick start, API version support
+- `QUICKSTART.md` - First-time setup guide (prerequisites, installation, verification)
+- `DEVELOPMENT.md` - Development guide, architecture, API version switching (detailed)
+- `CHANGELOG.md` - Version history in Keep a Changelog format
+- `AGENTS.md` - AI assistant memory (this file)
+- `.openhands/skills/` - AI skills for specialized tasks
+- **Octane manual**: https://docs.otoy.com/standaloneSE/
+
+**Documentation Topics**:
+- **API Version Switching**: See `DEVELOPMENT.md` → API Version Configuration
+- **CSS Theme System**: See `DEVELOPMENT.md` → Styling & Theming
+- **Service Architecture**: See `DEVELOPMENT.md` → Service Layer Pattern
+- **Recent Changes**: See `CHANGELOG.md` for dated version history
 
 ---
 

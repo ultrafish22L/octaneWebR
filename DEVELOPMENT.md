@@ -189,35 +189,128 @@ callback.proto         - Streaming callbacks
 ```
 
 ### API Version Configuration
-octaneWebR supports both **Alpha 5** and **Beta 2** Octane gRPC APIs:
 
-**Configuration File**: `api-version.config.js` (project root)
+octaneWebR supports two Octane gRPC API versions with automatic compatibility:
+- **Alpha 5 (2026.1)**: Proto files in `server/proto_old/`
+- **Beta 2 (2026.1)**: Proto files in `server/proto/` (default)
+
+#### Quick Switch Guide
+
+**Edit ONE file**: `api-version.config.js` (line 22)
 ```javascript
-// Single line to edit:
-const USE_ALPHA5_API = false;  // false = Beta 2, true = Alpha 5
+const USE_ALPHA5_API = true;   // Alpha 5 (2026.1)
+const USE_ALPHA5_API = false;  // Beta 2 (2026.1) - default
 ```
 
-**Architecture**:
-- **Build Time**: Vite injects `__USE_ALPHA5_API__` constant into client bundle
-- **Server Runtime**: Direct ES import from config file
-- **Client Runtime**: Uses Vite-injected constant (no module loading)
-- **Guaranteed Sync**: Both client and server always use same version
+**Then rebuild and restart**:
+```bash
+npm run build && npm run dev
+```
 
-**Key Differences**:
-| Aspect | Beta 2 (proto/) | Alpha 5 (proto_old/) |
-|--------|-----------------|---------------------|
-| Methods | `getPinValueByPinID` | `getPinValue` |
-|         | `setPinValueByPinID` | `setPinValue` |
-|         | `getValueByAttrID` | `getByAttrID` |
-| Params  | `pin_id`, `expected_type` | `id` (no expected_type) |
-| Values  | Typed fields (`bool_value`, `int_value`, etc.) | Generic `value` field |
+**That's it!** ✅ Both client and server automatically sync to the same version.
 
-**How to Switch**:
-1. Edit `api-version.config.js` line 24
-2. Restart dev server: `npm run dev`
-3. Both client and server automatically sync
+#### Architecture
 
-See `QUICK_START_API_VERSION.md` for step-by-step guide.
+```
+api-version.config.js (ROOT - Single Source of Truth)
+        ├──> vite-plugin-octane-grpc.ts (Server - CommonJS require)
+        └──> client/src/config/apiVersionImport.ts (Bridge - ES module import)
+                  └──> client/src/config/apiVersionConfig.ts (Client functions)
+```
+
+**Build Time**:
+- Vite injects `__USE_ALPHA5_API__` constant into client bundle
+- Server uses CommonJS `require()` to load config directly
+
+**Runtime**:
+- **Server**: Loads correct proto directory based on config
+- **Client**: Transforms method names/parameters if needed (Alpha 5 mode)
+- **Guaranteed Sync**: Impossible to mismatch versions
+
+#### What Happens When You Switch
+
+**When `USE_ALPHA5_API = true` (Alpha 5)**:
+- ✅ Server loads proto files from `server/proto_old/`
+- ✅ Client transforms Beta 2 method names → Alpha 5 method names
+  - `getPinValueByPinID` → `getPinValue`
+  - `getValueByAttrID` → `getByAttrID`
+  - `setPinValueByPinID` → `setPinValue`
+  - `setValueByAttrID` → `setByAttrID`
+- ✅ Client transforms Beta 2 parameters → Alpha 5 parameters
+  - `pin_id` → `id`
+  - Removes `expected_type` field
+  - `bool_value`, `int_value`, etc. → `value` (generic)
+
+**When `USE_ALPHA5_API = false` (Beta 2)**:
+- ✅ Server loads proto files from `server/proto/`
+- ✅ Client uses Beta 2 method names directly (no transformation)
+- ✅ Client uses Beta 2 parameters directly (no transformation)
+
+#### Key API Differences
+
+**Method Names**:
+| Feature | Beta 2 Method | Alpha 5 Method |
+|---------|---------------|----------------|
+| Get pin value | `getPinValueByPinID` | `getPinValue` |
+| Set pin value | `setPinValueByPinID` | `setPinValue` |
+| Get item value | `getValueByAttrID` | `getByAttrID` |
+| Set item value | `setValueByAttrID` | `setByAttrID` |
+
+**Parameter Structure**:
+| Parameter | Beta 2 | Alpha 5 |
+|-----------|--------|---------|
+| Pin ID | `pin_id` | `id` |
+| Type validation | `expected_type` (required) | Not used |
+| Value field | `bool_value`, `int_value`, `float_value`, etc. | `value` (generic) |
+
+#### Verification
+
+After switching, check console logs to confirm:
+
+**Server Console (Terminal)**:
+```
+[OCTANE-SERVER] API Version: Alpha 5 (2026.1)
+[OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto_old
+```
+or
+```
+[OCTANE-SERVER] API Version: Beta 2 (2026.1)
+[OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto
+```
+
+**Client Console (Browser)**:
+```
+[DEBUG] 🔄 API Compatibility: getPinValueByPinID → getPinValue (Alpha 5)
+```
+or
+```
+[DEBUG] 🔄 API Compatibility: Using Beta 2 (no transformation)
+```
+
+#### Troubleshooting
+
+**Error: "Method not found in service"**
+
+**Cause**: Server loaded wrong proto files (doesn't have the method client is requesting)
+
+**Fix**:
+1. Verify you edited `api-version.config.js` (NOT individual config files)
+2. Clear build cache: `rm -rf dist node_modules/.vite`
+3. Rebuild: `npm run build`
+4. Restart: `npm run dev`
+5. Check console logs match expected version
+
+**Error: "INVALID_ARGUMENT" or parameter errors**
+
+**Cause**: Client sent wrong parameter structure for the API version
+
+**Fix**: Same as above - ensure config is correct and rebuild
+
+**Files You Should NOT Edit Directly**:
+- ❌ `vite-plugin-octane-grpc.ts` - Now imports from centralized config
+- ❌ `client/src/config/apiVersionConfig.ts` - Now imports from centralized config
+
+These files **read** from `api-version.config.js`. Editing them has no effect.
 
 ### API Call Pattern
 ```typescript
