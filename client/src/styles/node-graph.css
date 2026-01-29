@@ -550,17 +550,17 @@
 
 /* ReactFlow background override - lighter gray like Octane SE */
 .node-graph-container .react-flow {
-  background: #454545;
+  background: var(--octane-bg-secondary);
 }
 
 /* ReactFlow background pattern (grid) - lighter gray base */
 .node-graph-container .react-flow__background {
-  background: #454545;
+  background: var(--octane-bg-secondary);
 }
 
 /* Grid lines - dark and visible like Octane SE */
 .node-graph-container .react-flow__background line {
-  stroke: #2a2a2a !important; /* Dark grid lines on lighter background */
+  stroke: var(--octane-viewport-bg) !important; /* Dark grid lines on lighter background */
 }
 
 /* NodeGraphEditor takes full remaining space after toolbar */
@@ -584,17 +584,17 @@
 
 /* ReactFlow background override - lighter gray like Octane SE */
 .node-graph-tabgraph .react-flow {
-  background: #454545;
+  background: var(--octane-bg-secondary);
 }
 
 /* ReactFlow background pattern (grid) - lighter gray base */
 .node-graph-tabgraph .react-flow__background {
-  background: #454545;
+  background: var(--octane-bg-secondary);
 }
 
 /* Grid lines - dark and visible like Octane SE */
 .node-graph-tabgraph .react-flow__background line {
-  stroke: #2a2a2a !important; /* Dark grid lines on lighter background */
+  stroke: var(--octane-viewport-bg) !important; /* Dark grid lines on lighter background */
 }
 
 /* NodeGraphEditor takes full remaining space after toolbar and tabs */
@@ -1223,7 +1223,7 @@
     background: var(--octane-bg-secondary) !important;
     border: 1px solid var(--octane-border) !important;
     border-radius: var(--border-radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: var(--octane-shadow-strong) !important;
     font-family: var(--font-family);
     font-size: var(--font-size-small); /* 11px for compact appearance matching Octane SE */
     color: var(--octane-text-primary) !important;
@@ -1263,7 +1263,7 @@
     background: var(--octane-bg-secondary) !important;
     border: 1px solid var(--octane-border) !important;
     border-radius: var(--border-radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: var(--octane-shadow-strong) !important;
     font-family: var(--font-family);
     font-size: var(--font-size-small); /* 11px for compact appearance matching Octane SE */
     color: var(--octane-text-primary) !important;
@@ -1281,7 +1281,7 @@
     background: var(--octane-bg-secondary) !important;
     border: 1px solid var(--octane-border) !important;
     border-radius: var(--border-radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: var(--octane-shadow-strong) !important;
     font-family: var(--font-family);
     font-size: var(--font-size-small); /* 11px for compact appearance matching Octane SE */
     color: var(--octane-text-primary) !important;
@@ -1378,7 +1378,7 @@
     height: 16px;
     border-radius: var(--border-radius);
     flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--octane-border-subtle-light);
 }
 
 /* Node type icon - actual PNG icons from Octane */
@@ -1407,7 +1407,7 @@
 
 .node-graph-tab {
     background: var(--octane-bg-lighter);
-    border: 1px solid #000;
+    border: 1px solid var(--octane-border-black);
     border-bottom: none;
     color: var(--octane-text-secondary);
     cursor: pointer;
@@ -1419,7 +1419,7 @@
     position: relative;
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
     margin-right: -10px;
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
+    filter: var(--octane-drop-shadow-tab);
 }
 
 /* Z-index stacking: left tabs on top, right tabs underneath */
@@ -1442,5 +1442,5 @@
     color: var(--octane-text-primary);
     z-index: 20 !important;
     font-weight: var(--font-weight-header);
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+    filter: var(--octane-drop-shadow-tab-active);
 }

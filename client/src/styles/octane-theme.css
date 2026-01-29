@@ -56,6 +56,7 @@
     /* Octane Accent Colors */
     --octane-accent: #ff8c00;          /* Primary accent - Octane orange */
     --octane-accent-yellow: #ffc107;   /* Selection yellow/gold - matches Octane */
+    --octane-accent-yellow-hover: #ffcd38; /* Yellow hover state */
     --octane-accent-orange: #ff8c00;   /* Warning/active orange */
     --octane-accent-green: #5cb85c;    /* Success green */
     --octane-accent-red: #d9534f;      /* Error red */
@@ -75,7 +76,16 @@
     --octane-border-medium: #555555;   /* Medium borders (same as --octane-border) */
     --octane-border-subtle: #444444;   /* Subtle borders (dimmer than dark) */
     --octane-border-hover: #777777;    /* Border hover state (lighter than standard) */
+    --octane-border-black: #000000;    /* Black borders for tabs matching Octane SE */
+    --octane-border-subtle-light: rgba(255, 255, 255, 0.2); /* Subtle light border for node type indicators */
     --octane-shadow: rgba(0, 0, 0, 0.3); /* Drop shadows */
+    
+    /* Button States */
+    --octane-btn-secondary-bg: #444444;     /* Secondary button background */
+    --octane-btn-secondary-hover: #555555;  /* Secondary button hover state */
+    --octane-btn-important-bg: rgba(64, 128, 255, 0.1);    /* Important button background */
+    --octane-btn-important-hover: rgba(64, 128, 255, 0.2); /* Important button hover state */
+    --octane-btn-important-active: rgba(64, 128, 255, 0.15); /* Important button active state */
     
     /* Error States */
     --octane-error-bg: #3a1a1a;        /* Error background (dark red) */
@@ -86,6 +96,7 @@
     --octane-node-bg: #3a3a3a;         /* Node backgrounds */
     --octane-connection-line: #888888; /* Node connections */
     --octane-parameter-bg: #2a2a2a;    /* Parameter backgrounds - LIGHTENED to match Octane SE */
+    --octane-minimap-bg: rgba(70, 68, 50, 0.95); /* Node graph minimap background - yellowish tint matching Octane SE */
     
     /* Transparent Overlays & Shadows */
     --octane-overlay-medium-dark: rgba(0, 0, 0, 0.75); /* Medium-dark overlays */
@@ -100,6 +111,14 @@
     --octane-shadow-medium: rgba(0, 0, 0, 0.4);     /* Medium shadows */
     --octane-shadow-ultra-subtle: rgba(0, 0, 0, 0.053); /* Ultra-subtle shadows */
     
+    /* Box Shadow Presets */
+    --octane-shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.5); /* Strong shadow for context menus */
+    --octane-shadow-medium-box: 0 4px 12px rgba(0, 0, 0, 0.4); /* Medium shadow for dropdowns */
+    
+    /* Drop Shadow Presets */
+    --octane-drop-shadow-tab: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5)); /* Normal tab shadow */
+    --octane-drop-shadow-tab-active: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8)); /* Active tab shadow */
+    
     /* White Highlights & Glows */
     --octane-highlight-medium: rgba(255, 255, 255, 0.2);  /* Medium highlights */
     --octane-accent-hover: rgba(255, 255, 255, 0.15);     /* Accent hover state (renamed from highlight) */
@@ -107,6 +126,10 @@
     --octane-highlight-subtle: rgba(255, 255, 255, 0.053); /* Subtle highlights */
     --octane-highlight-ultra-subtle: rgba(255, 255, 255, 0.042); /* Ultra-subtle highlights */
     --octane-accent-bg: rgba(255, 255, 255, 0.03);        /* Accent background (renamed from highlight-barely) */
+    
+    /* Special Purpose Overlays */
+    --octane-progress-bg: rgba(0, 150, 255, 0.15);   /* Progress bar overlay */
+    --octane-selection-overlay: rgba(0, 255, 0, 0.1); /* Render region selection overlay */
     
     /* State-Based Transparent Colors */
     --octane-error-bg-alpha: rgba(220, 53, 69, 0.1);     /* Error background overlay */

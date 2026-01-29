@@ -1693,7 +1693,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           strokeWidth: 3,
         }}
         className="node-graph-reactflow"
-        style={{ background: '#454545' }}
+        style={{ background: 'var(--octane-bg-secondary)' }}
         snapToGrid={snapToGrid}
         snapGrid={[20, 20]}
       >
@@ -1702,7 +1702,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           variant={BackgroundVariant.Lines} 
           gap={gridVisible ? 60 : 0} 
           size={gridVisible ? 1 : 0} 
-          color="#454545"
+          color="var(--octane-bg-secondary)"
         />
 
         {/* Minimap for navigation - top-left flush with yellow tint matching Octane SE */}
@@ -1717,7 +1717,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           style={{
             width: 160,
             height: 120,
-            background: 'rgba(70, 68, 50, 0.95)',
+            background: 'var(--octane-minimap-bg)',
             border: '2px solid rgba(200, 180, 80, 0.8)',
             borderRadius: 4,
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
