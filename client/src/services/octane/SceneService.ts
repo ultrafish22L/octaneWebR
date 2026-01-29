@@ -586,8 +586,11 @@ export class SceneService extends BaseService {
       
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
       
-      // NOTE: Children building is handled by syncSceneParallel for all levels
-      // This ensures consistent parallelization at every depth
+      // Build children for level > 1 nodes (sequential mode requires this)
+      // In parallel mode, syncSceneParallel handles children building for all levels
+      if (level > 1 && !PARALLEL_CONFIG.ENABLED) {
+        await this.addItemChildren(completeNode);
+      }
       
       return completeNode;
       

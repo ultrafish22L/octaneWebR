@@ -11,7 +11,7 @@ export const PARALLEL_CONFIG = {
    * 
    * Tested with 7424-node scenes: parallel loads in ~48s vs ~180s sequential
    */
-  ENABLED: true,  // Default to faster mode (well-tested)
+  ENABLED: false,  // TEMPORARY: Disabled due to Node Inspector bug (needs investigation)
   
   /**
    * Maximum concurrent API requests
@@ -20,12 +20,12 @@ export const PARALLEL_CONFIG = {
    * Unlike HTTP/1.1's 6-connection limit, HTTP/2 can handle 100+ concurrent requests.
    * 
    * Tested values:
-   * - 100: 48s load time (recommended)
-   * - 6: Much slower (outdated HTTP/1.1 thinking)
+   * - 100: 48s load time (but may cause Node Inspector issues)
+   * - 6: Conservative, tested working
    * 
    * Increase for faster loading, decrease if you encounter resource errors.
    */
-  MAX_CONCURRENT: 100,
+  MAX_CONCURRENT: 6,  // TEMPORARY: Reduced from 100 due to stability issues
   
   /**
    * Maximum recursion depth for scene tree
