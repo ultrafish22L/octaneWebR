@@ -76,11 +76,16 @@
     --octane-border-medium: #555555;   /* Medium borders (same as --octane-border) */
     --octane-border-subtle: #444444;   /* Subtle borders (dimmer than dark) */
     --octane-border-hover: #777777;    /* Border hover state (lighter than standard) */
+    --octane-border-black: #000000;    /* Black borders for tabs matching Octane SE */
+    --octane-border-subtle-light: rgba(255, 255, 255, 0.2); /* Subtle light border for node type indicators */
     --octane-shadow: rgba(0, 0, 0, 0.3); /* Drop shadows */
     
     /* Button States */
     --octane-btn-secondary-bg: #444444;     /* Secondary button background */
     --octane-btn-secondary-hover: #555555;  /* Secondary button hover state */
+    --octane-btn-important-bg: rgba(64, 128, 255, 0.1);    /* Important button background */
+    --octane-btn-important-hover: rgba(64, 128, 255, 0.2); /* Important button hover state */
+    --octane-btn-important-active: rgba(64, 128, 255, 0.15); /* Important button active state */
     
     /* Error States */
     --octane-error-bg: #3a1a1a;        /* Error background (dark red) */
@@ -105,6 +110,14 @@
     --octane-shadow-heavy: rgba(0, 0, 0, 0.6);      /* Heavy inset/drop shadows */
     --octane-shadow-medium: rgba(0, 0, 0, 0.4);     /* Medium shadows */
     --octane-shadow-ultra-subtle: rgba(0, 0, 0, 0.053); /* Ultra-subtle shadows */
+    
+    /* Box Shadow Presets */
+    --octane-shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.5); /* Strong shadow for context menus */
+    --octane-shadow-medium-box: 0 4px 12px rgba(0, 0, 0, 0.4); /* Medium shadow for dropdowns */
+    
+    /* Drop Shadow Presets */
+    --octane-drop-shadow-tab: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5)); /* Normal tab shadow */
+    --octane-drop-shadow-tab-active: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8)); /* Active tab shadow */
     
     /* White Highlights & Glows */
     --octane-highlight-medium: rgba(255, 255, 255, 0.2);  /* Medium highlights */
