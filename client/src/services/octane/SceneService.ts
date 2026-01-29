@@ -176,10 +176,11 @@ export class SceneService extends BaseService {
     level = level + 1;
     
     // Safety limit: Prevent runaway recursion in circular graphs
-    if (level > PARALLEL_CONFIG.MAX_DEPTH) {
-      Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
-      return sceneItems;
-    }
+    // NOTE: Disabled - scene.map reservation system already prevents duplicates and infinite loops
+    // if (level > PARALLEL_CONFIG.MAX_DEPTH) {
+    //   Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
+    //   return sceneItems;
+    // }
     
     try {
       if (itemHandle === null) {
@@ -304,10 +305,11 @@ export class SceneService extends BaseService {
     level = level + 1;
     
     // Safety limit: Prevent runaway recursion in circular graphs
-    if (level > PARALLEL_CONFIG.MAX_DEPTH) {
-      Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
-      return sceneItems;
-    }
+    // NOTE: Disabled - scene.map reservation system already prevents duplicates and infinite loops
+    // if (level > PARALLEL_CONFIG.MAX_DEPTH) {
+    //   Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
+    //   return sceneItems;
+    // }
     
     try {
       if (itemHandle === null) {
