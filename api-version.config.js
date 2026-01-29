@@ -21,7 +21,7 @@
  * - Server-side proto file loading directory
  * - Server-side service instantiation
  */
-const USE_ALPHA5_API = false;  // ⭐ CHANGE ONLY THIS LINE
+const USE_ALPHA5_API = true;  // ⭐ CHANGE ONLY THIS LINE
 
 // ============================================================================
 // EXPORTS (Do not modify below)
