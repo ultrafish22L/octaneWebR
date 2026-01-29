@@ -343,7 +343,10 @@ body.resizing .react-flow__edge-interaction {
         0 1px 2px var(--octane-shadow-medium),
         0 0 4px var(--octane-highlight-medium); /* Subtle outer glow */
 }
-
+  /*
+          background: linear-gradient(to bottom, #4CAF50 0%, #45a049 100%), 
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), 
+        */
 /* Octane Node Body Styling - Match Reference 3D Button Effect */
 .node {
     /* 3D gradient overlay - use background-image to layer over inline backgroundColor */

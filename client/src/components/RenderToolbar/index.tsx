@@ -763,7 +763,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({ className = '',
             top: 0,
             bottom: 0,
             width: `${renderStats.progressPercent}%`,
-            backgroundColor: 'var(--octane-progress-bg)',
+            backgroundColor: 'rgba(0, 150, 255, 0.15)',
             transition: 'width 0.3s ease',
             pointerEvents: 'none',
             zIndex: 0

@@ -223,7 +223,7 @@ input:checked + .slider:before {
 
 .scene-tab {
     background: var(--octane-bg-lighter);
-    border: 1px solid var(--octane-border-black);
+    border: 1px solid #000;
     border-bottom: none;
     color: var(--octane-text-secondary);
     cursor: pointer;
@@ -235,7 +235,7 @@ input:checked + .slider:before {
     position: relative;
     clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
     margin-right: -10px;
-    filter: var(--octane-drop-shadow-tab);
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
 }
 
 /* Z-index stacking: left tabs on top, right tabs underneath */
@@ -258,7 +258,7 @@ input:checked + .slider:before {
     color: var(--octane-text-primary);
     z-index: 20 !important;
     font-weight: var(--font-weight-header);
-    filter: var(--octane-drop-shadow-tab-active);
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 
 .refresh-btn {

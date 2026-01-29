@@ -807,11 +807,11 @@
 
 .toolbar-icon-btn.important {
     color: var(--octane-text-primary);
-    background-color: var(--octane-btn-important-bg);
+    background-color: rgba(64, 128, 255, 0.1);
 }
 
 .toolbar-icon-btn.important:hover {
-    background-color: var(--octane-btn-important-hover);
+    background-color: rgba(64, 128, 255, 0.2);
     border-color: var(--octane-accent-blue);
 }
 
@@ -854,7 +854,7 @@
     background-color: var(--octane-bg-secondary);
     border: 1px solid var(--octane-border);
     border-radius: var(--border-radius);
-    box-shadow: var(--octane-shadow-medium-box);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     z-index: var(--z-modal-bg);
     min-width: 180px;
     overflow: hidden;
@@ -903,7 +903,7 @@
     background-color: var(--octane-bg-secondary);
     border: 1px solid var(--octane-border);
     border-radius: var(--border-radius);
-    box-shadow: var(--octane-shadow-medium-box);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     z-index: var(--z-modal-bg);
     min-width: 200px;
     overflow: hidden;
@@ -946,7 +946,7 @@
 }
 
 .render-priority-item.active {
-    background-color: var(--octane-btn-important-active);
+    background-color: rgba(64, 128, 255, 0.15);
     color: var(--octane-accent-blue);
     font-weight: 600;
 }

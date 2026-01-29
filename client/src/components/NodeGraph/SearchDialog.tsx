@@ -131,7 +131,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'var(--octane-overlay-semi)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -142,8 +142,8 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
       <div
         className="search-dialog"
         style={{
-          backgroundColor: 'var(--octane-viewport-bg)',
-          border: '1px solid var(--octane-border-subtle)',
+          backgroundColor: '#2a2a2a',
+          border: '1px solid #444',
           borderRadius: '4px',
           padding: '20px',
           minWidth: '400px',
@@ -174,8 +174,8 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
             width: '100%',
             padding: '8px 12px',
             fontSize: '14px',
-            backgroundColor: 'var(--octane-border-primary)',
-            border: '1px solid var(--octane-border)',
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #555',
             borderRadius: '3px',
             color: '#fff',
             outline: 'none',
@@ -215,8 +215,8 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
             style={{
               maxHeight: '300px',
               overflowY: 'auto',
-              backgroundColor: 'var(--octane-border-primary)',
-              border: '1px solid var(--octane-border-subtle)',
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #444',
               borderRadius: '3px',
               marginBottom: '15px',
             }}
@@ -250,7 +250,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                     onClose();
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--octane-border-dark)';
+                    e.currentTarget.style.backgroundColor = '#333';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
@@ -284,17 +284,17 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
             style={{
               padding: '6px 16px',
               fontSize: '13px',
-              backgroundColor: 'var(--octane-btn-secondary-bg)',
-              border: '1px solid var(--octane-border)',
+              backgroundColor: '#444',
+              border: '1px solid #555',
               borderRadius: '3px',
               color: '#ddd',
               cursor: 'pointer',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--octane-btn-secondary-hover)';
+              e.currentTarget.style.backgroundColor = '#555';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--octane-btn-secondary-bg)';
+              e.currentTarget.style.backgroundColor = '#444';
             }}
           >
             Cancel
@@ -305,18 +305,18 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               style={{
                 padding: '6px 16px',
                 fontSize: '13px',
-                backgroundColor: 'var(--octane-accent-yellow)',
-                border: '1px solid var(--octane-accent-yellow)',
+                backgroundColor: '#ffc107',
+                border: '1px solid #ffc107',
                 borderRadius: '3px',
                 color: '#000',
                 cursor: 'pointer',
                 fontWeight: 'bold',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--octane-accent-yellow-hover)';
+                e.currentTarget.style.backgroundColor = '#ffcd38';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--octane-accent-yellow)';
+                e.currentTarget.style.backgroundColor = '#ffc107';
               }}
             >
               Select All ({results.length})
