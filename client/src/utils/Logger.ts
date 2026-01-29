@@ -44,7 +44,7 @@ class LoggerInstance {
     
     // Default configuration
     this.config = {
-      level: this.isDevelopment ? LogLevel.DEBUG : LogLevel.WARN,
+      level: this.isDevelopment ? LogLevel.INFO : LogLevel.WARN,
       prefix: '[OctaneWebR]',
       timestamp: this.isDevelopment,
       colors: true,
