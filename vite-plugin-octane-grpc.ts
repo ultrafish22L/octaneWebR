@@ -369,7 +369,7 @@ class OctaneGrpcClient {
         console.log('🎯🎯🎯 [CALLBACK-STREAM] ========== DATA EVENT FIRED ==========');
         try {
           // DEBUG: Log the entire callback request to see what we're actually receiving
-          console.log('📡 [CALLBACK-STREAM] Stream data received:', JSON.stringify(callbackRequest, null, 2));
+          // console.log('📡 [CALLBACK-STREAM] Stream data received:', JSON.stringify(callbackRequest, null, 2));
           console.log('📡 [CALLBACK-STREAM] Callback request keys:', Object.keys(callbackRequest));
           
           // StreamCallbackRequest has oneof payload: newImage, renderFailure, newStatistics, projectManagerChanged

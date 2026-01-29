@@ -698,7 +698,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
         displayCallbackImage(data.render_images.data[0]);
       } else {
         console.warn('⚠️  [VIEWPORT] No valid image data in callback');
-        console.warn('   [VIEWPORT] data:', data);
+        // console.warn('   [VIEWPORT] data:', data);
       }
     };
 
