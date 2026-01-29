@@ -256,6 +256,56 @@ export class ApiService extends BaseService {
 
 ---
 
+### 7. Prevent Duplicate Node Creation ✅
+
+**Problem**: Scene outliner showed **duplicate nodes** (7424 total instead of ~3661). Node count was almost exactly **double**! React warned about duplicate keys (`node_0`).
+
+**Root Cause**: Nodes at level 2+ were having their children created **TWICE**:
+1. **Individual building** (from `addSceneItem` line 700)
+2. **Batch building** (from parallel optimization line 424)
+
+Both called `addItemChildren()` → `syncSceneRecurse()` → created duplicate child nodes with different handles → all added to `scene.map`.
+
+**Solution**: Add `childrenLoaded` check inside `addItemChildren()` to skip if already loaded.
+
+**Implementation**:
+
+```typescript
+// client/src/services/octane/SceneService.ts
+private async addItemChildren(item: SceneNode): Promise<void> {
+  if (!item || !item.handle) {
+    return;
+  }
+  
+  // Skip if children already loaded (prevents duplication)
+  if (item.childrenLoaded) {
+    Logger.debug(`  ⏭️  Skipping ${item.name} - children already loaded`);
+    return;
+  }
+  
+  const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
+  
+  try {
+    const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
+    item.children = children;
+    item.childrenLoaded = true; // Mark as loaded
+    // ...
+  }
+}
+```
+
+**Result**:
+- ✅ **Each node's children created exactly once**
+- ✅ Node count matches actual scene (3661 not 7424)
+- ✅ No duplicate nodes in scene outliner
+- ✅ No React key warnings
+- ✅ Clean, correct scene tree structure
+
+**Why It Happened**:
+With breadth-first loading enabled, the batch building optimization processes all nodes at each level. But individual nodes at level 2+ were also triggering their own `addItemChildren` call, causing double creation. The flag existed but wasn't checked inside `addItemChildren` itself.
+
+---
+
 ## Testing the Fixes
 
 ### What to Test
@@ -285,6 +335,13 @@ export class ApiService extends BaseService {
    - ✅ Parameters should load progressively (throttled to 6 concurrent)
    - ✅ UI remains responsive during parameter loading
    - ✅ No "Failed to fetch" errors for getByAttrID calls
+
+6. **No Duplicate Nodes**:
+   - ✅ Check console log after scene loads
+   - ✅ Total node count should be **~3661** (not 7424!)
+   - ✅ Scene outliner should show each node **once** (no duplicates)
+   - ✅ No React key warnings about duplicate keys
+   - ✅ Clean scene tree structure
 
 ### Expected Performance
 
