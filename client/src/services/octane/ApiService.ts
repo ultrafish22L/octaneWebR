@@ -7,6 +7,7 @@ import { getObjectTypeForService, createObjectPtr } from '../../constants/Octane
 import { BaseService } from './BaseService';
 import Logger from '../../utils/Logger';
 import { getCompatibleMethodName, transformRequestParams, getApiVersion } from '../../config/apiVersionConfig';
+import { RequestQueue } from '../../utils/RequestQueue';
 
 /**
  * Request body structure for API calls
@@ -25,6 +26,9 @@ interface ApiRequestBody {
  * API Service handles all gRPC communication with Octane server
  */
 export class ApiService extends BaseService {
+  // Request queue for attribute fetching to prevent browser resource exhaustion
+  // Limits concurrent getByAttrID/getValueByAttrID calls to 6 (browser connection pool limit)
+  private attributeQueue = new RequestQueue(6);
   /**
    * Make a gRPC API call to the Octane server
    * @param service - Service name (e.g., 'ApiItem', 'ApiScene')
@@ -36,6 +40,32 @@ export class ApiService extends BaseService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async callApi(
+    service: string, 
+    method: string, 
+    handle?: string | number | Record<string, unknown> | null, 
+    params: Record<string, unknown> = {}
+  ): Promise<any> {
+    // Check if this is an attribute fetching call that should be queued
+    const isAttributeFetch = 
+      service === 'ApiItem' && 
+      (method === 'getByAttrID' || method === 'getValueByAttrID');
+    
+    // If it's an attribute fetch, route through the queue to prevent resource exhaustion
+    if (isAttributeFetch) {
+      return this.attributeQueue.enqueue(() => 
+        this.executeApiCall(service, method, handle, params)
+      );
+    }
+    
+    // All other calls execute immediately (scene sync, updates, etc.)
+    return this.executeApiCall(service, method, handle, params);
+  }
+
+  /**
+   * Execute the actual API call (internal method used by callApi)
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async executeApiCall(
     service: string, 
     method: string, 
     handle?: string | number | Record<string, unknown> | null, 
