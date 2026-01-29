@@ -9,9 +9,10 @@ This document describes all available performance optimization flags in octaneWe
 
 ```typescript
 const PARALLEL_CONFIG = {
-  MAX_CONCURRENT_REQUESTS: 220,
-  MAX_CONCURRENT_ITEMS: 150,
-  MAX_CONCURRENT_PINS: 150,
+  MAX_CONCURRENT_REQUESTS: 50,        // Reduced to prevent overwhelming gRPC
+  MAX_CONCURRENT_ITEMS: 50,           // Balanced for large scenes
+  MAX_CONCURRENT_PINS: 30,            // Conservative limit
+  MAX_RECURSION_DEPTH: 15,            // For deep node hierarchies
   
   ENABLE_PARALLEL_LOADING: true,      // Phase 1 ⚡
   ENABLE_PROGRESSIVE_LOADING: true,   // Phase 2 📈
@@ -403,6 +404,80 @@ ENABLE_PRIORITIZED_LOADING: true,
 
 ---
 
+## Concurrency Tuning for Large Scenes
+
+### Understanding the Limits
+
+The `PARALLEL_CONFIG` includes several tunable parameters:
+
+```typescript
+MAX_CONCURRENT_REQUESTS: 50   // Total concurrent gRPC calls
+MAX_CONCURRENT_ITEMS: 50      // Owned items fetched in parallel
+MAX_CONCURRENT_PINS: 30       // Pin data fetched in parallel
+MAX_RECURSION_DEPTH: 15       // Max depth for node hierarchies
+```
+
+### Symptoms of Too High Concurrency
+
+If you see these errors, **reduce the concurrency limits**:
+
+❌ `⚠️ Failed to load pin X: TypeError: Failed to fetch`  
+❌ Too many gRPC connection errors  
+❌ Server becomes unresponsive  
+❌ Browser tab crashes or freezes  
+
+**Solution**: Reduce limits by 50%:
+```typescript
+MAX_CONCURRENT_REQUESTS: 25
+MAX_CONCURRENT_ITEMS: 25
+MAX_CONCURRENT_PINS: 15
+```
+
+### Symptoms of Too Low Concurrency
+
+If you see these symptoms, **increase the concurrency limits**:
+
+⚠️ Slow scene loading (> 30s for 300-node scene)  
+⚠️ Long pauses between levels  
+⚠️ No errors but poor performance  
+
+**Solution**: Increase limits by 50%:
+```typescript
+MAX_CONCURRENT_REQUESTS: 75
+MAX_CONCURRENT_ITEMS: 75
+MAX_CONCURRENT_PINS: 45
+```
+
+### Optimal Settings by Scene Size
+
+| Scene Size | Nodes | Concurrency Recommendation |
+|------------|-------|---------------------------|
+| **Small** | < 100 | `REQUESTS: 100, ITEMS: 100, PINS: 50` |
+| **Medium** | 100-1000 | `REQUESTS: 50, ITEMS: 50, PINS: 30` ⭐ **Default** |
+| **Large** | 1000-5000 | `REQUESTS: 30, ITEMS: 30, PINS: 20` |
+| **Very Large** | > 5000 | `REQUESTS: 20, ITEMS: 20, PINS: 10` |
+
+### Recursion Depth Limit
+
+The `MAX_RECURSION_DEPTH` prevents infinite loops in circular node graphs:
+
+- **Default**: `15` (good for most scenes)
+- **Increase if**: You see `⚠️ Recursion depth limit reached` warnings
+- **Decrease if**: You have confirmed circular references and want to stop earlier
+
+**Warning**: Setting too high (> 50) may cause stack overflows in truly circular graphs!
+
+### Progressive UI Updates
+
+Large scenes (> 400 top-level nodes) now emit UI updates after level 1 loads:
+
+✅ **Before**: 21s blank screen → all nodes appear at once  
+✅ **After**: 0.5s → top-level nodes visible → children populate progressively  
+
+This is controlled by `ENABLE_PROGRESSIVE_LOADING` flag.
+
+---
+
 ## Change Log
 
 | Date | Change | Impact |
@@ -410,6 +485,10 @@ ENABLE_PRIORITIZED_LOADING: true,
 | Phase 1 | Added `ENABLE_PARALLEL_LOADING` flag | 1.63x total speedup |
 | Phase 2 | Added `ENABLE_PROGRESSIVE_LOADING` flag | Progress events |
 | Phase 4 | Added `ENABLE_PRIORITIZED_LOADING` flag | 10x faster to first node |
+| 2024-01 | Reduced concurrency limits (220→50) | Fewer "Failed to fetch" errors |
+| 2024-01 | Added `MAX_RECURSION_DEPTH` (15) | Support deep node hierarchies |
+| 2024-01 | Progressive UI updates after level 1 | No more blank screen on large scenes |
+| 2024-01 | Fixed React key uniqueness warning | Clean console output |
 
 ---
 
