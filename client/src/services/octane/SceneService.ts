@@ -22,11 +22,11 @@ import { parallelLimitSettled } from '../../utils/parallelAsync';
  */
 const PARALLEL_CONFIG = {
   /** Maximum concurrent API calls for localhost gRPC */
-  MAX_CONCURRENT_REQUESTS: 50,
+  MAX_CONCURRENT_REQUESTS: 220,
   /** Maximum concurrent owned items to fetch in parallel */
-  MAX_CONCURRENT_ITEMS: 50,
+  MAX_CONCURRENT_ITEMS: 150,
   /** Maximum concurrent pins to fetch in parallel */
-  MAX_CONCURRENT_PINS: 50,
+  MAX_CONCURRENT_PINS: 150,
   
   /**
    * 🔧 Phase 2: Enable Progressive Loading
