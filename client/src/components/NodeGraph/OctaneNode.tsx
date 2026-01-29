@@ -250,47 +250,11 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
                                       input.handle !== 0 && 
                                       !input.isAtTopLevel;
         
-        // Build enhanced tooltip with pin name, type, description, and connected node
-        // Using all available data from Octane's ApiNodePinInfo
+        // Build tooltip with pin name only
         const buildTooltip = () => {
-          const parts = [];
-          
           // Pin name/label (staticLabel is preferred, fallback to staticName)
           const pinName = input.pinInfo?.staticLabel || input.pinInfo?.staticName || input.label || `Input ${index}`;
-          parts.push(`📌 ${pinName}`);
-          
-          // Pin description (from ApiNodePinInfo.description)
-          if (input.pinInfo?.description) {
-            parts.push(`ℹ️ ${input.pinInfo.description}`);
-          }
-          
-          // Pin type (NodePinType from ApiNodePinInfo.type)
-          const pinTypeMap: Record<number, string> = {
-            0: 'Unknown', 1: 'Geometry', 2: 'Material', 3: 'Texture', 4: 'Environment',
-            5: 'Camera', 6: 'Emission', 7: 'Displacement', 8: 'Medium', 9: 'Projection',
-            10: 'Transform', 11: 'RenderTarget', 12: 'Imager', 13: 'PostProc', 14: 'RenderAOV',
-            15: 'OutputAOV', 16: 'RenderLayer', 17: 'ObjectLayer'
-          };
-          if (input.pinInfo?.type !== undefined) {
-            const typeName = pinTypeMap[input.pinInfo.type] || `Type ${input.pinInfo.type}`;
-            parts.push(`🏷️ Pin Type: ${typeName}`);
-          }
-          
-          // Group name (from ApiNodePinInfo.groupName)
-          if (input.pinInfo?.groupName) {
-            parts.push(`📁 Group: ${input.pinInfo.groupName}`);
-          }
-          
-          // Connected node name
-          if (input.connectedNodeName) {
-            parts.push(`🔗 Connected: ${input.connectedNodeName}`);
-          } else if (input.handle === 0) {
-            parts.push('⚪ Empty/Default');
-          } else {
-            parts.push('⚪ Not connected');
-          }
-          
-          return parts.join('\n');
+          return pinName;
         };
         
         return (
@@ -338,47 +302,11 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
         const rawOutputColor = getPinColor(output.pinInfo);
         const outputColor = saturateColor(rawOutputColor); // Fully saturated for vibrant pins
         
-        // Build enhanced output tooltip
-        // Using all available data from Octane's ApiNodeInfo
+        // Build output tooltip with node name only
         const buildOutputTooltip = () => {
-          const parts = [];
-          
           // Node name/label (defaultName from ApiNodeInfo is preferred)
           const nodeName = sceneNode.nodeInfo?.defaultName || sceneNode.name || sceneNode.type;
-          parts.push(`📤 Output: ${nodeName}`);
-          
-          // Node description (from ApiNodeInfo.description)
-          if (sceneNode.nodeInfo?.description) {
-            parts.push(`ℹ️ ${sceneNode.nodeInfo.description}`);
-          }
-          
-          // Output pin type (NodePinType from ApiNodeInfo.outType)
-          const pinTypeMap: Record<number, string> = {
-            0: 'Unknown', 1: 'Geometry', 2: 'Material', 3: 'Texture', 4: 'Environment',
-            5: 'Camera', 6: 'Emission', 7: 'Displacement', 8: 'Medium', 9: 'Projection',
-            10: 'Transform', 11: 'RenderTarget', 12: 'Imager', 13: 'PostProc', 14: 'RenderAOV',
-            15: 'OutputAOV', 16: 'RenderLayer', 17: 'ObjectLayer'
-          };
-          if (sceneNode.nodeInfo?.outType !== undefined) {
-            const typeName = pinTypeMap[sceneNode.nodeInfo.outType] || `Type ${sceneNode.nodeInfo.outType}`;
-            parts.push(`🏷️ Output Type: ${typeName}`);
-          }
-          
-          // Category (from ApiNodeInfo.category)
-          if (sceneNode.nodeInfo?.category) {
-            parts.push(`📂 Category: ${sceneNode.nodeInfo.category}`);
-          }
-          
-          // Special node types (from ApiNodeInfo flags)
-          const nodeFlags = [];
-          if (sceneNode.nodeInfo?.isLinker) nodeFlags.push('Linker');
-          if (sceneNode.nodeInfo?.isOutputLinker) nodeFlags.push('Output Linker');
-          if (sceneNode.nodeInfo?.isTypedTextureNode) nodeFlags.push('Typed Texture');
-          if (nodeFlags.length > 0) {
-            parts.push(`🔧 ${nodeFlags.join(', ')}`);
-          }
-          
-          return parts.join('\n');
+          return nodeName;
         };
         
         return (
