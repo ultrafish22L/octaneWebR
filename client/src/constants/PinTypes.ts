@@ -45,7 +45,7 @@ export const OCTANE_PIN_TYPES: Record<string, PinTypeInfo> = {
   'PT_ENVIRONMENT': { name: 'Environment', color: '#8080FF', icon: '/icons/ENVIRONMENT node.png' },
   'PT_IMAGER': { name: 'Imager', color: '#80FF80', icon: '/icons/IMAGER node.png' },
   'PT_KERNEL': { name: 'Kernel', color: '#FFCC80', icon: '/icons/RENDER KERNEL node.png' },
-  'PT_GEOMETRY': { name: 'Geometry', color: '#FFBDF2', icon: '/icons/MESH node.png' },
+  'PT_GEOMETRY': { name: 'Geometry', color: '#FFBDF2', icon: '/icons/MESH archive.png' },
   'PT_MEDIUM': { name: 'Medium', color: '#FFF2BD', icon: '/icons/MEDIUM_SWITCH node.png' },
   'PT_PHASEFUNCTION': { name: 'Phase Function', color: '#8844FF', icon: '/icons/PHASEFUNCTION_SWITCH node.png' },
   'PT_FILM_SETTINGS': { name: 'Film Settings', color: '#888888', icon: '/icons/FILM node.png' },
