@@ -8,7 +8,7 @@
 
 Before starting, ensure you have:
 
-1. **Octane Render** installed on your machine
+1. **Octane Render gRPC build** installed on your machine - (https://filedrop.otoy.com/f/393752)
 2. **Node.js 18+** installed ([Download](https://nodejs.org/))
 3. **npm** (comes with Node.js)
 4. A modern web browser (Chrome, Firefox, Edge, Safari)
@@ -19,11 +19,12 @@ Before starting, ensure you have:
 
 octaneWebR communicates with Octane via the LiveLink gRPC API.
 
-1. Launch **Octane Render**
-2. Open the menu: **Help → LiveLink**
-3. Confirm LiveLink is enabled (you should see a confirmation message)
-
-**Default Port**: Octane LiveLink listens on `localhost:51022`
+1. Launch **Octane Render gRPC 2026.1 Alpha 5** - (https://filedrop.otoy.com/f/393752)
+2. Open the menu File/Preferences: 
+3. Set **GRPC API/Enable GRPC Server : true**
+4. Set **GRPC API/GRPC Server Address: 127.0.0.1:51022** and OK
+5. Restart Octane
+6. Load sample scene (teapot.orbx), click on the Render Target
 
 ---
 

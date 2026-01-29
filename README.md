@@ -24,9 +24,17 @@ All operations communicate directly with Octane Render via the LiveLink gRPC API
 See **[QUICKSTART.md](./QUICKSTART.md)** for detailed setup instructions.
 
 ### Prerequisites
-- **Octane Render gRPC build** installed and running
+- **Octane Render gRPC build** installed and running (https://filedrop.otoy.com/f/393752)
 - **LiveLink enabled** in Octane (Help → LiveLink menu)
 - **Node.js 18+** installed
+
+### Octane setup
+1. Launch **Octane Render gRPC 2026.1 Alpha 5** - (https://filedrop.otoy.com/f/393752)
+2. Open the menu File/Preferences: 
+3. Set **GRPC API/Enable GRPC Server : true**
+4. Set **GRPC API/GRPC Server Address: 127.0.0.1:51022** and OK
+5. Restart Octane
+6. Load sample scene (teapot.orbx), click on the Render Target
 
 ### Launch Application
 ```bash
@@ -44,7 +52,7 @@ octaneWebR supports both **Alpha 5 (2026.1)** and **Beta 2 (2026.1)** Octane gRP
 
 **Quick Switch**: Edit `api-version.config.js` (line 22):
 ```javascript
-const USE_ALPHA5_API = false;  // false = Beta 2 (default), true = Alpha 5
+const USE_ALPHA5_API = true;  // false = Beta 2, true = Alpha 5 (default)
 ```
 
 Then rebuild and restart:
