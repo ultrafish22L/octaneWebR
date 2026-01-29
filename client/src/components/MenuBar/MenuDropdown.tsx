@@ -38,7 +38,7 @@ export function MenuDropdown({
     dropdown.style.left = `${rect.left}px`;
     dropdown.style.top = `${rect.bottom}px`;
     dropdown.style.zIndex = '10000';
-    dropdown.style.background = getComputedStyle(document.documentElement).getPropertyValue('--octane-bg-primary').trim();
+    dropdown.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim();
 
     if (isSubmenu) {
       // Position submenu to the right of parent item
