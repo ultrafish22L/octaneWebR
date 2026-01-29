@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - CSS Theme System (2025-02-01)
+- **CSS Variable Naming Refactor**: Removed `octane-` prefix from all theme variables
+  - Updated 753 occurrences across 7 files
+  - Cleaner naming: `--bg-primary` instead of `--octane-bg-primary`
+  - Zero naming conflicts with existing utility variables
+  - CSS bundle size reduced 5.26 KB (104.44 KB → 99.18 kB)
+  - Files affected:
+    - `client/src/styles/octane-theme.css` - Variable definitions
+    - `client/src/styles/app.css` - App-level styles
+    - `client/src/styles/node-graph.css` - Node graph styles
+    - `client/src/styles/node-inspector.css` - Inspector styles
+    - `client/src/styles/scene-outliner.css` - Outliner styles
+    - `client/src/styles/viewport.css` - Viewport styles
+    - `client/src/components/MenuBar/MenuDropdown.tsx` - Dynamic variable access
+
+### Fixed - UI Issues (2025-02-01)
+- **React Flow Container Error**: Fixed "React Flow parent container needs width/height" console warning
+  - Added explicit `width: 100%` and `height: 100%` to ReactFlow component style
+  - React Flow requires dimensions on component itself, not just parent container
+- **Browser Context Menu**: Fixed native context menu appearing over custom menus
+  - Added `event.stopPropagation()` to NodeGraph and Viewport components
+  - Prevents browser context menu from overlaying custom menus
+
+### Changed - Tooltip Behavior (2025-02-01)
+- **Node Pin Tooltips**: Simplified to show only pin name
+  - Removed type, description, and connection status info (was too verbose)
+  - Cleaner, less cluttered hover experience
+  - Modified `client/src/components/NodeGraph/OctaneNode.tsx`
+- **Node Inspector Tooltips**: Added descriptive tooltips to parameter items
+  - Shows full descriptions from pinInfo/attrInfo/nodeInfo
+  - Priority: pinInfo.description > attrInfo.description > nodeInfo.description
+  - Modified `client/src/components/NodeInspector/index.tsx`
+
+### Changed - CSS Optimization (2025-02-01)
+- **Dead Code Removal**: Cleaned up CSS files
+  - Removed 6 unused CSS variables
+  - Removed 5 dead CSS selectors with broken variable references
+  - Fixed 10+ duplicate CSS definitions across files
+  - Replaced all hardcoded colors with CSS variables
+  - All colors now use theme system for consistency
+
+### Commits (2025-02-01)
+- `5bebfcd` - Fix React Flow parent container sizing error
+- `20f1c5b` - Remove 'octane-' prefix from all CSS theme variables
+- `05b4e52` - Set Alpha 5 as default API version
+- `3c97abd` - Add descriptive tooltips to node inspector items
+- `01320b2` - Simplify node pin tooltips to show name only
+- `e0f3a83` - Fix browser context menu appearing on node graph and viewport backgrounds
+- `c896f10` - Remove redundant CSS variables and add node-bg aliasing
+- `08b3f1c` - Complete CSS hardcoded values to theme variables conversion
+- `4cd9a4b` - Add CSS variable for minimap background
+- `7edb265` - Replace hardcoded background colors with CSS variables
+- `f78ea98` - Fix dropdown and context menu background color
+- `ed8bd8d` - Phase 4E: CSS variable cleanup - Remove 6 unused variables
+- `fb4d0a1` - Phase 4D: Remove 5 dead CSS selectors with broken variable references
+- `acfd485` - Phase 4C: Remove 10 dead CSS definitions overridden by load order
+- `10a1bf1` - Phase 4B: Fix same-file CSS duplicate definitions
+- `d66e418` - Phase 4A: Fix obvious CSS duplicate definitions
+- `46003ea` - Phase 3: Remove redundant octane- prefix from CSS classes
+- `487867e` - Remove temporary CSS analysis scripts
+
+---
+
 ### Added - API Version Compatibility (2025-01-31)
 - **Centralized API Configuration**: Single source of truth for Alpha 5/Beta 2 API versions
   - `api-version.config.js` - ES module configuration file

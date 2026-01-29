@@ -404,8 +404,61 @@ curl http://localhost:57341/api/health | python -m json.tool
 - **Icons**: 300+ PNG icons for node types
 - **Proto Files**: 30+ gRPC API service definitions
 - **Logger Calls**: 670+ logging statements (66% DEBUG, 24% ERROR, 9% WARN)
-- **CSS Variables**: 134 theme variables in octane-theme.css
+- **CSS Variables**: 126 theme variables (no prefix, semantic naming)
 - **Commands**: Full undo/redo with 50-action history
+
+---
+
+## 📅 Feature Timeline
+
+### 2025-02-01
+- **CSS Theme Refactor**
+  - Removed `octane-` prefix from all CSS variables (753 occurrences)
+  - Cleaner naming: `--bg-primary` vs `--octane-bg-primary`
+  - CSS bundle size reduced 5.26 KB (104.44 KB → 99.18 kB)
+  - Zero naming conflicts with utility variables
+
+- **React Flow Container Fix**
+  - Fixed "React Flow parent container needs width/height" error
+  - Added explicit dimensions to ReactFlow component
+
+- **UI Polish**
+  - Simplified node pin tooltips to show name only (removed type/description clutter)
+  - Added descriptive tooltips to node inspector parameter items
+  - Fixed browser context menu appearing over custom context menus
+
+- **CSS Optimization**
+  - Removed 6 unused CSS variables
+  - Removed 5 dead CSS selectors with broken variable references
+  - Fixed 10+ duplicate CSS definitions
+  - Replaced all hardcoded colors with CSS variables
+
+### 2025-01-31
+- **API Version Compatibility**
+  - Centralized configuration for Alpha 5/Beta 2 API versions
+  - Single source of truth: `api-version.config.js`
+  - Vite `define` feature injects build-time constants
+  - Guaranteed sync between client and server
+
+- **ES Module Conversion**
+  - Fixed `module is not defined` browser error
+  - Converted CommonJS to ES modules
+  - All code passes strict TypeScript compilation
+
+- **Documentation**
+  - Added `QUICK_START_API_VERSION.md`
+  - Added `API_VERSION_SWITCHING.md`
+  - Updated `AGENTS.md` with development status
+
+### Earlier Development
+- **ReactFlow Migration** - Replaced custom 956-line SVG node graph with ReactFlow v12
+- **Node Type Dropdown** - Inspector allows replacing nodes with compatible types
+- **Connection Cutter** - Ctrl+Drag to cut multiple connections
+- **Material Database** - LiveDB and LocalDB integration
+- **Command History** - Full undo/redo with 50-action branching history
+- **Render Viewport** - Live streaming via Octane callback API
+- **gRPC Integration** - Embedded Vite proxy, no separate server needed
+- **Theme System** - Pure CSS custom properties (134 variables)
 
 ---
 
@@ -417,10 +470,6 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2025-01-31  
+**Last Updated**: 2025-02-01  
 **Version**: 1.0.0  
-**Status**: Production-ready  
-**Recent Changes**: 
-- API Version Support: Centralized configuration for Alpha 5 and Beta 2 compatibility
-- ES Module Conversion: Fixed browser compatibility issues with config loading
-- Documentation: Added API version switching guide and updated core docs
+**Status**: Production-ready
