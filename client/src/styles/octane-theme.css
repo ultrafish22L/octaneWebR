@@ -58,7 +58,6 @@
     --octane-accent-yellow: #ffc107;   /* Selection yellow/gold - matches Octane */
     --octane-accent-orange: #ff8c00;   /* Warning/active orange */
     --octane-accent-green: #5cb85c;    /* Success green */
-    --octane-success: #5cb85c;         /* Success state (alias of accent-green) */
     --octane-accent-red: #d9534f;      /* Error red */
     --octane-accent-blue: #3a9bd9;     /* Info/link blue */
     --octane-accent-blue-dim: #2a6a9a; /* Dimmed blue for subtle highlights */
@@ -89,8 +88,6 @@
     --octane-parameter-bg: #2a2a2a;    /* Parameter backgrounds - LIGHTENED to match Octane SE */
     
     /* Transparent Overlays & Shadows */
-    --octane-overlay-darkest: rgba(0, 0, 0, 0.9);   /* Very dark overlays */
-    --octane-overlay-dark: rgba(0, 0, 0, 0.8);      /* Dark modal overlays */
     --octane-overlay-medium-dark: rgba(0, 0, 0, 0.75); /* Medium-dark overlays */
     --octane-overlay-medium: rgba(0, 0, 0, 0.7);    /* Medium overlays */
     --octane-overlay-semi: rgba(0, 0, 0, 0.5);      /* Semi-transparent overlays */
@@ -101,7 +98,6 @@
     /* Shadow Variants */
     --octane-shadow-heavy: rgba(0, 0, 0, 0.6);      /* Heavy inset/drop shadows */
     --octane-shadow-medium: rgba(0, 0, 0, 0.4);     /* Medium shadows */
-    --octane-shadow-light: rgba(0, 0, 0, 0.25);     /* Light drop shadows */
     --octane-shadow-ultra-subtle: rgba(0, 0, 0, 0.053); /* Ultra-subtle shadows */
     
     /* White Highlights & Glows */
@@ -120,14 +116,10 @@
     --octane-success-bg-alpha: rgba(40, 167, 69, 0.1);   /* Success background overlay */
     --octane-success-border-alpha: rgba(40, 167, 69, 0.3); /* Success border overlay */
     
-    --octane-info-border-alpha: rgba(64, 128, 255, 0.2); /* Info border overlay */
     --octane-info-border-alpha-alt: rgba(74, 158, 255, 0.2); /* Alternate info border */
     
     --octane-warning-bg-alpha: rgba(255, 165, 0, 0.2);   /* Warning background overlay */
     --octane-warning-bg-alpha-alt: rgba(255, 120, 0, 0.2); /* Alternate warning overlay */
-    
-    /* Special Background Overlays */
-    --octane-bg-semi-transparent: rgba(42, 42, 42, 0.95); /* Semi-transparent dark background */
     
     /* Layout Dimensions */
     --menu-height: 26px;
