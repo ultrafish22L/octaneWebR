@@ -421,8 +421,7 @@ export class SceneService extends BaseService {
             PARALLEL_CONFIG.MAX_CONCURRENT_ITEMS,
             async (item) => {
               Logger.debug(`📍 Building children for ${item.name} (handle: ${item.handle})`);
-              await this.addItemChildren(item);
-              item.childrenLoaded = true; // Mark as loaded to prevent redundant individual building
+              await this.addItemChildren(item); // Sets childrenLoaded internally
               Logger.debug(`📍 Finished ${item.name}, children: ${item.children?.length || 0}`);
               return item;
             }
@@ -695,10 +694,10 @@ export class SceneService extends BaseService {
       // - Level 1 children are always batch-built at line 347-364
       // - Level 2+ NodeGraph children are batch-built when ENABLE_PRIORITIZED_LOADING=true
       // - Level 2+ regular Node (pin) children need individual building
-      // Use childrenLoaded flag to avoid redundant work
+      // addItemChildren now checks childrenLoaded flag internally
       if (level > 1 && !entry.childrenLoaded) {
         await this.addItemChildren(entry);
-        entry.childrenLoaded = true;
+        // childrenLoaded is set inside addItemChildren
       }
     }
     
@@ -710,11 +709,18 @@ export class SceneService extends BaseService {
       return;
     }
     
+    // Skip if children already loaded (prevents duplication)
+    if (item.childrenLoaded) {
+      Logger.debug(`  ⏭️  Skipping ${item.name} - children already loaded`);
+      return;
+    }
+    
     const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
     
     try {
       const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
       item.children = children;
+      item.childrenLoaded = true; // Mark as loaded here too
       
       if (children.length === 0) {
         try {
