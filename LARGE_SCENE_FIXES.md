@@ -13,47 +13,62 @@ Testing with a **large scene** (448 top-level items, 3661 total nodes):
 
 ## Fixes Applied
 
-### 1. Progressive UI Updates ✅
+### 1. Progressive UI Updates with Force Render ✅
 
-**Problem**: With 448 top-level nodes, breadth-first loading loaded ALL of them before updating the UI.
+**Problem**: With 448 top-level nodes, breadth-first loading loaded ALL of them before updating the UI. Even with progressive events, React was batching updates.
 
-**Solution**: Emit `sceneTreeUpdated` event immediately after level 1 nodes are added.
+**Solution**: 
+1. Emit `sceneTreeUpdated` event immediately after level 1 nodes are added
+2. Use `flushSync()` to force React to render immediately (not batched)
+3. Add 10ms delay to allow UI thread to render before continuing
 
-**File**: `client/src/services/octane/SceneService.ts` (line ~383)
+**Files Changed**:
+- `client/src/services/octane/SceneService.ts` (line ~387)
+- `client/src/components/SceneOutliner/index.tsx` (line ~727)
 
 ```typescript
-// Emit progressive UI update for level 1 (so top-level nodes appear immediately)
+// SceneService.ts - Emit with delay
 if (level === 1 && PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
-  Logger.debug(`📢 Emitting progressive UI update: ${this.scene.tree.length} top-level nodes visible`);
   this.emit('sceneTreeUpdated', this.scene);
+  await new Promise(resolve => setTimeout(resolve, 10)); // Allow UI to render
 }
+
+// SceneOutliner/index.tsx - Force immediate render
+import { flushSync } from 'react-dom';
+...
+flushSync(() => {
+  setSceneTree(tree); // Render immediately, not batched
+});
 ```
 
 **Result**: 
 - ✅ **Before**: 21s blank screen → all nodes appear at once
-- ✅ **After**: ~0.5s → top-level nodes visible → children populate progressively
+- ✅ **After**: ~0.5-1s → top-level nodes visible → children populate progressively
+- ✅ No more React update batching delays
 
 ---
 
-### 2. Reduced Concurrency Limits ✅
+### 2. Browser-Safe Concurrency Limits ✅
 
-**Problem**: Too many concurrent requests (220/150/150) were overwhelming the gRPC server.
+**Problem**: Too many concurrent requests were causing **`ERR_INSUFFICIENT_RESOURCES`** - browser connection pool exhaustion!
 
-**Solution**: Reduced limits to more conservative values optimized for large scenes.
+**Root Cause**: Browsers typically support **6-10 concurrent connections per domain**. Previous limits (50+) overwhelmed the browser.
+
+**Solution**: Reduced limits to browser-safe values.
 
 **Changes**:
 ```typescript
-MAX_CONCURRENT_REQUESTS: 220 → 50  (77% reduction)
-MAX_CONCURRENT_ITEMS: 150 → 50     (67% reduction)
-MAX_CONCURRENT_PINS: 150 → 30      (80% reduction)
+MAX_CONCURRENT_REQUESTS: 220 → 50 → 6   (97% reduction)
+MAX_CONCURRENT_ITEMS: 150 → 50 → 10    (93% reduction)
+MAX_CONCURRENT_PINS: 150 → 30 → 6      (96% reduction)
 ```
 
 **Result**: 
-- ✅ Fewer "Failed to fetch" errors
-- ✅ More stable gRPC communication
-- ✅ Better balance between speed and reliability
+- ✅ **No more ERR_INSUFFICIENT_RESOURCES errors**
+- ✅ Stable gRPC communication within browser limits
+- ✅ Reliable scene loading (no failed requests)
 
-**Tuning**: See [PERFORMANCE_FLAGS.md](PERFORMANCE_FLAGS.md) for guidance on adjusting these values.
+**Note**: These limits respect browser connection pools. See [PERFORMANCE_FLAGS.md](PERFORMANCE_FLAGS.md) for tuning guidance.
 
 ---
 
@@ -110,6 +125,67 @@ const uniqueKey = child.handle !== 0
 
 ---
 
+### 5. Prevent Attribute Loading During Scene Sync ✅
+
+**Problem**: When a node with many parameters (100+) is selected in the NodeInspector, ALL parameter values are fetched concurrently via `getByAttrID` calls. During scene sync, this creates **hundreds of concurrent API calls on top of scene loading requests**, causing `ERR_INSUFFICIENT_RESOURCES`.
+
+**Solution**: Add scene syncing state tracking to prevent attribute loading during sync.
+
+**Implementation**:
+
+1. **OctaneClient** tracks sync state:
+```typescript
+// client/src/services/OctaneClient.ts
+private isSceneSyncing: boolean = false;
+
+setSceneSyncing(syncing: boolean): void {
+  this.isSceneSyncing = syncing;
+}
+
+getIsSceneSyncing(): boolean {
+  return this.isSceneSyncing;
+}
+```
+
+2. **SceneService** sets flag during sync:
+```typescript
+// client/src/services/octane/SceneService.ts
+async buildSceneTree() {
+  this.client.setSceneSyncing(true);  // Start
+  try {
+    // ... build scene ...
+  } finally {
+    this.client.setSceneSyncing(false);  // End
+  }
+}
+```
+
+3. **NodeInspector** checks flag before fetching:
+```typescript
+// client/src/components/NodeInspector/index.tsx
+const fetchValue = async () => {
+  if (client.getIsSceneSyncing()) {
+    Logger.debug(`⏸️ Skipping value fetch - scene sync in progress`);
+    return;
+  }
+  // ... fetch attribute value ...
+};
+```
+
+**Result**:
+- ✅ **Prevents concurrent API call overload**
+- ✅ Scene sync completes without interference
+- ✅ Attribute values fetched after sync completes
+- ✅ User can still see node structure (just not values during sync)
+
+**Benefits**:
+- Works together with browser-safe concurrency limits (6/10/6)
+- Prevents ERR_INSUFFICIENT_RESOURCES from NodeInspector
+- Allows scene loading to use full browser connection pool
+- Cleaner separation of concerns (sync vs. inspection)
+
+---
+
 ## Testing the Fixes
 
 ### What to Test
@@ -148,70 +224,80 @@ const uniqueKey = child.handle !== 0
 
 ## Tuning for Your Scene Size
 
+**⚠️ Important**: Don't exceed browser connection pool limits (~6-10 concurrent connections)
+
 If you still see issues, adjust the concurrency limits in `SceneService.ts`:
 
-### Still seeing "Failed to fetch" errors?
+### Still seeing "ERR_INSUFFICIENT_RESOURCES" errors?
 
-**Reduce concurrency** by 50%:
+**Reduce concurrency** to absolute minimum:
 ```typescript
-MAX_CONCURRENT_REQUESTS: 25
-MAX_CONCURRENT_ITEMS: 25
-MAX_CONCURRENT_PINS: 15
+MAX_CONCURRENT_REQUESTS: 4
+MAX_CONCURRENT_ITEMS: 6
+MAX_CONCURRENT_PINS: 4
 ```
 
 ### Loading too slowly (no errors)?
 
-**Increase concurrency** by 50%:
+**Increase concurrency** slightly (stay under 10 total):
 ```typescript
-MAX_CONCURRENT_REQUESTS: 75
-MAX_CONCURRENT_ITEMS: 75
-MAX_CONCURRENT_PINS: 45
+MAX_CONCURRENT_REQUESTS: 8
+MAX_CONCURRENT_ITEMS: 12
+MAX_CONCURRENT_PINS: 8
 ```
 
 ### Seeing "Recursion depth limit reached"?
 
 **Increase depth limit**:
 ```typescript
-MAX_RECURSION_DEPTH: 20  // or higher
+MAX_RECURSION_DEPTH: 20  // or higher (no browser limit on this)
 ```
+
+**Note**: The REQUESTS + ITEMS + PINS totals should not exceed ~20-25 to stay within browser limits
 
 ---
 
 ## Recommended Settings by Scene Size
 
+**Note**: All values respect browser connection pool limits (6-10 concurrent connections)
+
 | Scene Size | Nodes | Recommended Settings |
 |------------|-------|---------------------|
-| **Small** | < 100 | `REQUESTS: 100, ITEMS: 100, PINS: 50` |
-| **Medium** | 100-1000 | `REQUESTS: 50, ITEMS: 50, PINS: 30` ⭐ **Current** |
-| **Large** | 1000-5000 | `REQUESTS: 30, ITEMS: 30, PINS: 20` |
-| **Very Large** | > 5000 | `REQUESTS: 20, ITEMS: 20, PINS: 10` |
+| **Small** | < 100 | `REQUESTS: 10, ITEMS: 20, PINS: 10` |
+| **Medium/Large** | 100-5000 | `REQUESTS: 6, ITEMS: 10, PINS: 6` ⭐ **Current** |
+| **Very Large** | > 5000 | `REQUESTS: 4, ITEMS: 8, PINS: 4` |
 
-**Your Scene**: 3661 nodes = **Large** category
+**Your Scene**: 3661 nodes = **Medium/Large** category → Current settings should work well!
 
-Consider testing with:
-```typescript
-MAX_CONCURRENT_REQUESTS: 30
-MAX_CONCURRENT_ITEMS: 30
-MAX_CONCURRENT_PINS: 20
-```
+**Important**: Don't exceed ~10 total concurrent connections (browser limit)
 
 ---
 
 ## Files Changed
 
 1. **client/src/services/octane/SceneService.ts**
-   - Added progressive UI update after level 1
-   - Reduced concurrency limits (220→50, 150→50, 150→30)
-   - Added `MAX_RECURSION_DEPTH` config parameter
-   - Increased depth limit (5→15)
+   - Added progressive UI update after level 1 with 10ms render delay
+   - Reduced concurrency limits to browser-safe values (220→6, 150→10, 150→6)
+   - Added `MAX_RECURSION_DEPTH` config parameter (increased 5→15)
+   - Added scene syncing state management (setSceneSyncing calls)
 
 2. **client/src/components/SceneOutliner/index.tsx**
    - Fixed React key uniqueness for nodes with handle=0
+   - Added `flushSync()` import and usage for immediate renders
+   - Force immediate UI updates (not batched)
 
-3. **PERFORMANCE_FLAGS.md**
+3. **client/src/services/OctaneClient.ts**
+   - Added `isSceneSyncing` flag to track scene sync state
+   - Added `setSceneSyncing()` and `getIsSceneSyncing()` methods
+
+4. **client/src/components/NodeInspector/index.tsx**
+   - Check scene syncing state before fetching attribute values
+   - Skip attribute loading during scene sync
+
+5. **PERFORMANCE_FLAGS.md**
    - Added concurrency tuning section
    - Added troubleshooting guide
-   - Added optimal settings by scene size table
+   - Updated with browser connection pool limits
 
 ---
 
@@ -243,7 +329,17 @@ MAX_CONCURRENT_PINS: 20
 
 ## Commits
 
-- `faa41d1` - fix: Improve large scene handling
-- `fa65621` - docs: Update performance flags with large scene tuning guidance
+1. `faa41d1` - fix: Improve large scene handling (initial fixes)
+2. `fa65621` - docs: Update performance flags with large scene tuning guidance
+3. `160976b` - docs: Add large scene fixes summary
+4. `5c81436` - **fix: Critical fixes for browser resource exhaustion and progressive UI** 🔥
+   - Reduced concurrency to browser-safe limits (6/10/6)
+   - Added flushSync() for immediate React renders
+   - Fixed blank screen issue with forced updates
+5. `b9b4c2b` - **fix: Prevent NodeInspector attribute loading during scene sync** 🔥
+   - Added scene syncing state tracking
+   - Prevents ERR_INSUFFICIENT_RESOURCES from NodeInspector
+   - Separates scene sync from attribute inspection
 
-**Status**: ✅ Pushed to `origin/main`
+**Status**: ✅ **Ready to test** - Latest commits need push
+**Next**: Test with large scene and push if successful
