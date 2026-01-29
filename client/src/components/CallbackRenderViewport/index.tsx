@@ -1046,6 +1046,7 @@ export const CallbackRenderViewport = React.memo(forwardRef<CallbackRenderViewpo
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault(); // Prevent right-click context menu
+      e.stopPropagation(); // Stop event from bubbling up
     };
 
     const handleWheel = async (e: WheelEvent) => {

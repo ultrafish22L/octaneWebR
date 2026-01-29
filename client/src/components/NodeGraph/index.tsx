@@ -1293,6 +1293,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       position: { x: event.clientX, y: event.clientY },
     });
     event.preventDefault();
+    event.stopPropagation();
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
     setContextMenuType('add');
     setContextMenuNodeId(null);

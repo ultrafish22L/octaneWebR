@@ -213,6 +213,19 @@ function AppContent() {
     });
   }, [connect]);
 
+  // Global context menu prevention (safety net)
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
   // Listen for node deletion events
   useEffect(() => {
     if (!client) return;
