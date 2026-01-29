@@ -92,6 +92,12 @@ export interface SceneNode {
   pinInfo?: PinInfo;
   attrInfo?: AttrInfo;
   icon?: string;
+  
+  // Progressive loading state (Phase 2)
+  loading?: boolean;          // Node metadata is being fetched
+  childrenLoaded?: boolean;   // Children have been fetched
+  childrenLoading?: boolean;  // Children are being fetched
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
@@ -113,6 +119,28 @@ export interface NodeAddedEvent {
 export interface NodeDeletedEvent {
   handle: number;
   collapsedChildren: number[];
+}
+
+/**
+ * Progressive loading events (Phase 2)
+ */
+export interface SceneNodeAddedEvent {
+  node: SceneNode;
+  parentHandle?: number;  // Parent node handle (if not root level)
+  level: number;
+}
+
+export interface SceneNodeUpdatedEvent {
+  handle: number;
+  node: SceneNode;
+  updates: Partial<SceneNode>;  // What changed
+}
+
+export interface SceneLoadingProgressEvent {
+  phase: 'metadata' | 'children' | 'complete';
+  progress: number;  // 0-100
+  nodesLoaded: number;
+  totalNodes: number;
 }
 
 export interface DeviceMemoryUsage {

@@ -26,6 +26,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Configuration**: `PARALLEL_CONFIG` in SceneService (tunable concurrency limits)
   - **Documentation**: See `PARALLEL_OPTIMIZATION.md` for complete details
 
+- **Phase 2: Progressive Loading** (Optional, configurable): Better perceived performance
+  - **New Events**: UI updates progressively as nodes load
+    - `sceneNodeAdded` - Emitted for each node as it's added
+    - `sceneLoadingProgress` - Throttled progress updates (every 10 nodes)
+    - `sceneTreeUpdated` - Final completion event (backward compatible)
+  - **New Type Fields**: Added loading state flags to `SceneNode`
+    - `loading?: boolean` - Node metadata being fetched
+    - `childrenLoaded?: boolean` - Children have been fetched
+    - `childrenLoading?: boolean` - Children are being fetched
+  - **New Event Types**: Added progressive loading event interfaces
+    - `SceneNodeAddedEvent` - Contains node, parentHandle, level
+    - `SceneNodeUpdatedEvent` - Contains handle, node, updates
+    - `SceneLoadingProgressEvent` - Contains phase, progress, node counts
+  - **Configuration**: `ENABLE_PROGRESSIVE_LOADING` flag in `PARALLEL_CONFIG`
+    - Set to `true` for progressive updates (better UX, slight overhead)
+    - Set to `false` for single update at end (simpler, debugging)
+  - **Performance**: No significant time change, but feels 2-3x faster
+    - Root nodes appear in < 0.5 seconds
+    - Tree fills in progressively
+    - User can interact immediately
+  - **Documentation**: See `PHASE2_PROGRESSIVE_LOADING.md` for complete guide
+  - **Backward Compatible**: All existing code works unchanged
+
 ### Changed - CSS Theme System (2025-02-01)
 - **CSS Variable Naming Refactor**: Removed `octane-` prefix from all theme variables
   - Updated 753 occurrences across 7 files

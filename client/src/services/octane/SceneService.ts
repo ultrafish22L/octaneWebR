@@ -6,13 +6,19 @@
 import { Logger } from '../../utils/Logger';
 import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
-import { Scene, SceneNode } from './types';
+import { 
+  Scene, 
+  SceneNode, 
+  SceneNodeAddedEvent, 
+  SceneNodeUpdatedEvent,
+  SceneLoadingProgressEvent 
+} from './types';
 import { getIconForType } from '../../constants/PinTypes';
 import { AttributeId } from '../../constants/OctaneTypes';
 import { parallelLimitSettled } from '../../utils/parallelAsync';
 
 /**
- * Configuration for parallel scene loading
+ * Configuration for parallel scene loading and progressive updates
  */
 const PARALLEL_CONFIG = {
   /** Maximum concurrent API calls for localhost gRPC */
@@ -21,11 +27,25 @@ const PARALLEL_CONFIG = {
   MAX_CONCURRENT_ITEMS: 50,
   /** Maximum concurrent pins to fetch in parallel */
   MAX_CONCURRENT_PINS: 50,
+  
+  /**
+   * 🔧 Phase 2: Enable Progressive Loading
+   * - true: Emit events as nodes load (better perceived performance)
+   * - false: Only emit final sceneTreeUpdated event (simpler, less overhead)
+   */
+  ENABLE_PROGRESSIVE_LOADING: true,
 } as const;
 
 export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
+  
+  // Progressive loading tracking (Phase 2)
+  private loadingProgress = {
+    totalNodes: 0,
+    nodesLoaded: 0,
+    phase: 'metadata' as 'metadata' | 'children' | 'complete'
+  };
 
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -75,13 +95,28 @@ export class SceneService extends BaseService {
      * Used on initial connection or when incremental updates aren't sufficient.
      */
     const startTime = performance.now();
-    Logger.info('🌳 Building scene tree (PARALLEL MODE)...');
+    const mode = PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING ? 'PARALLEL + PROGRESSIVE' : 'PARALLEL';
+    Logger.info(`🌳 Building scene tree (${mode} MODE)...`);
+    
+    // Reset progress tracking (Phase 2 - optional)
+    if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+      this.loadingProgress = {
+        totalNodes: 0,
+        nodesLoaded: 0,
+        phase: 'metadata'
+      };
+    }
     
     this.scene = {
       tree: [],
       map: new Map(),
       connections: new Map()
     };
+    
+    // Emit initial loading state (Phase 2 - optional)
+    if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+      this.emitProgress();
+    }
     
     try {
       Logger.debug('🔍 Step 1: Getting root node graph...');
@@ -108,6 +143,15 @@ export class SceneService extends BaseService {
       Logger.success(`   - ${this.scene.tree.length} top-level items`);
       Logger.success(`   - ${this.scene.map.size} total nodes`);
       Logger.success(`   - Concurrency: ${PARALLEL_CONFIG.MAX_CONCURRENT_REQUESTS} max parallel requests`);
+      if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+        Logger.success(`   - Progressive loading: ENABLED ⚡`);
+      }
+      
+      // Emit final progress event (Phase 2 - optional)
+      if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+        this.loadingProgress.phase = 'complete';
+        this.emitProgress();
+      }
       
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
       this.emit('sceneTreeUpdated', this.scene);
@@ -156,6 +200,28 @@ export class SceneService extends BaseService {
 
   getScene(): Scene {
     return this.scene;
+  }
+  
+  /**
+   * Emit progress event for progressive loading (Phase 2)
+   */
+  private emitProgress(): void {
+    if (!PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) return;
+    
+    const progress = this.loadingProgress.totalNodes > 0
+      ? Math.round((this.loadingProgress.nodesLoaded / this.loadingProgress.totalNodes) * 100)
+      : 0;
+    
+    const event: SceneLoadingProgressEvent = {
+      phase: this.loadingProgress.phase,
+      progress,
+      nodesLoaded: this.loadingProgress.nodesLoaded,
+      totalNodes: this.loadingProgress.totalNodes
+    };
+    
+    this.emit('sceneLoadingProgress', event);
+    
+    Logger.debug(`📊 Progress: ${progress}% (${this.loadingProgress.nodesLoaded}/${this.loadingProgress.totalNodes} nodes, phase: ${this.loadingProgress.phase})`);
   }
 
   /**
@@ -424,7 +490,11 @@ export class SceneService extends BaseService {
       nodeInfo,
       pinInfo,
       children: [],
-      position
+      position,
+      // Progressive loading state (Phase 2)
+      loading: false,
+      childrenLoaded: false,
+      childrenLoading: false
     };
     
     sceneItems.push(entry);
@@ -433,6 +503,21 @@ export class SceneService extends BaseService {
       const handleNum = Number(item.handle);
       this.scene.map.set(handleNum, entry);
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
+      
+      // Emit progressive event for this node (Phase 2 - optional)
+      if (PARALLEL_CONFIG.ENABLE_PROGRESSIVE_LOADING) {
+        this.loadingProgress.nodesLoaded++;
+        const nodeAddedEvent: SceneNodeAddedEvent = {
+          node: entry,
+          level: level
+        };
+        this.emit('sceneNodeAdded', nodeAddedEvent);
+        
+        // Throttled progress update (every 10 nodes or at key milestones)
+        if (this.loadingProgress.nodesLoaded % 10 === 0 || level === 1) {
+          this.emitProgress();
+        }
+      }
       
       if (level > 1) {
         await this.addItemChildren(entry);
