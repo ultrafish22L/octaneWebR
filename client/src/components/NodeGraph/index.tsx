@@ -1717,7 +1717,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           style={{
             width: 160,
             height: 120,
-            background: 'rgba(70, 68, 50, 0.95)',
+            background: 'var(--octane-minimap-bg)',
             border: '2px solid rgba(200, 180, 80, 0.8)',
             borderRadius: 4,
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',

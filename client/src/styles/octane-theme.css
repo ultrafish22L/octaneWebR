@@ -91,6 +91,7 @@
     --octane-node-bg: #3a3a3a;         /* Node backgrounds */
     --octane-connection-line: #888888; /* Node connections */
     --octane-parameter-bg: #2a2a2a;    /* Parameter backgrounds - LIGHTENED to match Octane SE */
+    --octane-minimap-bg: rgba(70, 68, 50, 0.95); /* Node graph minimap background - yellowish tint matching Octane SE */
     
     /* Transparent Overlays & Shadows */
     --octane-overlay-medium-dark: rgba(0, 0, 0, 0.75); /* Medium-dark overlays */
