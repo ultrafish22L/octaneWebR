@@ -186,6 +186,76 @@ const fetchValue = async () => {
 
 ---
 
+### 6. Request Queue for Attribute Fetching ✅
+
+**Problem**: Even AFTER scene sync completes, selecting a node with 100+ parameters (e.g., "Alpha 5" camera) triggers 100+ concurrent `getByAttrID` calls. Each React `NodeParameter` component mounts and immediately fetches its value → Browser connection pool exhaustion → `ERR_INSUFFICIENT_RESOURCES`.
+
+**Solution**: Add a request queue to **automatically throttle** all attribute fetching to browser-safe limits.
+
+**Implementation**:
+
+1. **RequestQueue utility** (new file):
+```typescript
+// client/src/utils/RequestQueue.ts
+export class RequestQueue {
+  private queue: Array<() => Promise<void>> = [];
+  private activeCount = 0;
+  private maxConcurrent = 6;  // Browser connection pool limit
+
+  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    // Queue request and execute when slot available
+    // Maintains max 6 concurrent requests at any time
+  }
+}
+```
+
+2. **ApiService uses queue** for attribute fetches:
+```typescript
+// client/src/services/octane/ApiService.ts
+export class ApiService extends BaseService {
+  private attributeQueue = new RequestQueue(6);
+  
+  async callApi(service: string, method: string, ...) {
+    // Check if this is an attribute fetch
+    const isAttributeFetch = 
+      service === 'ApiItem' && 
+      (method === 'getByAttrID' || method === 'getValueByAttrID');
+    
+    // Route through queue (throttled) or execute immediately
+    if (isAttributeFetch) {
+      return this.attributeQueue.enqueue(() => 
+        this.executeApiCall(service, method, ...)
+      );
+    }
+    
+    return this.executeApiCall(service, method, ...);
+  }
+}
+```
+
+**Result**:
+- ✅ **Attribute fetches automatically throttled to 6 concurrent max**
+- ✅ No more `ERR_INSUFFICIENT_RESOURCES` errors when selecting parameter-heavy nodes
+- ✅ Parameters still load progressively (queued, not blocked)
+- ✅ Scene sync and other API calls unaffected (bypass queue)
+- ✅ Works seamlessly with React's concurrent rendering
+
+**How It Works**:
+1. User selects "Alpha 5" camera (100+ parameters)
+2. React mounts 100+ `NodeParameter` components
+3. Each component's `useEffect` calls `getByAttrID`
+4. **Queue intercepts all requests**
+5. Only 6 execute concurrently, rest wait in queue
+6. As requests complete, queue processes next batch
+7. All 100+ parameters load without overwhelming browser
+
+**Complements Fix #5**:
+- **Fix #5** (scene sync flag): Prevents fetches DURING scene sync
+- **Fix #6** (request queue): Throttles fetches AFTER scene sync completes
+- Together: Complete protection against browser resource exhaustion
+
+---
+
 ## Testing the Fixes
 
 ### What to Test
@@ -208,6 +278,13 @@ const fetchValue = async () => {
 4. **React Key Warnings**:
    - ✅ No more "Encountered two children with the same key" warnings
    - ✅ Clean console output
+
+5. **Request Queue (Attribute Fetching)**:
+   - ✅ Select a node with many parameters (e.g., "Alpha 5" camera)
+   - ✅ Check console - should see NO `ERR_INSUFFICIENT_RESOURCES` errors
+   - ✅ Parameters should load progressively (throttled to 6 concurrent)
+   - ✅ UI remains responsive during parameter loading
+   - ✅ No "Failed to fetch" errors for getByAttrID calls
 
 ### Expected Performance
 
