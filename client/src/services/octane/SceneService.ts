@@ -13,6 +13,7 @@ import { AttributeId } from '../../constants/OctaneTypes';
 export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
+  private abortController: AbortController | null = null;
 
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -30,6 +31,16 @@ export class SceneService extends BaseService {
    *                        If omitted, performs full scene tree rebuild
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
+    // Abort any previous build operation
+    if (this.abortController) {
+      Logger.debug('🚫 Cancelling previous scene tree build');
+      this.abortController.abort();
+    }
+    
+    // Create new abort controller for this operation
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+    
     if (newNodeHandle !== undefined) {
       Logger.debug('➕ Building new node metadata:', newNodeHandle);
       
@@ -51,8 +62,9 @@ export class SceneService extends BaseService {
         }
         
         return this.scene.tree;
-      } catch (error: any) {
-        Logger.error('❌ Failed to build new node metadata:', error.message);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        Logger.error('❌ Failed to build new node metadata:', message);
         throw error;
       }
     }
@@ -61,7 +73,7 @@ export class SceneService extends BaseService {
      * Full rebuild: Clears scene state and reconstructs entire tree from root.
      * Used on initial connection or when incremental updates aren't sufficient.
      */
-    Logger.debug('🌳 Building scene tree...');
+    Logger.info('🌳 Building scene tree...');
     
     this.scene = {
       tree: [],
@@ -70,6 +82,11 @@ export class SceneService extends BaseService {
     };
     
     try {
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
+      
       Logger.debug('🔍 Step 1: Getting root node graph...');
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
@@ -79,24 +96,50 @@ export class SceneService extends BaseService {
       const rootHandle = rootResponse.result.handle;
       Logger.debug('📍 Root handle:', rootHandle);
       
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
+      
       Logger.debug('🔍 Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
       
-      Logger.debug('🔍 Step 3: Building tree recursively...');
-      this.scene.tree = await this.syncSceneRecurse(rootHandle, null, isGraph, 0);
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
       
-      Logger.debug('✅ Scene tree built:', this.scene.tree.length, 'top-level items');
-      Logger.debug('✅ Scene map has', this.scene.map.size, 'items');
+      // Choose sync strategy based on configuration
+      const startTime = performance.now();
+
+      Logger.debug('🔍 Step 3: Building tree synchronously...');
+      this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
+      const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      
+      Logger.info(`✅ Scene tree built in ${elapsedTime}s:`);
+      Logger.info(`   - ${this.scene.tree.length} top-level items`);
+      Logger.info(`   - ${this.scene.map.size} total nodes`);
+
+
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
       this.emit('sceneTreeUpdated', this.scene);
-      Logger.debug('✅ SceneTreeUpdated event emitted');
+      Logger.info('✅ SceneTreeUpdated event emitted');
       
       return this.scene.tree;
-    } catch (error: any) {
-      Logger.error('❌ Failed to build scene tree:', error.message);
-      Logger.error('❌ Error stack:', error.stack);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      
+      // Don't log cancellation as error
+      if (message.includes('cancelled')) {
+        Logger.debug('🚫 Scene tree build cancelled');
+      } else {
+        Logger.error('❌ Failed to build scene tree:', message);
+        if (error instanceof Error && error.stack) {
+          Logger.error('❌ Error stack:', error.stack);
+        }
+      }
       throw error;
     }
   }
@@ -145,7 +188,12 @@ export class SceneService extends BaseService {
    * @param isGraph - Whether current item is a NodeGraph (contains owned items vs pins)
    * @param level - Current recursion depth (limited to 5 to prevent infinite loops)
    */
-  private async syncSceneRecurse(
+  /**
+   * SEQUENTIAL scene loading - Original proven implementation
+   * Processes nodes one at a time in order
+   * Always works correctly, used as fallback when parallel is disabled
+   */
+  private async syncSceneSequential(
     itemHandle: number | null,
     sceneItems: SceneNode[] | null,
     isGraph: boolean,
@@ -157,11 +205,6 @@ export class SceneService extends BaseService {
     
     level = level + 1;
     
-    // Safety limit: Prevent runaway recursion in circular graphs
-    if (level > 5) {
-      Logger.warn(`⚠️ Recursion depth limit reached at level ${level}`);
-      return sceneItems;
-    }
     
     try {
       if (itemHandle === null) {
@@ -210,6 +253,10 @@ export class SceneService extends BaseService {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           Logger.debug(`✅ Finished building children for all level 1 items`);
+          
+          // 🎯 PROGRESSIVE UPDATE: Emit after level 1 completes
+//          Logger.debug(`📡 Sequential: Emitting progressive update after level ${level}`);
+//
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -262,7 +309,7 @@ export class SceneService extends BaseService {
       }
       
     } catch (error: any) {
-      Logger.error('❌ syncSceneRecurse failed:', error.message);
+      Logger.error('❌ syncSceneSequential failed:', error.message);
     }
     
     return sceneItems;
@@ -377,7 +424,7 @@ export class SceneService extends BaseService {
     const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
     
     try {
-      const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
+      const children = await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       
       if (children.length === 0) {

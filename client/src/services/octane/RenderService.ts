@@ -137,7 +137,10 @@ export class RenderService extends BaseService {
       
       const renderTargetHandle = renderTargetResponse.result.handle;
       
-      const filmSettingsResponse = await this.apiService.callApi('ApiNode', 'connectedNode', renderTargetHandle, { pinId: PinId.P_FILM_SETTINGS });
+      const filmSettingsResponse = await this.apiService.callApi('ApiNode', 'connectedNode', renderTargetHandle, { 
+        pinId: PinId.P_FILM_SETTINGS,
+        enterWrapperNode: true
+      });
       const handle = filmSettingsResponse?.result?.handle;
       
       // API returns "0" string/number for disconnected pins
