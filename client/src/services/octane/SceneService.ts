@@ -211,6 +211,9 @@ export class SceneService extends BaseService {
       
       const structureTime = ((performance.now() - startTime) / 1000).toFixed(2);
       Logger.info(`✅ Phase 1 complete: ${structureNodes.length} nodes in ${structureTime}s`);
+      Logger.info(`📊 Scene.map now has ${this.scene.map.size} entries`);
+      Logger.info(`📊 Scene.map keys: ${Array.from(this.scene.map.keys()).join(', ')}`);
+      Logger.info(`📊 StructureNodes handles: ${structureNodes.map(n => n.handle).join(', ')}`);
       
       // Emit structure immediately so UI can display
       this.emit('sceneStructureLoaded', {
@@ -237,6 +240,7 @@ export class SceneService extends BaseService {
         .map(n => n.handle!);
       
       Logger.info(`📊 Phase 2: Will process ${allHandles.length} nodes in batches of ${PROGRESSIVE_LOAD_BATCH_SIZE}`);
+      Logger.info(`📊 Phase 2 handles: ${allHandles.join(', ')} (types: ${allHandles.map(h => typeof h).join(', ')})`);
       
       // Process in batches
       for (let i = 0; i < allHandles.length; i += PROGRESSIVE_LOAD_BATCH_SIZE) {
@@ -453,7 +457,7 @@ export class SceneService extends BaseService {
       sceneItems.push(entry);
       this.scene.map.set(handleNum, entry);
       
-      Logger.debug(`  📄 Added skeleton node: ${itemName} (type: "${outType}", level: ${level})`);
+      Logger.info(`  📄 Added skeleton node: ${itemName} (handle=${handleNum}, typeof=${typeof handleNum}, type: "${outType}", level: ${level})`);
       
       return entry;
       
@@ -468,6 +472,7 @@ export class SceneService extends BaseService {
    */
   private async loadNodePinsBatch(handles: number[]): Promise<void> {
     Logger.info(`🔄 loadNodePinsBatch: Processing ${handles.length} handles`);
+    Logger.info(`🔄 Scene.map has ${this.scene.map.size} entries, keys: ${Array.from(this.scene.map.keys()).join(', ')}`);
     
     await Promise.all(
       handles.map(async (handle) => {
