@@ -23,7 +23,6 @@ import { formatColorValue, formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
 import { getPinTypeInfo } from '../../constants/PinTypes';
-import { requestQueue } from '../../utils/RequestQueue';
 
 /**
  * Format float value to maximum 6 decimal places
@@ -170,19 +169,16 @@ function NodeParameter({
           Logger.debug(`  - expected_type: ${expectedType} (${node.attrInfo.type})`);
         }
 
-        // Queue the API call to prevent connection pool exhaustion
-        // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
-        // This queues them with max 4 concurrent requests to stay within browser limits
-        const response = await requestQueue.enqueue(() =>
-          client.callApi(
-            'ApiItem',
-            methodName,  // Use correct method name for API version
-            node.handle,  // Pass handle as string
-            {
-              attribute_id: AttributeId.A_VALUE, // 185 - Use constant instead of hardcoded value
-              expected_type: expectedType  // number
-            }
-          )
+        // Pass just the handle string - callApi will wrap it in objectPtr automatically
+        // Server-side will transform objectPtr → item_ref for Alpha 5's getByAttrID
+        const response = await client.callApi(
+          'ApiItem',
+          methodName,  // Use correct method name for API version
+          node.handle,  // Pass handle as string
+          {
+            attribute_id: AttributeId.A_VALUE, // 185 - Use constant instead of hardcoded value
+            expected_type: expectedType  // number
+          }
         );
         
         if (response) {

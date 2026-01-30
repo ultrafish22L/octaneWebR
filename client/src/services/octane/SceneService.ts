@@ -9,13 +9,10 @@ import { ApiService } from './ApiService';
 import { Scene, SceneNode } from './types';
 import { getIconForType } from '../../constants/PinTypes';
 import { AttributeId } from '../../constants/OctaneTypes';
-import { PARALLEL_CONFIG } from './parallelConfig';
-import { parallelLimit } from './parallelUtils';
 
 export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
-  private abortController: AbortController | null = null;
 
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -33,16 +30,6 @@ export class SceneService extends BaseService {
    *                        If omitted, performs full scene tree rebuild
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
-    // Abort any previous build operation
-    if (this.abortController) {
-      Logger.debug('🚫 Cancelling previous scene tree build');
-      this.abortController.abort();
-    }
-    
-    // Create new abort controller for this operation
-    this.abortController = new AbortController();
-    const signal = this.abortController.signal;
-    
     if (newNodeHandle !== undefined) {
       Logger.debug('➕ Building new node metadata:', newNodeHandle);
       
@@ -64,9 +51,8 @@ export class SceneService extends BaseService {
         }
         
         return this.scene.tree;
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        Logger.error('❌ Failed to build new node metadata:', message);
+      } catch (error: any) {
+        Logger.error('❌ Failed to build new node metadata:', error.message);
         throw error;
       }
     }
@@ -75,7 +61,7 @@ export class SceneService extends BaseService {
      * Full rebuild: Clears scene state and reconstructs entire tree from root.
      * Used on initial connection or when incremental updates aren't sufficient.
      */
-    Logger.info('🌳 Building scene tree...');
+    Logger.debug('🌳 Building scene tree...');
     
     this.scene = {
       tree: [],
@@ -84,11 +70,6 @@ export class SceneService extends BaseService {
     };
     
     try {
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
-      }
-      
       Logger.debug('🔍 Step 1: Getting root node graph...');
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
@@ -98,54 +79,24 @@ export class SceneService extends BaseService {
       const rootHandle = rootResponse.result.handle;
       Logger.debug('📍 Root handle:', rootHandle);
       
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
-      }
-      
       Logger.debug('🔍 Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
       
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
-      }
+      Logger.debug('🔍 Step 3: Building tree recursively...');
+      this.scene.tree = await this.syncSceneRecurse(rootHandle, null, isGraph, 0);
       
-      // Choose sync strategy based on configuration
-      const startTime = performance.now();
-      if (PARALLEL_CONFIG.ENABLED) {
-        Logger.info('🔍 Step 3: Building tree with PARALLEL loading...');
-        this.scene.tree = await this.syncSceneParallel(rootHandle, null, isGraph, 0);
-      } else {
-        Logger.info('🔍 Step 3: Building tree with SEQUENTIAL loading...');
-        this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
-      }
-      const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
-      
-      Logger.info(`✅ Scene tree built in ${elapsedTime}s:`);
-      Logger.info(`   - ${this.scene.tree.length} top-level items`);
-      Logger.info(`   - ${this.scene.map.size} total nodes`);
-      Logger.info(`   - Mode: ${PARALLEL_CONFIG.ENABLED ? 'PARALLEL' : 'SEQUENTIAL'}`);
-      
+      Logger.debug('✅ Scene tree built:', this.scene.tree.length, 'top-level items');
+      Logger.debug('✅ Scene map has', this.scene.map.size, 'items');
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
       this.emit('sceneTreeUpdated', this.scene);
-      Logger.info('✅ SceneTreeUpdated event emitted');
+      Logger.debug('✅ SceneTreeUpdated event emitted');
       
       return this.scene.tree;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      
-      // Don't log cancellation as error
-      if (message.includes('cancelled')) {
-        Logger.debug('🚫 Scene tree build cancelled');
-      } else {
-        Logger.error('❌ Failed to build scene tree:', message);
-        if (error instanceof Error && error.stack) {
-          Logger.error('❌ Error stack:', error.stack);
-        }
-      }
+    } catch (error: any) {
+      Logger.error('❌ Failed to build scene tree:', error.message);
+      Logger.error('❌ Error stack:', error.stack);
       throw error;
     }
   }
@@ -194,12 +145,7 @@ export class SceneService extends BaseService {
    * @param isGraph - Whether current item is a NodeGraph (contains owned items vs pins)
    * @param level - Current recursion depth (limited to 5 to prevent infinite loops)
    */
-  /**
-   * SEQUENTIAL scene loading - Original proven implementation
-   * Processes nodes one at a time in order
-   * Always works correctly, used as fallback when parallel is disabled
-   */
-  private async syncSceneSequential(
+  private async syncSceneRecurse(
     itemHandle: number | null,
     sceneItems: SceneNode[] | null,
     isGraph: boolean,
@@ -212,11 +158,10 @@ export class SceneService extends BaseService {
     level = level + 1;
     
     // Safety limit: Prevent runaway recursion in circular graphs
-    // NOTE: Disabled - scene.map reservation system already prevents duplicates and infinite loops
-    // if (level > PARALLEL_CONFIG.MAX_DEPTH) {
-    //   Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
-    //   return sceneItems;
-    // }
+    if (level > 5) {
+      Logger.warn(`⚠️ Recursion depth limit reached at level ${level}`);
+      return sceneItems;
+    }
     
     try {
       if (itemHandle === null) {
@@ -265,10 +210,6 @@ export class SceneService extends BaseService {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           Logger.debug(`✅ Finished building children for all level 1 items`);
-          
-          // 🎯 PROGRESSIVE UPDATE: Emit after level 1 completes
-          Logger.debug(`📡 Sequential: Emitting progressive update after level ${level}`);
-          this.emit('sceneTreeUpdated', this.scene);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -327,304 +268,105 @@ export class SceneService extends BaseService {
     return sceneItems;
   }
 
-  /**
-   * PARALLEL scene loading - Optimized implementation  
-   * Processes multiple nodes concurrently for faster loading
-   * Uses parallelLimit to respect browser connection pool limits
-   */
-  private async syncSceneParallel(
-    itemHandle: number | null,
-    sceneItems: SceneNode[] | null,
-    isGraph: boolean,
-    level: number
-  ): Promise<SceneNode[]> {
-    if (sceneItems === null) {
-      sceneItems = [];
-    }
-    
-    level = level + 1;
-    
-    // Safety limit: Prevent runaway recursion in circular graphs
-    // NOTE: Disabled - scene.map reservation system already prevents duplicates and infinite loops
-    // if (level > PARALLEL_CONFIG.MAX_DEPTH) {
-    //   Logger.warn(`⚠️ Recursion depth limit reached at level ${level} (max: ${PARALLEL_CONFIG.MAX_DEPTH})`);
-    //   return sceneItems;
-    // }
-    
-    try {
-      if (itemHandle === null) {
-        const response = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
-        if (!response || !response.result || !response.result.handle) {
-          throw new Error('Failed ApiProjectManager/rootNodeGraph');
-        }
-        itemHandle = response.result.handle;
-        
-        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', itemHandle);
-        isGraph = isGraphResponse?.result || false;
-      }
-      
-      /**
-       * NodeGraph: Process owned items with parallelization
-       */
-      if (isGraph) {
-        const ownedResponse = await this.apiService.callApi('ApiNodeGraph', 'getOwnedItems', itemHandle);
-        if (!ownedResponse || !ownedResponse.list || !ownedResponse.list.handle) {
-          throw new Error('Failed ApiNodeGraph/getOwnedItems');
-        }
-        const ownedItemsHandle = ownedResponse.list.handle;
-        
-        const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
-        const size = sizeResponse?.result || 0;
-        
-        Logger.debug(`📦 Level ${level}: Found ${size} owned items (parallel mode)`);
-        
-        // ⚡ PARALLEL: Fetch all items concurrently
-        const itemHandles = Array.from({ length: size }, (_, i) => i);
-        const itemResults = await parallelLimit(itemHandles, PARALLEL_CONFIG.MAX_CONCURRENT, async (i) => {
-          const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
-          return itemResponse?.result || null;
-        });
-        
-        // Add all items to scene (this is fast, doesn't need parallelization)
-        for (const item of itemResults) {
-          if (item && item.handle) {
-            await this.addSceneItem(sceneItems, item, null, level);
-          }
-        }
-        
-        // ⚡ PARALLEL: Build children for all items at this level concurrently
-        // Recursively parallelizes all levels - MAX_CONCURRENT limit prevents overload
-        Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items (parallel)`);
-        await parallelLimit(sceneItems, PARALLEL_CONFIG.MAX_CONCURRENT, async (item) => {
-          await this.addItemChildren(item);
-        });
-        Logger.debug(`✅ Finished building children for ${sceneItems.length} level ${level} items`);
-        
-        // 🎯 PROGRESSIVE UPDATE: Emit after each level completes (for top levels only)
-        if (level <= 2) {
-          Logger.debug(`📡 Parallel: Emitting progressive update after level ${level} (NodeGraph)`);
-          this.emit('sceneTreeUpdated', this.scene);
-        }
-      } else if (itemHandle != 0) {
-        // Regular nodes: iterate through pins to find connected nodes
-        Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle} (parallel mode)`);
-        
-        try {
-          const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', itemHandle);
-          const pinCount = pinCountResponse?.result || 0;
-          
-          Logger.debug(`  Found ${pinCount} pins`);
-          
-          // ⚡ PARALLEL: Fetch all pin info concurrently
-          const pinIndexes = Array.from({ length: pinCount }, (_, i) => i);
-          const pinResults = await parallelLimit(pinIndexes, PARALLEL_CONFIG.MAX_CONCURRENT, async (i) => {
-            try {
-              const connectedResponse = await this.apiService.callApi(
-                'ApiNode',
-                'connectedNodeIx',
-                itemHandle,
-                { pinIx: i, enterWrapperNode: true }
-              );
-              
-              const connectedNode = connectedResponse?.result || null;
-              
-              const pinInfoHandleResponse = await this.apiService.callApi(
-                'ApiNode',
-                'pinInfoIx',
-                itemHandle,
-                { index: i }
-              );
-              
-              if (pinInfoHandleResponse && pinInfoHandleResponse.result && pinInfoHandleResponse.result.handle) {
-                const pinInfoResponse = await this.apiService.callApi(
-                  'ApiNodePinInfoEx',
-                  'getApiNodePinInfo',
-                  pinInfoHandleResponse.result.handle
-                );
-                
-                const pinInfo = pinInfoResponse?.nodePinInfo || null;
-                if (pinInfo) {
-                  pinInfo.ix = i;
-                  return { connectedNode, pinInfo };
-                }
-              }
-            } catch (pinError: any) {
-              Logger.warn(`  ⚠️ Failed to load pin ${i}:`, pinError.message);
-            }
-            return null;
-          });
-          
-          // Add all connected nodes to scene
-          for (const result of pinResults) {
-            if (result) {
-              await this.addSceneItem(sceneItems, result.connectedNode, result.pinInfo, level);
-            }
-          }
-          
-          // ⚡ PARALLEL: Build children for all items at this level concurrently
-          // Matches graph logic - ensures all nodes get children populated
-          Logger.debug(`🔄 Building children for ${sceneItems.length} level ${level} items (parallel)`);
-          await parallelLimit(sceneItems, PARALLEL_CONFIG.MAX_CONCURRENT, async (item) => {
-            await this.addItemChildren(item);
-          });
-          Logger.debug(`✅ Finished building children for ${sceneItems.length} level ${level} items`);
-          
-          // 🎯 PROGRESSIVE UPDATE: Emit after each level completes (for top levels only)
-          if (level <= 2) {
-            Logger.debug(`📡 Parallel: Emitting progressive update after level ${level} (Regular nodes)`);
-            this.emit('sceneTreeUpdated', this.scene);
-          }
-        } catch (pinCountError: any) {
-          Logger.error(`  ❌ Failed to get pin count:`, pinCountError.message);
-        }
-      }
-      
-    } catch (error: any) {
-      Logger.error('❌ syncSceneParallel failed:', error.message);
-    }
-    
-    return sceneItems;
-  }
-
   private async addSceneItem(
     sceneItems: SceneNode[],
     item: any,
     pinInfo: any,
     level: number
   ): Promise<SceneNode | undefined> {
-    const initialName = item?.name || pinInfo?.staticLabel || 'Unnamed';
-    const initialType = pinInfo?.outType || '';
+    let itemName = item?.name || pinInfo?.staticLabel || 'Unnamed';
+    let outType = pinInfo?.outType || '';
+    let graphInfo = null;
+    let nodeInfo = null;
+    let isGraph = false;
+    let position: { x: number; y: number } | null = null;
     
-    // Handle unconnected pins (handle = 0)
-    if (item == null || item.handle == 0) {
-      Logger.debug(`  ⚪ Unconnected pin: ${initialName}`);
-      
-      const displayName = pinInfo?.staticLabel || initialName;
-      const icon = this.getNodeIcon(initialType, displayName);
-      
-      const entry: SceneNode = {
-        level,
-        name: displayName,
-        handle: item?.handle,
-        type: initialType,
-        typeEnum: typeof initialType === 'number' ? initialType : 0,
-        outType: initialType,
-        icon,
-        visible: true,
-        graphInfo: undefined,
-        nodeInfo: undefined,
-        pinInfo,
-        children: [],
-        position: undefined
-      };
-      
-      sceneItems.push(entry);
-      return entry;
-    }
-    
-    // Check if node already exists
-    const handleNum = Number(item.handle);
-    const existing = this.scene.map.get(handleNum);
-    if (existing && existing.handle && !(existing as any)._reserved) {
-      // Update pinInfo if needed and return existing node
-      if (pinInfo) {
+    if (item != null && item.handle != 0) {
+      const handleNum = Number(item.handle);
+      const existing = this.scene.map.get(handleNum);
+      if (existing && existing.handle) {
         existing.pinInfo = pinInfo;
+        if (level > 1) {
+          sceneItems.push(existing);
+        }
+        return existing;
       }
-      if (level > 1) {
-        sceneItems.push(existing);
+      
+      try {
+        const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
+        itemName = nameResponse?.result || 'Unnamed';
+        
+        const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
+        outType = outTypeResponse?.result || '';
+        
+        Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
+        
+        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
+        isGraph = isGraphResponse?.result || false;
+        
+        // Fetch position for top-level nodes (level 1)
+        if (level === 1) {
+          try {
+            const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
+            if (posResponse?.result) {
+              position = {
+                x: posResponse.result.x || 0,
+                y: posResponse.result.y || 0
+              };
+              Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
+            }
+          } catch (posError: any) {
+            Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, posError.message);
+          }
+        }
+        
+        if (isGraph) {
+          const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
+          graphInfo = infoResponse?.result || null;
+        } else {
+          const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
+          nodeInfo = infoResponse?.result || null;
+        }
+        
+      } catch (error: any) {
+        Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
       }
-      return existing;
+    } else {
+      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
     }
     
-    // 🔒 Reserve this handle with minimal marker to prevent race conditions
-    // Other threads will see _reserved: true and know this node is being processed
-    const reservationMarker = { handle: item.handle, _reserved: true } as any;
-    this.scene.map.set(handleNum, reservationMarker);
+    const displayName = pinInfo?.staticLabel || itemName;
+    const icon = this.getNodeIcon(outType, displayName);
     
-    try {
-      // ⚡ Fetch all basic data in parallel
-      const [nameResponse, outTypeResponse, isGraphResponse] = await Promise.all([
-        this.apiService.callApi('ApiItem', 'name', item.handle),
-        this.apiService.callApi('ApiItem', 'outType', item.handle),
-        this.apiService.callApi('ApiItem', 'isGraph', item.handle)
-      ]);
-      
-      const itemName = nameResponse?.result || 'Unnamed';
-      const outType = outTypeResponse?.result || '';
-      const isGraph = isGraphResponse?.result || false;
-      
-      Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
-      
-      // Fetch additional data based on node type
-      let position: { x: number; y: number } | undefined = undefined;
-      let graphInfo = undefined;
-      let nodeInfo = undefined;
-      
-      if (level === 1) {
-        try {
-          const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
-          if (posResponse?.result) {
-            position = {
-              x: posResponse.result.x || 0,
-              y: posResponse.result.y || 0
-            };
-            Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
-          }
-        } catch (posError: unknown) {
-          const message = posError instanceof Error ? posError.message : String(posError);
-          Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, message);
-        }
-      }
-      
-      if (isGraph) {
-        const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
-        graphInfo = infoResponse?.result || null;
-      } else {
-        const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
-        nodeInfo = infoResponse?.result || null;
-      }
-      
-      // ✅ Build complete immutable node object
-      const displayName = pinInfo?.staticLabel || itemName;
-      const icon = this.getNodeIcon(outType, displayName);
-      
-      const completeNode: SceneNode = {
-        level,
-        name: displayName,
-        handle: item.handle,
-        type: outType,
-        typeEnum: typeof outType === 'number' ? outType : 0,
-        outType: outType,
-        icon,
-        visible: true,
-        graphInfo,
-        nodeInfo,
-        pinInfo,
-        children: [],
-        position
-      };
-      
-      // ✅ Replace reservation with complete node (atomic operation)
-      this.scene.map.set(handleNum, completeNode);
-      sceneItems.push(completeNode);
-      
+    const entry: SceneNode = {
+      level,
+      name: displayName,
+      handle: item?.handle,
+      type: outType,
+      typeEnum: typeof outType === 'number' ? outType : 0,
+      outType: outType,
+      icon,
+      visible: true,
+      graphInfo,
+      nodeInfo,
+      pinInfo,
+      children: [],
+      position
+    };
+    
+    sceneItems.push(entry);
+    
+    if (item != null && item.handle != 0) {
+      const handleNum = Number(item.handle);
+      this.scene.map.set(handleNum, entry);
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
       
-      // Build children for level > 1 nodes (sequential mode requires this)
-      // In parallel mode, syncSceneParallel handles children building for all levels
-      if (level > 1 && !PARALLEL_CONFIG.ENABLED) {
-        await this.addItemChildren(completeNode);
+      if (level > 1) {
+        await this.addItemChildren(entry);
       }
-      
-      return completeNode;
-      
-    } catch (error: unknown) {
-      // ✅ Cleanup: Remove failed reservation
-      this.scene.map.delete(handleNum);
-      const message = error instanceof Error ? error.message : String(error);
-      Logger.error('❌ addSceneItem failed to fetch item data:', message);
-      throw error;
     }
+    
+    return entry;
   }
 
   private async addItemChildren(item: SceneNode): Promise<void> {
@@ -635,47 +377,24 @@ export class SceneService extends BaseService {
     const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
     
     try {
-      // Call the appropriate recursive method based on configuration
-      const children = PARALLEL_CONFIG.ENABLED
-        ? await this.syncSceneParallel(item.handle, null, isGraph, item.level || 1)
-        : await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
+      const children = await this.syncSceneRecurse(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       
       if (children.length === 0) {
-        // Only call attrInfo on nodes with valid, fully-realized handles
-        // Check: 1) Handle exists and isn't 0 (unconnected pin)
-        //        2) Node is in scene map and not a reservation marker
-        //        3) Basic node data was successfully fetched
-        const handleNum = Number(item.handle);
-        const nodeInMap = this.scene.map.get(handleNum);
-        const isReserved = nodeInMap && (nodeInMap as any)._reserved;
-        
-        const hasValidHandle = item.handle && 
-                               item.handle !== 0 &&
-                               nodeInMap &&
-                               !isReserved &&
-                               item.name &&
-                               item.type;
-        
-        if (hasValidHandle) {
-          try {
-            const attrInfoResponse = await this.apiService.callApi(
-              'ApiItem',
-              'attrInfo',
-              item.handle,
-              { id: AttributeId.A_VALUE }
-            );
-            
-            if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
-              item.attrInfo = attrInfoResponse.result;
-              Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
-            }
-          } catch (attrError: any) {
-            Logger.error(`❌ attrInfo failed for validated node "${item.name}" (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
+        try {
+          const attrInfoResponse = await this.apiService.callApi(
+            'ApiItem',
+            'attrInfo',
+            item.handle,
+            { id: AttributeId.A_VALUE }
+          );
+          
+          if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+            item.attrInfo = attrInfoResponse.result;
+            Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
           }
-        } else {
-          const reason = !nodeInMap ? 'not in map' : isReserved ? 'reserved' : !item.name ? 'no name' : !item.type ? 'no type' : 'handle=0';
-          Logger.debug(`  ⏩ Skipping attrInfo for node "${item.name}" - ${reason}`);
+        } catch (attrError: any) {
+          Logger.debug(`  ℹ️ No attrInfo for ${item.name}`);
         }
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);

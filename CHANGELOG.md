@@ -9,35 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Parallel Scene Loading (2025-01-24 to 2025-01-30) 🔴 REVERT RECOMMENDED
-- **Status**: Testing complete - **causes Octane lockup on large scenes**
-- **Performance**: 2.5x faster for small scenes (310 nodes: 2.4s vs 5.2s)
-- **Critical Issue**: Large scenes (1000+ nodes) cause Octane to lock up with API errors
-- **Test Results**:
-  - ✅ Small scenes: Parallel works perfectly
-  - ❌ Large scenes: Parallel causes Octane lockup + API errors
-  - ✅ Sequential mode (271c390): All scenes load successfully
-- **Implementation**: Complete rewrite from sequential to parallel API requests
-  - Parallel pin fetching with `Promise.all()` (20 concurrent max)
-  - Handle reservation system to prevent race conditions
-  - Progressive UI updates (level-based rendering)
-  - Handle validation before `attrInfo()` API calls
-- **Major fixes**:
-  - Race condition prevention with reservation markers (`_reserved` flag)
-  - Duplicate node elimination with atomic map operations
-  - "Invalid object reference" errors eliminated (16-17 errors → 0)
-  - Connection pool exhaustion prevented with request queue
-  - React state consistency with immutable node objects
-- **Configuration**: `client/src/config/parallelConfig.ts` (toggle ENABLED: true/false)
-- **Files modified**:
-  - `client/src/services/octane/SceneService.ts` - Core implementation
-  - `client/src/config/parallelConfig.ts` - Configuration (NEW)
-  - `client/src/utils/parallelLimit.ts` - Concurrency utility (NEW)
-- **Documentation**: `PARALLEL_LOADING_HISTORY.md` - Complete technical deep dive
-- **Commit range**: `271c390..f5ecb1a` (~30 commits)
-- **Recommendation**: Revert to sequential mode (commit 271c390) for production stability
-- **Root Cause**: Concurrent API load likely overwhelms Octane server's internal processing queues
-
 ### Changed - CSS Theme System (2025-02-01)
 - **CSS Variable Naming Refactor**: Removed `octane-` prefix from all theme variables
   - Updated 753 occurrences across 7 files
