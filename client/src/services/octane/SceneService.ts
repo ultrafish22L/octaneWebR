@@ -334,7 +334,7 @@ export class SceneService extends BaseService {
         }
         
         const ownedItemsHandle = ownedResponse.list.handle;
-        const countResponse = await this.apiService.callApi('ApiList', 'size', ownedItemsHandle);
+        const countResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
         const count = countResponse?.result || 0;
         
         Logger.debug(`📍 Found ${count} top-level items in scene graph`);
@@ -343,7 +343,7 @@ export class SceneService extends BaseService {
         for (let i = 0; i < count; i++) {
           if (signal.aborted) break;
           
-          const itemResponse = await this.apiService.callApi('ApiList', 'at', ownedItemsHandle, { index: i });
+          const itemResponse = await this.apiService.callApi('ApiItemArray', 'at', ownedItemsHandle, { index: i });
           if (itemResponse && itemResponse.result && itemResponse.result.handle) {
             await this.addSceneItemFast(sceneItems, itemResponse.result, null, 1);
           }
