@@ -97,7 +97,7 @@ function ApplicationTab() {
   return (
     <div className="preferences-tab-content">
       <h3>Application Settings</h3>
-      
+
       <div className="preference-section">
         <h4>Statistics</h4>
         <label className="preference-checkbox">
@@ -105,8 +105,8 @@ function ApplicationTab() {
           <span>Enable anonymous usage statistics</span>
         </label>
         <p className="preference-description">
-          Send anonymous statistics to help improve OctaneRender. Includes session duration,
-          render settings, geometry size, and GPU count. No personal information is collected.
+          Send anonymous statistics to help improve OctaneRender. Includes session duration, render
+          settings, geometry size, and GPU count. No personal information is collected.
         </p>
       </div>
 
@@ -114,12 +114,18 @@ function ApplicationTab() {
         <h4>Performance</h4>
         <label className="preference-field">
           <span>Max CPU cores for AI training:</span>
-          <input type="number" min="1" max="32" defaultValue="8"                         autoComplete="off"
-                        name="preference-description-0"
+          <input
+            type="number"
+            min="1"
+            max="32"
+            defaultValue="8"
+            autoComplete="off"
+            name="preference-description-0"
           />
         </label>
         <p className="preference-description">
-          Limit the number of CPU cores used for AI scene training. Leave empty to use all available cores.
+          Limit the number of CPU cores used for AI scene training. Leave empty to use all available
+          cores.
         </p>
       </div>
 
@@ -137,9 +143,7 @@ function ApplicationTab() {
       <div className="preference-section">
         <h4>Developer Options</h4>
         <label className="preference-checkbox">
-          <input type="checkbox"                         autoComplete="off"
-                        name="preference-description-1"
-          />
+          <input type="checkbox" autoComplete="off" name="preference-description-1" />
           <span>Enable developer mode</span>
         </label>
         <label className="preference-field">
@@ -148,11 +152,12 @@ function ApplicationTab() {
             rows={4}
             placeholder="~/octane/osl&#10;/usr/local/octane/includes"
             style={{ fontFamily: 'monospace', fontSize: '12px' }}
-                                  name="textarea-2"
+            name="textarea-2"
           />
         </label>
         <p className="preference-description">
-          Specify paths to OSL include directories for script compilation. Use tilde (~) for home directory.
+          Specify paths to OSL include directories for script compilation. Use tilde (~) for home
+          directory.
         </p>
       </div>
     </div>
@@ -161,32 +166,37 @@ function ApplicationTab() {
 
 function ShortcutsTab() {
   const shortcuts = [
-    { category: 'File Operations', items: [
-      { action: 'New Scene', shortcut: 'Ctrl+N' },
-      { action: 'Open Scene', shortcut: 'Ctrl+O' },
-      { action: 'Save Scene', shortcut: 'Ctrl+S' },
-      { action: 'Save As', shortcut: 'Ctrl+Shift+S' },
-      { action: 'Preferences', shortcut: 'Ctrl+,' }
-    ]},
-    { category: 'Edit Operations', items: [
-      { action: 'Undo', shortcut: 'Ctrl+Z' },
-      { action: 'Redo', shortcut: 'Ctrl+Y' },
-      { action: 'Cut', shortcut: 'Ctrl+X' },
-      { action: 'Copy', shortcut: 'Ctrl+C' },
-      { action: 'Paste', shortcut: 'Ctrl+V' },
-      { action: 'Delete', shortcut: 'Del' },
-      { action: 'Select All', shortcut: 'Ctrl+A' }
-    ]},
-    { category: 'Node Graph', items: [
-      { action: 'Search Nodes', shortcut: 'Ctrl+F' }
-    ]},
-    { category: 'View', items: [
-      { action: 'Refresh Scene', shortcut: 'F5' },
-      { action: 'Fullscreen', shortcut: 'F11' }
-    ]},
-    { category: 'Help', items: [
-      { action: 'Documentation', shortcut: 'F1' }
-    ]}
+    {
+      category: 'File Operations',
+      items: [
+        { action: 'New Scene', shortcut: 'Ctrl+N' },
+        { action: 'Open Scene', shortcut: 'Ctrl+O' },
+        { action: 'Save Scene', shortcut: 'Ctrl+S' },
+        { action: 'Save As', shortcut: 'Ctrl+Shift+S' },
+        { action: 'Preferences', shortcut: 'Ctrl+,' },
+      ],
+    },
+    {
+      category: 'Edit Operations',
+      items: [
+        { action: 'Undo', shortcut: 'Ctrl+Z' },
+        { action: 'Redo', shortcut: 'Ctrl+Y' },
+        { action: 'Cut', shortcut: 'Ctrl+X' },
+        { action: 'Copy', shortcut: 'Ctrl+C' },
+        { action: 'Paste', shortcut: 'Ctrl+V' },
+        { action: 'Delete', shortcut: 'Del' },
+        { action: 'Select All', shortcut: 'Ctrl+A' },
+      ],
+    },
+    { category: 'Node Graph', items: [{ action: 'Search Nodes', shortcut: 'Ctrl+F' }] },
+    {
+      category: 'View',
+      items: [
+        { action: 'Refresh Scene', shortcut: 'F5' },
+        { action: 'Fullscreen', shortcut: 'F11' },
+      ],
+    },
+    { category: 'Help', items: [{ action: 'Documentation', shortcut: 'F1' }] },
   ];
 
   return (
@@ -222,7 +232,8 @@ function DevicesTab() {
     <div className="preferences-tab-content">
       <h3>GPU Devices</h3>
       <p className="preference-description">
-        GPU device information and rendering preferences. Connect to Octane to view available devices.
+        GPU device information and rendering preferences. Connect to Octane to view available
+        devices.
       </p>
 
       <div className="preference-section">
@@ -240,9 +251,7 @@ function DevicesTab() {
           <span>Use all available GPUs for rendering</span>
         </label>
         <label className="preference-checkbox">
-          <input type="checkbox"                         autoComplete="off"
-                        name="preference-checkbox-3"
-          />
+          <input type="checkbox" autoComplete="off" name="preference-checkbox-3" />
           <span>Enable GPU viewport acceleration</span>
         </label>
       </div>
@@ -258,8 +267,13 @@ function DevicesTab() {
         </p>
         <label className="preference-field">
           <span>Out-of-core cache size (GB):</span>
-          <input type="number" min="1" max="500" defaultValue="10"                         autoComplete="off"
-                        name="preference-description-4"
+          <input
+            type="number"
+            min="1"
+            max="500"
+            defaultValue="10"
+            autoComplete="off"
+            name="preference-description-4"
           />
         </label>
       </div>

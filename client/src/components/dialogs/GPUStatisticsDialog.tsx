@@ -62,64 +62,72 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
 
     const fetchStatistics = async () => {
       setLoading(true);
-      
+
       try {
         // Get Octane version
         const version = await client.getOctaneVersion();
         setOctaneVersion(version);
-        
+
         // Get device count
         const deviceCount = await client.getDeviceCount();
         Logger.debug(`📊 Found ${deviceCount} GPU device(s)`);
-        
+
         // Fetch statistics for each device
         const deviceStats: DeviceStatistics[] = [];
-        
+
         for (let i = 0; i < deviceCount; i++) {
           const name = await client.getDeviceName(i);
           const memory = await client.getMemoryUsage(i);
           const resources = await client.getResourceStatistics(i);
           const geometry = await client.getGeometryStatistics(i);
           const textures = await client.getTexturesStatistics(i);
-          
+
           deviceStats.push({
             index: i,
             name,
-            memory: memory ? {
-              used: memory.usedDeviceMemory,
-              free: memory.freeDeviceMemory,
-              total: memory.totalDeviceMemory,
-              outOfCore: memory.outOfCoreMemory,
-              peerToPeer: memory.peerToPeerBytesUsed
-            } : null,
-            resources: resources ? {
-              runtime: resources.runtimeDataSize,
-              film: resources.filmDataSize,
-              geometry: resources.geometryDataSize,
-              nodeSystem: resources.nodeSystemDataSize,
-              images: resources.imagesDataSize,
-              compositor: resources.compositorDataSize,
-              denoiser: resources.denoiserDataSize
-            } : null,
-            geometry: geometry ? {
-              triangles: geometry.triCount,
-              dispTriangles: geometry.dispTriCount,
-              hairSegments: geometry.hairSegCount,
-              voxels: Number(geometry.voxelCount),
-              gaussianSplats: Number(geometry.gaussianSplatCount),
-              spheres: geometry.sphereCount,
-              instances: geometry.instanceCount
-            } : null,
-            textures: textures ? {
-              rgba32: textures.usedRgba32Textures,
-              rgba64: textures.usedRgba64Textures,
-              y8: textures.usedY8Textures,
-              y16: textures.usedY16Textures,
-              virtual: textures.usedVirtualTextures
-            } : null
+            memory: memory
+              ? {
+                  used: memory.usedDeviceMemory,
+                  free: memory.freeDeviceMemory,
+                  total: memory.totalDeviceMemory,
+                  outOfCore: memory.outOfCoreMemory,
+                  peerToPeer: memory.peerToPeerBytesUsed,
+                }
+              : null,
+            resources: resources
+              ? {
+                  runtime: resources.runtimeDataSize,
+                  film: resources.filmDataSize,
+                  geometry: resources.geometryDataSize,
+                  nodeSystem: resources.nodeSystemDataSize,
+                  images: resources.imagesDataSize,
+                  compositor: resources.compositorDataSize,
+                  denoiser: resources.denoiserDataSize,
+                }
+              : null,
+            geometry: geometry
+              ? {
+                  triangles: geometry.triCount,
+                  dispTriangles: geometry.dispTriCount,
+                  hairSegments: geometry.hairSegCount,
+                  voxels: Number(geometry.voxelCount),
+                  gaussianSplats: Number(geometry.gaussianSplatCount),
+                  spheres: geometry.sphereCount,
+                  instances: geometry.instanceCount,
+                }
+              : null,
+            textures: textures
+              ? {
+                  rgba32: textures.usedRgba32Textures,
+                  rgba64: textures.usedRgba64Textures,
+                  y8: textures.usedY8Textures,
+                  y16: textures.usedY16Textures,
+                  virtual: textures.usedVirtualTextures,
+                }
+              : null,
           });
         }
-        
+
         setDevices(deviceStats);
       } catch (error: any) {
         Logger.error('❌ Failed to fetch GPU statistics:', error.message);
@@ -149,33 +157,37 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
     <>
       {/* Backdrop */}
       <div className="gpu-statistics-backdrop" onClick={onClose} />
-      
+
       {/* Dialog */}
-      <div 
+      <div
         className="gpu-statistics-dialog"
         style={position ? { top: position.y, left: position.x } : undefined}
       >
         <div className="gpu-statistics-header">
           <h2>GPU Resource Statistics</h2>
-          <button className="gpu-statistics-close" onClick={onClose}>×</button>
+          <button className="gpu-statistics-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="gpu-statistics-content">
           {/* Octane Version */}
           <div className="gpu-statistics-section">
             <h3>Octane Version</h3>
             <div className="gpu-statistics-value">{octaneVersion}</div>
           </div>
-          
+
           {loading ? (
             <div className="gpu-statistics-loading">Loading GPU statistics...</div>
           ) : devices.length === 0 ? (
             <div className="gpu-statistics-empty">No GPU devices found</div>
           ) : (
-            devices.map((device) => (
+            devices.map(device => (
               <div key={device.index} className="gpu-statistics-device">
-                <h3>Device {device.index}: {device.name}</h3>
-                
+                <h3>
+                  Device {device.index}: {device.name}
+                </h3>
+
                 {/* Memory Usage */}
                 {device.memory && (
                   <div className="gpu-statistics-section">
@@ -197,7 +209,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
                         <tr>
                           <td>Usage:</td>
                           <td>
-                            {device.memory.total > 0 
+                            {device.memory.total > 0
                               ? ((device.memory.used / device.memory.total) * 100).toFixed(1) + '%'
                               : 'N/A'}
                           </td>
@@ -218,7 +230,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
                     </table>
                   </div>
                 )}
-                
+
                 {/* Resource Statistics */}
                 {device.resources && (
                   <div className="gpu-statistics-section">
@@ -257,7 +269,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
                     </table>
                   </div>
                 )}
-                
+
                 {/* Geometry Statistics */}
                 {device.geometry && (
                   <div className="gpu-statistics-section">
@@ -306,7 +318,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
                     </table>
                   </div>
                 )}
-                
+
                 {/* Texture Statistics */}
                 {device.textures && (
                   <div className="gpu-statistics-section">

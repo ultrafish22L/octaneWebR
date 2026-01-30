@@ -1,7 +1,7 @@
 /**
  * useKeyboardShortcuts Hook
  * Global keyboard shortcut management system
- * 
+ *
  * Handles keyboard shortcuts across the application with support for:
  * - Modifier keys (Ctrl, Shift, Alt, Meta)
  * - Prevention of default browser behavior
@@ -44,42 +44,42 @@ export function useKeyboardShortcuts(
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Skip if disabled or if typing in an input field
-    if (!enabled) return;
-    
-    const target = event.target as HTMLElement;
-    const isInputField = (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.isContentEditable
-    );
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      // Skip if disabled or if typing in an input field
+      if (!enabled) return;
 
-    // Find matching shortcut
-    for (const shortcut of shortcutsRef.current) {
-      const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
-      const ctrlMatch = (shortcut.ctrl ?? false) === (event.ctrlKey || event.metaKey);
-      const shiftMatch = (shortcut.shift ?? false) === event.shiftKey;
-      const altMatch = (shortcut.alt ?? false) === event.altKey;
+      const target = event.target as HTMLElement;
+      const isInputField =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-      if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
-        // Allow input fields to use their native shortcuts unless explicitly overridden
-        if (isInputField && !shortcut.preventDefault) {
-          continue;
+      // Find matching shortcut
+      for (const shortcut of shortcutsRef.current) {
+        const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
+        const ctrlMatch = (shortcut.ctrl ?? false) === (event.ctrlKey || event.metaKey);
+        const shiftMatch = (shortcut.shift ?? false) === event.shiftKey;
+        const altMatch = (shortcut.alt ?? false) === event.altKey;
+
+        if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
+          // Allow input fields to use their native shortcuts unless explicitly overridden
+          if (isInputField && !shortcut.preventDefault) {
+            continue;
+          }
+
+          // Prevent default browser behavior if requested
+          if (preventDefault || shortcut.preventDefault) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+
+          // Call the handler
+          shortcut.handler(event);
+          break; // Only trigger first matching shortcut
         }
-
-        // Prevent default browser behavior if requested
-        if (preventDefault || shortcut.preventDefault) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-
-        // Call the handler
-        shortcut.handler(event);
-        break; // Only trigger first matching shortcut
       }
-    }
-  }, [enabled, preventDefault]);
+    },
+    [enabled, preventDefault]
+  );
 
   useEffect(() => {
     if (enabled) {
@@ -96,18 +96,18 @@ export function useKeyboardShortcuts(
  */
 export function formatShortcut(shortcut: Omit<KeyboardShortcut, 'handler'>): string {
   const parts: string[] = [];
-  
+
   // Detect platform
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  
+
   if (shortcut.ctrl) parts.push(isMac ? '⌘' : 'Ctrl');
   if (shortcut.shift) parts.push('Shift');
   if (shortcut.alt) parts.push(isMac ? '⌥' : 'Alt');
   if (shortcut.meta) parts.push('Meta');
-  
+
   // Capitalize key for display
   const key = shortcut.key.length === 1 ? shortcut.key.toUpperCase() : shortcut.key;
   parts.push(key);
-  
+
   return parts.join('+');
 }

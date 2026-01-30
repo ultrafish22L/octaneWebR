@@ -37,11 +37,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       <div className="about-dialog">
         <div className="modal-header">
           <h2 id="about-title">About OctaneRender</h2>
-          <button
-            className="modal-close-button"
-            onClick={onClose}
-            aria-label="Close about dialog"
-          >
+          <button className="modal-close-button" onClick={onClose} aria-label="Close about dialog">
             ✕
           </button>
         </div>
@@ -56,8 +52,8 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
             <div className="about-description">
               <p>
-                <strong>OctaneWebR</strong> is a pixel-perfect React/TypeScript UI clone of 
-                Octane Render Studio Standalone Edition with real-time gRPC connectivity.
+                <strong>OctaneWebR</strong> is a pixel-perfect React/TypeScript UI clone of Octane
+                Render Studio Standalone Edition with real-time gRPC connectivity.
               </p>
             </div>
 
@@ -72,19 +68,36 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
             <div className="about-credits">
               <p className="copyright">
-                © OTOY Inc. 2014-2025. All rights reserved.<br />
-                <strong>OctaneRender®</strong> and <strong>OTOY®</strong> are registered trademarks of OTOY Inc.
+                © OTOY Inc. 2014-2025. All rights reserved.
+                <br />
+                <strong>OctaneRender®</strong> and <strong>OTOY®</strong> are registered trademarks
+                of OTOY Inc.
               </p>
             </div>
 
             <div className="about-links">
-              <a href="https://home.otoy.com" target="_blank" rel="noopener noreferrer" className="about-link">
+              <a
+                href="https://home.otoy.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="about-link"
+              >
                 OTOY Home
               </a>
-              <a href="https://docs.otoy.com/standaloneSE/CoverPage.html" target="_blank" rel="noopener noreferrer" className="about-link">
+              <a
+                href="https://docs.otoy.com/standaloneSE/CoverPage.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="about-link"
+              >
                 Documentation
               </a>
-              <a href="https://github.com/ultrafish22L/grpcSamples" target="_blank" rel="noopener noreferrer" className="about-link">
+              <a
+                href="https://github.com/ultrafish22L/grpcSamples"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="about-link"
+              >
                 GitHub
               </a>
             </div>

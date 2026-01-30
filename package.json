@@ -13,7 +13,13 @@
     "build:client": "tsc && vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "build:legacy": "npm run build:client && npm run build:server",
-    "start": "node server/dist/index.js"
+    "start": "node server/dist/index.js",
+    "format": "prettier --write \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",
+    "format:check": "prettier --check \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",
+    "lint": "eslint client/src",
+    "lint:fix": "eslint client/src --fix",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "@improbable-eng/grpc-web": "^0.15.0",
@@ -26,6 +32,7 @@
     "react-window": "^2.2.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@types/cors": "^2.8.17",
@@ -35,15 +42,35 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^17.2.0",
     "grpc_tools_node_protoc_ts": "^5.3.3",
     "grpc-tools": "^1.12.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "nodemon": "^3.0.2",
+    "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "ts-protoc-gen": "^0.15.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "ws": "^8.18.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,json,md}": [
+      "prettier --write"
+    ]
   }
 }

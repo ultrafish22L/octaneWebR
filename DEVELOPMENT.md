@@ -28,7 +28,7 @@ Frontend:
 - TypeScript (strict mode, no 'any' types)
 - Vite (build tool, dev server)
 - ReactFlow v12 (node graph editor)
-- Zustand (state management)
+- React Context API (state management via OctaneProvider, EditActionsProvider)
 - CSS Modules + CSS Variables (theming)
 
 Backend:

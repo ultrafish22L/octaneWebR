@@ -2,7 +2,7 @@
  * Node Context Menu Component
  * Context menu displayed when right-clicking on nodes in the graph editor
  * Provides full node operations matching Octane SE
- * 
+ *
  * ReactFlow v12 Best Practices:
  * - Uses createPortal for proper rendering outside parent DOM
  * - Screen boundary detection to keep menu visible
@@ -100,24 +100,60 @@ export function NodeContextMenu({
     }
   }, [x, y]);
 
-  const handleMenuItemClick = useCallback((action: () => void, disabled = false) => {
-    if (disabled) return;
-    action();
-    onClose();
-  }, [onClose]);
+  const handleMenuItemClick = useCallback(
+    (action: () => void, disabled = false) => {
+      if (disabled) return;
+      action();
+      onClose();
+    },
+    [onClose]
+  );
 
   // Memoized menu item handlers
-  const handleRenderClick = useCallback(() => handleMenuItemClick(onRenderNode), [handleMenuItemClick, onRenderNode]);
-  const handleSaveClick = useCallback(() => handleMenuItemClick(onSaveAsMacro), [handleMenuItemClick, onSaveAsMacro]);
-  const handleCutClick = useCallback(() => handleMenuItemClick(onCut), [handleMenuItemClick, onCut]);
-  const handleCopyClick = useCallback(() => handleMenuItemClick(onCopy), [handleMenuItemClick, onCopy]);
-  const handlePasteClick = useCallback(() => handleMenuItemClick(onPaste), [handleMenuItemClick, onPaste]);
-  const handleDeleteClick = useCallback(() => handleMenuItemClick(onDeleteSelected), [handleMenuItemClick, onDeleteSelected]);
-  const handleCollapseClick = useCallback(() => handleMenuItemClick(onCollapseItems), [handleMenuItemClick, onCollapseItems]);
-  const handleExpandClick = useCallback(() => handleMenuItemClick(onExpandItems), [handleMenuItemClick, onExpandItems]);
-  const handleGroupClick = useCallback(() => handleMenuItemClick(onGroupItems, selectedNodeCount < 2), [handleMenuItemClick, onGroupItems, selectedNodeCount]);
-  const handleShowInOutlinerClick = useCallback(() => handleMenuItemClick(onShowInOutliner), [handleMenuItemClick, onShowInOutliner]);
-  const handleShowInLuaBrowserClick = useCallback(() => handleMenuItemClick(onShowInLuaBrowser), [handleMenuItemClick, onShowInLuaBrowser]);
+  const handleRenderClick = useCallback(
+    () => handleMenuItemClick(onRenderNode),
+    [handleMenuItemClick, onRenderNode]
+  );
+  const handleSaveClick = useCallback(
+    () => handleMenuItemClick(onSaveAsMacro),
+    [handleMenuItemClick, onSaveAsMacro]
+  );
+  const handleCutClick = useCallback(
+    () => handleMenuItemClick(onCut),
+    [handleMenuItemClick, onCut]
+  );
+  const handleCopyClick = useCallback(
+    () => handleMenuItemClick(onCopy),
+    [handleMenuItemClick, onCopy]
+  );
+  const handlePasteClick = useCallback(
+    () => handleMenuItemClick(onPaste),
+    [handleMenuItemClick, onPaste]
+  );
+  const handleDeleteClick = useCallback(
+    () => handleMenuItemClick(onDeleteSelected),
+    [handleMenuItemClick, onDeleteSelected]
+  );
+  const handleCollapseClick = useCallback(
+    () => handleMenuItemClick(onCollapseItems),
+    [handleMenuItemClick, onCollapseItems]
+  );
+  const handleExpandClick = useCallback(
+    () => handleMenuItemClick(onExpandItems),
+    [handleMenuItemClick, onExpandItems]
+  );
+  const handleGroupClick = useCallback(
+    () => handleMenuItemClick(onGroupItems, selectedNodeCount < 2),
+    [handleMenuItemClick, onGroupItems, selectedNodeCount]
+  );
+  const handleShowInOutlinerClick = useCallback(
+    () => handleMenuItemClick(onShowInOutliner),
+    [handleMenuItemClick, onShowInOutliner]
+  );
+  const handleShowInLuaBrowserClick = useCallback(
+    () => handleMenuItemClick(onShowInLuaBrowser),
+    [handleMenuItemClick, onShowInLuaBrowser]
+  );
 
   // Render to document.body using portal
   return createPortal(
@@ -132,18 +168,12 @@ export function NodeContextMenu({
       }}
     >
       {/* Render */}
-      <div
-        className="context-menu-item disabled"
-        onClick={handleRenderClick}
-      >
+      <div className="context-menu-item disabled" onClick={handleRenderClick}>
         Render
       </div>
 
       {/* Save... */}
-      <div
-        className="context-menu-item disabled"
-        onClick={handleSaveClick}
-      >
+      <div className="context-menu-item disabled" onClick={handleSaveClick}>
         Save...
       </div>
 
@@ -151,26 +181,17 @@ export function NodeContextMenu({
       <div className="context-menu-separator" />
 
       {/* Cut */}
-      <div
-        className="context-menu-item"
-        onClick={handleCutClick}
-      >
+      <div className="context-menu-item" onClick={handleCutClick}>
         Cut
       </div>
 
       {/* Copy */}
-      <div
-        className="context-menu-item"
-        onClick={handleCopyClick}
-      >
+      <div className="context-menu-item" onClick={handleCopyClick}>
         Copy
       </div>
 
       {/* Paste */}
-      <div
-        className="context-menu-item"
-        onClick={handlePasteClick}
-      >
+      <div className="context-menu-item" onClick={handlePasteClick}>
         Paste
       </div>
 
@@ -178,10 +199,7 @@ export function NodeContextMenu({
       <div className="context-menu-separator" />
 
       {/* Delete */}
-      <div
-        className="context-menu-item"
-        onClick={handleDeleteClick}
-      >
+      <div className="context-menu-item" onClick={handleDeleteClick}>
         Delete
       </div>
 
@@ -189,18 +207,12 @@ export function NodeContextMenu({
       <div className="context-menu-separator" />
 
       {/* Collapse items */}
-      <div
-        className="context-menu-item"
-        onClick={handleCollapseClick}
-      >
+      <div className="context-menu-item" onClick={handleCollapseClick}>
         Collapse items
       </div>
 
       {/* Expand items */}
-      <div
-        className="context-menu-item"
-        onClick={handleExpandClick}
-      >
+      <div className="context-menu-item" onClick={handleExpandClick}>
         Expand items
       </div>
 
@@ -216,18 +228,12 @@ export function NodeContextMenu({
       <div className="context-menu-separator" />
 
       {/* Show in Outliner */}
-      <div
-        className="context-menu-item"
-        onClick={handleShowInOutlinerClick}
-      >
+      <div className="context-menu-item" onClick={handleShowInOutlinerClick}>
         Show in Outliner
       </div>
 
       {/* Show in Lua API browser */}
-      <div
-        className="context-menu-item disabled"
-        onClick={handleShowInLuaBrowserClick}
-      >
+      <div className="context-menu-item disabled" onClick={handleShowInLuaBrowserClick}>
         Show in Lua API browser
       </div>
     </div>,

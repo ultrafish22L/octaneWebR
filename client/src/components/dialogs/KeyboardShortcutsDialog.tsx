@@ -26,20 +26,18 @@ const SHORTCUTS: ShortcutSection[] = [
       { keys: 'Ctrl+O', description: 'Open scene' },
       { keys: 'Ctrl+S', description: 'Save scene' },
       { keys: 'Ctrl+Shift+S', description: 'Save scene as' },
-    ]
+    ],
   },
   {
     title: 'View',
     shortcuts: [
       { keys: 'F5', description: 'Refresh scene' },
       { keys: 'F11', description: 'Toggle fullscreen' },
-    ]
+    ],
   },
   {
     title: 'Help',
-    shortcuts: [
-      { keys: 'F1', description: 'Open documentation' },
-    ]
+    shortcuts: [{ keys: 'F1', description: 'Open documentation' }],
   },
 ];
 
@@ -62,7 +60,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog keyboard-shortcuts-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-dialog keyboard-shortcuts-dialog" onClick={e => e.stopPropagation()}>
         <header className="modal-header">
           <h2>⌨️ Keyboard Shortcuts</h2>
           <button className="close-button" onClick={onClose} aria-label="Close dialog">
@@ -81,9 +79,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
                       <td className="shortcut-keys">
                         <kbd>{shortcut.keys}</kbd>
                       </td>
-                      <td className="shortcut-description">
-                        {shortcut.description}
-                      </td>
+                      <td className="shortcut-description">{shortcut.description}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+*.min.js
+*.min.css
+server/proto/
+server/proto_old/
+package-lock.json
+pnpm-lock.yaml

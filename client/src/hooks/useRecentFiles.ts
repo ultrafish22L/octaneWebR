@@ -58,7 +58,7 @@ export function useRecentFiles() {
     const newFile: RecentFile = {
       path,
       name: fileName,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     setRecentFiles(currentFiles => {
@@ -85,13 +85,16 @@ export function useRecentFiles() {
   /**
    * Remove a file from recent files list
    */
-  const removeRecentFile = useCallback((path: string) => {
-    setRecentFiles(currentFiles => {
-      const updated = currentFiles.filter(f => f.path !== path);
-      saveToStorage(updated);
-      return updated;
-    });
-  }, [saveToStorage]);
+  const removeRecentFile = useCallback(
+    (path: string) => {
+      setRecentFiles(currentFiles => {
+        const updated = currentFiles.filter(f => f.path !== path);
+        saveToStorage(updated);
+        return updated;
+      });
+    },
+    [saveToStorage]
+  );
 
   /**
    * Clear all recent files
@@ -112,6 +115,6 @@ export function useRecentFiles() {
     addRecentFile,
     removeRecentFile,
     clearRecentFiles,
-    getRecentFilePaths
+    getRecentFilePaths,
   };
 }

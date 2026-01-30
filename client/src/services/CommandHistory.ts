@@ -18,11 +18,11 @@ export class CommandHistory {
 
   /**
    * Execute a command and add it to history
-   * 
+   *
    * Undo/Redo branching behavior:
    * If user undoes to state A, then performs new action B, all undone states
    * after A are discarded. This prevents complex tree-based history.
-   * 
+   *
    * Example: [Create, Delete, Move] -> Undo Move -> Copy
    * Result:  [Create, Delete, Copy] (Move is gone)
    */

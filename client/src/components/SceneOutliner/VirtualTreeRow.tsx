@@ -16,7 +16,7 @@ export const getNodeIcon = (node: SceneNode): string => {
   if (node.type === 'SceneRoot' || node.name === 'Scene') {
     return '/icons/SCENE node.png';
   }
-  
+
   // Use getIconForType for consistent icon mapping
   const outType = String(node.type || node.outType || 'unknown');
   return getIconForType(outType, node.name);
@@ -37,23 +37,25 @@ export interface VirtualTreeRowProps {
  * Virtual Tree Row Component
  * React-window v2 rowComponent receives built-in props + custom props from rowProps
  */
-export function VirtualTreeRow(props: {
-  ariaAttributes: {
-    "aria-posinset": number;
-    "aria-setsize": number;
-    role: "listitem";
-  };
-  index: number;
-  style: React.CSSProperties;
-} & VirtualTreeRowProps): React.ReactElement | null {
+export function VirtualTreeRow(
+  props: {
+    ariaAttributes: {
+      'aria-posinset': number;
+      'aria-setsize': number;
+      role: 'listitem';
+    };
+    index: number;
+    style: React.CSSProperties;
+  } & VirtualTreeRowProps
+): React.ReactElement | null {
   const { index, style, flattenedNodes, selectedHandle, onSelect, onContextMenu, onToggle } = props;
   const flatNode = flattenedNodes[index];
-  
+
   if (!flatNode) return null;
-  
+
   const { node, depth, hasChildren, isExpanded, uniqueKey } = flatNode;
   const isSelected = selectedHandle === node.handle;
-  
+
   return (
     <div
       style={style}
@@ -65,7 +67,7 @@ export function VirtualTreeRow(props: {
           onSelect(node);
         }
       }}
-      onContextMenu={(e) => {
+      onContextMenu={e => {
         // Don't show context menu for synthetic Scene root
         if (node.type !== 'SceneRoot') {
           onContextMenu(node, e);
@@ -76,7 +78,7 @@ export function VirtualTreeRow(props: {
         {hasChildren ? (
           <span
             className={`node-toggle ${isExpanded ? 'expanded' : 'collapsed'}`}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               onToggle(uniqueKey);
             }}
@@ -87,13 +89,13 @@ export function VirtualTreeRow(props: {
           <span className="node-spacer"></span>
         )}
 
-        <img 
-          src={getNodeIcon(node)} 
-          alt="" 
+        <img
+          src={getNodeIcon(node)}
+          alt=""
           className="node-icon"
           width={16}
           height={16}
-          onError={(e) => {
+          onError={e => {
             // Fallback to category icon if specific icon not found
             (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
           }}

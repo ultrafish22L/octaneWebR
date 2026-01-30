@@ -1,10 +1,10 @@
 /**
  * Search Dialog Component
  * Implements Ctrl+F search functionality per Octane SE manual
- * 
- * Manual Reference: "Search Dialog - Pressing CTRL+F brings up the Search Dialog, 
+ *
+ * Manual Reference: "Search Dialog - Pressing CTRL+F brings up the Search Dialog,
  * which finds and selects nodes and dynamic pins that contain the entered search string."
- * 
+ *
  * Features:
  * - Opens on Ctrl+F keyboard shortcut
  * - Searches node names and pin names
@@ -69,11 +69,11 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
     const term = searchTerm.toLowerCase();
     const matches: SearchResult[] = [];
 
-    nodes.forEach((node) => {
+    nodes.forEach(node => {
       const data = node.data as OctaneNodeData;
       const nodeName = data.sceneNode.name?.toLowerCase() || '';
       const nodeTypeName = data.sceneNode.nodeInfo?.nodeTypeName?.toLowerCase() || '';
-      
+
       // Search in node name (highest priority)
       if (nodeName.includes(term)) {
         matches.push({ node, matchType: 'nodeName' });
@@ -89,7 +89,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
       // Search in pin names (dynamic pins)
       const inputs = data.sceneNode.children || [];
       const matchedPins: string[] = [];
-      
+
       inputs.forEach((pin: any) => {
         const pinName = pin.name?.toLowerCase() || '';
         if (pinName.includes(term)) {
@@ -107,7 +107,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
 
   // Select all matching nodes
   const handleSelectAll = () => {
-    const nodeIds = results.map((result) => result.node.id);
+    const nodeIds = results.map(result => result.node.id);
     onSelectNodes(nodeIds);
     onClose();
   };
@@ -168,7 +168,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
           ref={inputRef}
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
           placeholder="Enter search term..."
           style={{
             width: '100%',
@@ -181,13 +181,13 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
             outline: 'none',
             marginBottom: '15px',
           }}
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             if (e.key === 'Enter' && results.length > 0) {
               handleSelectAll();
             }
           }}
-                              autoComplete="off"
-                      name="text-0"
+          autoComplete="off"
+          name="text-0"
         />
 
         {/* Results */}
@@ -200,7 +200,9 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
         >
           {searchTerm.trim() ? (
             results.length > 0 ? (
-              <>Found {results.length} matching node{results.length !== 1 ? 's' : ''}</>
+              <>
+                Found {results.length} matching node{results.length !== 1 ? 's' : ''}
+              </>
             ) : (
               <>No matches found</>
             )
@@ -221,10 +223,10 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               marginBottom: '15px',
             }}
           >
-            {results.map((result) => {
+            {results.map(result => {
               const { node, matchType, matchedPins } = result;
               const data = node.data as OctaneNodeData;
-              
+
               // Format match context message
               let matchContext = '';
               if (matchType === 'nodeName') {
@@ -234,7 +236,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               } else if (matchType === 'pinName' && matchedPins) {
                 matchContext = `📍 Matched in ${matchedPins.length} pin${matchedPins.length > 1 ? 's' : ''}: ${matchedPins.slice(0, 3).join(', ')}${matchedPins.length > 3 ? '...' : ''}`;
               }
-              
+
               return (
                 <div
                   key={node.id}
@@ -249,10 +251,10 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                     onSelectNodes([node.id]);
                     onClose();
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor = '#333';
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
@@ -290,10 +292,10 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               color: '#ddd',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = '#555';
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.backgroundColor = '#444';
             }}
           >
@@ -312,10 +314,10 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                 cursor: 'pointer',
                 fontWeight: 'bold',
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.backgroundColor = '#ffcd38';
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = '#ffc107';
               }}
             >

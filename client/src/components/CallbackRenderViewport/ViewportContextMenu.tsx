@@ -1,10 +1,10 @@
 /**
  * Viewport Context Menu Component
- * 
+ *
  * Context menu for the Render Viewport matching Octane SE behavior:
  * - Appears on right-click (without drag)
  * - Right-click + drag = camera pan (no menu)
- * 
+ *
  * Actions per Octane SE Manual:
  * - Copy to Clipboard
  * - Save Render
@@ -39,7 +39,7 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
   onExportPasses,
   onSetBackgroundImage,
   onToggleLockViewport,
-  viewportLocked
+  viewportLocked,
 }) => {
   if (!visible) return null;
 
@@ -58,15 +58,15 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 999
+          zIndex: 999,
         }}
         onClick={onClose}
-        onContextMenu={(e) => {
+        onContextMenu={e => {
           e.preventDefault();
           onClose();
         }}
       />
-      
+
       {/* Context Menu */}
       <div
         className="context-menu"
@@ -74,33 +74,49 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
           position: 'fixed',
           left: `${x}px`,
           top: `${y}px`,
-          zIndex: 1000
+          zIndex: 1000,
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div className="context-menu-item" onClick={() => handleMenuClick(onCopyToClipboard)}>
-          <img src={getGeneralUIIcon('COPY_TO_CLIPBOARD_IMAGE')} alt="" style={{ width: 14, height: 14, marginRight: 8 }} />
+          <img
+            src={getGeneralUIIcon('COPY_TO_CLIPBOARD_IMAGE')}
+            alt=""
+            style={{ width: 14, height: 14, marginRight: 8 }}
+          />
           Copy to Clipboard
         </div>
         <div className="context-menu-item" onClick={() => handleMenuClick(onSaveRender)}>
-          <img src={getGeneralUIIcon('LOAD_GENERAL')} alt="" style={{ width: 14, height: 14, marginRight: 8 }} />
+          <img
+            src={getGeneralUIIcon('LOAD_GENERAL')}
+            alt=""
+            style={{ width: 14, height: 14, marginRight: 8 }}
+          />
           Save Render
         </div>
         <div className="context-menu-item" onClick={() => handleMenuClick(onExportPasses)}>
-          <img src={getGeneralUIIcon('LOAD_ALL')} alt="" style={{ width: 14, height: 14, marginRight: 8 }} />
+          <img
+            src={getGeneralUIIcon('LOAD_ALL')}
+            alt=""
+            style={{ width: 14, height: 14, marginRight: 8 }}
+          />
           Export Render Passes
         </div>
         <div className="context-menu-separator" />
         <div className="context-menu-item" onClick={() => handleMenuClick(onSetBackgroundImage)}>
-          <img src={getGeneralUIIcon('BACKGROUND')} alt="" style={{ width: 14, height: 14, marginRight: 8 }} />
+          <img
+            src={getGeneralUIIcon('BACKGROUND')}
+            alt=""
+            style={{ width: 14, height: 14, marginRight: 8 }}
+          />
           Set Background Image
         </div>
         <div className="context-menu-separator" />
         <div className="context-menu-item" onClick={() => handleMenuClick(onToggleLockViewport)}>
-          <img 
-            src={viewportLocked ? getWindowControlIcon('UNLOCK') : getWindowControlIcon('LOCK')} 
-            alt="" 
-            style={{ width: 14, height: 14, marginRight: 8 }} 
+          <img
+            src={viewportLocked ? getWindowControlIcon('UNLOCK') : getWindowControlIcon('LOCK')}
+            alt=""
+            style={{ width: 14, height: 14, marginRight: 8 }}
           />
           {viewportLocked ? 'Unlock Viewport' : 'Lock Viewport'}
         </div>

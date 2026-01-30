@@ -88,18 +88,12 @@ export function SceneOutlinerContextMenu({
       }}
     >
       {/* Render */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onRender)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onRender)}>
         Render
       </div>
 
       {/* Save... */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onSave)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onSave)}>
         Save...
       </div>
 
@@ -107,18 +101,12 @@ export function SceneOutlinerContextMenu({
       <div className="context-menu-separator" />
 
       {/* Cut */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onCut)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onCut)}>
         Cut
       </div>
 
       {/* Copy */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onCopy)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onCopy)}>
         Copy
       </div>
 
@@ -131,10 +119,7 @@ export function SceneOutlinerContextMenu({
       </div>
 
       {/* Fill empty node pins */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onFillEmptyPins)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onFillEmptyPins)}>
         Fill empty node pins
       </div>
 
@@ -142,10 +127,7 @@ export function SceneOutlinerContextMenu({
       <div className="context-menu-separator" />
 
       {/* Delete */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onDelete)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onDelete)}>
         Delete
       </div>
 
@@ -153,18 +135,12 @@ export function SceneOutlinerContextMenu({
       <div className="context-menu-separator" />
 
       {/* Show in Graph Editor */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onShowInGraphEditor)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onShowInGraphEditor)}>
         Show in Graph Editor
       </div>
 
       {/* Show in Lua API browser */}
-      <div
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onShowInLuaBrowser)}
-      >
+      <div className="context-menu-item" onClick={() => handleMenuItemClick(onShowInLuaBrowser)}>
         Show in Lua API browser
       </div>
     </div>,

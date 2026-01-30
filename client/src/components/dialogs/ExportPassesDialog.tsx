@@ -54,10 +54,10 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
       Logger.debug(`📤 Exporting render passes to: ${outputDirectory}`);
       Logger.debug(`📄 Filename prefix: ${filenamePrefix}`);
       Logger.debug(`🖼️ Format: ${format}`);
-      
+
       // Call Octane API to export all passes
       const success = await client.exportRenderPasses(outputDirectory, filenamePrefix, format);
-      
+
       if (success) {
         Logger.debug('✅ Render passes exported successfully');
         onClose();
@@ -76,10 +76,12 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog export-passes-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-dialog export-passes-dialog" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Export Render Passes</h2>
-          <button className="modal-close-btn" onClick={onClose}>×</button>
+          <button className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
@@ -90,11 +92,11 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
               id="output-directory"
               className="form-control"
               value={outputDirectory}
-              onChange={(e) => setOutputDirectory(e.target.value)}
+              onChange={e => setOutputDirectory(e.target.value)}
               placeholder="Enter directory path"
               disabled={exporting}
-                                      autoComplete="off"
-                          name="form-control-0"
+              autoComplete="off"
+              name="form-control-0"
             />
             <small className="form-text">Directory where all pass files will be saved</small>
           </div>
@@ -106,11 +108,11 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
               id="filename-prefix"
               className="form-control"
               value={filenamePrefix}
-              onChange={(e) => setFilenamePrefix(e.target.value)}
+              onChange={e => setFilenamePrefix(e.target.value)}
               placeholder="Enter prefix"
               disabled={exporting}
-                                      autoComplete="off"
-                          name="form-control-1"
+              autoComplete="off"
+              name="form-control-1"
             />
             <small className="form-text">Each pass will be saved as: prefix_passname.ext</small>
           </div>
@@ -121,9 +123,9 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
               id="format"
               className="form-control"
               value={format}
-              onChange={(e) => setFormat(e.target.value as ImageFormat)}
+              onChange={e => setFormat(e.target.value as ImageFormat)}
               disabled={exporting}
-                                      name="form-control-2"
+              name="form-control-2"
             >
               <option value="PNG">PNG (Lossless, Alpha support)</option>
               <option value="JPG">JPG (Smaller file size)</option>
@@ -133,22 +135,30 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
           </div>
 
           <div className="form-info">
-            <p>💡 <strong>Tip:</strong> This will export all enabled render passes (Beauty, Diffuse, Specular, etc.) as separate files.</p>
-            <p>📁 Example output: <code>{outputDirectory}/{filenamePrefix}_beauty.{format.toLowerCase()}</code></p>
+            <p>
+              💡 <strong>Tip:</strong> This will export all enabled render passes (Beauty, Diffuse,
+              Specular, etc.) as separate files.
+            </p>
+            <p>
+              📁 Example output:{' '}
+              <code>
+                {outputDirectory}/{filenamePrefix}_beauty.{format.toLowerCase()}
+              </code>
+            </p>
           </div>
 
-          {errorMessage && (
-            <div className="error-message">
-              ⚠️ {errorMessage}
-            </div>
-          )}
+          {errorMessage && <div className="error-message">⚠️ {errorMessage}</div>}
         </div>
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose} disabled={exporting}>
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={handleExport} disabled={exporting || !connected}>
+          <button
+            className="btn btn-primary"
+            onClick={handleExport}
+            disabled={exporting || !connected}
+          >
             {exporting ? 'Exporting...' : 'Export All Passes'}
           </button>
         </div>

@@ -17,7 +17,7 @@ export const TOOLBAR_ICON_MAP: ToolbarIconMapping = {
   'pause-render': 'PAUSE window.png',
   'stop-render': 'STOP window.png',
   'restart-render': 'REWIND window.png', // Using STOP as restart placeholder
-  
+
   // Render Modes
   'realtime-mode': 'RENDER TARGET node.png',
   'real-time-render': 'real_time.png',
@@ -27,7 +27,7 @@ export const TOOLBAR_ICON_MAP: ToolbarIconMapping = {
   'subsample-2x2': '2x.png',
   'subsample-4x4': '4x.png',
   'decal-wireframe': 'draw_decal_wireframe.png',
-  
+
   // Camera Tools
   'pick-focus': 'MOUSE pipette focus.png',
   'focus-picker': 'PICK af.png',
@@ -45,19 +45,19 @@ export const TOOLBAR_ICON_MAP: ToolbarIconMapping = {
   'film-region-picker': 'PICK film region.png',
   'camera-presets': 'camera_view_presets.png',
   'recenter-view': 'RECENTER window.png',
-  'reset-camera': 'reset_camera.png', 
-  
+  'reset-camera': 'reset_camera.png',
+
   // Export and Save
   'copy-clipboard': 'COPY TO CLIPBOARD image.png',
   'save-render': 'SAVE RENDER general.png',
   'export-passes': 'render_passes_export.png',
   'background-image': 'Background.png',
-  
+
   // Viewport Controls
   'viewport-resolution-lock': 'LOCK_RES-3 window.png',
   'lock-viewport': 'LOCK window.png',
   'unlock-viewport': 'UNLOCK window.png',
-  
+
   // Object Manipulation (Gizmos)
   'object-control-alignment-world': 'GIZMO world mode.png',
   'object-control-alignment-local': 'GIZMO local mode.png',
@@ -66,7 +66,7 @@ export const TOOLBAR_ICON_MAP: ToolbarIconMapping = {
   'rotate-gizmo': 'GIZMO rotate frame.png',
   'scale-gizmo': 'GIZMO scale frame.png',
   'world-coordinate': 'GIZMO world indicator.png',
-  
+
   // Render Priority
   'render-priority-low': 'PRIORITY low.png',
   'render-priority-normal': 'PRIORITY med.png',

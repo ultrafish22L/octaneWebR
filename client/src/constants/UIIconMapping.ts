@@ -1,10 +1,10 @@
 /**
  * UI Icon Mapping
  * Maps UI controls, window elements, editor panels, and interaction tools to Octane icons
- * 
+ *
  * Icon sources:
  * - Window controls: client/public/icons/*window.png
- * - Editor types: client/public/icons/*editor.png  
+ * - Editor types: client/public/icons/*editor.png
  * - Preview modes: client/public/icons/*PREVIEW*.png
  * - Mini controls: client/public/icons/MINI*.png
  * - Picker tools: client/public/icons/MOUSE*.png, PICK*.png
@@ -21,22 +21,22 @@ export const WindowControlIcons = {
   PAUSE: 'PAUSE window.png',
   STOP: 'STOP window.png',
   REWIND: 'REWIND window.png',
-  
+
   // Window size controls
   MINIMIZE: 'MINIMIZE window.png',
   MAXIMIZE: 'MAXIMIZE window.png',
-  
+
   // View controls
   RECENTER: 'RECENTER window.png',
   RULERS: 'RULERS window.png',
   STEREO: 'STEREO window.png',
   SHOW_HOME: 'SHOW HOME window.png',
-  
+
   // Lock controls
   LOCK: 'LOCK window.png',
   UNLOCK: 'UNLOCK window.png',
   LOCK_RES: 'LOCK_RES-3 window.png',
-  
+
   // Node graph controls
   COLLAPSE_NODES: 'COLLAPSE NODES window.png',
   UNCOLLAPSE_NODES: 'UNCOLLAPSE NODES window.png',
@@ -44,13 +44,13 @@ export const WindowControlIcons = {
   UNFOLD_GRAPH_RECURSIVELY: 'unfold_graph_recursively.png',
   SNAP_TO_GRID: 'grid snap.png',
   GRID_TOGGLE: 'toggle grid.png',
-  
+
   // Network
   NETWORK: 'NETWORK window.png',
-  
+
   // AF (Adaptive Focus?)
   AF: 'AF window.png',
-  
+
   // Clay modes
   CLAY: 'CLAY window.png',
   CLAY_OFF: 'CLAY OFF window.png',
@@ -78,13 +78,13 @@ export const PreviewModeIcons = {
   MESH_PREVIEW: 'MESH_PREVIEW window.png',
   RENDER_TARGET_PREVIEW: 'RENDER TARGET_PREVIEW window.png',
   TEXTURE_PREVIEW: 'TEXTURE_PREVIEW window.png',
-  
+
   // Material preview shapes
   MAT_PREVIEW_BALL: 'MAT_PREVIEW_BALL window.png',
   MAT_PREVIEW_BALL_CROP: 'MAT_PREVIEW_BALL_CROP window.png',
   MAT_PREVIEW_PLANE: 'MAT_PREVIEW_PLANE window.png',
   MAT_PREVIEW_PLANE_WITH_ALPHA: 'MAT_PREVIEW_PLANE_WITH_ALPHA window.png',
-  
+
   // Mini preview toggles
   MINI_PREVIEW_ON: 'MINI PREVIEW ON.png',
   MINI_PREVIEW_OFF: 'MINI PREVIEW OFF.png',
@@ -100,23 +100,23 @@ export const MiniControlIcons = {
   REMOVE: 'MINI REMOVE.png',
   EDIT: 'MINI EDIT.png',
   RUN: 'MINI run.png',
-  
+
   // Lock controls
   LOCK: 'MINI LOCK.png',
   UNLOCK: 'MINI UNLOCK.png',
-  
+
   // Tab controls
   TAB_CLOSE: 'MINI TAB CLOSE BRIGHT.png',
-  
+
   // Distribution modes
   LINEAR_DISTRIBUTION: 'MINI LINEAR DISTRIBUTION.png',
   LOG_DISTRIBUTION: 'MINI LOG DISTRIBUTION.png',
-  
+
   // Node pins
   NODE_INPUT_PINS: 'mini node inputpins.png',
   NODE_OUTPUT_PINS: 'mini node outputpins.png',
   NODE_OUT_CONNECTION: 'mini node outconnection.png',
-  
+
   // Other
   COMPATIBILITY: 'mini_compatibility.png',
 } as const;
@@ -136,7 +136,7 @@ export const PickerToolIcons = {
   PIPETTE_ZOOM: 'MOUSE pipette zoom.png',
   PIPETTE_CRYPTOMATTE_ADD: 'MOUSE_pipette_cryptomatte_add.png',
   PIPETTE_CRYPTOMATTE_REMOVE: 'MOUSE_pipette_cryptomatte_remove.png',
-  
+
   // Pick tools
   PICK_AF: 'PICK af.png',
   PICK_FILM_REGION: 'PICK film region.png',
@@ -154,7 +154,7 @@ export const GizmoIcons = {
   MOVE_FRAME: 'GIZMO move frame.png',
   ROTATE_FRAME: 'GIZMO rotate frame.png',
   SCALE_FRAME: 'GIZMO scale frame.png',
-  
+
   // Coordinate space modes
   LOCAL_MODE: 'GIZMO local mode.png',
   WORLD_MODE: 'GIZMO world mode.png',
@@ -169,14 +169,14 @@ export const GeneralUIIcons = {
   // Clipboard operations
   COPY_TO_CLIPBOARD_IMAGE: 'COPY TO CLIPBOARD image.png',
   COPY_TO_CLIPBOARD_TEXT: 'COPY_TO_CLIPBOARD text.png',
-  
+
   // File operations
   LOAD_GENERAL: 'LOAD general.png',
   LOAD_ALL: 'LOAD_all.png',
-  
+
   // Settings
   CUSTOMIZE_GENERAL: 'CUSTOMIZE general.png',
-  
+
   // Other
   CATEGORY: 'CATEGORY.png',
   BACKGROUND: 'Background.png',
@@ -238,7 +238,7 @@ export const RenderToolbarIcons = {
   RENDER_MODE_PMC: 'render mode PMC.png',
   RENDER_MODE_DIRECT_LIGHTING: 'render mode direct lighting.png',
   DECAL_WIREFRAME: 'decal-wireframe.png',
-  
+
   // Node graph controls (also in WindowControlIcons but here for render toolbar)
   SNAP_GRID: 'grid snap.png',
   TOGGLE_GRID: 'toggle grid.png',

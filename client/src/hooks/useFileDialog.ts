@@ -21,43 +21,42 @@ export function useFileDialog() {
   /**
    * Show native file open dialog
    */
-  const openFileDialog = useCallback(async (options: FileDialogOptions = {}): Promise<FileList | null> => {
-    const {
-      accept = '*/*',
-      multiple = false,
-      directory = false
-    } = options;
+  const openFileDialog = useCallback(
+    async (options: FileDialogOptions = {}): Promise<FileList | null> => {
+      const { accept = '*/*', multiple = false, directory = false } = options;
 
-    return new Promise((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = accept;
-      input.multiple = multiple;
+      return new Promise(resolve => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = accept;
+        input.multiple = multiple;
 
-      if (directory) {
-        input.setAttribute('webkitdirectory', 'true');
-      }
+        if (directory) {
+          input.setAttribute('webkitdirectory', 'true');
+        }
 
-      // Append to body (required for some browsers)
-      input.style.display = 'none';
-      document.body.appendChild(input);
+        // Append to body (required for some browsers)
+        input.style.display = 'none';
+        document.body.appendChild(input);
 
-      input.onchange = () => {
-        const files = input.files;
-        document.body.removeChild(input);
-        resolve(files && files.length > 0 ? files : null);
-      };
+        input.onchange = () => {
+          const files = input.files;
+          document.body.removeChild(input);
+          resolve(files && files.length > 0 ? files : null);
+        };
 
-      // Handle cancel
-      input.oncancel = () => {
-        document.body.removeChild(input);
-        resolve(null);
-      };
+        // Handle cancel
+        input.oncancel = () => {
+          document.body.removeChild(input);
+          resolve(null);
+        };
 
-      // Trigger dialog
-      input.click();
-    });
-  }, []);
+        // Trigger dialog
+        input.click();
+      });
+    },
+    []
+  );
 
   /**
    * Save file using browser download
@@ -122,6 +121,6 @@ export function useFileDialog() {
     saveFile,
     readFileAsText,
     readFileAsArrayBuffer,
-    readFileAsDataURL
+    readFileAsDataURL,
   };
 }

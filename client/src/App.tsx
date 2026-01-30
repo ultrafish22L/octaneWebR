@@ -1,7 +1,7 @@
 /**
  * OctaneWebR - React TypeScript Main Application
  * Port of octaneWeb with identical UI and functionality
- * 
+ *
  * Layout Structure (matching octaneWeb exactly):
  * - Menu Bar (top)
  * - App Layout (5-column x 3-row grid):
@@ -20,7 +20,10 @@ import { useResizablePanels } from './hooks/useResizablePanels';
 import { EditActionsProvider } from './contexts/EditActionsContext';
 import { MenuBar } from './components/MenuBar';
 import { ConnectionStatus } from './components/ConnectionStatus';
-import { CallbackRenderViewport, CallbackRenderViewportHandle } from './components/CallbackRenderViewport';
+import {
+  CallbackRenderViewport,
+  CallbackRenderViewportHandle,
+} from './components/CallbackRenderViewport';
 import { RenderToolbar } from './components/RenderToolbar';
 import { SceneOutliner } from './components/SceneOutliner';
 import { NodeInspector } from './components/NodeInspector';
@@ -40,25 +43,35 @@ function AppContent() {
   const [_isSyncing, setIsSyncing] = useState(false);
   const [showWorldCoord, setShowWorldCoord] = useState(true); // Display world coordinate axis
   const [viewportLocked, setViewportLocked] = useState(false); // Lock viewport controls
-  const [pickingMode, setPickingMode] = useState<'none' | 'focus' | 'whiteBalance' | 'material' | 'object' | 'cameraTarget' | 'renderRegion' | 'filmRegion'>('none');
+  const [pickingMode, setPickingMode] = useState<
+    | 'none'
+    | 'focus'
+    | 'whiteBalance'
+    | 'material'
+    | 'object'
+    | 'cameraTarget'
+    | 'renderRegion'
+    | 'filmRegion'
+  >('none');
   const [materialDatabaseVisible, setMaterialDatabaseVisible] = useState(false);
   const [saveRenderDialogOpen, setSaveRenderDialogOpen] = useState(false);
   const [exportPassesDialogOpen, setExportPassesDialogOpen] = useState(false);
-  
+
   // Panel visibility state
   const [panelVisibility, setPanelVisibility] = useState({
     renderViewport: true,
     nodeInspector: true,
     graphEditor: true,
-    sceneOutliner: true
+    sceneOutliner: true,
   });
 
   // Node Graph Editor toolbar state (Figure 10 buttons)
   const [gridVisible, setGridVisible] = useState(false); // Grid off by default
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [recenterViewCallback, setRecenterViewCallback] = useState<(() => void) | null>(null);
-  
-  const { panelSizes, handleSplitterMouseDown, containerRef, isDragging, resetPanelSizes } = useResizablePanels();
+
+  const { panelSizes, handleSplitterMouseDown, containerRef, isDragging, resetPanelSizes } =
+    useResizablePanels();
   const viewportRef = useRef<CallbackRenderViewportHandle>(null);
 
   // Scene tree change handler
@@ -141,18 +154,32 @@ function AppContent() {
   // Toggle viewport lock handler (for context menu)
   const handleToggleLockViewport = () => {
     setViewportLocked(prev => !prev);
-    Logger.debug(`🔒 App.tsx: Viewport lock toggled to ${!viewportLocked ? 'enabled' : 'disabled'}`);
+    Logger.debug(
+      `🔒 App.tsx: Viewport lock toggled to ${!viewportLocked ? 'enabled' : 'disabled'}`
+    );
   };
 
   // Set background image handler (for context menu)
   const handleSetBackgroundImage = () => {
     Logger.debug('🖼️  Set Background Image - TODO: Implement file picker');
     // TODO: Implement file picker and set background image
-    alert('Set Background Image: Feature coming soon!\n\nThis will allow you to set a background image visible through alpha channel.');
+    alert(
+      'Set Background Image: Feature coming soon!\n\nThis will allow you to set a background image visible through alpha channel.'
+    );
   };
 
   // Picking mode change handler
-  const handlePickingModeChange = (mode: 'none' | 'focus' | 'whiteBalance' | 'material' | 'object' | 'cameraTarget' | 'renderRegion' | 'filmRegion') => {
+  const handlePickingModeChange = (
+    mode:
+      | 'none'
+      | 'focus'
+      | 'whiteBalance'
+      | 'material'
+      | 'object'
+      | 'cameraTarget'
+      | 'renderRegion'
+      | 'filmRegion'
+  ) => {
     setPickingMode(mode);
     Logger.debug(`🎯 App.tsx: Picking mode changed to: ${mode}`);
   };
@@ -175,10 +202,12 @@ function AppContent() {
   };
 
   // Panel visibility toggle handler
-  const handleTogglePanelVisibility = (panel: 'renderViewport' | 'nodeInspector' | 'graphEditor' | 'sceneOutliner') => {
+  const handleTogglePanelVisibility = (
+    panel: 'renderViewport' | 'nodeInspector' | 'graphEditor' | 'sceneOutliner'
+  ) => {
     setPanelVisibility(prev => ({
       ...prev,
-      [panel]: !prev[panel]
+      [panel]: !prev[panel],
     }));
     Logger.debug(`👁️ Toggled ${panel} visibility`);
   };
@@ -186,15 +215,15 @@ function AppContent() {
   // Reset layout handler - resets all panels to visible and default sizes
   const handleResetLayout = () => {
     Logger.debug('↺ Resetting layout to defaults');
-    
+
     // Reset all panels to visible
     setPanelVisibility({
       renderViewport: true,
       nodeInspector: true,
       graphEditor: true,
-      sceneOutliner: true
+      sceneOutliner: true,
     });
-    
+
     // Reset panel sizes to defaults
     resetPanelSizes();
   };
@@ -202,15 +231,17 @@ function AppContent() {
   useEffect(() => {
     // Auto-connect on mount
     Logger.debug('🚀 OctaneWebR starting...');
-    connect().then(success => {
-      if (success) {
-        Logger.debug('✅ Auto-connected to server');
-      } else {
-        Logger.debug('⚠️ Could not connect to server');
-      }
-    }).catch(error => {
-      Logger.error('❌ App.tsx: connect() threw error:', error);
-    });
+    connect()
+      .then(success => {
+        if (success) {
+          Logger.debug('✅ Auto-connected to server');
+        } else {
+          Logger.debug('⚠️ Could not connect to server');
+        }
+      })
+      .catch(error => {
+        Logger.error('❌ App.tsx: connect() threw error:', error);
+      });
   }, [connect]);
 
   // Global context menu prevention (safety net)
@@ -219,7 +250,7 @@ function AppContent() {
       e.preventDefault();
       e.stopPropagation();
     };
-    
+
     document.addEventListener('contextmenu', handleContextMenu);
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
@@ -232,7 +263,7 @@ function AppContent() {
 
     const handleNodeDeleted = (event: NodeDeletedEvent) => {
       Logger.debug('🗑️ App: Node deleted event received:', event.handle);
-      
+
       // If selected node was deleted, clear selection (Node Inspector behavior)
       setSelectedNode(current => {
         if (current && current.handle === event.handle) {
@@ -246,7 +277,9 @@ function AppContent() {
     const handleRenderFailure = (data: any) => {
       Logger.error('❌ Render failure detected:', data);
       // TODO: Show user-facing error notification
-      alert('Render Failed: Octane encountered an error during rendering. Check console for details.');
+      alert(
+        'Render Failed: Octane encountered an error during rendering. Check console for details.'
+      );
     };
 
     const handleProjectManagerChanged = (data: any) => {
@@ -260,8 +293,10 @@ function AppContent() {
     client.on('nodeDeleted', handleNodeDeleted);
     client.on('OnRenderFailure', handleRenderFailure);
     client.on('OnProjectManagerChanged', handleProjectManagerChanged);
-    
-    Logger.debug('✅ Listening for callback events (nodeDeleted, OnRenderFailure, OnProjectManagerChanged)');
+
+    Logger.debug(
+      '✅ Listening for callback events (nodeDeleted, OnRenderFailure, OnProjectManagerChanged)'
+    );
 
     // Cleanup listener on unmount
     return () => {
@@ -276,14 +311,14 @@ function AppContent() {
     <div className="app-container">
       {/* Top Menu Bar */}
       <header className="menu-bar">
-        <MenuBar 
+        <MenuBar
           onSceneRefresh={handleSceneRefresh}
           onMaterialDatabaseOpen={handleMaterialDatabaseOpen}
           panelVisibility={panelVisibility}
           onTogglePanelVisibility={handleTogglePanelVisibility}
           onResetLayout={handleResetLayout}
         />
-        
+
         {/* Connection Status & Controls */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <ConnectionStatus />
@@ -291,27 +326,28 @@ function AppContent() {
       </header>
 
       {/* Main Application Layout */}
-      <main 
+      <main
         ref={containerRef}
         className={`app-layout ${isDragging ? 'resizing' : ''}`}
         style={{
-          gridTemplateColumns: panelVisibility.sceneOutliner && panelVisibility.nodeInspector
-            ? `${panelSizes.left}px 4px 1fr 4px ${panelSizes.right}px`
-            : panelVisibility.sceneOutliner
-            ? `${panelSizes.left}px 4px 1fr`
-            : panelVisibility.nodeInspector
-            ? `1fr 4px ${panelSizes.right}px`
-            : '1fr',
-          gridTemplateRows: panelVisibility.renderViewport && panelVisibility.graphEditor
-            ? `${panelSizes.top}px 4px 1fr`
-            : panelVisibility.renderViewport
-            ? '1fr'
-            : panelVisibility.graphEditor
-            ? '1fr'
-            : '1fr',
+          gridTemplateColumns:
+            panelVisibility.sceneOutliner && panelVisibility.nodeInspector
+              ? `${panelSizes.left}px 4px 1fr 4px ${panelSizes.right}px`
+              : panelVisibility.sceneOutliner
+                ? `${panelSizes.left}px 4px 1fr`
+                : panelVisibility.nodeInspector
+                  ? `1fr 4px ${panelSizes.right}px`
+                  : '1fr',
+          gridTemplateRows:
+            panelVisibility.renderViewport && panelVisibility.graphEditor
+              ? `${panelSizes.top}px 4px 1fr`
+              : panelVisibility.renderViewport
+                ? '1fr'
+                : panelVisibility.graphEditor
+                  ? '1fr'
+                  : '1fr',
         }}
       >
-        
         {/* Left Panel: Scene Outliner - spans ALL rows (full height to bottom) */}
         {panelVisibility.sceneOutliner && (
           <>
@@ -320,7 +356,7 @@ function AppContent() {
                 <h3>Scene outliner</h3>
               </div>
               <div className="panel-content">
-                <SceneOutliner 
+                <SceneOutliner
                   key={sceneRefreshTrigger}
                   selectedNode={selectedNode}
                   onNodeSelect={setSelectedNode}
@@ -331,7 +367,7 @@ function AppContent() {
             </aside>
 
             {/* Left Splitter - spans ALL rows (full height) */}
-            <div 
+            <div
               className="panel-splitter vertical left-splitter"
               onMouseDown={() => handleSplitterMouseDown('left')}
               style={{ gridRow: '1 / -1' }}
@@ -345,18 +381,26 @@ function AppContent() {
             <div className="viewport-header">
               <div className="viewport-title">Render viewport - Render target @ 100%</div>
               <div className="viewport-controls">
-                <button className="viewport-btn" title="Fit to Window">⊞</button>
-                <button className="viewport-btn" title="Actual Size">1:1</button>
-                <button className="viewport-btn" title="Zoom In">🔍+</button>
-                <button className="viewport-btn" title="Zoom Out">🔍-</button>
+                <button className="viewport-btn" title="Fit to Window">
+                  ⊞
+                </button>
+                <button className="viewport-btn" title="Actual Size">
+                  1:1
+                </button>
+                <button className="viewport-btn" title="Zoom In">
+                  🔍+
+                </button>
+                <button className="viewport-btn" title="Zoom Out">
+                  🔍-
+                </button>
               </div>
             </div>
-            
+
             <div className="viewport-container">
               {connected ? (
-                <CallbackRenderViewport 
-                  ref={viewportRef} 
-                  showWorldCoord={showWorldCoord} 
+                <CallbackRenderViewport
+                  ref={viewportRef}
+                  showWorldCoord={showWorldCoord}
                   viewportLocked={viewportLocked}
                   pickingMode={pickingMode}
                   onExportPasses={handleExportPasses}
@@ -372,10 +416,10 @@ function AppContent() {
                 </div>
               )}
             </div>
-            
+
             {/* Render Toolbar - Official Octane viewport controls */}
-            <RenderToolbar 
-              onToggleWorldCoord={() => setShowWorldCoord(!showWorldCoord)} 
+            <RenderToolbar
+              onToggleWorldCoord={() => setShowWorldCoord(!showWorldCoord)}
               onCopyToClipboard={handleCopyToClipboard}
               onSaveRender={handleSaveRender}
               onExportPasses={handleExportPasses}
@@ -389,7 +433,7 @@ function AppContent() {
         {/* Center-Right Splitter & Right Panel: Node Inspector - spans ALL rows (full height) */}
         {panelVisibility.nodeInspector && (
           <>
-            <div 
+            <div
               className="panel-splitter vertical center-right-splitter"
               onMouseDown={() => handleSplitterMouseDown('right')}
               style={{ gridRow: '1 / -1' }}
@@ -401,10 +445,7 @@ function AppContent() {
               </div>
               <div className="panel-content">
                 <div className="node-inspector-layout">
-                  <NodeInspectorControls 
-                    sceneTree={sceneTree}
-                    onNodeSelect={setSelectedNode}
-                  />
+                  <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={setSelectedNode} />
                   <div className="node-inspector-main">
                     <NodeInspector node={selectedNode} />
                   </div>
@@ -418,7 +459,7 @@ function AppContent() {
         {panelVisibility.graphEditor && (
           <>
             {panelVisibility.renderViewport && (
-              <div 
+              <div
                 className="panel-splitter horizontal top-bottom-splitter"
                 onMouseDown={() => handleSplitterMouseDown('top')}
                 style={{ gridColumn: '3 / 4' }}
@@ -441,30 +482,26 @@ function AppContent() {
                 <div className="node-graph-tabgraph">
                   {/* Node Graph Tabs */}
                   <div className="node-graph-tabs">
-                    <button 
-                      className="node-graph-tab active" 
-                      title="Scene node graph"
-                    >
+                    <button className="node-graph-tab active" title="Scene node graph">
                       Scene
                     </button>
                   </div>
-                  {/* Node Graph Toolbar - Figure 10 vertical buttons, docked left */}                
-                  <NodeGraphEditor 
-                    sceneTree={sceneTree} 
+                  {/* Node Graph Toolbar - Figure 10 vertical buttons, docked left */}
+                  <NodeGraphEditor
+                    sceneTree={sceneTree}
                     selectedNode={selectedNode}
                     onNodeSelect={setSelectedNode}
                     gridVisible={gridVisible}
                     setGridVisible={setGridVisible}
                     snapToGrid={snapToGrid}
                     setSnapToGrid={setSnapToGrid}
-                    onRecenterViewReady={(callback) => setRecenterViewCallback(() => callback)}
+                    onRecenterViewReady={callback => setRecenterViewCallback(() => callback)}
                   />
                 </div>
               </div>
             </section>
           </>
         )}
-        
       </main>
 
       {/* Status Bar */}
@@ -472,18 +509,16 @@ function AppContent() {
         <div className="status-left">
           <span className="status-item">OctaneWebR - React TypeScript + Node.js gRPC</span>
         </div>
-        <div className="status-center">
-        </div>
+        <div className="status-center"></div>
         <div className="status-right">
-          <span className="status-item">OctaneLive: <span id="octane-status">{connected ? 'connected' : 'disconnected'}</span></span>
+          <span className="status-item">
+            OctaneLive: <span id="octane-status">{connected ? 'connected' : 'disconnected'}</span>
+          </span>
         </div>
       </footer>
 
       {/* Material Database Modal */}
-      <MaterialDatabase
-        visible={materialDatabaseVisible}
-        onClose={handleMaterialDatabaseClose}
-      />
+      <MaterialDatabase visible={materialDatabaseVisible} onClose={handleMaterialDatabaseClose} />
 
       {/* Save Render Dialog */}
       <SaveRenderDialog

@@ -6,7 +6,11 @@
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
 import { BaseService } from './BaseService';
 import Logger from '../../utils/Logger';
-import { getCompatibleMethodName, transformRequestParams, getApiVersion } from '../../config/apiVersionConfig';
+import {
+  getCompatibleMethodName,
+  transformRequestParams,
+  getApiVersion,
+} from '../../config/apiVersionConfig';
 
 /**
  * Request body structure for API calls
@@ -36,22 +40,22 @@ export class ApiService extends BaseService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async callApi(
-    service: string, 
-    method: string, 
-    handle?: string | number | Record<string, unknown> | null, 
+    service: string,
+    method: string,
+    handle?: string | number | Record<string, unknown> | null,
     params: Record<string, unknown> = {}
   ): Promise<any> {
     // Apply API version compatibility: translate method name if needed
     const compatibleMethod = getCompatibleMethodName(service, method);
-    
+
     if (method !== compatibleMethod) {
       Logger.debug(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
     }
-    
+
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
-    
+
     Logger.api(service, compatibleMethod, handle);
-    
+
     /**
      * Request body construction follows Octane's gRPC conventions:
      * - Some services (ApiItem, ApiNode, etc.) require an objectPtr wrapper:
@@ -60,10 +64,10 @@ export class ApiService extends BaseService {
      * - OctaneTypes.ts maps service names to their required ObjectType
      */
     let body: ApiRequestBody = {};
-    
+
     if (typeof handle === 'string' || typeof handle === 'number') {
       const objectType = getObjectTypeForService(service);
-      
+
       if (objectType !== undefined) {
         body.objectPtr = createObjectPtr(String(handle), objectType);
         Logger.debug('Created objectPtr:', body.objectPtr);
@@ -73,11 +77,11 @@ export class ApiService extends BaseService {
     } else if (handle !== undefined && handle !== null) {
       body = { ...handle };
     }
-    
+
     if (params && Object.keys(params).length > 0) {
       // Apply parameter transformation if needed for API version compatibility
       const transformedParams = transformRequestParams(service, method, params);
-      
+
       // Log if parameters were transformed
       const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
       if (paramsChanged) {
@@ -85,25 +89,25 @@ export class ApiService extends BaseService {
         Logger.debug(`   Original:`, params);
         Logger.debug(`   Transformed:`, transformedParams);
       }
-      
+
       body = { ...body, ...transformedParams };
       Logger.debug('Added params:', transformedParams);
     }
-    
+
     Logger.debug('Request body:', JSON.stringify(body));
-    
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || `API call failed: ${response.status}`);
       }
-      
+
       const data = await response.json();
       Logger.debug(`${service}.${method} success`);
       return data;
@@ -121,21 +125,21 @@ export class ApiService extends BaseService {
   async checkServerHealth(): Promise<boolean> {
     const healthUrl = `${this.serverUrl}/api/health`;
     Logger.debug('Fetching health check:', healthUrl);
-    
+
     try {
       const healthResponse = await fetch(healthUrl, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
-      
+
       Logger.debug('Health response status:', healthResponse.status);
-      
+
       if (!healthResponse.ok) {
         const healthData = await healthResponse.json().catch(() => ({}));
         Logger.error('Server unhealthy:', healthData);
         return false;
       }
-      
+
       const healthData = await healthResponse.json();
       Logger.debug('Server health check passed:', healthData);
       return true;

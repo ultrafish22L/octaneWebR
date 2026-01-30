@@ -21,7 +21,7 @@ function getPinColor(pinInfo: any): string {
   if (pinInfo?.pinColor !== undefined && pinInfo?.pinColor !== null) {
     return formatColorValue(pinInfo.pinColor);
   }
-  
+
   // Fall back to local color mapping by type (from PinTypes.ts - C++ source colors)
   if (pinInfo?.type) {
     try {
@@ -31,7 +31,7 @@ function getPinColor(pinInfo: any): string {
       // Type not found in mapping, continue to default
     }
   }
-  
+
   // Final fallback to light pink
   return '#f3dcde';
 }
@@ -42,27 +42,34 @@ function getPinColor(pinInfo: any): string {
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return { h: 0, s: 0, l: 0 };
-  
+
   let r = parseInt(result[1], 16) / 255;
   let g = parseInt(result[2], 16) / 255;
   let b = parseInt(result[3], 16) / 255;
-  
+
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  let h = 0, s = 0;
+  let h = 0,
+    s = 0;
   const l = (max + min) / 2;
-  
+
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    
+
     switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
     }
   }
-  
+
   return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
@@ -73,33 +80,33 @@ function hslToHex(h: number, s: number, l: number): string {
   h = h / 360;
   s = s / 100;
   l = l / 100;
-  
+
   let r, g, b;
-  
+
   if (s === 0) {
     r = g = b = l;
   } else {
     const hue2rgb = (p: number, q: number, t: number) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
-    
+
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
+    r = hue2rgb(p, q, h + 1 / 3);
     g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
-  
+
   const toHex = (x: number) => {
     const hex = Math.round(x * 255).toString(16);
     return hex.length === 1 ? '0' + hex : hex;
   };
-  
+
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
@@ -153,9 +160,9 @@ type OctaneNodeProps = {
 export const OctaneNode = memo((props: OctaneNodeProps) => {
   const { data, selected, id } = props;
   const { sceneNode, inputs = [], output, onContextMenu } = data;
-  
+
   // Get node color from nodeInfo - desaturate for muted appearance
-  const rawNodeColor = sceneNode.nodeInfo?.nodeColor 
+  const rawNodeColor = sceneNode.nodeInfo?.nodeColor
     ? formatColorValue(sceneNode.nodeInfo.nodeColor)
     : '#666';
   const nodeColor = rawNodeColor; //desaturateColor(rawNodeColor, 0.4); // 40% saturation for muted look
@@ -164,9 +171,8 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
   const inputCount = inputs.length;
   const minWidth = 180;
   const minPinSpacing = 30; // Increased spacing for better visibility
-  const calculatedWidth = inputCount > 0 
-    ? Math.max(minWidth, inputCount * minPinSpacing + 40) 
-    : minWidth;
+  const calculatedWidth =
+    inputCount > 0 ? Math.max(minWidth, inputCount * minPinSpacing + 40) : minWidth;
 
   const handleContextMenu = (event: React.MouseEvent) => {
     if (onContextMenu) {
@@ -178,7 +184,6 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
   };
   const typeStr = String(sceneNode.type || sceneNode.outType || 'unknown');
   const icon = sceneNode.icon || getIconForType(typeStr, sceneNode.name);
-
 
   return (
     <div
@@ -196,7 +201,6 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
         position: 'relative',
         padding: '0 10px 0 32px',
         cursor: 'grab',
-
       }}
     >
       {/* Node type icon box - fitted gray box on left side */}
@@ -220,25 +224,25 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
             boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.4)',
           }}
         >
-          <img 
-            src={icon} 
-            alt="" 
+          <img
+            src={icon}
+            alt=""
             className="node-icon"
             width={24}
             height={24}
-            onError={(e) => {
+            onError={e => {
               (e.target as HTMLImageElement).src = '/icons/CATEGORY.png';
             }}
           />
         </div>
       )}
-      
+
       {/* Input handles on top */}
       {inputs.map((input: any, index: number) => {
         // Get socket color with proper fallback (Octane → local mapping → default)
         const rawSocketColor = getPinColor(input.pinInfo);
         const socketColor = saturateColor(rawSocketColor); // Fully saturated for vibrant pins
-        
+
         const inputSpacing = calculatedWidth / (inputs.length + 1);
         const socketX = inputSpacing * (index + 1) - calculatedWidth / 2;
 
@@ -246,17 +250,20 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
         // - Collapsed node at pin: pin connects to a node NOT at level 1 (not visible in NGE) → SOLID ⬤
         // - Expanded node at pin: pin connects to a node AT level 1 (visible in NGE) → OUTLINE ○
         // - No connection at pin: pin has no connected node → OUTLINE ○
-        const isConnectedToCollapsed = input.handle !== undefined && 
-                                      input.handle !== 0 && 
-                                      !input.isAtTopLevel;
-        
+        const isConnectedToCollapsed =
+          input.handle !== undefined && input.handle !== 0 && !input.isAtTopLevel;
+
         // Build tooltip with pin name only
         const buildTooltip = () => {
           // Pin name/label (staticLabel is preferred, fallback to staticName)
-          const pinName = input.pinInfo?.staticLabel || input.pinInfo?.staticName || input.label || `Input ${index}`;
+          const pinName =
+            input.pinInfo?.staticLabel ||
+            input.pinInfo?.staticName ||
+            input.label ||
+            `Input ${index}`;
           return pinName;
         };
-        
+
         return (
           <Handle
             key={input.id}
@@ -297,37 +304,38 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
       </div>
 
       {/* Output handle on bottom */}
-      {output && (() => {
-        // Get output socket color with proper fallback (Octane → local mapping → default)
-        const rawOutputColor = getPinColor(output.pinInfo);
-        const outputColor = saturateColor(rawOutputColor); // Fully saturated for vibrant pins
-        
-        // Build output tooltip with node name only
-        const buildOutputTooltip = () => {
-          // Node name/label (defaultName from ApiNodeInfo is preferred)
-          const nodeName = sceneNode.nodeInfo?.defaultName || sceneNode.name || sceneNode.type;
-          return nodeName;
-        };
-        
-        return (
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id={output.id}
-            style={{
-              left: '50%',
-              bottom: -4, // Move slightly below the node
-              width: 12,
-              height: 12,
-              backgroundColor: outputColor,
-              border: `2px solid ${outputColor}`,
-              borderRadius: '50%',
-              zIndex: 10,
-            }}
-            title={buildOutputTooltip()}
-          />
-        );
-      })()}
+      {output &&
+        (() => {
+          // Get output socket color with proper fallback (Octane → local mapping → default)
+          const rawOutputColor = getPinColor(output.pinInfo);
+          const outputColor = saturateColor(rawOutputColor); // Fully saturated for vibrant pins
+
+          // Build output tooltip with node name only
+          const buildOutputTooltip = () => {
+            // Node name/label (defaultName from ApiNodeInfo is preferred)
+            const nodeName = sceneNode.nodeInfo?.defaultName || sceneNode.name || sceneNode.type;
+            return nodeName;
+          };
+
+          return (
+            <Handle
+              type="source"
+              position={Position.Bottom}
+              id={output.id}
+              style={{
+                left: '50%',
+                bottom: -4, // Move slightly below the node
+                width: 12,
+                height: 12,
+                backgroundColor: outputColor,
+                border: `2px solid ${outputColor}`,
+                borderRadius: '50%',
+                zIndex: 10,
+              }}
+              title={buildOutputTooltip()}
+            />
+          );
+        })()}
     </div>
   );
 });

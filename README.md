@@ -141,7 +141,7 @@ Platform-aware shortcuts (Ctrl on Windows/Linux, Cmd on macOS):
 ### Technology Stack
 - **Frontend**: React 18 + TypeScript + Vite
 - **Node Graph**: ReactFlow v12 (custom nodes and edges)
-- **State Management**: Zustand (global state)
+- **State Management**: React Context API (OctaneProvider, EditActionsProvider)
 - **Communication**: gRPC-Web via embedded proxy
 - **Styling**: CSS Modules + CSS Variables (theme system)
 

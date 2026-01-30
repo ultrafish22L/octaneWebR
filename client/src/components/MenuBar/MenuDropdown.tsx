@@ -14,12 +14,12 @@ interface MenuDropdownProps {
   isSubmenu?: boolean;
 }
 
-export function MenuDropdown({ 
-  items, 
-  anchorElement, 
-  onItemClick, 
+export function MenuDropdown({
+  items,
+  anchorElement,
+  onItemClick,
   onClose,
-  isSubmenu = false 
+  isSubmenu = false,
 }: MenuDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
@@ -38,7 +38,9 @@ export function MenuDropdown({
     dropdown.style.left = `${rect.left}px`;
     dropdown.style.top = `${rect.bottom}px`;
     dropdown.style.zIndex = '10000';
-    dropdown.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim();
+    dropdown.style.background = getComputedStyle(document.documentElement)
+      .getPropertyValue('--bg-primary')
+      .trim();
 
     if (isSubmenu) {
       // Position submenu to the right of parent item
@@ -69,14 +71,17 @@ export function MenuDropdown({
     });
   }, [anchorElement, isSubmenu]);
 
-  const handleItemClick = useCallback((item: MenuItem) => {
-    if (item.enabled === false) return;
-    if (item.submenu && item.submenu.length > 0) return;
-    
-    if (item.action) {
-      onItemClick(item.action as MenuAction, item.data);
-    }
-  }, [onItemClick]);
+  const handleItemClick = useCallback(
+    (item: MenuItem) => {
+      if (item.enabled === false) return;
+      if (item.submenu && item.submenu.length > 0) return;
+
+      if (item.action) {
+        onItemClick(item.action as MenuAction, item.data);
+      }
+    },
+    [onItemClick]
+  );
 
   const handleItemMouseEnter = useCallback((item: MenuItem, element: HTMLElement) => {
     // Clear any pending submenu close
@@ -116,7 +121,7 @@ export function MenuDropdown({
         key={item.action || `item-${index}`}
         className={`context-menu-item ${isDisabled ? 'disabled' : ''} ${hasSubmenu ? 'has-submenu' : ''} ${isActive ? 'active' : ''}`}
         onClick={() => !isDisabled && handleItemClick(item)}
-        onMouseEnter={(e) => handleItemMouseEnter(item, e.currentTarget)}
+        onMouseEnter={e => handleItemMouseEnter(item, e.currentTarget)}
         onMouseLeave={handleItemMouseLeave}
       >
         {item.checked !== undefined && (

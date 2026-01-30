@@ -10,16 +10,16 @@ interface PanelSizes {
   left: number;
   center: number;
   right: number;
-  top: number;      // Top row height (viewport + inspector)
-  bottom: number;   // Calculated from window height - top
+  top: number; // Top row height (viewport + inspector)
+  bottom: number; // Calculated from window height - top
 }
 
 const DEFAULT_PANEL_SIZES: PanelSizes = {
-  left: 260,    // Scene Outliner width 
-  center: 0,    // Will be calculated
-  right: 440,   // Node Inspector width
-  top: 0,       // Will be calculated as 60% of window height on mount
-  bottom: 0,    // Will be calculated from window height - top
+  left: 260, // Scene Outliner width
+  center: 0, // Will be calculated
+  right: 440, // Node Inspector width
+  top: 0, // Will be calculated as 60% of window height on mount
+  bottom: 0, // Will be calculated from window height - top
 };
 
 // Calculate initial top panel height as 60% of available height
@@ -71,14 +71,14 @@ export function useResizablePanels() {
 
       setPanelSizes(prev => {
         const TOTAL_SPLITTERS = 8; // Two 4px splitters
-        
+
         if (dragType === 'left') {
           // Dragging left boundary (between Scene Outliner and center)
           const minLeft = 150;
           const maxLeft = containerRect.width - prev.right - TOTAL_SPLITTERS - 400;
           const newLeft = Math.max(minLeft, Math.min(maxLeft, mouseX));
           Logger.debug(`📏 Left panel resize: ${newLeft}px (mouse: ${mouseX}px)`);
-          
+
           return {
             ...prev,
             left: newLeft,
@@ -90,7 +90,7 @@ export function useResizablePanels() {
           const distanceFromRight = containerRect.width - mouseX;
           const newRight = Math.max(minRight, Math.min(maxRight, distanceFromRight));
           Logger.debug(`📏 Right panel resize: ${newRight}px (mouse: ${mouseX}px)`);
-          
+
           return {
             ...prev,
             right: newRight,
@@ -101,13 +101,13 @@ export function useResizablePanels() {
           const maxTop = containerRect.height - 150; // Leave room for node graph
           const newTop = Math.max(minTop, Math.min(maxTop, mouseY));
           Logger.debug(`📏 Top row resize: ${newTop}px (mouse: ${mouseY}px)`);
-          
+
           return {
             ...prev,
             top: newTop,
           };
         }
-        
+
         return prev;
       });
     };

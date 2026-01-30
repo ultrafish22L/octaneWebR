@@ -7,7 +7,12 @@
 import { Logger } from '../../utils/Logger';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { getCategoriesInOrder, getNodeTypesForCategory, OCTANE_NODE_TYPES, getNodeIconPath } from '../../constants/NodeTypes';
+import {
+  getCategoriesInOrder,
+  getNodeTypesForCategory,
+  OCTANE_NODE_TYPES,
+  getNodeIconPath,
+} from '../../constants/NodeTypes';
 
 interface NodeTypeContextMenuProps {
   x: number;
@@ -24,17 +29,15 @@ function getNodeIcon(nodeType: string): string {
   return getNodeIconPath(nodeType);
 }
 
-export function NodeTypeContextMenu({
-  x,
-  y,
-  onSelectNodeType,
-  onClose,
-}: NodeTypeContextMenuProps) {
+export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTypeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const categoryElementRef = useRef<HTMLDivElement | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
-  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const categories = getCategoriesInOrder();
 
@@ -44,7 +47,7 @@ export function NodeTypeContextMenu({
     const handleClickOutside = (e: MouseEvent) => {
       const isInsideMenu = menuRef.current?.contains(e.target as Node);
       const isInsideSubmenu = submenuRef.current?.contains(e.target as Node);
-      
+
       if (!isInsideMenu && !isInsideSubmenu) {
         onClose();
       }
@@ -97,24 +100,27 @@ export function NodeTypeContextMenu({
     }
   }, [x, y]);
 
-  const handleCategoryMouseEnter = useCallback((category: string, e: React.MouseEvent<HTMLDivElement>) => {
-    // Clear any pending hide timeout
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
+  const handleCategoryMouseEnter = useCallback(
+    (category: string, e: React.MouseEvent<HTMLDivElement>) => {
+      // Clear any pending hide timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
 
-    // Store reference to category element for submenu positioning
-    categoryElementRef.current = e.currentTarget;
-    setHoveredCategory(category);
-    
-    // Position submenu to the right of the category item (matching octaneWeb lines 294-313)
-    const categoryRect = e.currentTarget.getBoundingClientRect();
-    let submenuLeft = categoryRect.right + 2;
-    let submenuTop = categoryRect.top;
+      // Store reference to category element for submenu positioning
+      categoryElementRef.current = e.currentTarget;
+      setHoveredCategory(category);
 
-    setSubmenuPosition({ top: submenuTop, left: submenuLeft });
-  }, []);
+      // Position submenu to the right of the category item (matching octaneWeb lines 294-313)
+      const categoryRect = e.currentTarget.getBoundingClientRect();
+      let submenuLeft = categoryRect.right + 2;
+      let submenuTop = categoryRect.top;
+
+      setSubmenuPosition({ top: submenuTop, left: submenuLeft });
+    },
+    []
+  );
 
   const handleCategoryMouseLeave = useCallback(() => {
     // Add delay before hiding to allow moving mouse to submenu
@@ -167,10 +173,13 @@ export function NodeTypeContextMenu({
     return () => clearTimeout(timeoutId);
   }, [hoveredCategory, submenuPosition]);
 
-  const handleNodeTypeClick = useCallback((nodeType: string) => {
-    onSelectNodeType(nodeType);
-    onClose();
-  }, [onSelectNodeType, onClose]);
+  const handleNodeTypeClick = useCallback(
+    (nodeType: string) => {
+      onSelectNodeType(nodeType);
+      onClose();
+    },
+    [onSelectNodeType, onClose]
+  );
 
   // Render menu to document.body using portal (matching octaneWeb line 319: document.body.appendChild)
   return createPortal(
@@ -199,21 +208,21 @@ export function NodeTypeContextMenu({
             <div
               key={category}
               className="context-menu-category"
-              onMouseEnter={(e) => handleCategoryMouseEnter(category, e)}
+              onMouseEnter={e => handleCategoryMouseEnter(category, e)}
               onMouseLeave={handleCategoryMouseLeave}
             >
               {category}
             </div>
           );
         })}
-        
+
         {/* Separator before special items */}
         <div className="context-menu-separator" />
-        
+
         {/* Special menu items */}
-        <div 
+        <div
           className="context-menu-category"
-          onMouseEnter={(e) => handleCategoryMouseEnter('__ALL_ITEMS__', e)}
+          onMouseEnter={e => handleCategoryMouseEnter('__ALL_ITEMS__', e)}
           onMouseLeave={handleCategoryMouseLeave}
         >
           All items
@@ -224,72 +233,71 @@ export function NodeTypeContextMenu({
         <div className="context-menu-item" onClick={() => Logger.debug('Import')}>
           Import...
         </div>
-        <div className="context-menu-item disabled">
-          Paste
-        </div>
+        <div className="context-menu-item disabled">Paste</div>
       </div>
 
       {/* Render active submenu separately (not nested inside category div) */}
-      {hoveredCategory && (() => {
-        // Handle "All items" - show all nodes from all categories
-        let nodeTypes: Record<string, { name: string; color: string }> | undefined;
-        if (hoveredCategory === '__ALL_ITEMS__') {
-          nodeTypes = {};
-          // Collect all nodes from all categories
-          Object.values(OCTANE_NODE_TYPES).forEach(categoryNodes => {
-            Object.assign(nodeTypes!, categoryNodes);
-          });
-        } else {
-          nodeTypes = getNodeTypesForCategory(hoveredCategory);
-        }
-        
-        if (!nodeTypes || Object.keys(nodeTypes).length === 0) return null;
-        
-        const isAllItems = hoveredCategory === '__ALL_ITEMS__';
-        
-        return (
-          <div
-            ref={submenuRef}
-            className={isAllItems ? "context-submenu-multicolumn" : "context-submenu"}
-            onMouseEnter={handleSubmenuMouseEnter}
-            onMouseLeave={handleSubmenuMouseLeave}
-            style={{
-              display: 'block', // Override CSS display: none (matching octaneWeb line 308)
-              position: 'fixed',
-              left: submenuPosition.left,
-              top: submenuPosition.top,
-              zIndex: 10001, // Ensure it's above main menu
-            }}
-          >
-            {Object.entries(nodeTypes).map(([nodeType, info]) => (
-              <div
-                key={nodeType}
-                className="context-menu-item"
-                onClick={() => handleNodeTypeClick(nodeType)}
-                title={nodeType}
-              >
-                <img
-                  src={getNodeIcon(nodeType)}
-                  alt=""
-                  className="node-type-icon"
-                  onError={(e) => {
-                    // Fallback to colored square if icon doesn't exist
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const fallback = target.nextElementSibling as HTMLSpanElement;
-                    if (fallback) fallback.style.display = 'block';
-                  }}
-                />
-                <span
-                  className="node-type-color"
-                  style={{ backgroundColor: info.color, display: 'none' }}
-                />
-                {info.name}
-              </div>
-            ))}
-          </div>
-        );
-      })()}
+      {hoveredCategory &&
+        (() => {
+          // Handle "All items" - show all nodes from all categories
+          let nodeTypes: Record<string, { name: string; color: string }> | undefined;
+          if (hoveredCategory === '__ALL_ITEMS__') {
+            nodeTypes = {};
+            // Collect all nodes from all categories
+            Object.values(OCTANE_NODE_TYPES).forEach(categoryNodes => {
+              Object.assign(nodeTypes!, categoryNodes);
+            });
+          } else {
+            nodeTypes = getNodeTypesForCategory(hoveredCategory);
+          }
+
+          if (!nodeTypes || Object.keys(nodeTypes).length === 0) return null;
+
+          const isAllItems = hoveredCategory === '__ALL_ITEMS__';
+
+          return (
+            <div
+              ref={submenuRef}
+              className={isAllItems ? 'context-submenu-multicolumn' : 'context-submenu'}
+              onMouseEnter={handleSubmenuMouseEnter}
+              onMouseLeave={handleSubmenuMouseLeave}
+              style={{
+                display: 'block', // Override CSS display: none (matching octaneWeb line 308)
+                position: 'fixed',
+                left: submenuPosition.left,
+                top: submenuPosition.top,
+                zIndex: 10001, // Ensure it's above main menu
+              }}
+            >
+              {Object.entries(nodeTypes).map(([nodeType, info]) => (
+                <div
+                  key={nodeType}
+                  className="context-menu-item"
+                  onClick={() => handleNodeTypeClick(nodeType)}
+                  title={nodeType}
+                >
+                  <img
+                    src={getNodeIcon(nodeType)}
+                    alt=""
+                    className="node-type-icon"
+                    onError={e => {
+                      // Fallback to colored square if icon doesn't exist
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = target.nextElementSibling as HTMLSpanElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }}
+                  />
+                  <span
+                    className="node-type-color"
+                    style={{ backgroundColor: info.color, display: 'none' }}
+                  />
+                  {info.name}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
     </>,
     document.body // Render to document.body (matching octaneWeb approach)
   );

@@ -48,12 +48,12 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
       // Get file extension for format
       const ext = format.toLowerCase();
       const fullPath = `${filename}.${ext}`;
-      
+
       Logger.debug(`💾 Saving render as ${format}: ${fullPath}`);
-      
+
       // Call Octane API to save render
       const success = await client.saveRender(fullPath, format, 0);
-      
+
       if (success) {
         Logger.debug('✅ Render saved successfully');
         onClose();
@@ -72,10 +72,12 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog save-render-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-dialog save-render-dialog" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Save Render</h2>
-          <button className="modal-close-btn" onClick={onClose}>×</button>
+          <button className="modal-close-btn" onClick={onClose}>
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
@@ -86,11 +88,11 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
               id="filename"
               className="form-control"
               value={filename}
-              onChange={(e) => setFilename(e.target.value)}
+              onChange={e => setFilename(e.target.value)}
               placeholder="Enter filename"
               disabled={saving}
-                                      autoComplete="off"
-                          name="form-control-0"
+              autoComplete="off"
+              name="form-control-0"
             />
           </div>
 
@@ -100,9 +102,9 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
               id="format"
               className="form-control"
               value={format}
-              onChange={(e) => setFormat(e.target.value as ImageFormat)}
+              onChange={e => setFormat(e.target.value as ImageFormat)}
               disabled={saving}
-                                      name="form-control-1"
+              name="form-control-1"
             >
               <option value="PNG">PNG (Lossless, Alpha support)</option>
               <option value="JPG">JPG (Smaller file size)</option>
@@ -112,14 +114,13 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
           </div>
 
           <div className="form-info">
-            <p>💡 <strong>Tip:</strong> PNG and JPG are good for web/screen use. EXR preserves HDR data for compositing.</p>
+            <p>
+              💡 <strong>Tip:</strong> PNG and JPG are good for web/screen use. EXR preserves HDR
+              data for compositing.
+            </p>
           </div>
 
-          {errorMessage && (
-            <div className="error-message">
-              ⚠️ {errorMessage}
-            </div>
-          )}
+          {errorMessage && <div className="error-message">⚠️ {errorMessage}</div>}
         </div>
 
         <div className="modal-footer">

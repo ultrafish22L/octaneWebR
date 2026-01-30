@@ -9,7 +9,7 @@ export interface MenuItem {
   shortcut?: string;
   icon?: string;
   enabled?: boolean;
-  checked?: boolean;  // For toggle menu items (e.g., panel visibility)
+  checked?: boolean; // For toggle menu items (e.g., panel visibility)
   submenu?: MenuItem[];
   data?: any;
 }
@@ -18,7 +18,7 @@ export interface MenuDefinition {
   [key: string]: MenuItem[];
 }
 
-export type MenuAction = 
+export type MenuAction =
   | 'file.new'
   | 'file.open'
   | 'file.openRecent'

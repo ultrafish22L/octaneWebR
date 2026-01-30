@@ -3,7 +3,13 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { OctaneClient, getOctaneClient, RenderState, Scene, NodeAddedEvent } from '../services/OctaneClient';
+import {
+  OctaneClient,
+  getOctaneClient,
+  RenderState,
+  Scene,
+  NodeAddedEvent,
+} from '../services/OctaneClient';
 
 interface OctaneContextValue {
   client: OctaneClient;
@@ -25,7 +31,7 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
     progress: 0,
     samples: 0,
     renderTime: 0,
-    resolution: { width: 1920, height: 1080 }
+    resolution: { width: 1920, height: 1080 },
   });
 
   useEffect(() => {
@@ -72,7 +78,7 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
     scene,
     renderState,
     connect,
-    disconnect
+    disconnect,
   };
 
   return <OctaneContext.Provider value={value}>{children}</OctaneContext.Provider>;

@@ -29,7 +29,7 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
   const { client, connected } = useOctane();
   const [filename, setFilename] = useState('scene.orbx');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [settings, setSettings] = useState<PackageSettings>({
     mergeScatterInstances: true,
     includeInstancePercentage: 100,
@@ -64,10 +64,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
         exportAnimation: settings.exportAnimation,
         animationFramerate: settings.animationFramerate,
         enableCustomAnimationTimespan: settings.enableCustomAnimationTimespan,
-        customAnimationTimespan: settings.enableCustomAnimationTimespan ? {
-          start: { value: settings.customAnimationStart },
-          end: { value: settings.customAnimationEnd }
-        } : undefined,
+        customAnimationTimespan: settings.enableCustomAnimationTimespan
+          ? {
+              start: { value: settings.customAnimationStart },
+              end: { value: settings.customAnimationEnd },
+            }
+          : undefined,
         exportNestedReferenceGraphs: settings.exportNestedReferenceGraphs,
       };
 
@@ -75,7 +77,7 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
 
       const response = await client.callApi('ApiProjectManager', 'saveProjectAsReferencePackage', {
         path: filename,
-        referencePackageSettings
+        referencePackageSettings,
       });
 
       if (response && response.result) {
@@ -102,10 +104,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog save-package-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog save-package-dialog" onClick={e => e.stopPropagation()}>
         <div className="dialog-header">
           <h2>💾 Save as Package (ORBX)</h2>
-          <button className="dialog-close" onClick={onClose} disabled={isProcessing}>×</button>
+          <button className="dialog-close" onClick={onClose} disabled={isProcessing}>
+            ×
+          </button>
         </div>
 
         <div className="dialog-body">
@@ -118,14 +122,15 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                 type="text"
                 id="filename"
                 value={filename}
-                onChange={(e) => setFilename(e.target.value)}
+                onChange={e => setFilename(e.target.value)}
                 placeholder="scene.orbx"
                 disabled={isProcessing}
-                                          autoComplete="off"
-                            name="text-0"
+                autoComplete="off"
+                name="text-0"
               />
               <p className="help-text">
-                ORBX packages all scene data, geometry, textures, and materials into a single portable file.
+                ORBX packages all scene data, geometry, textures, and materials into a single
+                portable file.
               </p>
             </div>
           </div>
@@ -133,16 +138,16 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           {/* Instance Settings */}
           <div className="dialog-section">
             <h3>Instance Settings</h3>
-            
+
             <div className="form-group">
               <label className="checkbox-label">
                 <input
                   type="checkbox"
                   checked={settings.mergeScatterInstances}
-                  onChange={(e) => updateSetting('mergeScatterInstances', e.target.checked)}
+                  onChange={e => updateSetting('mergeScatterInstances', e.target.checked)}
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="checkbox-1"
+                  autoComplete="off"
+                  name="checkbox-1"
                 />
                 Merge scatter instances
               </label>
@@ -158,26 +163,32 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                   min="0"
                   max="100"
                   value={settings.includeInstancePercentage}
-                  onChange={(e) => updateSetting('includeInstancePercentage', parseFloat(e.target.value))}
+                  onChange={e =>
+                    updateSetting('includeInstancePercentage', parseFloat(e.target.value))
+                  }
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="range-2"
+                  autoComplete="off"
+                  name="range-2"
                 />
                 <input
                   type="number"
                   value={settings.includeInstancePercentage}
-                  onChange={(e) => updateSetting('includeInstancePercentage', parseFloat(e.target.value) || 0)}
+                  onChange={e =>
+                    updateSetting('includeInstancePercentage', parseFloat(e.target.value) || 0)
+                  }
                   min="0"
                   max="100"
                   step="1"
                   className="number-input-small"
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="number-input-small-3"
+                  autoComplete="off"
+                  name="number-input-small-3"
                 />
                 <span>%</span>
               </div>
-              <p className="help-text">Percentage of instances to include (reduce for faster exports)</p>
+              <p className="help-text">
+                Percentage of instances to include (reduce for faster exports)
+              </p>
             </div>
 
             <div className="form-group">
@@ -189,22 +200,26 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                   min="0"
                   max="100"
                   value={settings.ignoreSmallObjectPercentage}
-                  onChange={(e) => updateSetting('ignoreSmallObjectPercentage', parseFloat(e.target.value))}
+                  onChange={e =>
+                    updateSetting('ignoreSmallObjectPercentage', parseFloat(e.target.value))
+                  }
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="range-4"
+                  autoComplete="off"
+                  name="range-4"
                 />
                 <input
                   type="number"
                   value={settings.ignoreSmallObjectPercentage}
-                  onChange={(e) => updateSetting('ignoreSmallObjectPercentage', parseFloat(e.target.value) || 0)}
+                  onChange={e =>
+                    updateSetting('ignoreSmallObjectPercentage', parseFloat(e.target.value) || 0)
+                  }
                   min="0"
                   max="100"
                   step="1"
                   className="number-input-small"
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="number-input-small-5"
+                  autoComplete="off"
+                  name="number-input-small-5"
                 />
                 <span>%</span>
               </div>
@@ -215,16 +230,16 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           {/* Animation Settings */}
           <div className="dialog-section">
             <h3>Animation Settings</h3>
-            
+
             <div className="form-group">
               <label className="checkbox-label">
                 <input
                   type="checkbox"
                   checked={settings.exportAnimation}
-                  onChange={(e) => updateSetting('exportAnimation', e.target.checked)}
+                  onChange={e => updateSetting('exportAnimation', e.target.checked)}
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="checkbox-6"
+                  autoComplete="off"
+                  name="checkbox-6"
                 />
                 Export animation
               </label>
@@ -239,13 +254,15 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                     type="number"
                     id="animationFramerate"
                     value={settings.animationFramerate}
-                    onChange={(e) => updateSetting('animationFramerate', parseFloat(e.target.value) || 30)}
+                    onChange={e =>
+                      updateSetting('animationFramerate', parseFloat(e.target.value) || 30)
+                    }
                     min="1"
                     max="120"
                     step="1"
                     disabled={isProcessing}
-                                                  autoComplete="off"
-                                name="number-7"
+                    autoComplete="off"
+                    name="number-7"
                   />
                   <span className="unit">fps</span>
                   <p className="help-text">Frames per second for animation</p>
@@ -256,10 +273,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                     <input
                       type="checkbox"
                       checked={settings.enableCustomAnimationTimespan}
-                      onChange={(e) => updateSetting('enableCustomAnimationTimespan', e.target.checked)}
+                      onChange={e =>
+                        updateSetting('enableCustomAnimationTimespan', e.target.checked)
+                      }
                       disabled={isProcessing}
-                                                      autoComplete="off"
-                                  name="checkbox-8"
+                      autoComplete="off"
+                      name="checkbox-8"
                     />
                     Custom animation timespan
                   </label>
@@ -275,10 +294,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                           type="number"
                           id="customAnimationStart"
                           value={settings.customAnimationStart}
-                          onChange={(e) => updateSetting('customAnimationStart', parseFloat(e.target.value) || 0)}
+                          onChange={e =>
+                            updateSetting('customAnimationStart', parseFloat(e.target.value) || 0)
+                          }
                           disabled={isProcessing}
-                                                              autoComplete="off"
-                                      name="number-9"
+                          autoComplete="off"
+                          name="number-9"
                         />
                       </div>
                       <div>
@@ -287,10 +308,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
                           type="number"
                           id="customAnimationEnd"
                           value={settings.customAnimationEnd}
-                          onChange={(e) => updateSetting('customAnimationEnd', parseFloat(e.target.value) || 100)}
+                          onChange={e =>
+                            updateSetting('customAnimationEnd', parseFloat(e.target.value) || 100)
+                          }
                           disabled={isProcessing}
-                                                              autoComplete="off"
-                                      name="number-10"
+                          autoComplete="off"
+                          name="number-10"
                         />
                       </div>
                     </div>
@@ -303,16 +326,16 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           {/* Advanced Settings */}
           <div className="dialog-section">
             <h3>Advanced Settings</h3>
-            
+
             <div className="form-group">
               <label className="checkbox-label">
                 <input
                   type="checkbox"
                   checked={settings.exportNestedReferenceGraphs}
-                  onChange={(e) => updateSetting('exportNestedReferenceGraphs', e.target.checked)}
+                  onChange={e => updateSetting('exportNestedReferenceGraphs', e.target.checked)}
                   disabled={isProcessing}
-                                              autoComplete="off"
-                              name="checkbox-11"
+                  autoComplete="off"
+                  name="checkbox-11"
                 />
                 Export nested reference graphs
               </label>
@@ -324,10 +347,10 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           <div className="dialog-info-box">
             <strong>ℹ️ About ORBX Format:</strong>
             <p>
-              ORBX is Octane's container format that packages all scene data, geometry, textures, 
-              and materials into a single portable file. The format is not compressed, so file 
-              sizes can be large. ORBX is the recommended format for transferring scenes between 
-              Octane applications and platforms.
+              ORBX is Octane's container format that packages all scene data, geometry, textures,
+              and materials into a single portable file. The format is not compressed, so file sizes
+              can be large. ORBX is the recommended format for transferring scenes between Octane
+              applications and platforms.
             </p>
           </div>
         </div>
@@ -336,8 +359,8 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           <button className="btn-secondary" onClick={onClose} disabled={isProcessing}>
             Cancel
           </button>
-          <button 
-            className="btn-primary" 
+          <button
+            className="btn-primary"
             onClick={handleSave}
             disabled={isProcessing || !filename.trim()}
           >

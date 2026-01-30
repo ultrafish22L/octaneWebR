@@ -93,40 +93,39 @@ export class ConnectionService extends BaseService {
       };
       
       this.ws.onmessage = (event: MessageEvent) => {
-        console.debug('🎯🎯🎯 [ConnectionService] WebSocket message received');
-        console.debug('📊 [ConnectionService] Raw event.data length:', event.data?.length);
+        Logger.debug('🎯🎯🎯 [ConnectionService] WebSocket message received');
+        Logger.debug('📊 [ConnectionService] Raw event.data length:', event.data?.length);
         
         try {
           const message = JSON.parse(event.data as string);
-          console.debug('📊 [ConnectionService] Parsed message type:', message.type);
-          console.debug('📊 [ConnectionService] Has data:', !!message.data);
+          Logger.debug('📊 [ConnectionService] Parsed message type:', message.type);
+          Logger.debug('📊 [ConnectionService] Has data:', !!message.data);
           
           if (message.type === 'newImage') {
-            console.debug('🖼️  [ConnectionService] newImage message received');
-            console.debug('📊 [ConnectionService] Image data:', {
+            Logger.debug('🖼️  [ConnectionService] newImage message received');
+            Logger.debug('📊 [ConnectionService] Image data:', {
               hasRenderImages: !!message.data?.render_images,
               hasData: !!message.data?.render_images?.data,
               imageCount: message.data?.render_images?.data?.length || 0
             });
-            console.debug('📤 [ConnectionService] Emitting OnNewImage event...');
+            Logger.debug('📤 [ConnectionService] Emitting OnNewImage event...');
             this.emit('OnNewImage', message.data);
-            console.debug('✅ [ConnectionService] OnNewImage event emitted');
+            Logger.debug('✅ [ConnectionService] OnNewImage event emitted');
           } else if (message.type === 'newStatistics') {
-            console.debug('📊 [ConnectionService] Received newStatistics callback');
+            Logger.debug('📊 [ConnectionService] Received newStatistics callback');
             this.emit('OnNewStatistics', message.data);
           } else if (message.type === 'renderFailure') {
-            console.error('❌ [ConnectionService] Received renderFailure callback');
+            Logger.error('❌ [ConnectionService] Received renderFailure callback');
             this.emit('OnRenderFailure', message.data);
           } else if (message.type === 'projectManagerChanged') {
-            console.log('📁 [ConnectionService] Received projectManagerChanged callback');
+            Logger.info('📁 [ConnectionService] Received projectManagerChanged callback');
             this.emit('OnProjectManagerChanged', message.data);
           } else {
-            console.warn('⚠️  [ConnectionService] Unknown message type:', message.type);
+            Logger.warn('⚠️  [ConnectionService] Unknown message type:', message.type);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.error('❌ [ConnectionService] WebSocket message error:', errorMessage);
-          Logger.error('WebSocket message error:', errorMessage);
+          Logger.error('❌ [ConnectionService] WebSocket message error:', errorMessage);
         }
       };
       

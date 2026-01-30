@@ -1,6 +1,6 @@
 /**
  * Octane gRPC Type Constants
- * 
+ *
  * Converted from octaneWeb/js/constants/OctaneTypes.js
  * These match the protobuf ObjectRef.ObjectType enum values from common.proto
  */
@@ -110,7 +110,7 @@ export type ObjectTypeName = keyof typeof ObjectType;
 export function createObjectPtr(handle: string, type: number) {
   return {
     handle,
-    type
+    type,
   };
 }
 
@@ -143,7 +143,7 @@ export const AttributeId = {
  * Attribute types for node values
  * These match the AttributeTypeId enum from common.proto
  * AUTO-GENERATED from octaneWeb's AttributeType mapping
- * 
+ *
  * IMPORTANT: These are the actual protobuf enum values from AttributeTypeId
  * Note: AT_FLOAT2 = 90 (not 10!) - this is correct per the proto definition
  */
@@ -158,7 +158,7 @@ export const AttrType = {
   AT_LONG: 7,
   AT_LONG2: 8,
   AT_FLOAT: 9,
-  AT_FLOAT2: 90,  // Note: 90 not 10 - verified in common.proto
+  AT_FLOAT2: 90, // Note: 90 not 10 - verified in common.proto
   AT_FLOAT3: 11,
   AT_FLOAT4: 12,
   AT_MATRIX: 13,
@@ -179,19 +179,19 @@ export const NodeType: Record<string, number> = {
   NT_CAM_SIMULATED_LENS: 301,
   NT_CAM_THINLENS: 13,
   NT_CAM_UNIVERSAL: 157,
-  
+
   // Displacement
   NT_DISPLACEMENT: 80,
-  
+
   // Emission
   NT_EMIS_BLACKBODY: 53,
   NT_EMIS_TEXTURE: 54,
-  
+
   // Environments
   NT_ENV_DAYLIGHT: 14,
   NT_ENV_PLANETARY: 129,
   NT_ENV_TEXTURE: 37,
-  
+
   // Geometry
   NT_GEO_MESH: 1,
   NT_GEO_GROUP: 3,
@@ -200,26 +200,26 @@ export const NodeType: Record<string, number> = {
   NT_GEO_PLANE: 110,
   NT_GEO_VOLUME: 91,
   NT_GEO_OBJECT: 153,
-  
+
   // Input
   NT_BOOL: 11,
   NT_FLOAT: 6,
   NT_INT: 9,
   NT_ENUM: 57,
-  
+
   // Kernels
   NT_KERN_PMC: 23,
   NT_KERN_DIRECTLIGHTING: 24,
   NT_KERN_PATHTRACING: 25,
   NT_KERN_INFO: 26,
-  
+
   // Lights
   NT_LIGHT_QUAD: 148,
   NT_LIGHT_SPHERE: 149,
   NT_LIGHT_VOLUME_SPOT: 152,
   NT_LIGHT_DIRECTIONAL: 282,
   NT_LIGHT_ANALYTIC: 294,
-  
+
   // Materials
   NT_MAT_DIFFUSE: 17,
   NT_MAT_GLOSSY: 16,
@@ -229,13 +229,13 @@ export const NodeType: Record<string, number> = {
   NT_MAT_UNIVERSAL: 130,
   NT_MAT_METAL: 120,
   NT_MAT_TOON: 121,
-  
+
   // Medium
   NT_MED_ABSORPTION: 58,
   NT_MED_SCATTERING: 59,
   NT_MED_VOLUME: 98,
   NT_MED_RANDOMWALK: 146,
-  
+
   // Textures
   NT_TEX_IMAGE: 34,
   NT_TEX_FLOATIMAGE: 36,
@@ -252,7 +252,7 @@ export const NodeType: Record<string, number> = {
   NT_TEX_SUBTRACT: 108,
   NT_TEX_GRADIENT: 49,
   NT_TEX_FALLOFF: 50,
-  
+
   // Render Target
   NT_RENDERTARGET: 56,
 } as const;
@@ -261,12 +261,12 @@ export const NodeType: Record<string, number> = {
  * Pin IDs for Octane scene graph nodes
  * These match the PinId enum values from octaneids.proto
  * Used for pin connections and parameter access
- * 
+ *
  * NOTE: Add more values as needed from server/proto/octaneids.proto (PinId enum)
  */
 export const PinId: Record<string, number> = {
   P_FILM_SETTINGS: 311,
-  P_LOCK_RENDER_AOVS: 2672,  // Controls viewport resolution lock
+  P_LOCK_RENDER_AOVS: 2672, // Controls viewport resolution lock
 } as const;
 
 /**
@@ -283,7 +283,7 @@ export const PinTypeId = {
   PIN_ID_INT3: 5,
   PIN_ID_INT4: 6,
   PIN_ID_FLOAT: 9,
-  PIN_ID_FLOAT2: 90,  // Note: 90 not 10
+  PIN_ID_FLOAT2: 90, // Note: 90 not 10
   PIN_ID_FLOAT3: 11,
   PIN_ID_FLOAT4: 12,
   PIN_ID_MATRIX: 13,

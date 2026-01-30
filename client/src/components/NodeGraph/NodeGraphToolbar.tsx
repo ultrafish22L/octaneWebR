@@ -2,7 +2,7 @@
  * Node Graph Editor Toolbar Component
  * Matches Octane SE Manual Figure 10 - The Graph Editor buttons
  * https://docs.otoy.com/standaloneSE/TheGraphEditor.html
- * 
+ *
  * Documented buttons (converted to vertical layout, docked left):
  * 1. Recenter View
  * 2. Re-arrange Graph with Sub-graph
@@ -27,14 +27,13 @@ interface NodeGraphToolbarProps {
   onRecenterView?: () => void; // Optional callback for recenter (from ReactFlow fitView)
 }
 
-export function NodeGraphToolbar({ 
-  gridVisible, 
-  setGridVisible, 
-  snapToGrid, 
+export function NodeGraphToolbar({
+  gridVisible,
+  setGridVisible,
+  snapToGrid,
   setSnapToGrid,
-  onRecenterView
+  onRecenterView,
 }: NodeGraphToolbarProps) {
-  
   // Toggle states for preview scenes (managed locally)
   const [renderTargetPreview, setRenderTargetPreview] = useState(false);
   const [meshPreview, setMeshPreview] = useState(false);
@@ -118,20 +117,12 @@ export function NodeGraphToolbar({
   return (
     <div className="node-graph-toolbar">
       {/* 1. Recenter View */}
-      <button
-        className="toolbar-button"
-        onClick={handleRecenterView}
-        title="Recenter View"
-      >
+      <button className="toolbar-button" onClick={handleRecenterView} title="Recenter View">
         <img src={getWindowControlIcon('RECENTER')} alt="Recenter" />
       </button>
 
       {/* 2. Re-arrange Graph */}
-      <button
-        className="toolbar-button"
-        onClick={handleRearrangeGraph}
-        title="Re-arrange Graph"
-      >
+      <button className="toolbar-button" onClick={handleRearrangeGraph} title="Re-arrange Graph">
         <img src={getWindowControlIcon('UNFOLD_GRAPH')} alt="Re-arrange graph" />
       </button>
 
@@ -141,7 +132,10 @@ export function NodeGraphToolbar({
         onClick={handleRearrangeWithSubgraph}
         title="Re-arrange Graph with Sub-graph"
       >
-        <img src={getWindowControlIcon('UNFOLD_GRAPH_RECURSIVELY')} alt="Re-arrange with subgraphs" />
+        <img
+          src={getWindowControlIcon('UNFOLD_GRAPH_RECURSIVELY')}
+          alt="Re-arrange with subgraphs"
+        />
       </button>
 
       {/* 4. View/Hide Render Target Preview Scene */}

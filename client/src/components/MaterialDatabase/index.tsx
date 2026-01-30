@@ -1,9 +1,9 @@
 /**
  * MaterialDatabase.tsx - Material Browser Component
- * 
+ *
  * Octane SE Material Database UI clone with LiveDB and LocalDB tabs
  * Allows browsing and downloading materials from OTOY material library
- * 
+ *
  * References:
  * - Octane SE Manual: Materials Database section
  * - gRPC API: ApiDBMaterialManager (getCategories, getMaterials, downloadMaterial)
@@ -49,10 +49,10 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
       try {
         Logger.debug(`🗂️ Loading ${activeTab === 'livedb' ? 'LiveDB' : 'LocalDB'} categories...`);
-        
+
         // Call gRPC API to get categories
         const response = await client.callApi('ApiDBMaterialManager', 'getCategories', {
-          dbType: activeTab === 'livedb' ? 0 : 1 // 0 = LiveDB, 1 = LocalDB
+          dbType: activeTab === 'livedb' ? 0 : 1, // 0 = LiveDB, 1 = LocalDB
         });
 
         if (response && response.categories) {
@@ -84,10 +84,10 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
       try {
         Logger.debug(`📦 Loading materials for category ${selectedCategory}...`);
-        
+
         const response = await client.callApi('ApiDBMaterialManager', 'getMaterials', {
           categoryId: selectedCategory,
-          dbType: activeTab === 'livedb' ? 0 : 1
+          dbType: activeTab === 'livedb' ? 0 : 1,
         });
 
         if (response && response.materials) {
@@ -117,14 +117,14 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
     try {
       Logger.debug(`⬇️ Downloading material: ${materialName} (ID: ${materialId})`);
-      
+
       await client.callApi('ApiDBMaterialManager', 'downloadMaterial', {
         materialId,
-        dbType: activeTab === 'livedb' ? 0 : 1
+        dbType: activeTab === 'livedb' ? 0 : 1,
       });
 
       Logger.debug(`✅ Material downloaded: ${materialName}`);
-      
+
       // TODO: Show success notification
     } catch (err: any) {
       Logger.error(`❌ Failed to download material ${materialName}:`, err);
@@ -142,10 +142,12 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
   return (
     <div className="material-database-overlay" onClick={onClose}>
-      <div className="material-database-window" onClick={(e) => e.stopPropagation()}>
+      <div className="material-database-window" onClick={e => e.stopPropagation()}>
         <div className="material-database-header">
           <h2>Material Database</h2>
-          <button className="close-button" onClick={onClose} title="Close">✕</button>
+          <button className="close-button" onClick={onClose} title="Close">
+            ✕
+          </button>
         </div>
 
         {/* Tab Buttons: LiveDB / LocalDB */}
@@ -170,12 +172,12 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
           <select
             id="category-select"
             value={selectedCategory || ''}
-            onChange={(e) => handleCategoryChange(e.target.value)}
+            onChange={e => handleCategoryChange(e.target.value)}
             disabled={loading || categories.length === 0}
-                                  name="select-0"
+            name="select-0"
           >
             <option value="">Select a category...</option>
-            {categories.map((cat) => (
+            {categories.map(cat => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
               </option>
@@ -184,23 +186,15 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
         </div>
 
         {/* Error Display */}
-        {error && (
-          <div className="material-database-error">
-            ⚠️ {error}
-          </div>
-        )}
+        {error && <div className="material-database-error">⚠️ {error}</div>}
 
         {/* Material Grid */}
         <div className="material-database-content">
-          {loading && (
-            <div className="material-database-loading">
-              Loading...
-            </div>
-          )}
+          {loading && <div className="material-database-loading">Loading...</div>}
 
           {!loading && materials.length === 0 && selectedCategory && (
             <div className="material-database-empty">
-              {activeTab === 'livedb' 
+              {activeTab === 'livedb'
                 ? 'No materials available in this category'
                 : 'No materials saved locally in this category'}
             </div>
@@ -208,7 +202,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
           {!loading && materials.length > 0 && (
             <div className="material-grid">
-              {materials.map((material) => (
+              {materials.map(material => (
                 <div
                   key={material.id}
                   className="material-card"
@@ -219,9 +213,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
                     {material.previewUrl ? (
                       <img src={material.previewUrl} alt={material.name} />
                     ) : (
-                      <div className="material-preview-placeholder">
-                        No Preview
-                      </div>
+                      <div className="material-preview-placeholder">No Preview</div>
                     )}
                   </div>
                   <div className="material-name">{material.name}</div>
@@ -239,7 +231,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
         <div className="material-database-footer">
           <div className="material-database-info">
-            {activeTab === 'livedb' 
+            {activeTab === 'livedb'
               ? 'LiveDB: Download pre-built materials from OTOY'
               : 'LocalDB: Browse locally saved materials'}
           </div>

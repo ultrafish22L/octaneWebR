@@ -11,10 +11,10 @@ export function ConnectionStatus() {
 
   return (
     <div className="connection-status">
-      <div className={`status-led ${connected ? 'status-led-connected' : 'status-led-disconnected'}`}></div>
-      <span className="status-text">
-        {connected ? 'Connected' : 'Disconnected'}
-      </span>
+      <div
+        className={`status-led ${connected ? 'status-led-connected' : 'status-led-disconnected'}`}
+      ></div>
+      <span className="status-text">{connected ? 'Connected' : 'Disconnected'}</span>
     </div>
   );
 }
