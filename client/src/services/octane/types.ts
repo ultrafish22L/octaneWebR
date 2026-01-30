@@ -92,10 +92,6 @@ export interface SceneNode {
   pinInfo?: PinInfo;
   attrInfo?: AttrInfo;
   icon?: string;
-  // Progressive loading state
-  loadingState?: 'skeleton' | 'loading' | 'loaded' | 'error';
-  loadError?: string;
-  childrenLoaded?: boolean;  // Track if children/pins have been fetched
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
@@ -117,30 +113,6 @@ export interface NodeAddedEvent {
 export interface NodeDeletedEvent {
   handle: number;
   collapsedChildren: number[];
-}
-
-/**
- * Progressive scene loading events
- */
-export interface SceneSyncProgress {
-  phase: 'idle' | 'structure' | 'details' | 'complete' | 'cancelled';
-  nodesStructureLoaded: number;   // Nodes with basic metadata
-  nodesPinsLoaded: number;        // Nodes with full pin data
-  nodesTotal: number;
-  currentBatch?: number;
-  elapsedTime: number;
-  estimatedTimeRemaining?: number;
-}
-
-export interface SceneStructureLoadedEvent {
-  nodes: SceneNode[];  // Basic structure, no pins yet
-  total: number;
-}
-
-export interface NodeBatchLoadedEvent {
-  handles: number[];  // Handles of nodes that just loaded
-  nodes: SceneNode[];  // Updated node objects with children/pins
-  progress: SceneSyncProgress;
 }
 
 export interface DeviceMemoryUsage {

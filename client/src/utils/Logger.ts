@@ -7,7 +7,7 @@
  */
 
 // Debug mode flag - when true, sends logs to /api/log endpoint for file logging
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 export enum LogLevel {
   DEBUG = 0,
