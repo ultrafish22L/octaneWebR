@@ -392,8 +392,6 @@ input:checked + .slider:before {
     font-style: italic;
 }
 
-/* @keyframes spin consolidated in app.css (shared animation) */
-
 /* Scene Tree Loading States */
 .scene-loading {
     padding: 20px;
@@ -413,7 +411,16 @@ input:checked + .slider:before {
     border: 3px solid var(--border);
     border-top-color: var(--accent-blue);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: scene-spinner-spin 0.8s linear infinite;
+}
+
+@keyframes scene-spinner-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .scene-loading-text {
