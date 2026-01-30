@@ -681,10 +681,12 @@ Geometry nodes:  1 error
 
 ### Current Status (Pre-Revert)
 
-1. **User Reports Concerns** ⚠️
-   - User doing additional testing
-   - Potential issues not yet specified
-   - May require full revert to sequential mode
+1. **Large Scene Failures** 🔴 **CRITICAL**
+   - **User Testing Results**: Pre-parallel build (271c390) successfully loads several large scenes
+   - **Parallel Build Issues**: Same large scenes cause Octane to lock up with API errors
+   - **Errors**: API errors occur that don't happen in sequential mode
+   - **Impact**: Parallel mode works for small/medium scenes (310 nodes) but fails on large scenes
+   - **Verdict**: Strong evidence for reverting to sequential mode (271c390)
 
 2. **Complex Codebase**
    - Parallel logic adds ~200 lines
@@ -709,15 +711,27 @@ Geometry nodes:  1 error
 
 ## Rollback Plan
 
-### If Revert Needed
+### Recommended: Revert to Sequential Mode (271c390)
 
-**Option 1: Clean Revert to 271c390**
+**User testing confirms:** Large scenes fail with parallel mode but work with sequential mode.
+
+**Option 1: Clean Revert to 271c390** ⭐ **RECOMMENDED**
 ```bash
-git revert --no-commit f5ecb1a..HEAD
-git commit -m "Revert parallel loading (testing issues)"
+git revert --no-commit f5ecb1a..271c390
+git commit -m "Revert parallel loading - causes Octane lockup on large scenes
+
+Testing Results:
+- Small scenes (310 nodes): Parallel works (2.4s vs 5.2s)
+- Large scenes: Parallel causes Octane to lock up with API errors
+- Sequential mode (271c390): All scenes load successfully
+
+Reverting to stable sequential implementation.
+Parallel work preserved in PARALLEL_LOADING_HISTORY.md for future reference."
+
+git push origin main
 ```
 
-**Option 2: Disable via Config**
+**Option 2: Disable via Config** (Temporary testing)
 ```typescript
 // parallelConfig.ts
 export const PARALLEL_CONFIG = {
@@ -726,13 +740,16 @@ export const PARALLEL_CONFIG = {
 };
 ```
 Rebuild and deploy. Sequential mode still works perfectly.
+**Note:** This keeps parallel code in repo but disabled.
 
-**Option 3: Cherry-Pick Good Parts**
-Keep certain commits (virtual scrolling, progressive updates) but revert parallel core:
+**Option 3: Cherry-Pick Good Parts** (Advanced)
+Keep certain improvements but revert parallel core:
 ```bash
-git revert 399704a  # Revert recursive parallel loading
-# Keep other improvements
+# Keep virtual scrolling, progressive updates
+# Revert only parallel loading logic
+git revert 399704a b5f8084 a65e311  # Core parallel commits
 ```
+**Note:** May require manual conflict resolution.
 
 ---
 
@@ -797,12 +814,31 @@ If reverted:
 
 ## Conclusion
 
-The parallel loading implementation represents a significant engineering effort (~30 commits over 7+ days) that achieved the primary goal: **2.5-3x faster scene loading**. The journey uncovered fundamental challenges in concurrent gRPC access, handle lifecycle management, and React state consistency.
+The parallel loading implementation represents a significant engineering effort (~30 commits over 7+ days) that achieved performance goals for small/medium scenes (**2.5-3x faster**) but revealed critical stability issues with large scenes.
 
-**If Kept**: Provides substantial UX improvement with clean, maintainable code  
-**If Reverted**: Lessons learned are invaluable, sequential mode is battle-tested and stable
+**User Testing Verdict:** 🔴 **REVERT RECOMMENDED**
 
-The decision rests on comprehensive user testing. The architecture allows either path with minimal risk.
+**Results:**
+- ✅ **Small scenes (310 nodes)**: Parallel works perfectly (2.4s vs 5.2s, zero errors)
+- ❌ **Large scenes**: Parallel causes Octane to lock up with API errors
+- ✅ **Sequential mode (271c390)**: All scenes load successfully (proven stable)
+
+**Root Cause Hypothesis:**
+Concurrent API load overwhelms Octane server's internal processing queues or resource limits. Sequential mode gives server breathing room between operations.
+
+**Value Gained:**
+1. **Technical Learning**: Deep understanding of gRPC concurrency, race conditions, handle lifecycle
+2. **Code Quality**: Improved error handling, immutability, validation patterns
+3. **Documentation**: Complete historical record preserved for future optimization attempts
+4. **Architecture**: Clean separation allows easy revert with no regression risk
+
+**Recommendation:**
+Revert to sequential mode (271c390) for production stability. Archive parallel work as reference. Future optimization should focus on:
+- Server-side batching APIs (if Octane exposes them)
+- Client-side caching (reduce redundant API calls)
+- Smarter scene traversal (skip unnecessary subtrees)
+
+**Status**: Sequential mode is battle-tested, stable, and reliable. Parallel mode was a valuable learning experience but not production-ready for all scene sizes.
 
 ---
 
@@ -811,6 +847,8 @@ The decision rests on comprehensive user testing. The architecture allows either
 **Commit Range**: 271c390..f5ecb1a (~30 commits)  
 **Total Lines Changed**: ~800 additions, ~200 deletions  
 **Files Modified**: 15+  
-**Test Scene**: teapot.orbx (310 nodes, 1400 API calls)  
-**Performance Gain**: 2.5x (5.2s → 2.4s)  
-**Status**: ⚠️ Pending user testing validation
+**Test Scenes**: 
+- Small (310 nodes): ✅ Parallel works (2.4s vs 5.2s)
+- Large (1000+ nodes): ❌ Parallel fails (Octane lockup, API errors)
+**Performance Gain**: 2.5x for small scenes, but unstable for large scenes  
+**Status**: 🔴 **User testing complete - REVERT RECOMMENDED**

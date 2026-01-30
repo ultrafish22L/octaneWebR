@@ -530,13 +530,18 @@ api-version.config.js (ROOT - Single Source)
 
 ## Recent Development Status
 
-### Parallel Scene Loading Implementation (2025-01-24 to 2025-01-30) ⚠️
+### Parallel Scene Loading Implementation (2025-01-24 to 2025-01-30) 🔴
 
-**Status**: ⚠️ TESTING - May be reverted based on user feedback
+**Status**: 🔴 **REVERT RECOMMENDED** - Testing revealed critical issues
 
 **What**: Complete rewrite of scene tree loading from sequential to parallel API requests
 
-**Performance**: 2.5-3x speedup (5.2s → 2.4s for 310-node scene)
+**Test Results**:
+- ✅ Small scenes (310 nodes): Parallel works (2.4s vs 5.2s sequential)
+- ❌ Large scenes (1000+ nodes): **Parallel causes Octane lockup + API errors**
+- ✅ Sequential mode (271c390): **All scenes load successfully**
+
+**Verdict**: Sequential mode is stable and reliable. Parallel mode not production-ready.
 
 **Commit Range**: `271c390..f5ecb1a` (~30 commits)
 
@@ -565,19 +570,21 @@ export const PARALLEL_CONFIG = {
 };
 ```
 
-**Revert Strategy** (if needed):
+**Revert Strategy** (RECOMMENDED):
 ```bash
-# Option 1: Full revert to 271c390
-git revert --no-commit f5ecb1a..HEAD
-git commit -m "Revert parallel loading"
+# Option 1: Full revert to 271c390 (RECOMMENDED)
+git revert --no-commit f5ecb1a..271c390
+git commit -m "Revert parallel loading - causes Octane lockup on large scenes"
+git push origin main
 
-# Option 2: Disable via config
-# Change ENABLED: false in parallelConfig.ts
+# Option 2: Disable via config (temporary testing)
+# Edit client/src/config/parallelConfig.ts
+# Change ENABLED: false
 ```
 
 **Documentation**: See `PARALLEL_LOADING_HISTORY.md` for complete technical deep dive
 
-**Current Issue**: User reports potential problems, conducting additional testing
+**Issue Found**: Large scenes cause Octane to lock up with API errors (sequential mode works fine)
 
 ---
 
