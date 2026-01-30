@@ -119,6 +119,56 @@ export class RenderService extends BaseService {
   }
 
   /**
+   * Sets the render target node that should be rendered
+   * @param nodeHandle - Handle of the render target node, or null to clear
+   * @returns true if successful, false if the node wasn't valid
+   */
+  async setRenderTargetNode(nodeHandle: number | null): Promise<boolean> {
+    try {
+      // Convert null to empty object for gRPC
+      const targetNode = nodeHandle ? { handle: nodeHandle } : {};
+      
+      const response = await this.apiService.callApi('ApiRenderEngine', 'setRenderTargetNode', null, {
+        targetNode
+      });
+      
+      const success = response?.result ?? false;
+      
+      if (success) {
+        Logger.debug(`✅ Render target set to node handle: ${nodeHandle || 'null'}`);
+      } else {
+        Logger.warn(`⚠️ Failed to set render target (invalid node or wrong type)`);
+      }
+      
+      return success;
+    } catch (error: any) {
+      Logger.error('❌ Failed to set render target node:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Gets the render target node that's currently being rendered
+   * @returns Handle of the render target node, or null if none is set
+   */
+  async getRenderTargetNode(): Promise<number | null> {
+    try {
+      const response = await this.apiService.callApi('ApiRenderEngine', 'getRenderTargetNode', {});
+      const handle = response?.result?.handle;
+      
+      // API returns "0" string/number for no render target
+      if (!handle || handle === "0" || handle === 0) {
+        return null;
+      }
+      
+      return handle;
+    } catch (error: any) {
+      Logger.error('❌ Failed to get render target node:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Gets the Film Settings node connected to the render target
    * 
    * Octane's render pipeline structure:
@@ -129,13 +179,11 @@ export class RenderService extends BaseService {
    */
   private async getFilmSettingsNode(): Promise<number | null> {
     try {
-      const renderTargetResponse = await this.apiService.callApi('ApiRenderEngine', 'getRenderTargetNode', {});
-      if (!renderTargetResponse?.result?.handle) {
+      const renderTargetHandle = await this.getRenderTargetNode();
+      if (!renderTargetHandle) {
         Logger.warn('⚠️ No render target found');
         return null;
       }
-      
-      const renderTargetHandle = renderTargetResponse.result.handle;
       
       const filmSettingsResponse = await this.apiService.callApi('ApiNode', 'connectedNode', renderTargetHandle, { 
         pinId: PinId.P_FILM_SETTINGS,

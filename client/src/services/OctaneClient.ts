@@ -211,6 +211,14 @@ export class OctaneClient extends EventEmitter {
     return this.renderService.setViewportResolutionLock(locked);
   }
 
+  async setRenderTargetNode(nodeHandle: number | null): Promise<boolean> {
+    return this.renderService.setRenderTargetNode(nodeHandle);
+  }
+
+  async getRenderTargetNode(): Promise<number | null> {
+    return this.renderService.getRenderTargetNode();
+  }
+
   getRenderState(): RenderState {
     return this.renderService.getRenderState();
   }

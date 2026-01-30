@@ -228,9 +228,31 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
     setContextMenuNode(null);
   };
   
-  const handleRender = () => {
-    Logger.debug('🎬 Render action for node:', contextMenuNode?.name);
-    // TODO: Implement render action
+  const handleRender = async () => {
+    if (!contextMenuNode) return;
+    
+    Logger.debug('🎬 Render action for node:', contextMenuNode.name);
+    
+    // If the node is a render target, set it as the active render target
+    if (contextMenuNode.type === 'PT_RENDERTARGET' && contextMenuNode.handle && contextMenuNode.handle !== -1) {
+      try {
+        const success = await client.setRenderTargetNode(contextMenuNode.handle);
+        if (success) {
+          Logger.debug(`✅ Render target activated: "${contextMenuNode.name}" (handle: ${contextMenuNode.handle})`);
+          // Optionally restart rendering with the new target
+          await client.restartRender();
+          Logger.debug('🔄 Rendering restarted with new render target');
+        } else {
+          Logger.warn(`⚠️ Failed to activate render target: "${contextMenuNode.name}"`);
+        }
+      } catch (error) {
+        Logger.error('❌ Error setting render target:', error);
+      }
+    } else {
+      Logger.warn('⚠️ Selected node is not a render target');
+    }
+    
+    handleContextMenuClose();
   };
   
   const handleSave = () => {
@@ -394,6 +416,20 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       const renderTarget = findRenderTarget(tree);
       if (renderTarget) {
         handleNodeSelect(renderTarget);
+        
+        // Set this as the active render target in the render engine
+        if (renderTarget.handle && renderTarget.handle !== -1) {
+          try {
+            const success = await client.setRenderTargetNode(renderTarget.handle);
+            if (success) {
+              Logger.debug(`🎯 Render target activated: "${renderTarget.name}" (handle: ${renderTarget.handle})`);
+            } else {
+              Logger.warn(`⚠️ Failed to activate render target: "${renderTarget.name}"`);
+            }
+          } catch (error) {
+            Logger.error('❌ Error setting render target:', error);
+          }
+        }
       }
     } catch (error: any) {
       Logger.error('❌ Failed to load scene tree:', error);

@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Render Target Management (2025-02-01)
+- **Automatic Render Target Activation**: Scene Outliner now automatically sets the active render target on scene load
+  - Finds first `PT_RENDERTARGET` node in scene tree
+  - Calls `ApiRenderEngineService.setRenderTargetNode` to activate it
+  - Enables rendering immediately after scene loads
+- **Manual Render Target Selection**: Right-click context menu "Render" action
+  - Works on any render target node in Scene Outliner
+  - Sets node as active render target via gRPC API
+  - Automatically restarts rendering with new target
+- **New API Methods**:
+  - `OctaneClient.setRenderTargetNode(handle)` - Set active render target
+  - `OctaneClient.getRenderTargetNode()` - Get current render target handle
+  - `RenderService.setRenderTargetNode()` - Service layer implementation
+  - `RenderService.getRenderTargetNode()` - Service layer implementation
+- **Files Modified**:
+  - `client/src/services/octane/RenderService.ts` - Added render target methods
+  - `client/src/services/OctaneClient.ts` - Exposed render target API
+  - `client/src/components/SceneOutliner/index.tsx` - Auto-select and context menu integration
+
 ### Changed - CSS Theme System (2025-02-01)
 - **CSS Variable Naming Refactor**: Removed `octane-` prefix from all theme variables
   - Updated 753 occurrences across 7 files
