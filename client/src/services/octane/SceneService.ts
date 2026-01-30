@@ -6,9 +6,17 @@
 import { Logger } from '../../utils/Logger';
 import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
-import { Scene, SceneNode } from './types';
+import { Scene, SceneNode, SceneSyncProgress } from './types';
 import { getIconForType } from '../../constants/PinTypes';
 import { AttributeId } from '../../constants/OctaneTypes';
+
+/**
+ * Progressive loading configuration
+ * BATCH_SIZE = 1: Update UI after each node (maximum feedback, per-node updates)
+ * BATCH_SIZE = 10: Update every 10 nodes (balanced)
+ * BATCH_SIZE = 30: Update every 30 nodes (minimal overhead)
+ */
+const PROGRESSIVE_LOAD_BATCH_SIZE = 1;
 
 export class SceneService extends BaseService {
   private apiService: ApiService;
@@ -141,6 +149,352 @@ export class SceneService extends BaseService {
         }
       }
       throw error;
+    }
+  }
+
+  /**
+   * Progressive scene tree building - loads structure first, then details in batches
+   * Provides live progress updates for large scenes (200+ seconds)
+   */
+  async buildSceneTreeProgressive(): Promise<SceneNode[]> {
+    // Abort any previous build operation
+    if (this.abortController) {
+      Logger.debug('🚫 Cancelling previous scene tree build');
+      this.abortController.abort();
+    }
+    
+    // Create new abort controller for this operation
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+    const startTime = performance.now();
+    
+    Logger.info('🌳 Building scene tree progressively...');
+    
+    // Reset scene
+    this.scene = {
+      tree: [],
+      map: new Map(),
+      connections: new Map()
+    };
+    
+    try {
+      // ===== PHASE 1: Quick Structure Load =====
+      Logger.info('📊 Phase 1: Loading scene structure (fast)...');
+      this.emit('sceneSyncStarted', { phase: 'structure' });
+      
+      // Check for cancellation
+      if (signal.aborted) {
+        throw new Error('Scene tree build was cancelled');
+      }
+      
+      // Get root and build structure without pins
+      Logger.debug('🔍 Getting root node graph...');
+      const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
+      if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
+        throw new Error('Failed to get root node graph');
+      }
+      
+      const rootHandle = rootResponse.result.handle;
+      const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
+      const isGraph = isGraphResponse?.result || false;
+      
+      // Build structure quickly (level 1 only, no children)
+      const structureNodes = await this.buildSceneStructureFast(rootHandle, isGraph, signal);
+      
+      // Mark all nodes as skeleton state
+      structureNodes.forEach(node => {
+        node.loadingState = 'skeleton';
+        node.childrenLoaded = false;
+      });
+      
+      this.scene.tree = structureNodes;
+      
+      const structureTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      Logger.info(`✅ Phase 1 complete: ${structureNodes.length} nodes in ${structureTime}s`);
+      
+      // Emit structure immediately so UI can display
+      this.emit('sceneStructureLoaded', {
+        nodes: structureNodes,
+        total: structureNodes.length
+      });
+      
+      // ===== PHASE 2: Batch Pin Loading =====
+      Logger.info('📊 Phase 2: Loading node details in batches...');
+      
+      const progress: SceneSyncProgress = {
+        phase: 'details',
+        nodesStructureLoaded: structureNodes.length,
+        nodesPinsLoaded: 0,
+        nodesTotal: structureNodes.length,
+        elapsedTime: parseFloat(structureTime)
+      };
+      
+      this.emit('sceneSyncProgress', progress);
+      
+      // Get all handles to load
+      const allHandles = structureNodes
+        .filter(n => n.handle && n.handle !== 0)
+        .map(n => n.handle!);
+      
+      // Process in batches
+      for (let i = 0; i < allHandles.length; i += PROGRESSIVE_LOAD_BATCH_SIZE) {
+        // Check for cancellation
+        if (signal.aborted) {
+          throw new Error('Scene sync cancelled by user');
+        }
+        
+        const batch = allHandles.slice(i, i + PROGRESSIVE_LOAD_BATCH_SIZE);
+        
+        // Load pins for this batch
+        await this.loadNodePinsBatch(batch);
+        
+        // Mark nodes as loaded
+        batch.forEach(handle => {
+          const node = this.scene.map.get(handle);
+          if (node) {
+            node.loadingState = 'loaded';
+            node.childrenLoaded = true;
+          }
+        });
+        
+        // Emit progress update
+        const loaded = i + batch.length;
+        const elapsed = (performance.now() - startTime) / 1000;
+        const updatedProgress: SceneSyncProgress = {
+          phase: 'details',
+          nodesStructureLoaded: structureNodes.length,
+          nodesPinsLoaded: loaded,
+          nodesTotal: structureNodes.length,
+          currentBatch: Math.floor(i / PROGRESSIVE_LOAD_BATCH_SIZE) + 1,
+          elapsedTime: elapsed,
+          estimatedTimeRemaining: this.estimateTimeRemaining(loaded, structureNodes.length, startTime)
+        };
+        
+        this.emit('nodeBatchLoaded', {
+          handles: batch,
+          progress: updatedProgress
+        });
+        
+        // Small delay to keep UI responsive
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      
+      // ===== PHASE 3: Complete =====
+      const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+      Logger.info(`✅ Scene sync complete: ${structureNodes.length} nodes in ${totalTime}s`);
+      
+      const finalProgress: SceneSyncProgress = {
+        phase: 'complete',
+        nodesStructureLoaded: structureNodes.length,
+        nodesPinsLoaded: structureNodes.length,
+        nodesTotal: structureNodes.length,
+        elapsedTime: parseFloat(totalTime)
+      };
+      
+      this.emit('sceneSyncComplete', finalProgress);
+      this.emit('sceneTreeUpdated', this.scene);
+      
+      return this.scene.tree;
+      
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      
+      // Don't log cancellation as error
+      if (message.includes('cancelled')) {
+        Logger.info('🚫 Scene sync cancelled by user');
+        this.emit('sceneSyncCancelled');
+      } else {
+        Logger.error('❌ Scene sync failed:', message);
+        if (error instanceof Error && error.stack) {
+          Logger.error('❌ Error stack:', error.stack);
+        }
+        this.emit('sceneSyncError', { error: message });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Build scene structure quickly without loading pins/children
+   * Returns level 1 nodes with basic metadata only
+   */
+  private async buildSceneStructureFast(
+    rootHandle: number,
+    isGraph: boolean,
+    signal: AbortSignal
+  ): Promise<SceneNode[]> {
+    const sceneItems: SceneNode[] = [];
+    
+    try {
+      if (isGraph) {
+        // Get owned items from NodeGraph
+        const ownedResponse = await this.apiService.callApi('ApiNodeGraph', 'getOwnedItems', rootHandle);
+        if (!ownedResponse || !ownedResponse.list || !ownedResponse.list.handle) {
+          throw new Error('Failed to get owned items from root graph');
+        }
+        
+        const ownedItemsHandle = ownedResponse.list.handle;
+        const countResponse = await this.apiService.callApi('ApiList', 'size', ownedItemsHandle);
+        const count = countResponse?.result || 0;
+        
+        Logger.debug(`📍 Found ${count} top-level items in scene graph`);
+        
+        // Fetch basic metadata for each item (no children yet)
+        for (let i = 0; i < count; i++) {
+          if (signal.aborted) break;
+          
+          const itemResponse = await this.apiService.callApi('ApiList', 'at', ownedItemsHandle, { index: i });
+          if (itemResponse && itemResponse.result && itemResponse.result.handle) {
+            await this.addSceneItemFast(sceneItems, itemResponse.result, null, 1);
+          }
+        }
+      }
+      
+      Logger.debug(`✅ Fast structure load complete: ${sceneItems.length} nodes`);
+      return sceneItems;
+      
+    } catch (error: any) {
+      Logger.error('❌ buildSceneStructureFast failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Add scene item with basic metadata only (no children/pins)
+   */
+  private async addSceneItemFast(
+    sceneItems: SceneNode[],
+    item: any,
+    pinInfo: any,
+    level: number
+  ): Promise<SceneNode | undefined> {
+    if (!item || !item.handle || item.handle === 0) {
+      return undefined;
+    }
+    
+    const handleNum = Number(item.handle);
+    
+    // Check if already exists
+    const existing = this.scene.map.get(handleNum);
+    if (existing) {
+      existing.pinInfo = pinInfo;
+      sceneItems.push(existing);
+      return existing;
+    }
+    
+    try {
+      // Fetch basic metadata only
+      const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
+      const itemName = nameResponse?.result || 'Unnamed';
+      
+      const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
+      const outType = outTypeResponse?.result || '';
+      
+      const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
+      const isGraph = isGraphResponse?.result || false;
+      
+      // Fetch position for top-level nodes
+      let position: { x: number; y: number } | null = null;
+      if (level === 1) {
+        try {
+          const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
+          if (posResponse?.result) {
+            position = {
+              x: posResponse.result.x || 0,
+              y: posResponse.result.y || 0
+            };
+          }
+        } catch (posError: any) {
+          Logger.debug(`  ⚠️ Failed to get position for ${itemName}`);
+        }
+      }
+      
+      // Fetch graph/node info
+      let graphInfo = null;
+      let nodeInfo = null;
+      if (isGraph) {
+        const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
+        graphInfo = infoResponse?.result || null;
+      } else {
+        const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
+        nodeInfo = infoResponse?.result || null;
+      }
+      
+      const displayName = pinInfo?.staticLabel || itemName;
+      const icon = this.getNodeIcon(outType, displayName);
+      
+      const entry: SceneNode = {
+        level,
+        name: displayName,
+        handle: item.handle,
+        type: outType,
+        typeEnum: typeof outType === 'number' ? outType : 0,
+        outType: outType,
+        icon,
+        visible: true,
+        graphInfo,
+        nodeInfo,
+        pinInfo,
+        children: [],  // Empty for now
+        position,
+        loadingState: 'skeleton',
+        childrenLoaded: false
+      };
+      
+      sceneItems.push(entry);
+      this.scene.map.set(handleNum, entry);
+      
+      Logger.debug(`  📄 Added skeleton node: ${itemName} (type: "${outType}", level: ${level})`);
+      
+      return entry;
+      
+    } catch (error: any) {
+      Logger.error('❌ addSceneItemFast failed:', error.message);
+      return undefined;
+    }
+  }
+
+  /**
+   * Load pins/children for a batch of nodes
+   */
+  private async loadNodePinsBatch(handles: number[]): Promise<void> {
+    await Promise.all(
+      handles.map(async (handle) => {
+        const node = this.scene.map.get(handle);
+        if (node && !node.childrenLoaded) {
+          try {
+            await this.addItemChildren(node);
+            node.loadingState = 'loaded';
+            node.childrenLoaded = true;
+          } catch (error: any) {
+            Logger.warn(`⚠️ Failed to load pins for node ${handle}:`, error.message);
+            node.loadingState = 'error';
+            node.loadError = error.message;
+          }
+        }
+      })
+    );
+  }
+
+  /**
+   * Estimate time remaining for progressive loading
+   */
+  private estimateTimeRemaining(loaded: number, total: number, startTime: number): number {
+    if (loaded === 0) return 0;
+    
+    const elapsed = (performance.now() - startTime) / 1000;
+    const rate = loaded / elapsed;  // nodes per second
+    const remaining = total - loaded;
+    return Math.ceil(remaining / rate);
+  }
+
+  /**
+   * Cancel in-progress scene sync
+   */
+  cancelSceneSync(): void {
+    if (this.abortController) {
+      Logger.debug('🚫 Cancelling scene sync...');
+      this.abortController.abort();
     }
   }
 

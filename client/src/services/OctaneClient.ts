@@ -22,6 +22,9 @@ import {
   Scene,
   NodeAddedEvent,
   NodeDeletedEvent,
+  SceneSyncProgress,
+  SceneStructureLoadedEvent,
+  NodeBatchLoadedEvent,
   RenderRegion,
   MaterialCategory,
   Material
@@ -34,6 +37,9 @@ export type {
   Scene,
   NodeAddedEvent,
   NodeDeletedEvent,
+  SceneSyncProgress,
+  SceneStructureLoadedEvent,
+  NodeBatchLoadedEvent,
   RenderRegion,
   MaterialCategory,
   Material
@@ -130,6 +136,21 @@ export class OctaneClient extends EventEmitter {
   
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     return this.sceneService.buildSceneTree(newNodeHandle);
+  }
+
+  /**
+   * Build scene tree progressively with live updates
+   * Emits: sceneStructureLoaded, nodeBatchLoaded, sceneSyncComplete
+   */
+  async buildSceneTreeProgressive(): Promise<SceneNode[]> {
+    return this.sceneService.buildSceneTreeProgressive();
+  }
+
+  /**
+   * Cancel in-progress progressive scene sync
+   */
+  cancelSceneSync(): void {
+    this.sceneService.cancelSceneSync();
   }
 
   lookupItem(handle: number): SceneNode | null {

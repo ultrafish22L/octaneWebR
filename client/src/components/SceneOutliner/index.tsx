@@ -7,7 +7,7 @@ import { Logger } from '../../utils/Logger';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { List } from 'react-window';
 import { useOctane } from '../../hooks/useOctane';
-import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../services/OctaneClient';
+import { SceneNode, NodeAddedEvent, NodeDeletedEvent, SceneSyncProgress, SceneStructureLoadedEvent, NodeBatchLoadedEvent } from '../../services/OctaneClient';
 import { SceneOutlinerContextMenu } from './SceneOutlinerContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
 import { 
@@ -191,6 +191,42 @@ function LocalDBTreeItem({ category, depth, onLoadCategory, onLoadPackage }: Loc
   );
 }
 
+/**
+ * Update node loading states with structural sharing
+ * Only creates new objects for updated nodes, keeps others unchanged for React optimization
+ */
+function updateNodesLoadingState(
+  tree: SceneNode[],
+  handles: number[],
+  state: 'skeleton' | 'loading' | 'loaded' | 'error'
+): SceneNode[] {
+  const handleSet = new Set(handles);
+  
+  const updateNode = (node: SceneNode): SceneNode => {
+    if (node.handle && handleSet.has(node.handle)) {
+      // Create new node object with updated state
+      return {
+        ...node,
+        loadingState: state,
+        children: node.children?.map(updateNode)
+      };
+    }
+    
+    // Check children recursively
+    if (node.children && node.children.length > 0) {
+      const updatedChildren = node.children.map(updateNode);
+      // Only create new object if children changed
+      if (updatedChildren.some((c, i) => c !== node.children![i])) {
+        return { ...node, children: updatedChildren };
+      }
+    }
+    
+    return node; // Return same reference if unchanged
+  };
+  
+  return tree.map(updateNode);
+}
+
 export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, onNodeSelect, onSceneTreeChange, onSyncStateChange }: SceneOutlinerProps) {
   const { client, connected } = useOctane();
   const [loading, setLoading] = useState(false);
@@ -200,6 +236,10 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
   const [liveDBCategories, setLiveDBCategories] = useState<LiveDBCategory[]>([]);
   const [liveDBLoading, setLiveDBLoading] = useState(false);
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
+  
+  // Progressive loading state
+  const [syncProgress, setSyncProgress] = useState<SceneSyncProgress | null>(null);
+  const [isProgressiveSync, setIsProgressiveSync] = useState(false);
   
   // Virtual scrolling: Expansion state management
   const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(new Map());
@@ -376,12 +416,14 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       return;
     }
 
-    Logger.debug('🔄 Loading scene tree from Octane...');
+    Logger.debug('🔄 Loading scene tree progressively from Octane...');
     setLoading(true);
+    setIsProgressiveSync(true);
+    setSyncProgress(null);
     onSyncStateChange?.(true);
     
     try {
-      const tree = await client.buildSceneTree();
+      const tree = await client.buildSceneTreeProgressive();
       
       setSceneTree(tree);
       onSceneTreeChange?.(tree);
@@ -727,16 +769,87 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       setTimeout(() => onSceneTreeChange?.(tree), 0);
     };
 
+    // Progressive loading event handlers
+    const handleSceneStructureLoaded = (event: SceneStructureLoadedEvent) => {
+      Logger.info(`📊 Scene structure loaded: ${event.nodes.length} nodes (skeleton)`);
+      
+      // Display tree immediately with skeleton nodes
+      setSceneTree(event.nodes);
+      
+      // Initialize expansion map
+      const syntheticRoot: SceneNode[] = [{
+        handle: -1,
+        name: 'Scene',
+        type: 'SceneRoot',
+        typeEnum: 0,
+        children: event.nodes
+      }];
+      setExpansionMap(initializeExpansionMap(syntheticRoot));
+      
+      // Notify parent
+      setTimeout(() => onSceneTreeChange?.(event.nodes), 0);
+    };
+
+    const handleNodeBatchLoaded = (event: NodeBatchLoadedEvent) => {
+      Logger.debug(`📊 Batch loaded: ${event.handles.length} nodes (${event.progress.nodesPinsLoaded}/${event.progress.nodesTotal})`);
+      
+      // Update progress
+      setSyncProgress(event.progress);
+      
+      // Update tree to reflect loaded nodes (structural sharing)
+      setSceneTree(prev => updateNodesLoadingState(prev, event.handles, 'loaded'));
+    };
+
+    const handleSyncProgress = (progress: SceneSyncProgress) => {
+      setSyncProgress(progress);
+    };
+
+    const handleSyncComplete = (progress: SceneSyncProgress) => {
+      Logger.info(`✅ Scene sync complete: ${progress.nodesTotal} nodes in ${progress.elapsedTime.toFixed(2)}s`);
+      setIsProgressiveSync(false);
+      setSyncProgress(null);
+      setLoading(false);
+      onSyncStateChange?.(false);
+    };
+
+    const handleSyncCancelled = () => {
+      Logger.info('🚫 Scene sync cancelled');
+      setIsProgressiveSync(false);
+      setSyncProgress(null);
+      setLoading(false);
+      onSyncStateChange?.(false);
+    };
+
+    const handleSyncError = (event: { error: string }) => {
+      Logger.error('❌ Scene sync error:', event.error);
+      setIsProgressiveSync(false);
+      setSyncProgress(null);
+      setLoading(false);
+      onSyncStateChange?.(false);
+    };
+
     client.on('nodeAdded', handleNodeAdded);
     client.on('nodeDeleted', handleNodeDeleted);
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
+    client.on('sceneStructureLoaded', handleSceneStructureLoaded);
+    client.on('nodeBatchLoaded', handleNodeBatchLoaded);
+    client.on('sceneSyncProgress', handleSyncProgress);
+    client.on('sceneSyncComplete', handleSyncComplete);
+    client.on('sceneSyncCancelled', handleSyncCancelled);
+    client.on('sceneSyncError', handleSyncError);
 
     return () => {
       client.off('nodeAdded', handleNodeAdded);
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
+      client.off('sceneStructureLoaded', handleSceneStructureLoaded);
+      client.off('nodeBatchLoaded', handleNodeBatchLoaded);
+      client.off('sceneSyncProgress', handleSyncProgress);
+      client.off('sceneSyncComplete', handleSyncComplete);
+      client.off('sceneSyncCancelled', handleSyncCancelled);
+      client.off('sceneSyncError', handleSyncError);
     };
-  }, [client, onSceneTreeChange]);
+  }, [client, onSceneTreeChange, onSyncStateChange]);
 
   // Use virtual scrolling handlers for expand/collapse
   const handleExpandAll = handleExpandAllVirtual;
@@ -826,10 +939,42 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       
       {/* Tab Content: Scene */}
       <div className={`scene-tab-content ${activeTab === 'scene' ? 'active' : ''}`} data-content="scene">
+        {/* Progressive Loading Progress Bar */}
+        {syncProgress && syncProgress.phase !== 'complete' && (
+          <div className="scene-sync-progress">
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar" 
+                style={{ width: `${(syncProgress.nodesPinsLoaded / syncProgress.nodesTotal) * 100}%` }} 
+              />
+            </div>
+            <div className="progress-text">
+              {syncProgress.phase === 'structure' ? (
+                <span>Loading scene structure...</span>
+              ) : (
+                <span>
+                  Loading details: {syncProgress.nodesPinsLoaded}/{syncProgress.nodesTotal} nodes 
+                  ({Math.round((syncProgress.nodesPinsLoaded / syncProgress.nodesTotal) * 100)}%)
+                  {syncProgress.estimatedTimeRemaining && syncProgress.estimatedTimeRemaining > 0 && (
+                    <span className="eta"> • ~{syncProgress.estimatedTimeRemaining}s remaining</span>
+                  )}
+                </span>
+              )}
+            </div>
+            <button 
+              className="cancel-sync-btn" 
+              onClick={() => client?.cancelSceneSync()}
+              title="Cancel scene loading"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        
         <div className="scene-tree">
           {!connected ? (
             <div className="scene-loading">Not connected</div>
-          ) : loading ? (
+          ) : loading && !isProgressiveSync ? (
             <div className="scene-loading">Loading scene...</div>
           ) : sceneTree.length > 0 ? (
             <div className="scene-mesh-list">
