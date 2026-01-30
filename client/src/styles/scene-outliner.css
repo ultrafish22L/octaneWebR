@@ -445,6 +445,15 @@ input:checked + .slider:before {
     position: relative; /* Establish positioning context */
 }
 
+/* Virtual list wrapper - must fill parent to position scrollbar at bottom */
+.scene-mesh-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
 /* Scene Outliner Tree Styles */
 .scene-outliner-toolbar {
     display: flex;
