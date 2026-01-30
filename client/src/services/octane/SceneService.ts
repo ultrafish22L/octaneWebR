@@ -439,7 +439,7 @@ export class SceneService extends BaseService {
       const entry: SceneNode = {
         level,
         name: displayName,
-        handle: item.handle,
+        handle: handleNum,  // Use the NUMBER, not the original item.handle!
         type: outType,
         typeEnum: typeof outType === 'number' ? outType : 0,
         outType: outType,
