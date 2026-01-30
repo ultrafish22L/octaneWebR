@@ -343,7 +343,7 @@ export class SceneService extends BaseService {
         for (let i = 0; i < count; i++) {
           if (signal.aborted) break;
           
-          const itemResponse = await this.apiService.callApi('ApiItemArray', 'at', ownedItemsHandle, { index: i });
+          const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
           if (itemResponse && itemResponse.result && itemResponse.result.handle) {
             await this.addSceneItemFast(sceneItems, itemResponse.result, null, 1);
           }
