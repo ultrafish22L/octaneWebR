@@ -199,18 +199,23 @@ function mergeUpdatedNodes(
   tree: SceneNode[],
   updatedNodes: SceneNode[]
 ): SceneNode[] {
+  Logger.info(`🔀 mergeUpdatedNodes: Merging ${updatedNodes.length} updated nodes into tree`);
+  
   // Create a map of updated nodes by handle
   const updateMap = new Map<number, SceneNode>();
   updatedNodes.forEach(node => {
     if (node.handle) {
+      Logger.info(`  🗂️ Adding to updateMap: handle=${node.handle}, name=${node.name}, children=${node.children?.length || 0}`);
       updateMap.set(node.handle, node);
     }
   });
 
   const mergeNode = (node: SceneNode): SceneNode => {
     if (node.handle && updateMap.has(node.handle)) {
+      const updated = updateMap.get(node.handle)!;
+      Logger.info(`  ✅ Replacing node: ${node.name} (handle=${node.handle}), old children=${node.children?.length || 0}, new children=${updated.children?.length || 0}`);
       // Replace with updated node (which includes children, pins, etc.)
-      return updateMap.get(node.handle)!;
+      return updated;
     }
 
     // Check children recursively
@@ -828,14 +833,17 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
     };
 
     const handleNodeBatchLoaded = (event: NodeBatchLoadedEvent) => {
-      Logger.debug(`📊 Batch loaded: ${event.handles.length} nodes (${event.progress.nodesPinsLoaded}/${event.progress.nodesTotal})`);
+      Logger.info(`📦 UI received nodeBatchLoaded: ${event.handles.length} handles, ${event.nodes.length} nodes with data`);
+      Logger.info(`📦 Received nodes: ${event.nodes.map(n => `${n.name}(children=${n.children?.length || 0})`).join(', ')}`);
       
       // Update progress
       setSyncProgress(event.progress);
       
       // Merge updated nodes into tree (includes children, pins, connections)
       setSceneTree(prev => {
+        Logger.info(`📦 Before merge: tree has ${prev.length} nodes`);
         const merged = mergeUpdatedNodes(prev, event.nodes);
+        Logger.info(`📦 After merge: tree has ${merged.length} nodes`);
         // Schedule parent callback after state update completes
         setTimeout(() => onSceneTreeChange?.(merged), 0);
         return merged;

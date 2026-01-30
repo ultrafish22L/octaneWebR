@@ -263,6 +263,8 @@ export class SceneService extends BaseService {
           }
         });
         
+        Logger.info(`📤 Emitting nodeBatchLoaded: ${updatedNodes.length} nodes, children counts: ${updatedNodes.map(n => `${n.name}=${n.children?.length || 0}`).join(', ')}`);
+        
         // Emit progress update with updated nodes
         const loaded = i + batch.length;
         const elapsed = (performance.now() - startTime) / 1000;
@@ -465,18 +467,18 @@ export class SceneService extends BaseService {
    * Load pins/children for a batch of nodes
    */
   private async loadNodePinsBatch(handles: number[]): Promise<void> {
-    Logger.debug(`🔄 loadNodePinsBatch: Processing ${handles.length} handles`);
+    Logger.info(`🔄 loadNodePinsBatch: Processing ${handles.length} handles`);
     
     await Promise.all(
       handles.map(async (handle) => {
         const node = this.scene.map.get(handle);
-        Logger.debug(`  📍 Handle ${handle}: node=${node?.name}, childrenLoaded=${node?.childrenLoaded}, children=${node?.children?.length}`);
+        Logger.info(`  📍 Handle ${handle}: node=${node?.name}, childrenLoaded=${node?.childrenLoaded}, children=${node?.children?.length}`);
         
         if (node && !node.childrenLoaded) {
           try {
-            Logger.debug(`  🔄 Loading children for: ${node.name}`);
+            Logger.info(`  🔄 Loading children for: ${node.name}`);
             await this.addItemChildren(node);
-            Logger.debug(`  ✅ Loaded ${node.children?.length || 0} children for: ${node.name}`);
+            Logger.info(`  ✅ Loaded ${node.children?.length || 0} children for: ${node.name}`);
             node.loadingState = 'loaded';
             node.childrenLoaded = true;
           } catch (error: any) {
@@ -485,7 +487,7 @@ export class SceneService extends BaseService {
             node.loadError = error.message;
           }
         } else if (node && node.childrenLoaded) {
-          Logger.debug(`  ⏭️ Skipping ${node.name} - already loaded`);
+          Logger.info(`  ⏭️ Skipping ${node.name} - already loaded`);
         }
       })
     );
@@ -787,7 +789,7 @@ export class SceneService extends BaseService {
 
   private async addItemChildren(item: SceneNode): Promise<void> {
     if (!item || !item.handle) {
-      Logger.debug(`  ⚠️ addItemChildren: Invalid item (no handle)`);
+      Logger.info(`  ⚠️ addItemChildren: Invalid item (no handle)`);
       return;
     }
     
