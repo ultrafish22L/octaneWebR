@@ -1,131 +1,23 @@
 /**
  * Scene Outliner Component (React TypeScript)
- * Hierarchical tree view of Octane scene
+ * Hierarchical tree view of Octane scene with virtual scrolling
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { List } from 'react-window';
 import { useOctane } from '../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../services/OctaneClient';
-import { getIconForType } from '../../constants/PinTypes';
 import { SceneOutlinerContextMenu } from './SceneOutlinerContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
-
-const getNodeIcon = (node: SceneNode): string => {
-  // Special case: Scene root
-  if (node.type === 'SceneRoot' || node.name === 'Scene') {
-    return '/icons/SCENE node.png'; // Scene icon for scene root
-  }
-  
-  // Use getIconForType for consistent icon mapping
-  const outType = String(node.type || node.outType || 'unknown');
-  return getIconForType(outType, node.name);
-};
-
-interface SceneTreeItemProps {
-  node: SceneNode;
-  depth: number;
-  onSelect: (node: SceneNode) => void;
-  onContextMenu: (node: SceneNode, event: React.MouseEvent) => void;
-  selectedHandle: number | null;
-  expandAllSignal?: number;
-  collapseAllSignal?: number;
-}
-
-function SceneTreeItem({ node, depth, onSelect, onContextMenu, selectedHandle, expandAllSignal, collapseAllSignal }: SceneTreeItemProps) {
-    // Scene root and Render target start expanded by default
-  const [expanded, setExpanded] = useState(
-    node.type === 'SceneRoot' || node.type === 'PT_RENDERTARGET'
-  );
-  const hasChildren = node.children && node.children.length > 0;
-  const isSelected = selectedHandle === node.handle;
-
-  // Respond to expand/collapse all signals
-  useEffect(() => {
-    if (expandAllSignal && expandAllSignal > 0 && hasChildren) {
-      setExpanded(true);
-    }
-  }, [expandAllSignal, hasChildren]);
-
-  useEffect(() => {
-    if (collapseAllSignal && collapseAllSignal > 0) {
-      // Don't collapse the Scene root
-      if (node.type !== 'SceneRoot') {
-        setExpanded(false);
-      }
-    }
-  }, [collapseAllSignal, node.type]);
-
-  return (
-    <>
-      <div
-        className={`tree-node level-${depth} ${isSelected ? 'selected' : ''}`}
-        data-handle={node.handle}
-        onClick={() => {
-          // Don't select the synthetic Scene root
-          if (node.type !== 'SceneRoot') {
-            onSelect(node);
-          }
-        }}
-        onContextMenu={(e) => {
-          // Don't show context menu for synthetic Scene root
-          if (node.type !== 'SceneRoot') {
-            onContextMenu(node, e);
-          }
-        }}
-      >
-        <div className="node-content">
-          {hasChildren ? (
-            <span
-              className={`node-toggle ${expanded ? 'expanded' : 'collapsed'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(!expanded);
-              }}
-            >
-              {expanded ? '−' : '+'}
-            </span>
-          ) : (
-            <span className="node-spacer"></span>
-          )}
-
-          <img 
-            src={getNodeIcon(node)} 
-            alt="" 
-            className="node-icon"
-            width={16}
-            height={16}
-            onError={(e) => {
-              // Fallback to category icon if specific icon not found
-              (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
-            }}
-          />
-          <span className="node-name">{node.name}</span>
-        </div>
-      </div>
-      {expanded && hasChildren && node.children!.map((child, index) => {
-        // Generate unique key: use handle + pin index for NO_ITEM nodes (handle=0)
-        // Pin index comes from pinInfo.ix, fallback to array index
-        const uniqueKey = child.handle !== 0 
-          ? child.handle 
-          : `${node.handle}_pin${child.pinInfo?.ix ?? index}`;
-        
-        return (
-          <SceneTreeItem
-            key={uniqueKey}
-            node={child}
-            depth={depth + 1}
-            onSelect={onSelect}
-            onContextMenu={onContextMenu}
-            selectedHandle={selectedHandle}
-            expandAllSignal={expandAllSignal}
-            collapseAllSignal={collapseAllSignal}
-          />
-        );
-      })}
-    </>
-  );
-}
+import { 
+  flattenTree, 
+  initializeExpansionMap, 
+  toggleExpansion, 
+  expandAll, 
+  collapseAll
+} from '../../utils/TreeFlattener';
+import { VirtualTreeRow, VirtualTreeRowProps } from './VirtualTreeRow';
 
 interface SceneOutlinerProps {
   selectedNode?: SceneNode | null;
@@ -308,8 +200,9 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
   const [liveDBCategories, setLiveDBCategories] = useState<LiveDBCategory[]>([]);
   const [liveDBLoading, setLiveDBLoading] = useState(false);
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
-  const [expandAllSignal, setExpandAllSignal] = useState(0);
-  const [collapseAllSignal, setCollapseAllSignal] = useState(0);
+  
+  // Virtual scrolling: Expansion state management
+  const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(new Map());
   
   // Context menu state
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -395,6 +288,67 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
     // TODO: Implement Lua browser navigation
   };
 
+  // Virtual scrolling: Toggle node expansion
+  const handleToggleExpansion = useCallback((nodeKey: string) => {
+    setExpansionMap(prevMap => toggleExpansion(prevMap, nodeKey));
+  }, []);
+
+  // Virtual scrolling: Expand/Collapse all handlers
+  const handleExpandAllVirtual = useCallback(() => {
+    if (sceneTree.length === 0) return;
+    
+    // Create synthetic root with sceneTree as children
+    const syntheticRoot: SceneNode[] = [{
+      handle: -1,
+      name: 'Scene',
+      type: 'SceneRoot',
+      typeEnum: 0,
+      children: sceneTree
+    }];
+    
+    setExpansionMap(expandAll(syntheticRoot));
+  }, [sceneTree]);
+
+  const handleCollapseAllVirtual = useCallback(() => {
+    if (sceneTree.length === 0) return;
+    
+    // Create synthetic root with sceneTree as children
+    const syntheticRoot: SceneNode[] = [{
+      handle: -1,
+      name: 'Scene',
+      type: 'SceneRoot',
+      typeEnum: 0,
+      children: sceneTree
+    }];
+    
+    setExpansionMap(collapseAll(syntheticRoot));
+  }, [sceneTree]);
+
+  // Virtual scrolling: Flatten tree for rendering
+  const flattenedNodes = useMemo(() => {
+    if (sceneTree.length === 0) return [];
+    
+    // Create synthetic root with sceneTree as children
+    const syntheticRoot: SceneNode[] = [{
+      handle: -1,
+      name: 'Scene',
+      type: 'SceneRoot',
+      typeEnum: 0,
+      children: sceneTree
+    }];
+    
+    return flattenTree(syntheticRoot, expansionMap);
+  }, [sceneTree, expansionMap]);
+
+  // Virtual scrolling: Create rowProps for react-window v2 List
+  const rowProps = useMemo<VirtualTreeRowProps>(() => ({
+    flattenedNodes,
+    selectedHandle: selectedNode?.handle || null,
+    onSelect: handleNodeSelect,
+    onContextMenu: handleNodeContextMenu,
+    onToggle: handleToggleExpansion
+  }), [flattenedNodes, selectedNode, handleToggleExpansion]);
+
   const loadSceneTree = async () => {
     if (!connected || !client) {
       return;
@@ -409,6 +363,17 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       
       setSceneTree(tree);
       onSceneTreeChange?.(tree);
+      
+      // Initialize expansion map for virtual scrolling
+      // Create synthetic root with sceneTree as children
+      const syntheticRoot: SceneNode[] = [{
+        handle: -1,
+        name: 'Scene',
+        type: 'SceneRoot',
+        typeEnum: 0,
+        children: tree
+      }];
+      setExpansionMap(initializeExpansionMap(syntheticRoot));
       
       Logger.debug(`✅ Loaded ${tree.length} top-level items`);
 
@@ -737,13 +702,9 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
     };
   }, [client, onSceneTreeChange]);
 
-  const handleExpandAll = () => {
-    setExpandAllSignal(prev => prev + 1);
-  };
-
-  const handleCollapseAll = () => {
-    setCollapseAllSignal(prev => prev + 1);
-  };
+  // Use virtual scrolling handlers for expand/collapse
+  const handleExpandAll = handleExpandAllVirtual;
+  const handleCollapseAll = handleCollapseAllVirtual;
 
   return (
     <div className="scene-outliner">
@@ -836,21 +797,13 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
             <div className="scene-loading">Loading scene...</div>
           ) : sceneTree.length > 0 ? (
             <div className="scene-mesh-list">
-              {/* Create a synthetic Scene root node with children */}
-              <SceneTreeItem
-                node={{
-                  handle: -1, // Use -1 for synthetic root to avoid collision with NO_ITEM (0)
-                  name: 'Scene',
-                  type: 'SceneRoot',
-                  typeEnum: 0,
-                  children: sceneTree
-                }}
-                depth={0}
-                onSelect={handleNodeSelect}
-                onContextMenu={handleNodeContextMenu}
-                selectedHandle={selectedNode?.handle || null}
-                expandAllSignal={expandAllSignal}
-                collapseAllSignal={collapseAllSignal}
+              {/* Virtual scrolling: Only render visible nodes */}
+              <List
+                defaultHeight={600}
+                rowCount={flattenedNodes.length}
+                rowHeight={24}
+                rowComponent={VirtualTreeRow}
+                rowProps={rowProps}
               />
             </div>
           ) : (
