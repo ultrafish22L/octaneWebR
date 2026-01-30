@@ -642,24 +642,40 @@ export class SceneService extends BaseService {
       item.children = children;
       
       if (children.length === 0) {
-        // Try to fetch attrInfo for leaf nodes (parameter nodes)
-        // Some nodes may not support attrInfo (invalid object reference) - this is expected
-        try {
-          const attrInfoResponse = await this.apiService.callApi(
-            'ApiItem',
-            'attrInfo',
-            item.handle,
-            { id: AttributeId.A_VALUE }
-          );
-          
-          if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
-            item.attrInfo = attrInfoResponse.result;
-            Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
+        // Only call attrInfo on nodes with valid, fully-realized handles
+        // Check: 1) Handle exists and isn't 0 (unconnected pin)
+        //        2) Node is in scene map and not a reservation marker
+        //        3) Basic node data was successfully fetched
+        const handleNum = Number(item.handle);
+        const nodeInMap = this.scene.map.get(handleNum);
+        const isReserved = nodeInMap && (nodeInMap as any)._reserved;
+        
+        const hasValidHandle = item.handle && 
+                               item.handle !== 0 &&
+                               nodeInMap &&
+                               !isReserved &&
+                               item.name &&
+                               item.type;
+        
+        if (hasValidHandle) {
+          try {
+            const attrInfoResponse = await this.apiService.callApi(
+              'ApiItem',
+              'attrInfo',
+              item.handle,
+              { id: AttributeId.A_VALUE }
+            );
+            
+            if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+              item.attrInfo = attrInfoResponse.result;
+              Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
+            }
+          } catch (attrError: any) {
+            Logger.error(`❌ attrInfo failed for validated node "${item.name}" (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
           }
-        } catch (attrError: any) {
-          // Expected for some node types that don't have A_VALUE attribute
-          // Log at WARN level so it's visible even with DEBUG suppressed (for diagnostics)
-          Logger.warn(`  ℹ️ No attrInfo for "${item.name}" (handle: ${item.handle}, type: ${item.type}, level: ${item.level})`);
+        } else {
+          const reason = !nodeInMap ? 'not in map' : isReserved ? 'reserved' : !item.name ? 'no name' : !item.type ? 'no type' : 'handle=0';
+          Logger.debug(`  ⏩ Skipping attrInfo for node "${item.name}" - ${reason}`);
         }
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);
