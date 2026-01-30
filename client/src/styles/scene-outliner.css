@@ -490,7 +490,7 @@ input:checked + .slider:before {
     font-size: var(--font-size-small);
     font-family: var(--font-family);
     color: var(--text-secondary);
-    padding: 1px 0;
+    padding: 0;
 }
 
 .tree-node:hover {

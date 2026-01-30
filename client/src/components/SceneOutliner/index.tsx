@@ -836,7 +836,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
               {/* Virtual scrolling: Only render visible nodes */}
               <List
                 rowCount={flattenedNodes.length}
-                rowHeight={24}
+                rowHeight={20}
                 rowComponent={VirtualTreeRow}
                 rowProps={rowProps}
               />
