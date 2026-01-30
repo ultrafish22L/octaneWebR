@@ -139,6 +139,7 @@ export interface SceneStructureLoadedEvent {
 
 export interface NodeBatchLoadedEvent {
   handles: number[];  // Handles of nodes that just loaded
+  nodes: SceneNode[];  // Updated node objects with children/pins
   progress: SceneSyncProgress;
 }
 

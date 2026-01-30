@@ -248,16 +248,18 @@ export class SceneService extends BaseService {
         // Load pins for this batch
         await this.loadNodePinsBatch(batch);
         
-        // Mark nodes as loaded
+        // Mark nodes as loaded and collect updated nodes
+        const updatedNodes: SceneNode[] = [];
         batch.forEach(handle => {
           const node = this.scene.map.get(handle);
           if (node) {
             node.loadingState = 'loaded';
             node.childrenLoaded = true;
+            updatedNodes.push(node);
           }
         });
         
-        // Emit progress update
+        // Emit progress update with updated nodes
         const loaded = i + batch.length;
         const elapsed = (performance.now() - startTime) / 1000;
         const updatedProgress: SceneSyncProgress = {
@@ -272,6 +274,7 @@ export class SceneService extends BaseService {
         
         this.emit('nodeBatchLoaded', {
           handles: batch,
+          nodes: updatedNodes,
           progress: updatedProgress
         });
         

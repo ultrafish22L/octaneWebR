@@ -192,6 +192,43 @@ function LocalDBTreeItem({ category, depth, onLoadCategory, onLoadPackage }: Loc
 }
 
 /**
+ * Merge updated nodes into the tree, replacing nodes by handle
+ * This updates both the node data AND its children
+ */
+function mergeUpdatedNodes(
+  tree: SceneNode[],
+  updatedNodes: SceneNode[]
+): SceneNode[] {
+  // Create a map of updated nodes by handle
+  const updateMap = new Map<number, SceneNode>();
+  updatedNodes.forEach(node => {
+    if (node.handle) {
+      updateMap.set(node.handle, node);
+    }
+  });
+
+  const mergeNode = (node: SceneNode): SceneNode => {
+    if (node.handle && updateMap.has(node.handle)) {
+      // Replace with updated node (which includes children, pins, etc.)
+      return updateMap.get(node.handle)!;
+    }
+
+    // Check children recursively
+    if (node.children && node.children.length > 0) {
+      const updatedChildren = node.children.map(mergeNode);
+      // Only create new object if children changed
+      if (updatedChildren.some((child, i) => child !== node.children![i])) {
+        return { ...node, children: updatedChildren };
+      }
+    }
+
+    return node; // Return same reference if unchanged
+  };
+
+  return tree.map(mergeNode);
+}
+
+/**
  * Update node loading states with structural sharing
  * Only creates new objects for updated nodes, keeps others unchanged for React optimization
  */
@@ -796,8 +833,13 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
       // Update progress
       setSyncProgress(event.progress);
       
-      // Update tree to reflect loaded nodes (structural sharing)
-      setSceneTree(prev => updateNodesLoadingState(prev, event.handles, 'loaded'));
+      // Merge updated nodes into tree (includes children, pins, connections)
+      setSceneTree(prev => {
+        const merged = mergeUpdatedNodes(prev, event.nodes);
+        // Schedule parent callback after state update completes
+        setTimeout(() => onSceneTreeChange?.(merged), 0);
+        return merged;
+      });
     };
 
     const handleSyncProgress = (progress: SceneSyncProgress) => {
