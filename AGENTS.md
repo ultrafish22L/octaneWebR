@@ -530,6 +530,57 @@ api-version.config.js (ROOT - Single Source)
 
 ## Recent Development Status
 
+### Parallel Scene Loading Implementation (2025-01-24 to 2025-01-30) ⚠️
+
+**Status**: ⚠️ TESTING - May be reverted based on user feedback
+
+**What**: Complete rewrite of scene tree loading from sequential to parallel API requests
+
+**Performance**: 2.5-3x speedup (5.2s → 2.4s for 310-node scene)
+
+**Commit Range**: `271c390..f5ecb1a` (~30 commits)
+
+**Key Implementation**:
+- **Parallel Pin Fetching**: `Promise.all()` for concurrent API requests (20 concurrent max)
+- **Handle Reservation System**: Prevents duplicate nodes in concurrent mode
+- **Progressive UI Updates**: Level-based scene tree rendering (top-level nodes visible immediately)
+- **Handle Validation**: Multi-step validation before calling `attrInfo()` API
+
+**Major Challenges Solved**:
+1. **Race Conditions**: Reservation marker system (`_reserved` flag in `scene.map`)
+2. **Duplicate Nodes**: Atomic map operations with immediate reservation
+3. **attrInfo Errors**: Validate handles are "fully realized" before API calls
+4. **Connection Exhaustion**: Request queue with configurable concurrency limits
+5. **Immutability**: React state consistency with immutable node objects
+
+**Configuration**:
+```typescript
+// client/src/config/parallelConfig.ts
+export const PARALLEL_CONFIG = {
+  ENABLED: true,  // Toggle parallel/sequential mode
+  MAX_CONCURRENT_PINS: 20,
+  MAX_CONCURRENT_CHILDREN: 20,
+  REQUEST_DELAY_MS: 0,
+  DEBUG_LOGGING: false
+};
+```
+
+**Revert Strategy** (if needed):
+```bash
+# Option 1: Full revert to 271c390
+git revert --no-commit f5ecb1a..HEAD
+git commit -m "Revert parallel loading"
+
+# Option 2: Disable via config
+# Change ENABLED: false in parallelConfig.ts
+```
+
+**Documentation**: See `PARALLEL_LOADING_HISTORY.md` for complete technical deep dive
+
+**Current Issue**: User reports potential problems, conducting additional testing
+
+---
+
 ### Virtual Scrolling Implementation (2025-02-02)
 
 **Status**: ✅ BUILD PASSING - Ready for Testing
@@ -707,12 +758,13 @@ api-version.config.js (ROOT - Single Source)
 
 ## Reference Documentation
 
-**Main Documentation** (7 files):
+**Main Documentation**:
 - `README.md` - Project overview, features, quick start, API version support
 - `QUICKSTART.md` - First-time setup guide (prerequisites, installation, verification)
 - `DEVELOPMENT.md` - Development guide, architecture, API version switching (detailed)
 - `CHANGELOG.md` - Version history in Keep a Changelog format
 - `AGENTS.md` - AI assistant memory (this file)
+- `PARALLEL_LOADING_HISTORY.md` - Complete parallel loading development history (271c390..f5ecb1a)
 - `.openhands/skills/` - AI skills for specialized tasks
 - **Octane manual**: https://docs.otoy.com/standaloneSE/
 
