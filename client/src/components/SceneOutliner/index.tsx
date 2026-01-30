@@ -831,11 +831,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
             <div className="scene-loading">Not connected</div>
           ) : loading ? (
             <div className="scene-loading">
-              <img 
-                src="/loading-spinner.svg" 
-                alt="Loading" 
-                className="scene-loading-spinner"
-              />
+              <div className="scene-loading-spinner"></div>
               <div className="scene-loading-text">Loading scene...</div>
             </div>
           ) : sceneTree.length > 0 ? (
