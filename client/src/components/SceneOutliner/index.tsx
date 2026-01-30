@@ -830,7 +830,14 @@ export const SceneOutliner = React.memo(function SceneOutliner({ selectedNode, o
           {!connected ? (
             <div className="scene-loading">Not connected</div>
           ) : loading ? (
-            <div className="scene-loading">Loading scene...</div>
+            <div className="scene-loading">
+              <img 
+                src="/loading-spinner.svg" 
+                alt="Loading" 
+                className="scene-loading-spinner"
+              />
+              <div className="scene-loading-text">Loading scene...</div>
+            </div>
           ) : sceneTree.length > 0 ? (
             <div className="scene-mesh-list">
               {/* Virtual scrolling: Only render visible nodes */}

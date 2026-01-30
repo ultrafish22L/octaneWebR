@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(100, 100)">
+    <!-- Turbine blade 1 (curved trapezoid) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" />
+    
+    <!-- Turbine blade 2 (60 degrees) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" transform="rotate(60)" />
+    
+    <!-- Turbine blade 3 (120 degrees) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" transform="rotate(120)" />
+    
+    <!-- Turbine blade 4 (180 degrees) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" transform="rotate(180)" />
+    
+    <!-- Turbine blade 5 (240 degrees) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" transform="rotate(240)" />
+    
+    <!-- Turbine blade 6 (300 degrees) -->
+    <path d="M 5 -25 Q 20 -50 30 -80 L 55 -90 Q 60 -70 55 -40 Q 45 -30 30 -25 Z" fill="#FF0000" transform="rotate(300)" />
+    
+    <!-- Center circle (white) -->
+    <circle cx="0" cy="0" r="30" fill="white" />
+  </g>
+</svg>
