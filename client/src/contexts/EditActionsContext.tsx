@@ -17,7 +17,8 @@ export interface EditActionsHandler {
   find?: () => void;
 }
 
-interface EditActionsContextType {
+export interface EditActionsContextType {
+  // eslint-disable-next-line no-unused-vars
   registerHandlers: (handlers: EditActionsHandler) => void;
   unregisterHandlers: () => void;
   cut: () => void;
