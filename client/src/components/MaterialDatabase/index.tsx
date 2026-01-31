@@ -7,24 +7,22 @@
  * References:
  * - Octane SE Manual: Materials Database section
  * - gRPC API: ApiDBMaterialManager (getCategories, getMaterials, downloadMaterial)
+ *
+ * React 18 Modernization:
+ * - Uses React Query (useMaterialCategories, useMaterialsForCategory, useDownloadMaterial)
+ * - Automatic caching and background refetching
+ * - Declarative data fetching with loading/error states
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState, useEffect } from 'react';
-import { useOctane } from '../../hooks/useOctane';
+import { useState } from 'react';
+import {
+  useMaterialCategories,
+  useMaterialsForCategory,
+  useDownloadMaterial,
+  type DBType,
+} from '../../hooks/useMaterialQueries';
 import { SkeletonMaterialGrid } from '../Skeleton';
-
-interface MaterialCategory {
-  name: string;
-  id: number;
-}
-
-interface Material {
-  id: number;
-  name: string;
-  previewUrl?: string;
-  category: string;
-}
 
 interface MaterialDatabaseProps {
   visible: boolean;
@@ -32,111 +30,47 @@ interface MaterialDatabaseProps {
 }
 
 export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
-  const { connected, client } = useOctane();
-  const [activeTab, setActiveTab] = useState<'livedb' | 'localdb'>('livedb');
-  const [categories, setCategories] = useState<MaterialCategory[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [activeTab, setActiveTab] = useState<DBType>('livedb');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Load categories when database opens
-  useEffect(() => {
-    if (!visible || !connected) return;
+  // React Query hooks - declarative data fetching
+  const categoriesQuery = useMaterialCategories(activeTab, visible);
+  const materialsQuery = useMaterialsForCategory(selectedCategory, activeTab, visible);
+  const downloadMaterialMutation = useDownloadMaterial();
 
-    const loadCategories = async () => {
-      setLoading(true);
-      setError(null);
+  // Derived state from queries
+  const categories = categoriesQuery.data ?? [];
+  const materials = materialsQuery.data ?? [];
+  const loading = categoriesQuery.isLoading || materialsQuery.isLoading;
+  const error = categoriesQuery.error?.message || materialsQuery.error?.message || null;
 
-      try {
-        Logger.debug(`🗂️ Loading ${activeTab === 'livedb' ? 'LiveDB' : 'LocalDB'} categories...`);
-
-        // Call gRPC API to get categories
-        const response = await client.callApi('ApiDBMaterialManager', 'getCategories', {
-          dbType: activeTab === 'livedb' ? 0 : 1, // 0 = LiveDB, 1 = LocalDB
-        });
-
-        if (response && response.categories) {
-          setCategories(response.categories);
-          Logger.debug(`✅ Loaded ${response.categories.length} categories`);
-        } else {
-          setCategories([]);
-          Logger.warn('⚠️ No categories returned from API');
-        }
-      } catch (err: any) {
-        Logger.error('❌ Failed to load categories:', err);
-        setError(`Failed to load categories: ${err.message}`);
-        setCategories([]);
-      } finally {
-        setLoading(false);
+  // Handle material download using React Query mutation
+  const handleDownloadMaterial = (materialId: number, materialName: string) => {
+    downloadMaterialMutation.mutate(
+      { materialId, materialName, dbType: activeTab },
+      {
+        onSuccess: () => {
+          Logger.debug(`✅ Download complete: ${materialName}`);
+          // TODO: Show success notification
+        },
+        onError: (error: any) => {
+          Logger.error(`❌ Download failed: ${materialName}`, error);
+          // Error is already logged by the mutation hook
+        },
       }
-    };
-
-    loadCategories();
-  }, [visible, connected, activeTab, client]);
-
-  // Load materials when category is selected
-  useEffect(() => {
-    if (!selectedCategory || !connected) return;
-
-    const loadMaterials = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        Logger.debug(`📦 Loading materials for category ${selectedCategory}...`);
-
-        const response = await client.callApi('ApiDBMaterialManager', 'getMaterials', {
-          categoryId: selectedCategory,
-          dbType: activeTab === 'livedb' ? 0 : 1,
-        });
-
-        if (response && response.materials) {
-          setMaterials(response.materials);
-          Logger.debug(`✅ Loaded ${response.materials.length} materials`);
-        } else {
-          setMaterials([]);
-          Logger.warn('⚠️ No materials returned from API');
-        }
-      } catch (err: any) {
-        Logger.error('❌ Failed to load materials:', err);
-        setError(`Failed to load materials: ${err.message}`);
-        setMaterials([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMaterials();
-  }, [selectedCategory, connected, activeTab, client]);
-
-  const handleDownloadMaterial = async (materialId: number, materialName: string) => {
-    if (!connected) {
-      Logger.warn('⚠️ Cannot download material: not connected');
-      return;
-    }
-
-    try {
-      Logger.debug(`⬇️ Downloading material: ${materialName} (ID: ${materialId})`);
-
-      await client.callApi('ApiDBMaterialManager', 'downloadMaterial', {
-        materialId,
-        dbType: activeTab === 'livedb' ? 0 : 1,
-      });
-
-      Logger.debug(`✅ Material downloaded: ${materialName}`);
-
-      // TODO: Show success notification
-    } catch (err: any) {
-      Logger.error(`❌ Failed to download material ${materialName}:`, err);
-      setError(`Failed to download material: ${err.message}`);
-    }
+    );
   };
 
   const handleCategoryChange = (categoryId: string) => {
     const id = parseInt(categoryId, 10);
     setSelectedCategory(id);
-    setMaterials([]); // Clear materials while loading
+    // React Query will automatically fetch materials for the new category
+  };
+
+  const handleTabChange = (tab: DBType) => {
+    setActiveTab(tab);
+    setSelectedCategory(null); // Reset category when switching tabs
+    // React Query will automatically refetch categories for the new tab
   };
 
   if (!visible) return null;
@@ -171,13 +105,13 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
         <div className="material-database-tabs">
           <button
             className={`tab-button ${activeTab === 'livedb' ? 'active' : ''}`}
-            onClick={() => setActiveTab('livedb')}
+            onClick={() => handleTabChange('livedb')}
           >
             LiveDB
           </button>
           <button
             className={`tab-button ${activeTab === 'localdb' ? 'active' : ''}`}
-            onClick={() => setActiveTab('localdb')}
+            onClick={() => handleTabChange('localdb')}
           >
             LocalDB
           </button>
@@ -227,8 +161,8 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
                   title={`Double-click to download: ${material.name}`}
                 >
                   <div className="material-preview">
-                    {material.previewUrl ? (
-                      <img src={material.previewUrl} alt={material.name} />
+                    {material.preview ? (
+                      <img src={material.preview} alt={material.name} />
                     ) : (
                       <div className="material-preview-placeholder">No Preview</div>
                     )}

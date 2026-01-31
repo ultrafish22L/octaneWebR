@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - React 18 Modernization P2B: React Query (2025-02-03)
+
+- **React Query Integration**: Modern data fetching and state management
+  - Installed `@tanstack/react-query@^5.90.20` and `@tanstack/react-query-devtools@^5.90.20`
+  - Created centralized QueryClient configuration with optimized defaults
+  - Configured for Octane gRPC API: longer stale times, aggressive retries, background refetching
+  - Centralized query keys factory for type safety and consistency
+  - Query presets for different data types (realtime, stable, on-demand)
+  - Files: `client/src/lib/queryClient.ts`
+- **Material Database Hooks**: Declarative data fetching for materials
+  - `useMaterialCategories` - Fetches LiveDB/LocalDB categories with automatic caching
+  - `useMaterialsForCategory` - Fetches materials for selected category with smart invalidation
+  - `useDownloadMaterial` - Mutation hook for downloading materials with optimistic updates
+  - Automatic query invalidation on material downloads
+  - Files: `client/src/hooks/useMaterialQueries.ts`
+- **MaterialDatabase Migration**: Converted from useState/useEffect to React Query
+  - Removed manual loading/error state management (100+ lines removed)
+  - Declarative data fetching with automatic loading/error states
+  - Background refetching keeps data fresh during long sessions
+  - Automatic request deduplication and caching
+  - Tab switching properly resets state and refetches data
+  - Files: `client/src/components/MaterialDatabase/index.tsx`
+- **React Query DevTools**: Integrated development tools for debugging
+  - Added DevTools for query inspection and debugging
+  - Automatically tree-shaken in production builds
+  - Access via floating icon in development mode
+- **QueryClientProvider**: Wrapped application with React Query provider
+  - Provider hierarchy: QueryClient → Octane → EditActions → AppContent
+  - Files: `client/src/App.tsx`
+
+**Benefits:**
+
+- ✅ **Automatic Caching**: Eliminates redundant API calls
+- ✅ **Background Refetching**: Keeps data fresh without blocking UI
+- ✅ **Request Deduplication**: Multiple components can use same data efficiently
+- ✅ **Optimistic Updates**: Better perceived performance for mutations
+- ✅ **Declarative API**: Cleaner, more maintainable code
+- ✅ **DevTools**: Rich debugging experience
+
 ### Added - React 18 Modernization P2A: Suspense Boundaries (2025-02-03)
 
 - **Skeleton Loaders**: Context-aware loading placeholders for better UX

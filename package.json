@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@improbable-eng/grpc-web": "^0.15.0",
+    "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "@xyflow/react": "^12.10.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",

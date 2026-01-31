@@ -405,8 +405,8 @@ When investigating issues:
 ## Current Status
 
 **Version**: 1.0.0  
-**Status**: P2A Modernization Complete (Suspense Boundaries + Skeleton Loaders)  
-**Next**: P2B - React Query (2-3 days estimate)
+**Status**: P2B Modernization Complete (React Query + Data Fetching)  
+**Next**: P2C - React.memo & useMemo optimizations (2-3 hours estimate)
 
 **Key Stats**:
 
@@ -417,6 +417,16 @@ When investigating issues:
 - 134 CSS variables
 
 **Recent Milestones** (2025-02-03):
+
+**P2B: React Query** ✅
+
+- ✅ React Query installed (@tanstack/react-query v5.90.20)
+- ✅ QueryClient configured with Octane-optimized defaults
+- ✅ Centralized query keys factory for type safety
+- ✅ MaterialDatabase migrated to useQuery hooks (100+ lines removed)
+- ✅ Custom hooks: useMaterialCategories, useMaterialsForCategory, useDownloadMaterial
+- ✅ React Query DevTools integrated for debugging
+- ✅ Automatic caching, background refetching, request deduplication
 
 **P2A: Suspense Boundaries** ✅
 
@@ -432,7 +442,7 @@ When investigating issues:
 - ✅ Code Splitting complete (lazy load NodeGraph + MaterialDatabase)
 - ✅ Bundle size reduction: 587KB → ~150-200KB initial
 
-**Next**: P2B - React Query for data fetching (4-6 hours estimate)
+**Next**: P2C - React.memo & useMemo/useCallback optimizations
 
 ---
 
