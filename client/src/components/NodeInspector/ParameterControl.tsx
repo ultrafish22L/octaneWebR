@@ -65,6 +65,18 @@ export function ParameterControl({
 
   const { value, type } = paramValue;
 
+  // Debug logging for stereo filter parameters
+  const nodeName = node.pinInfo?.staticLabel || node.name;
+  if (nodeName.toLowerCase().includes('stereo') && nodeName.toLowerCase().includes('filter')) {
+    console.log('🔧 ParameterControl RENDERING:', {
+      nodeName,
+      type,
+      value,
+      floatInfo: node.pinInfo?.floatInfo,
+      nodeType: node.nodeInfo?.type,
+    });
+  }
+
   // Controls must be wrapped in parameter-control-container or parameter-checkbox-container
   // which are then wrapped in node-parameter-controls div (matching octaneWeb structure)
   let controlHtml = null;
@@ -168,9 +180,31 @@ export function ParameterControl({
         const dimCount = floatInfo?.dimCount ?? 3;
         const isColor = floatInfo?.isColor || node.nodeInfo?.type === 'NT_TEX_RGB';
 
+        // Debug logging for stereo filter color detection
+        if (
+          nodeName.toLowerCase().includes('stereo') &&
+          nodeName.toLowerCase().includes('filter')
+        ) {
+          console.log('🎨 AT_FLOAT3 COLOR DETECTION:', {
+            nodeName,
+            isColor,
+            floatInfoIsColor: floatInfo?.isColor,
+            nodeType: node.nodeInfo?.type,
+            value: { x, y, z },
+          });
+        }
+
         // Check if this is a color (NT_TEX_RGB)
         if (isColor) {
           const hexColor = formatColorValue(value);
+
+          if (
+            nodeName.toLowerCase().includes('stereo') &&
+            nodeName.toLowerCase().includes('filter')
+          ) {
+            console.log('✅ RENDERING COLOR INPUT:', { nodeName, hexColor });
+          }
+
           controlHtml = (
             <div className="parameter-control-container">
               <input
