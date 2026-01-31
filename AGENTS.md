@@ -11,16 +11,18 @@ This file provides essential repository knowledge for AI assistants. For detaile
 **octaneWebR** is a React/TypeScript web UI clone of Octane Render Studio Standalone Edition that communicates with a live instance of Octane via the gRPC LiveLink API.
 
 ### Core Principles
+
 - **No Mocking**: All features use real Octane gRPC connections
 - **UI Clone**: Interface matches [Octane SE Manual](https://docs.otoy.com/standaloneSE/)
 - **Service Architecture**: Event-driven service layer + reactive UI
 - **Theme System**: CSS variables for all styling (no inline styles, no hardcoded colors)
 
 ### Tech Stack
+
 ```
 React 18 + TypeScript 5 + Vite 5
 ReactFlow (node graph)
-Zustand (state management)
+React Context API (state management)
 gRPC-Web (Octane communication)
 ```
 
@@ -29,6 +31,7 @@ gRPC-Web (Octane communication)
 ## Essential Commands
 
 ### Development
+
 ```bash
 # Type check
 npx tsc --noEmit
@@ -44,12 +47,14 @@ lsof -ti:57341,49019 | xargs kill -9
 ```
 
 ### Health Check
+
 ```bash
 curl -s http://localhost:57341/api/health | python3 -m json.tool
 # Should return: { "status": "ok", "octane": "connected" }
 ```
 
 ### Quick Test Workflow
+
 ```bash
 # 1. Stop servers
 lsof -ti:57341,49019 | xargs kill -9
@@ -102,15 +107,16 @@ octaneWebR/
 ## Architecture Patterns
 
 ### Service Layer
+
 ```typescript
 export class MyService extends BaseService {
   async myMethod(param: Type): Promise<Result> {
     // 1. Make gRPC call
     const result = await this.grpcCall(param);
-    
+
     // 2. Emit event for UI sync
     this.emit('event:name', { data: result });
-    
+
     // 3. Return result
     return result;
   }
@@ -118,33 +124,35 @@ export class MyService extends BaseService {
 ```
 
 ### Component Pattern
+
 ```typescript
 const MyComponent: React.FC<Props> = ({ prop }) => {
   // 1. State
   const [state, setState] = useState<Type>(initial);
-  
+
   // 2. Context/hooks
   const { client, connected } = useOctane();
-  
+
   // 3. Effects (with cleanup!)
   useEffect(() => {
     const handler = (data) => setState(data);
     client.on('event:name', handler);
     return () => client.off('event:name', handler);
   }, [client]);
-  
+
   // 4. Handlers
   const handleAction = async () => {
     if (!connected) return;
     await client.service.method();
   };
-  
+
   // 5. Render
   return <div>{/* JSX */}</div>;
 };
 ```
 
 ### Event-Driven Communication
+
 ```typescript
 // Service emits:
 this.emit('node:created', { handle, type });
@@ -161,23 +169,27 @@ client.on('node:created', handler);
 ## Code Conventions
 
 ### TypeScript
+
 - ✅ Strict mode (no `any` types)
 - ✅ Named exports for utilities, default for components
 - ✅ Define interfaces before components
 - ✅ Arrow functions everywhere
 
 ### Styling
+
 - ✅ Use `var(--octane-*)` CSS variables (defined in `octane-theme.css`)
 - ✅ No inline styles (except dynamic transforms, positions)
 - ✅ CSS Modules for component styles
 - ❌ Never hardcode colors or spacing values
 
 ### File Naming
+
 - Components: `PascalCase.tsx`
 - Utilities: `camelCase.ts`
 - Styles: `kebab-case.css`
 
 ### Import Order
+
 ```typescript
 // 1. External deps
 import React, { useState } from 'react';
@@ -200,41 +212,48 @@ import styles from './MyComponent.module.css';
 ## Recent Features
 
 ### Logger System (Jan 2025) ✅
-**What**: Centralized logging system replacing all console.* calls (670+ logs)  
+
+**What**: Centralized logging system replacing all console.\* calls (670+ logs)  
 **Where**: `client/src/utils/Logger.ts`  
 **Methods**: `Logger.debug()`, `Logger.error()`, `Logger.warn()`, `Logger.info()`, `Logger.success()`, `Logger.network()`, `Logger.api()`  
-**Usage**: 
+**Usage**:
+
 - High-frequency operations → `Logger.debug()` (scene building, position updates)
 - Errors → `Logger.error()` with descriptive messages
 - User actions → `Logger.info()` or `Logger.success()`
 - Network events → `Logger.network()` (connections, disconnects)
-**Emoji Prefixes**: 🔍 (debug), ❌ (error), ⚠️ (warn), ✅ (success), 🌐 (network)  
-**Status**: Complete (66% DEBUG, 24% ERROR, 9% WARN)
+  **Emoji Prefixes**: 🔍 (debug), ❌ (error), ⚠️ (warn), ✅ (success), 🌐 (network)  
+  **Status**: Complete (66% DEBUG, 24% ERROR, 9% WARN)
 
 ### Code Documentation (Jan 2025) ✅
+
 **What**: Enhanced 7 core service files with architectural documentation  
 **Where**: `services/octane/*.ts`, `services/CommandHistory.ts`  
 **Key Additions**:
+
 - gRPC conventions (objectPtr requirements, service mappings)
 - WebSocket timing fixes (50ms delay rationale)
 - Scene tree building strategy (NodeGraph vs Node traversal)
 - Pin connection model (cycle checking, handle "0" = disconnect)
 - Render pipeline structure (RenderEngine → RenderTarget → FilmSettings)
 - Undo/redo branching behavior (new action discards redo stack)
-**Status**: Complete (created DOCUMENTATION_IMPROVEMENTS.md)
+  **Status**: Complete (created DOCUMENTATION_IMPROVEMENTS.md)
 
 ### Tab Bar UI Refinements (Jan 2025) ✅
+
 **What**: Added tab bars to Scene Outliner and Node Graph Editor matching Octane SE styling  
 **Where**: `scene-outliner.css`, `node-graph.css`, `App.tsx`  
 **Key Details**:
+
 - Right-slanted trapezoid tabs using `clip-path: polygon()`
 - Z-index stacking for proper left-to-right overlap effect
 - Active tab: `--octane-bg-secondary`, Inactive: `--octane-bg-lighter`
 - Node Graph: Vertical toolbar (26px width) on left, tabs to right in horizontal row
 - Constrained tab width (max-width: 120px) matching reference screenshots
-**Status**: Complete
+  **Status**: Complete
 
 ### Node Type Dropdown (Jan 2025) ✅
+
 **What**: Change a node's type via dropdown while preserving graph position  
 **Where**: NodeInspector component (`client/src/components/NodeInspector/index.tsx`)  
 **How**: Uses `PT_TO_NT` mapping to show compatible types, calls `replaceNode()` service method  
@@ -242,6 +261,7 @@ import styles from './MyComponent.module.css';
 **Status**: Fully implemented and tested
 
 **Key Implementation**:
+
 ```typescript
 // NodeService.ts
 async replaceNode(oldHandle: number, newType: string): Promise<number> {
@@ -257,6 +277,7 @@ async replaceNode(oldHandle: number, newType: string): Promise<number> {
 ```
 
 ### API Version Compatibility Layer (Jan 2025) ✅ COMPLETE
+
 **What**: Static code flag system to support both Beta 2 and Alpha 5 gRPC APIs  
 **Where**: `client/src/config/apiVersionConfig.ts`, `vite-plugin-octane-grpc.ts`, `ApiService.ts`  
 **Current Config**: `USE_ALPHA5_API = true` (using Alpha 5 / proto_old)  
@@ -264,8 +285,9 @@ async replaceNode(oldHandle: number, newType: string): Promise<number> {
 **Status**: **FULLY VERIFIED - All transformations complete, zero errors**
 
 **Architecture (3 Layers)**:
+
 ```
-CLIENT CODE (Beta 2 style) 
+CLIENT CODE (Beta 2 style)
   → CLIENT COMPATIBILITY LAYER (method name mapping, parameter transforms)
   → HTTP/JSON TRANSPORT
   → SERVER COMPATIBILITY LAYER (objectPtr → item_ref remapping)
@@ -282,6 +304,7 @@ CLIENT CODE (Beta 2 style)
 | `setValueByAttrID` | `setByAttrID` | Method only | objectPtr→item_ref |
 
 **Parameter Transformations (getPinValue/setPinValue)**:
+
 - `pin_id` → `id`
 - `bool_value`/`int_value`/`float_value` → `value`
 - `expected_type` → removed
@@ -292,6 +315,7 @@ CLIENT CODE (Beta 2 style)
 ✅ See `COMPATIBILITY_VERIFICATION.md` for full proto structure analysis
 
 **Critical Fixes Applied**:
+
 1. **Fix #1 (getByAttrID method not found)**: Added `USE_ALPHA5_API` flag to vite plugin to load correct proto files
 2. **Fix #2 (558 "Invalid object type" errors)**: Added Alpha 5 method names (`getByAttrID`, `setByAttrID`) to server-side transformation condition (lines 689-690)
    - Root Cause: Server transformation only checked Beta 2 method names
@@ -307,17 +331,20 @@ CLIENT CODE (Beta 2 style)
 
 **Callback Compatibility**:
 ✅ Callbacks use IDENTICAL method names and signatures in both versions:
+
 - `setOnNewImageCallback` (same in Alpha 5 and Beta 2)
 - `setOnNewStatisticsCallback` (same in Alpha 5 and Beta 2)
 - StreamCallbackService streaming: same in both versions
 - **No transformations needed for callbacks**
 
 ⚠️ **Don't use `grabRenderResult` for real-time callbacks**:
+
 - `grabRenderResult()` is for manual polling, not callback-based streaming
 - Callback stream already contains image data in `callbackRequest.newImage.render_images`
 - Using `grabRenderResult` with callbacks adds latency and can cause timing issues
 
 **Currently Used Methods Audit (75+ methods)**:
+
 - ✅ All 27 ApiRenderEngine methods: Compatible (same names in both versions)
 - ✅ All 11 ApiNode methods: Compatible (2 transformed, 9 same)
 - ✅ All 8 ApiItem methods: Compatible (same names)
@@ -327,18 +354,21 @@ CLIENT CODE (Beta 2 style)
 - See `COMPATIBILITY_ANALYSIS.md` for full method matrix
 
 **⚠️ CRITICAL - Server Architecture**:
+
 - Vite plugin (`vite-plugin-octane-grpc.ts`) IS the server (embedded in Vite dev server)
 - `server/` directory contains separate Express server - **NOT USED** by `npm run dev`
 - All transformations MUST be in vite plugin, not `server/src/index.ts`
 
 **Usage** (switching versions):
+
 ```typescript
 // In client/src/config/apiVersionConfig.ts
-export const USE_ALPHA5_API = true;  // false for Beta 2, true for Alpha 5
+export const USE_ALPHA5_API = true; // false for Beta 2, true for Alpha 5
 // Rebuild and restart
 ```
 
 **Debug Logging**:
+
 ```javascript
 // Browser console shows transformations when enabled:
 🔄 API Compatibility: getPinValueByPinID → getPinValue (Alpha 5)
@@ -346,6 +376,7 @@ export const USE_ALPHA5_API = true;  // false for Beta 2, true for Alpha 5
 ```
 
 ### Server Logging Control (Jan 2025) ✅
+
 **What**: Debug flag to control server-side logging with clear tagging  
 **Where**: `vite-plugin-octane-grpc.ts` (lines 22-42)  
 **Flag**: `DEBUG_SERVER_LOGS` (default: `false`)  
@@ -354,19 +385,22 @@ export const USE_ALPHA5_API = true;  // false for Beta 2, true for Alpha 5
 **Status**: Complete (63 server logs controlled, CLIENT logs always visible)
 
 **Usage**:
+
 ```typescript
 // In vite-plugin-octane-grpc.ts
-const DEBUG_SERVER_LOGS = true;  // Change from false to enable logs
+const DEBUG_SERVER_LOGS = true; // Change from false to enable logs
 // Restart dev server to apply changes
 ```
 
 **Key Benefits**:
+
 - **Cleaner Console**: Server logs hidden by default, only client logs visible
 - **Easy Toggle**: Single flag to enable/disable all server logs
 - **Clear Tagging**: `[OCTANE-SERVER]` prefix makes source obvious when enabled
 - **Preserved CLIENT Logs**: Client-side forwarded logs always visible regardless of flag
 
 **Example Output (when enabled)**:
+
 ```
 [OCTANE-SERVER] 📡 Vite gRPC Plugin: Connected to Octane at host.docker.internal:51022
 [OCTANE-SERVER] 🐳 Using Docker networking (sandbox environment detected)
@@ -379,36 +413,43 @@ const DEBUG_SERVER_LOGS = true;  // Change from false to enable logs
 
 For detailed domain knowledge, see `.openhands/skills/`:
 
-### `.openhands/skills/octane-grpc/` 
+### `.openhands/skills/octane-grpc/`
+
 **Triggers**: grpc, proto, api, service layer  
 **Contains**: gRPC call patterns, proto file usage, service architecture, common operations
 
 ### `.openhands/skills/node-inspector/`
+
 **Triggers**: node inspector, properties, parameters, dropdown  
 **Contains**: NodeInspector architecture, node type dropdown details, parameter editing
 
 ### `.openhands/skills/scene-graph/`
+
 **Triggers**: scene, outliner, tree, graph, hierarchy  
 **Contains**: Scene graph structure, tree traversal, node relationships, outliner patterns
 
 ### `.openhands/skills/testing-workflow/`
+
 **Triggers**: test, debug, workflow, build, verify  
 **Contains**: Complete testing routine, debugging techniques, visual debugging, server management
 
 ### `.openhands/skills/react-patterns/`
-**Triggers**: react, component, hook, state, zustand  
-**Contains**: Component patterns, custom hooks, performance optimization, Zustand usage
+
+**Triggers**: react, component, hook, state, context  
+**Contains**: Component patterns, custom hooks, performance optimization, Context API usage
 
 ---
 
 ## Recent Important Fixes
 
 ### Centralized API Version Config (2025-01-31) ⭐ LATEST
+
 **Problem**: When switching between Alpha 5 and Beta 2, users had to edit TWO config files. Mismatched configs caused "Method not found" errors.  
 **Root Cause**: Client and server had separate `USE_ALPHA5_API` constants that could get out of sync.  
 **Solution**: Created single source of truth in `api-version.config.js` at project root.
 
 **Files Changed**:
+
 - **NEW**: `api-version.config.js` - Single source of truth (line 22)
 - **NEW**: `client/src/config/apiVersionImport.ts` - ES module bridge
 - **UPDATED**: `vite-plugin-octane-grpc.ts` (line 40) - Now imports from centralized config
@@ -433,6 +474,7 @@ npm run build && npm run dev
 ```
 
 **Architecture**:
+
 ```
 api-version.config.js (ROOT - Single Source)
      ├──> Server (vite-plugin-octane-grpc.ts)
@@ -440,16 +482,19 @@ api-version.config.js (ROOT - Single Source)
 ```
 
 **What Gets Synchronized**:
+
 - ✅ Proto file directory selection (server/proto vs server/proto_old)
 - ✅ Method name transformation (getPinValueByPinID → getPinValue)
 - ✅ Parameter transformation (pin_id → id, expected_type removal)
 
 **Previous Bug Pattern** (Now Impossible):
+
 - Alpha 5 in client + Beta 2 in server = "Method getPinValue not found" ❌
 - Beta 2 in client + Alpha 5 in server = "Method getPinValueByPinID not found" ❌
 - Now: Always synchronized automatically ✅
 
 **Verification**: After switching, check logs:
+
 ```
 [OCTANE-SERVER] API Version: Alpha 5 (2026.1)
 [OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto_old
@@ -460,6 +505,7 @@ api-version.config.js (ROOT - Single Source)
 ---
 
 ### Beta 2 API Configuration (2025-01-31) [SUPERSEDED BY CENTRALIZED CONFIG]
+
 **Problem**: "Method not found" errors when testing Beta 2 Octane (`getPinValueByPinID`, `getValueByAttrID`)  
 **Root Cause**: Both client and server configured for Alpha 5 while testing Beta 2  
 **Files**: `vite-plugin-octane-grpc.ts` line 35, `client/src/config/apiVersionConfig.ts` line 46
@@ -477,6 +523,7 @@ api-version.config.js (ROOT - Single Source)
 ```
 
 **API Differences**:
+
 - Beta 2: `getPinValueByPinID`, `getValueByAttrID`
 - Alpha 5: `getPinValue`, `getByAttrID`
 
@@ -485,6 +532,7 @@ api-version.config.js (ROOT - Single Source)
 ---
 
 ### Callback Streaming Fix (2025-01-31)
+
 **Problem**: Render callback images weren't displaying; mouse camera controls not working  
 **Root Cause**: `StreamCallbackService` mapped to non-existent `callbackstream.proto` instead of `callback.proto`  
 **Location**: `vite-plugin-octane-grpc.ts` line 139
@@ -498,6 +546,7 @@ api-version.config.js (ROOT - Single Source)
 ```
 
 **Key Discovery**: Canvas visibility controlled by `frameCount > 0`
+
 - No callbacks → frameCount stays 0 → canvas hidden (`display: 'none'`)
 - Hidden canvas = no mouse interactions
 - Fix proto mapping → callbacks flow → frameCount increments → canvas visible
@@ -509,17 +558,20 @@ api-version.config.js (ROOT - Single Source)
 ## Common Quick Tasks
 
 ### Add gRPC Service Method
+
 1. Find proto: `grep -r "MethodName" server/proto/`
 2. Add to service: `services/octane/MyService.ts`
 3. Expose in `OctaneClient.ts`
 4. Use in component via `useOctane()`
 
 ### Add Icon
+
 1. Check: `ls client/public/icons/ | grep "name"`
 2. Map: `constants/IconMapping.ts` → `iconMap['KEY'] = '/icons/file.png'`
 3. Use: `getNodeIconPath('KEY')`
 
 ### Debug Checklist
+
 1. Browser console (errors?)
 2. Network tab (gRPC calls?)
 3. TypeScript check: `npx tsc --noEmit`
@@ -535,12 +587,14 @@ api-version.config.js (ROOT - Single Source)
 **Status**: ✅ COMPLETED - API version docs merged into main documentation
 
 **Changes**:
+
 - Merged `QUICK_START_API_VERSION.md` → `README.md` (brief section)
 - Merged `API_VERSION_SWITCHING.md` → `DEVELOPMENT.md` (detailed section)
 - Deleted separate API version documentation files
 - Updated cross-references in all documentation
 
 **New Documentation Structure**:
+
 - **README.md**: Quick overview of API version switching (5 lines of code)
 - **DEVELOPMENT.md**: Complete guide with architecture, troubleshooting, and verification steps
 - **QUICKSTART.md**: First-time setup (no API version info needed)
@@ -548,6 +602,7 @@ api-version.config.js (ROOT - Single Source)
 - **AGENTS.md**: AI assistant memory (this file)
 
 **Benefits**:
+
 - ✅ Fewer files to maintain (7 docs instead of 9)
 - ✅ Single source of truth per topic
 - ✅ Easier to find information (no separate mini-docs)
@@ -560,18 +615,21 @@ api-version.config.js (ROOT - Single Source)
 **Status**: ✅ COMPLETED - All CSS variables renamed, UI bugs fixed
 
 **CSS Variable Naming**:
+
 - Removed `octane-` prefix from all 126 theme variables (753 occurrences)
 - New naming: `--bg-primary`, `--text-primary`, `--accent-blue` (no prefix)
 - CSS bundle reduced 5.26 KB (104.44 KB → 99.18 kB)
 - Zero naming conflicts verified with existing utility variables
 
 **UI Improvements**:
+
 - Fixed React Flow "container needs width/height" error
 - Fixed browser context menu appearing over custom menus
 - Simplified node pin tooltips (name only, no type/description clutter)
 - Added descriptive tooltips to node inspector parameters
 
 **CSS Cleanup**:
+
 - Removed 6 unused CSS variables
 - Removed 5 dead CSS selectors with broken references
 - Fixed 10+ duplicate CSS definitions
@@ -580,6 +638,7 @@ api-version.config.js (ROOT - Single Source)
 **Files Modified**: 7 CSS/TSX files across styles/ and components/
 
 **Key Commits**:
+
 - `5bebfcd` - Fix React Flow parent container sizing error
 - `20f1c5b` - Remove 'octane-' prefix from all CSS theme variables
 - `3c97abd` - Add descriptive tooltips to node inspector items
@@ -593,27 +652,32 @@ api-version.config.js (ROOT - Single Source)
 **Status**: ✅ COMPLETED - Centralized configuration working
 
 **Implementation**:
+
 - Single source of truth: `api-version.config.js` (ES module)
 - Vite injects `__USE_ALPHA5_API__` constant at build time
 - Server uses direct ES import from config file
 - Both Alpha 5 and Beta 2 supported by changing ONE line in config
 
 **Key Changes**:
+
 - Converted `api-version.config.js` from CommonJS → ES modules
 - Removed `apiVersionImport.ts` (obsolete)
 - Server plugin uses `getProtoDir()` helper function
 - TypeScript strict typing enforced (no implicit `any`)
 
 **To Switch API Versions**:
+
 1. Edit `api-version.config.js` line 24: `const USE_ALPHA5_API = true/false`
 2. Restart dev server: `npm run dev`
 3. Both client and server automatically sync
 
 **Testing Status**:
+
 - ✅ Beta 2: Working (render canvas displays)
 - ✅ Alpha 5: Set as default
 
 **Commits**:
+
 - `af1609b` - Fix: Convert API version config to ES modules and fix TypeScript errors
 - `4249989` - Add quick-start guide for API version switching
 - `df63f18` - Fix API version compatibility with centralized configuration
@@ -623,6 +687,7 @@ api-version.config.js (ROOT - Single Source)
 ## Updating This File
 
 **When to update AGENTS.md**:
+
 - ✅ New major features (with concise summary)
 - ✅ Changed architecture patterns
 - ✅ New essential commands or workflows
@@ -631,6 +696,7 @@ api-version.config.js (ROOT - Single Source)
 - ✅ New dependencies or tech stack changes
 
 **What NOT to put here** (use skills or docs instead):
+
 - ❌ Detailed implementation steps (→ `.openhands/skills/`)
 - ❌ Specific bug fixes (→ `CHANGELOG.md`)
 - ❌ Complete testing workflows (→ `.openhands/skills/testing-workflow/`)
@@ -638,12 +704,14 @@ api-version.config.js (ROOT - Single Source)
 - ❌ Human setup instructions (→ `QUICKSTART.md`, `DEVELOPMENT.md`)
 
 **Before adding knowledge**:
+
 1. **Ask yourself**: "Will this be useful for DIFFERENT future tasks?"
 2. **Ask user**: "Should I add these items to AGENTS.md?" (list numbered items)
 3. **Get approval**: User may want only a subset
 4. **Integrate cleanly**: Reorganize if needed for clarity
 
 **Example of good additions**:
+
 - "When replacing nodes, ALWAYS get parent connections BEFORE deletion"
 - "Use visual debugging with Elements tab to verify component renders"
 - "Node handles are numbers, not strings"
@@ -653,6 +721,7 @@ api-version.config.js (ROOT - Single Source)
 ## Reference Documentation
 
 **Main Documentation** (7 files):
+
 - `README.md` - Project overview, features, quick start, API version support
 - `QUICKSTART.md` - First-time setup guide (prerequisites, installation, verification)
 - `DEVELOPMENT.md` - Development guide, architecture, API version switching (detailed)
@@ -662,6 +731,7 @@ api-version.config.js (ROOT - Single Source)
 - **Octane manual**: https://docs.otoy.com/standaloneSE/
 
 **Documentation Topics**:
+
 - **API Version Switching**: See `DEVELOPMENT.md` → API Version Configuration
 - **CSS Theme System**: See `DEVELOPMENT.md` → Styling & Theming
 - **Service Architecture**: See `DEVELOPMENT.md` → Service Layer Pattern
@@ -672,4 +742,3 @@ api-version.config.js (ROOT - Single Source)
 **Last Updated**: 2025-02-01  
 **Version**: v1.0.0  
 **Status**: Active development
-

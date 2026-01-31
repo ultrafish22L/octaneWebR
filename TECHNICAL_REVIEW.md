@@ -1,4 +1,5 @@
 # octaneWebR - Comprehensive Technical Review
+
 **React 18+, TypeScript, and Modern Web Stack Assessment**
 
 ---
@@ -13,6 +14,7 @@
 ### Overall Assessment: ⭐⭐⭐⭐ (4/5)
 
 **Strengths**:
+
 - ✅ Solid TypeScript foundation with strict mode
 - ✅ Modern React 18 with concurrent mode enabled
 - ✅ Latest React Flow v12 implementation
@@ -22,6 +24,7 @@
 - ✅ Excellent documentation
 
 **Critical Gaps**:
+
 - ❌ Zero React 18 concurrent features (Suspense, Transitions, useDeferredValue)
 - ❌ No testing infrastructure
 - ❌ Limited accessibility (23 ARIA attributes across entire app)
@@ -38,6 +41,7 @@
 ### ✅ What's Done Well
 
 #### 1.1 Concurrent Mode Enabled
+
 ```typescript
 // client/src/main.tsx
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -46,25 +50,29 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 )
 ```
+
 - ✅ Using `createRoot` (not legacy `render`)
 - ✅ StrictMode enabled for development warnings
 - ✅ Ready for concurrent features
 
 #### 1.2 Performance Optimizations
+
 **173 instances** of performance hooks:
+
 ```typescript
 // Excellent memoization patterns found throughout
 const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({ ... }) {
   const handleNodeSelect = useCallback((node: SceneNode) => {
     onNodeSelect?.(node);
   }, [onNodeSelect]);
-  
-  const flatItems = useMemo(() => 
-    flattenTree(sceneTree, expansionMap), 
+
+  const flatItems = useMemo(() =>
+    flattenTree(sceneTree, expansionMap),
     [sceneTree, expansionMap]
   );
 });
 ```
+
 ✅ Proper dependency arrays  
 ✅ Strategic memoization on expensive operations  
 ✅ React.memo on large components
@@ -72,7 +80,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({ ... }) {
 ### ❌ Critical Missing Patterns
 
 #### 1.3 No Suspense Implementation
+
 **Current State**: Manual loading states everywhere
+
 ```typescript
 // Current pattern (seen in SceneOutliner, NodeInspector, etc.)
 const [loading, setLoading] = useState(false);
@@ -87,6 +97,7 @@ if (loading) return <div className="loading-spinner">Loading...</div>;
 ```
 
 **Modern React 18 Pattern**: Would eliminate 95% of this boilerplate
+
 ```typescript
 // Recommended pattern with Suspense
 <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
@@ -94,19 +105,23 @@ if (loading) return <div className="loading-spinner">Loading...</div>;
 </Suspense>
 ```
 
-**Impact**: 
+**Impact**:
+
 - 📊 Would remove ~50+ manual loading states
 - 🎯 Better UX with automatic loading boundaries
 - 🧹 Cleaner component code
 
 #### 1.4 No Transitions for Non-Urgent Updates
+
 **Problem Identified**: Large scene syncs block UI
+
 ```typescript
 // From PROGRESSIVE_LOADING_PLAN.md
 // "Scenes take 200+ seconds to sync, with no UI feedback"
 ```
 
 **React 18 Solution**: `useTransition` + `useDeferredValue`
+
 ```typescript
 // Recommended pattern
 const [isPending, startTransition] = useTransition();
@@ -123,12 +138,15 @@ const deferredTree = useDeferredValue(sceneTree);
 ```
 
 **Impact**:
+
 - 🚀 UI stays responsive during heavy updates
 - 🎯 Users can keep working while data loads
 - 📈 Perceived performance boost
 
 #### 1.5 No Code Splitting
+
 **Current**: Single 587 KB bundle (per README)
+
 ```typescript
 // vite.config.mts
 build: {
@@ -137,6 +155,7 @@ build: {
 ```
 
 **React 18 Pattern**: Lazy loading with Suspense
+
 ```typescript
 // Recommended for heavy components
 const NodeGraph = lazy(() => import('./components/NodeGraph'));
@@ -148,12 +167,15 @@ const MaterialDatabase = lazy(() => import('./components/MaterialDatabase'));
 ```
 
 **Impact**:
+
 - 📉 Initial bundle: 587 KB → ~150-200 KB
 - ⚡ Faster initial load
 - 🎯 Load heavy components on-demand
 
 #### 1.6 No Error Boundaries
+
 **Current**: No crash protection
+
 ```bash
 # grep results
 $ grep -r "ErrorBoundary\|componentDidCatch" client/src
@@ -161,6 +183,7 @@ $ grep -r "ErrorBoundary\|componentDidCatch" client/src
 ```
 
 **React 18 Pattern**: Error boundaries for resilience
+
 ```typescript
 // Recommended pattern
 <ErrorBoundary fallback={<ErrorDisplay />}>
@@ -169,6 +192,7 @@ $ grep -r "ErrorBoundary\|componentDidCatch" client/src
 ```
 
 **Impact**:
+
 - 🛡️ Isolated failures (one component crashes, others keep working)
 - 🔍 Better error reporting
 - 💪 Production stability
@@ -180,20 +204,22 @@ $ grep -r "ErrorBoundary\|componentDidCatch" client/src
 ### ✅ Excellent Use of React Flow v12
 
 #### 2.1 Latest Version
+
 ```json
 "@xyflow/react": "^12.10.0"  // ✅ Latest stable (released Dec 2024)
 ```
 
 #### 2.2 Modern Hooks Pattern
+
 ```typescript
 // client/src/components/NodeGraph/index.tsx
 import {
   ReactFlow,
-  useNodesState,      // ✅ Modern state management
-  useEdgesState,      // ✅ Modern state management
-  useReactFlow,       // ✅ Access flow instance
-  Background,         // ✅ Using built-in components
-  MiniMap,           // ✅ Using built-in components
+  useNodesState, // ✅ Modern state management
+  useEdgesState, // ✅ Modern state management
+  useReactFlow, // ✅ Access flow instance
+  Background, // ✅ Using built-in components
+  MiniMap, // ✅ Using built-in components
 } from '@xyflow/react';
 
 const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -207,32 +233,38 @@ const { fitView } = useReactFlow();
 ✅ MiniMap for navigation
 
 #### 2.3 Custom Node Implementation
+
 ```typescript
 // OctaneNode.tsx - Custom styled nodes
 const nodeTypes = {
   octane: OctaneNode,
-} as const satisfies NodeTypes;  // ✅ Type-safe node types
+} as const satisfies NodeTypes; // ✅ Type-safe node types
 ```
 
 ### ⚠️ Areas for Enhancement
 
 #### 2.4 Missing React Flow Pro Features
+
 **Not using** (consider if budget allows):
+
 - ❌ `useUndoRedo` hook (they have custom implementation)
 - ❌ Node resizing handles
 - ❌ Sub-flows / nested graphs
 - ❌ Built-in layouting algorithms
 
 **Current Custom Solution**:
+
 ```typescript
 // services/CommandHistory.ts - 200+ lines of custom undo/redo
 // Could be replaced with React Flow Pro's useUndoRedo
 ```
 
 #### 2.5 Performance Optimization Opportunity
+
 **Large graph performance**: 755+ node types, potentially large scenes
 
 **Recommended**: Add viewport culling
+
 ```typescript
 // Add to NodeGraph component
 <ReactFlow
@@ -251,6 +283,7 @@ const nodeTypes = {
 ### ✅ Context API Pattern
 
 #### 3.1 Well-Structured Contexts
+
 ```typescript
 // hooks/useOctane.tsx - Main app context
 export function OctaneProvider({ children }: { children: React.ReactNode }) {
@@ -266,6 +299,7 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
 ✅ Proper error handling for missing providers
 
 #### 3.2 Service Layer Pattern
+
 ```typescript
 // services/OctaneClient.ts - Facade pattern
 export class OctaneClient extends EventEmitter {
@@ -282,24 +316,29 @@ export class OctaneClient extends EventEmitter {
 
 ### ❌ Missing Modern State Management
 
-#### 3.3 Documentation Inaccuracy
-**README claims**:
+#### 3.3 Documentation Inaccuracy ✅ FIXED
+
+**Previously claimed**:
+
 ```markdown
 State Management: Zustand (global state)
 ```
 
 **Reality**:
+
 ```bash
 $ grep "zustand" package.json
 # (no results - Zustand not installed!)
 ```
 
-❌ **Discrepancy**: Documentation outdated or feature planned but not implemented
+✅ **Fixed**: Documentation now correctly states "React Context API" for state management
 
 #### 3.4 No Modern Data Fetching Library
+
 **Current Pattern**: Manual async/await with loading states
 
 **Recommended**: React Query (TanStack Query)
+
 ```typescript
 // Current (60+ lines for data fetching)
 const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
@@ -307,14 +346,19 @@ const [loading, setLoading] = useState(false);
 const [error, setError] = useState<Error | null>(null);
 useEffect(() => {
   setLoading(true);
-  client.buildSceneTree()
+  client
+    .buildSceneTree()
     .then(setSceneTree)
     .catch(setError)
     .finally(() => setLoading(false));
 }, []);
 
 // With React Query (15 lines)
-const { data: sceneTree, isLoading, error } = useQuery({
+const {
+  data: sceneTree,
+  isLoading,
+  error,
+} = useQuery({
   queryKey: ['sceneTree'],
   queryFn: () => client.buildSceneTree(),
   staleTime: 5000, // Auto-caching
@@ -323,6 +367,7 @@ const { data: sceneTree, isLoading, error } = useQuery({
 ```
 
 **Benefits**:
+
 - ✅ Automatic caching & deduplication
 - ✅ Background refetching
 - ✅ Optimistic updates
@@ -336,21 +381,23 @@ const { data: sceneTree, isLoading, error } = useQuery({
 ### ✅ Excellent TypeScript Usage
 
 #### 4.1 Strict Configuration
+
 ```json
 // tsconfig.json
 {
   "compilerOptions": {
-    "strict": true,                    // ✅ All strict checks
-    "noUnusedLocals": true,           // ✅ No dead code
-    "noUnusedParameters": true,       // ✅ Clean functions
+    "strict": true, // ✅ All strict checks
+    "noUnusedLocals": true, // ✅ No dead code
+    "noUnusedParameters": true, // ✅ Clean functions
     "noFallthroughCasesInSwitch": true, // ✅ Safe switches
-    "moduleResolution": "bundler",    // ✅ Modern resolution
-    "jsx": "react-jsx",               // ✅ New JSX transform
+    "moduleResolution": "bundler", // ✅ Modern resolution
+    "jsx": "react-jsx" // ✅ New JSX transform
   }
 }
 ```
 
 #### 4.2 Strong Type Safety
+
 ```typescript
 // Proper type definitions throughout
 interface NodeGraphEditorProps {
@@ -363,7 +410,7 @@ interface NodeGraphEditorProps {
 // Type-safe React Flow
 const nodeTypes = {
   octane: OctaneNode,
-} as const satisfies NodeTypes;  // ✅ Type inference + constraint
+} as const satisfies NodeTypes; // ✅ Type inference + constraint
 ```
 
 ✅ **"No 'any' types"** (per documentation) - verified in spot checks  
@@ -371,10 +418,12 @@ const nodeTypes = {
 ✅ Proper use of unions, optionals, generics
 
 #### 4.3 gRPC Type Generation
+
 ```typescript
 // Generated from .proto files
 // 30+ proto definitions → TypeScript types
 ```
+
 ✅ Automated type generation from protobuf  
 ✅ Type safety across gRPC boundary
 
@@ -385,17 +434,18 @@ const nodeTypes = {
 ### ✅ Modern Build Setup
 
 #### 5.1 Vite Configuration
+
 ```typescript
 // vite.config.mts
 export default defineConfig({
   plugins: [
-    react(),                    // ✅ Fast Refresh
-    octaneGrpcPlugin()         // ✅ Custom gRPC proxy
+    react(), // ✅ Fast Refresh
+    octaneGrpcPlugin(), // ✅ Custom gRPC proxy
   ],
   build: {
     chunkSizeWarningLimit: 1000, // ⚠️ Large bundle warning
-  }
-})
+  },
+});
 ```
 
 ✅ Vite 5 (fastest bundler)  
@@ -405,14 +455,17 @@ export default defineConfig({
 ### ⚠️ Performance Concerns
 
 #### 5.2 Bundle Size
+
 **Current**: 587 KB (per README, compresses to 170 KB)
 
 **Analysis**:
+
 - ⚠️ Large for initial load
 - ✅ Decent gzip compression (70% reduction)
 - ❌ No chunk splitting visible
 
 **Recommendations**:
+
 ```typescript
 // Add to vite.config.mts
 build: {
@@ -431,6 +484,7 @@ build: {
 **Expected Result**: 587 KB → ~150 KB initial + lazy chunks
 
 #### 5.3 Virtual Scrolling
+
 ```typescript
 // SceneOutliner - Large tree performance
 import { List } from 'react-window';  // ✅ Virtual scrolling
@@ -448,12 +502,14 @@ import { List } from 'react-window';  // ✅ Virtual scrolling
 ✅ **Excellent**: Handles 1000+ nodes without performance degradation
 
 #### 5.4 No Bundle Analysis
+
 ```bash
 $ ls dist/client/
 # (no build artifacts found - not built)
 ```
 
 **Recommendation**: Add bundle analyzer
+
 ```bash
 npm install -D rollup-plugin-visualizer
 ```
@@ -465,21 +521,22 @@ npm install -D rollup-plugin-visualizer
 ### ✅ Good Patterns
 
 #### 6.1 Functional Components with Hooks
+
 ```typescript
 // Consistent pattern across all 35+ components
-export const SceneOutliner = React.memo(function SceneOutliner({ 
-  selectedNode, 
-  onNodeSelect 
+export const SceneOutliner = React.memo(function SceneOutliner({
+  selectedNode,
+  onNodeSelect
 }: SceneOutlinerProps) {
   // Hooks
   const { client, connected } = useOctane();
   const [loading, setLoading] = useState(false);
-  
+
   // Event handlers
   const handleNodeSelect = useCallback((node: SceneNode) => {
     onNodeSelect?.(node);
   }, [onNodeSelect]);
-  
+
   // Render
   return <div>...</div>;
 });
@@ -490,6 +547,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
 ✅ Proper TypeScript types
 
 #### 6.2 Custom Hooks
+
 ```typescript
 // 5 custom hooks found:
 hooks/
@@ -507,6 +565,7 @@ hooks/
 ### ❌ Component Size Issues
 
 #### 6.3 Massive Components
+
 ```bash
 $ wc -l client/src/components/NodeGraph/index.tsx
 1774 client/src/components/NodeGraph/index.tsx  # ⚠️ Too large!
@@ -518,6 +577,7 @@ $ wc -l client/src/components/SceneOutliner/index.tsx
 **Issue**: Components exceed 500-line best practice guideline
 
 **Recommendation**: Split into subcomponents
+
 ```typescript
 // NodeGraph/index.tsx (1774 lines) → Split into:
 NodeGraph/
@@ -537,6 +597,7 @@ NodeGraph/
 ### ❌ Critical Gap: Zero Testing
 
 #### 7.1 No Test Infrastructure
+
 ```bash
 $ find . -name "*.test.*" -o -name "*.spec.*"
 # (no results)
@@ -545,27 +606,31 @@ $ grep -E "vitest|jest|testing-library" package.json
 # (no results)
 ```
 
-**Impact**: 
+**Impact**:
+
 - 🚨 No safety net for refactoring
 - 🚨 No regression detection
 - 🚨 Manual testing only (slow, unreliable)
 
 #### 7.2 Recommended Testing Stack
+
 ```json
 {
   "devDependencies": {
-    "vitest": "^1.0.0",                    // Fast unit tests
-    "@testing-library/react": "^14.0.0",   // Component testing
+    "vitest": "^1.0.0", // Fast unit tests
+    "@testing-library/react": "^14.0.0", // Component testing
     "@testing-library/user-event": "^14.0.0",
     "@testing-library/jest-dom": "^6.0.0",
-    "@vitest/ui": "^1.0.0",               // Test UI
-    "msw": "^2.0.0"                       // API mocking
+    "@vitest/ui": "^1.0.0", // Test UI
+    "msw": "^2.0.0" // API mocking
   }
 }
 ```
 
 #### 7.3 Priority Test Coverage
+
 **Critical paths to test**:
+
 1. OctaneClient service methods
 2. SceneService tree building logic
 3. NodeGraph connection validation
@@ -573,6 +638,7 @@ $ grep -E "vitest|jest|testing-library" package.json
 5. Custom hooks (useOctane, useResizablePanels)
 
 **Example Test**:
+
 ```typescript
 // OctaneClient.test.ts
 import { describe, it, expect, vi } from 'vitest';
@@ -594,12 +660,14 @@ describe('OctaneClient', () => {
 ### ❌ Minimal Accessibility
 
 #### 8.1 Low ARIA Coverage
+
 ```bash
 $ grep -r "aria-\|role=" client/src --include="*.tsx" | wc -l
 23  # Only 23 attributes in entire app!
 ```
 
 **Examples Found**:
+
 ```typescript
 // Good (rare examples)
 <button aria-label="Close dialog">×</button>
@@ -612,20 +680,23 @@ $ grep -r "aria-\|role=" client/src --include="*.tsx" | wc -l
 ```
 
 #### 8.2 Keyboard Navigation
+
 **Status**: Partially implemented
+
 - ✅ Keyboard shortcuts (Ctrl+N, Ctrl+S, etc.)
 - ❌ Tab navigation through dialogs
 - ❌ Arrow key navigation in trees
 - ❌ Screen reader support
 
 #### 8.3 Recommended Improvements
+
 ```typescript
 // Tree navigation
-<div 
+<div
   role="tree"
   aria-label="Scene hierarchy"
 >
-  <div 
+  <div
     role="treeitem"
     aria-expanded={isExpanded}
     aria-level={depth}
@@ -648,6 +719,7 @@ $ grep -r "aria-\|role=" client/src --include="*.tsx" | wc -l
 ```
 
 **Tools to Add**:
+
 - `@radix-ui/react-dialog` - Accessible dialogs
 - `@radix-ui/react-dropdown-menu` - Accessible menus
 - `@tanstack/react-virtual` - Accessible virtual scrolling
@@ -660,12 +732,14 @@ $ grep -r "aria-\|role=" client/src --include="*.tsx" | wc -l
 ### 9.1 React 18 Concurrent Features
 
 #### Server Components (Future-Proof)
+
 **Status**: Not applicable (client-side only)  
 **Watch**: React 19 will bring client components pattern refinements
 
 #### Recommended Immediate Additions
 
 **A. Suspense + Error Boundaries**
+
 ```typescript
 // App.tsx refactor
 <ErrorBoundary FallbackComponent={ErrorFallback}>
@@ -676,6 +750,7 @@ $ grep -r "aria-\|role=" client/src --include="*.tsx" | wc -l
 ```
 
 **B. Transitions for Heavy Updates**
+
 ```typescript
 // Scene sync with transitions
 const [isPending, startTransition] = useTransition();
@@ -698,6 +773,7 @@ return (
 ### 9.2 State Management Upgrade
 
 **Recommended**: TanStack Query v5
+
 ```typescript
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -714,16 +790,21 @@ const queryClient = new QueryClient({
 
 // Usage
 function SceneOutliner() {
-  const { data: sceneTree, isLoading, refetch } = useQuery({
+  const {
+    data: sceneTree,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['sceneTree'],
     queryFn: () => client.buildSceneTree(),
   });
-  
+
   // Automatic caching, background sync, error handling
 }
 ```
 
 **Benefits**:
+
 - ✅ Removes ~200 lines of manual loading state
 - ✅ Automatic request deduplication
 - ✅ Suspense integration
@@ -735,12 +816,14 @@ function SceneOutliner() {
 #### Headless UI Libraries (Recommended)
 
 **Radix UI** (Best for this project)
+
 ```bash
 npm install @radix-ui/react-dialog @radix-ui/react-dropdown-menu \
   @radix-ui/react-select @radix-ui/react-tooltip
 ```
 
 **Why Radix**:
+
 - ✅ Unstyled (keeps your custom design)
 - ✅ Fully accessible (WCAG 2.1 AA)
 - ✅ TypeScript-first
@@ -748,6 +831,7 @@ npm install @radix-ui/react-dialog @radix-ui/react-dropdown-menu \
 - ✅ Tree-shakeable
 
 **Usage Example**:
+
 ```typescript
 // Replace custom dialog with Radix
 import * as Dialog from '@radix-ui/react-dialog';
@@ -764,6 +848,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 ```
 
 **Alternative**: Headless UI (Tailwind Labs)
+
 - Similar philosophy
 - Smaller bundle
 - Less feature-rich
@@ -779,6 +864,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 **Current**: Manual form handling
 
 **Recommended**: React Hook Form
+
 ```typescript
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -795,11 +881,11 @@ function SaveRenderDialog() {
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
   });
-  
+
   const onSubmit = (data) => {
     // Validated data with TypeScript types!
   };
-  
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <input {...register('filename')} />
@@ -810,6 +896,7 @@ function SaveRenderDialog() {
 ```
 
 **Benefits**:
+
 - ✅ Automatic validation
 - ✅ TypeScript integration
 - ✅ Minimal re-renders
@@ -820,11 +907,13 @@ function SaveRenderDialog() {
 #### Recommended Additions
 
 **A. Bundle Analyzer**
+
 ```bash
 npm install -D rollup-plugin-visualizer
 ```
 
 **B. React DevTools Profiler**
+
 ```typescript
 // Wrap expensive components
 <Profiler id="NodeGraph" onRender={onRenderCallback}>
@@ -833,6 +922,7 @@ npm install -D rollup-plugin-visualizer
 ```
 
 **C. ESLint Plugins**
+
 ```bash
 npm install -D eslint-plugin-react-hooks \
   eslint-plugin-jsx-a11y \
@@ -840,6 +930,7 @@ npm install -D eslint-plugin-react-hooks \
 ```
 
 **D. Prettier + EditorConfig**
+
 ```bash
 npm install -D prettier
 ```
@@ -851,46 +942,58 @@ npm install -D prettier
 ### Phase 1: Quick Wins (1-2 days)
 
 1. **Add Code Splitting**
+
 ```typescript
 const NodeGraph = lazy(() => import('./components/NodeGraph'));
 const MaterialDatabase = lazy(() => import('./components/MaterialDatabase'));
 ```
+
 **Impact**: 587 KB → 150-200 KB initial bundle
 
 2. **Add Error Boundaries**
+
 ```typescript
 <ErrorBoundary FallbackComponent={ErrorDisplay}>
   <App />
 </ErrorBoundary>
 ```
+
 **Impact**: Crash resilience
 
 3. **Enable React Flow Optimizations**
+
 ```typescript
 <ReactFlow onlyRenderVisibleElements={true} />
 ```
+
 **Impact**: Better performance with large graphs
 
 ### Phase 2: Concurrent Features (1 week)
 
 1. **Implement Suspense Boundaries**
+
 ```typescript
 <Suspense fallback={<Skeleton />}>
   <SceneOutliner />
 </Suspense>
 ```
+
 **Impact**: Remove ~50 manual loading states
 
 2. **Add Transitions for Heavy Updates**
+
 ```typescript
 const [isPending, startTransition] = useTransition();
 ```
+
 **Impact**: UI stays responsive during scene sync
 
 3. **Add React Query**
+
 ```typescript
 const { data } = useQuery({ queryKey: ['scene'], queryFn: fetchScene });
 ```
+
 **Impact**: Automatic caching, background sync
 
 ### Phase 3: Architecture Improvements (2-3 weeks)
@@ -916,14 +1019,18 @@ const { data } = useQuery({ queryKey: ['scene'], queryFn: fetchScene });
 ### React Ecosystem Leaders
 
 #### 11.1 Next.js App Router Pattern
+
 **octaneWebR vs Next.js 14**:
+
 - ❌ No Server Components (not applicable - needs client rendering)
 - ❌ No file-based routing (SPA, intentional)
 - ✅ Similar TypeScript strictness
 - ❌ No built-in data fetching patterns
 
 #### 11.2 Vercel's Next.js Best Practices
+
 **Score**: 6/10
+
 - ✅ TypeScript strict mode
 - ✅ React 18 concurrent mode
 - ❌ No Suspense usage
@@ -936,20 +1043,24 @@ const { data } = useQuery({ queryKey: ['scene'], queryFn: fetchScene });
 - ✅ Clean file structure
 
 #### 11.3 React Core Team Recommendations (2024)
+
 From [react.dev](https://react.dev/):
 
 **Data Fetching**:
+
 - ❌ Manual async/await (should use React Query/SWR)
 - ❌ Manual loading states (should use Suspense)
 - ✅ No prop drilling (Context API used well)
 
 **Performance**:
+
 - ✅ useMemo/useCallback used extensively
 - ✅ React.memo on expensive components
 - ❌ No code splitting (should use lazy())
 - ✅ Virtual scrolling for lists
 
 **Patterns**:
+
 - ✅ Functional components only
 - ✅ Custom hooks for logic reuse
 - ❌ No Suspense boundaries
@@ -957,20 +1068,20 @@ From [react.dev](https://react.dev/):
 
 ### Industry Comparison Table
 
-| Feature | octaneWebR | Industry Standard | Gap |
-|---------|------------|-------------------|-----|
-| TypeScript | Strict mode ✅ | Strict mode | None |
-| React Version | 18.2 ✅ | 18.2+ | None |
-| React Flow | v12 ✅ | v11-12 | None |
-| State Management | Context only ⚠️ | React Query/Zustand | Medium |
-| Data Fetching | Manual ❌ | React Query/SWR | High |
-| Code Splitting | None ❌ | lazy() + Suspense | High |
-| Error Handling | None ❌ | Error Boundaries | High |
-| Testing | None ❌ | Vitest/Jest | Critical |
-| Accessibility | Minimal ❌ | WCAG 2.1 AA | High |
-| Bundle Size | 587 KB ⚠️ | <200 KB initial | Medium |
-| Performance Hooks | 173 uses ✅ | Heavy usage | None |
-| Documentation | Excellent ✅ | Good docs | None |
+| Feature           | octaneWebR     | Industry Standard | Gap      |
+| ----------------- | -------------- | ----------------- | -------- |
+| TypeScript        | Strict mode ✅ | Strict mode       | None     |
+| React Version     | 18.2 ✅        | 18.2+             | None     |
+| React Flow        | v12 ✅         | v11-12            | None     |
+| State Management  | Context API ✅ | Context/Zustand   | Low      |
+| Data Fetching     | Manual ❌      | React Query/SWR   | High     |
+| Code Splitting    | None ❌        | lazy() + Suspense | High     |
+| Error Handling    | None ❌        | Error Boundaries  | High     |
+| Testing           | None ❌        | Vitest/Jest       | Critical |
+| Accessibility     | Minimal ❌     | WCAG 2.1 AA       | High     |
+| Bundle Size       | 587 KB ⚠️      | <200 KB initial   | Medium   |
+| Performance Hooks | 173 uses ✅    | Heavy usage       | None     |
+| Documentation     | Excellent ✅   | Good docs         | None     |
 
 ---
 
@@ -979,20 +1090,24 @@ From [react.dev](https://react.dev/):
 ### Priority 1: Critical (Do First)
 
 1. **Add Testing Infrastructure** 🚨
+
    ```bash
    npm install -D vitest @testing-library/react @testing-library/user-event
    ```
+
    - Start with service layer tests
    - Add component integration tests
    - Target 60% coverage in 2 weeks
 
 2. **Implement Error Boundaries** 🛡️
+
    ```typescript
    // Wrap all major sections
    <ErrorBoundary FallbackComponent={ErrorDisplay}>
      <SceneOutliner />
    </ErrorBoundary>
    ```
+
    - Prevents catastrophic crashes
    - Better error reporting
    - User-friendly error UI
@@ -1001,6 +1116,7 @@ From [react.dev](https://react.dev/):
    ```typescript
    const NodeGraph = lazy(() => import('./components/NodeGraph'));
    ```
+
    - Immediate load time improvement
    - Better user experience
    - Lower infrastructure costs
@@ -1050,27 +1166,27 @@ From [react.dev](https://react.dev/):
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@tanstack/react-query": "^5.0.0",        // 🆕 Data fetching
+    "@tanstack/react-query": "^5.0.0", // 🆕 Data fetching
     "@tanstack/react-query-devtools": "^5.0.0",
     "@xyflow/react": "^12.10.0",
     "react-window": "^2.2.5",
-    "react-error-boundary": "^4.0.0",         // 🆕 Error handling
-    "@radix-ui/react-dialog": "^1.0.0",      // 🆕 Accessible dialogs
+    "react-error-boundary": "^4.0.0", // 🆕 Error handling
+    "@radix-ui/react-dialog": "^1.0.0", // 🆕 Accessible dialogs
     "@radix-ui/react-dropdown-menu": "^2.0.0", // 🆕 Accessible menus
-    "@radix-ui/react-select": "^2.0.0",       // 🆕 Accessible selects
-    "react-hook-form": "^7.48.0",             // 🆕 Form management
-    "zod": "^3.22.0"                          // 🆕 Schema validation
+    "@radix-ui/react-select": "^2.0.0", // 🆕 Accessible selects
+    "react-hook-form": "^7.48.0", // 🆕 Form management
+    "zod": "^3.22.0" // 🆕 Schema validation
   },
   "devDependencies": {
-    "vitest": "^1.0.0",                       // 🆕 Testing
-    "@testing-library/react": "^14.0.0",      // 🆕 Component tests
+    "vitest": "^1.0.0", // 🆕 Testing
+    "@testing-library/react": "^14.0.0", // 🆕 Component tests
     "@testing-library/user-event": "^14.0.0",
     "@vitest/ui": "^1.0.0",
-    "msw": "^2.0.0",                          // 🆕 API mocking
-    "eslint-plugin-jsx-a11y": "^6.8.0",      // 🆕 A11y linting
+    "msw": "^2.0.0", // 🆕 API mocking
+    "eslint-plugin-jsx-a11y": "^6.8.0", // 🆕 A11y linting
     "eslint-plugin-react-hooks": "^4.6.0",
-    "rollup-plugin-visualizer": "^5.11.0",    // 🆕 Bundle analysis
-    "prettier": "^3.1.0"                      // 🆕 Code formatting
+    "rollup-plugin-visualizer": "^5.11.0", // 🆕 Bundle analysis
+    "prettier": "^3.1.0" // 🆕 Code formatting
   }
 }
 ```
@@ -1078,31 +1194,37 @@ From [react.dev](https://react.dev/):
 ### Migration Path
 
 **Week 1**: Infrastructure
+
 - Add testing setup
 - Add error boundaries
 - Add code splitting
 
 **Week 2**: Data Fetching
+
 - Install React Query
 - Migrate SceneOutliner to useQuery
 - Migrate NodeInspector to useMutation
 
 **Week 3**: Concurrent Features
+
 - Add Suspense boundaries
 - Add transitions for heavy updates
 - Add useDeferredValue for search
 
 **Week 4**: Component Library
+
 - Install Radix UI
 - Replace custom dialogs
 - Replace custom dropdowns
 
 **Week 5**: Forms & Validation
+
 - Add React Hook Form
 - Add Zod schemas
 - Refactor all forms
 
 **Week 6**: Polish
+
 - Accessibility audit
 - Performance profiling
 - Bundle optimization
@@ -1114,36 +1236,43 @@ From [react.dev](https://react.dev/):
 ### Strengths Summary
 
 **Architecture**: ⭐⭐⭐⭐⭐ (5/5)
+
 - Excellent service layer separation
 - Clean component structure
 - Strong TypeScript implementation
 
 **React Fundamentals**: ⭐⭐⭐⭐⭐ (5/5)
+
 - Modern React 18 setup
 - Excellent hook usage
 - Strong memoization patterns
 
 **React Flow Usage**: ⭐⭐⭐⭐⭐ (5/5)
+
 - Latest version
 - Proper patterns
 - Custom nodes well-implemented
 
 **Performance**: ⭐⭐⭐⭐ (4/5)
+
 - Good optimization patterns
 - Virtual scrolling
 - Missing code splitting
 
 **Modern Features**: ⭐⭐ (2/5)
+
 - No Suspense
 - No Transitions
 - No lazy loading
 
 **Testing**: ⭐ (1/5)
+
 - Zero tests
 - No test infrastructure
 - Critical gap
 
 **Accessibility**: ⭐⭐ (2/5)
+
 - Minimal ARIA attributes
 - Limited keyboard navigation
 - No screen reader support
@@ -1157,17 +1286,20 @@ From [react.dev](https://react.dev/):
 **Ship It?**: ✅ Yes, with caveats
 
 **Production Ready?**: ⚠️ Conditional
+
 - ✅ Core functionality solid
 - ✅ TypeScript safety good
 - ❌ Needs error boundaries for stability
 - ❌ Needs tests for confidence
 
 **Investment Needed**: 4-6 weeks to reach industry standard
+
 - 2 weeks: Testing + error handling
 - 2 weeks: React 18 features + data fetching
 - 1-2 weeks: Accessibility + optimization
 
 **ROI**: High
+
 - Current: Solid foundation
 - With improvements: Industry-leading React app
 - Maintainability: Excellent
@@ -1178,17 +1310,20 @@ From [react.dev](https://react.dev/):
 ## 15. References & Further Reading
 
 ### Official Documentation
+
 - [React 18 Docs](https://react.dev/) - Suspense, Transitions, Concurrent Features
 - [React Flow Docs](https://reactflow.dev/) - Node graph best practices
 - [TanStack Query](https://tanstack.com/query/) - Modern data fetching
 - [Radix UI](https://www.radix-ui.com/) - Accessible components
 
 ### Best Practices
+
 - [React TypeScript Cheatsheet](https://react-typescript-cheatsheet.netlify.app/)
 - [Web Accessibility (WCAG 2.1)](https://www.w3.org/WAI/WCAG21/quickref/)
 - [Vite Best Practices](https://vitejs.dev/guide/best-practices.html)
 
 ### Testing Resources
+
 - [Vitest Guide](https://vitest.dev/guide/)
 - [Testing Library Docs](https://testing-library.com/docs/react-testing-library/intro/)
 - [MSW (API Mocking)](https://mswjs.io/)
@@ -1198,4 +1333,3 @@ From [react.dev](https://react.dev/):
 **Review Conducted**: 2025-01-XX  
 **Reviewer**: Technical Architecture Analysis  
 **Next Review**: After implementation of Priority 1 recommendations
-
