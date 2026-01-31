@@ -125,9 +125,8 @@
 }
 
 .parameter-dropdown {
-  width: 160px; /* Consistent width matching Octane */
-  min-width: 160px;
-  max-width: 160px;
+  flex: 1; /* Grow to fill available space */
+  min-width: 80px; /* Minimum usable width */
   height: 22px;
   padding: 0 20px 0 6px;
   background: var(--bg-secondary);
@@ -1102,8 +1101,8 @@
 
 /* Parameter Control Styles for Interactive Node Inspector */
 .parameter-control-container {
-  display: inline-flex;
-  width: auto; /* Let content determine width, not parent */
+  display: flex;
+  width: 100%; /* Fill available space in grid column */
   align-items: center;
   gap: var(--spacing-md);
 }
