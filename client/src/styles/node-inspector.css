@@ -773,7 +773,7 @@
 /* Node header with improved spacing and alignment - ONLY for Node Inspector */
 .node-inspector .node-label {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 175px 1fr;
   align-items: center;
   cursor: pointer;
   user-select: none;
@@ -805,6 +805,9 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* Node title styling - ONLY for Node Inspector */
