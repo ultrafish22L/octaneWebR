@@ -1,9 +1,9 @@
 /**
  * Parameter Value Management Hook
- * 
+ *
  * Handles fetching and updating parameter values via the Octane API.
  * Extracted from NodeParameter component for better code organization.
- * 
+ *
  * Features:
  * - Fetches parameter values using getByAttrID/getValueByAttrID
  * - Updates parameter values using setValueByAttrID
@@ -28,7 +28,7 @@ export interface ParameterValue {
 
 export interface UseParameterValueReturn {
   paramValue: ParameterValue | null;
-  // eslint-disable-next-line no-unused-vars
+
   handleValueChange: (newValue: any) => Promise<void>;
 }
 
@@ -60,11 +60,23 @@ export function useParameterValue(
       // These PT_ types match PinTypeId enum from octaneids.proto - only primitive value nodes
       const valueTypes = ['PT_BOOL', 'PT_INT', 'PT_FLOAT', 'PT_STRING', 'PT_ENUM'];
 
-      if (!node.outType || !valueTypes.includes(String(node.outType))) {
+      // SPECIAL CASE: AT_FLOAT3 with PT_TEXTURE outType (e.g., stereo filters, sky color)
+      // These are texture pins that can ALSO hold simple RGB values
+      // We need to fetch their values to display color pickers
+      const isFloat3TexturePin =
+        node.attrInfo.type === 'AT_FLOAT3' && node.outType === 'PT_TEXTURE';
+
+      if (!node.outType || (!valueTypes.includes(String(node.outType)) && !isFloat3TexturePin)) {
         Logger.debug(
-          `🚫 Skipping value fetch for ${node.name} (outType: ${node.outType}) - not a simple value type`
+          `🚫 Skipping value fetch for ${node.name} (outType: ${node.outType}, attrType: ${node.attrInfo.type}) - not a simple value type`
         );
         return; // Skip nodes that aren't simple value types
+      }
+
+      if (isFloat3TexturePin) {
+        Logger.debug(
+          `✅ AT_FLOAT3 texture pin detected: ${node.name} - fetching RGB value for color picker`
+        );
       }
 
       // Alpha 5 uses 'getByAttrID', Beta 2 uses 'getValueByAttrID'
