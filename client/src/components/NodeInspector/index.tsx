@@ -160,16 +160,24 @@ function NodeParameter({
 
   // Render as parameter node (end node with attrInfo)
   if (node.attrInfo) {
-    // Debug logging for stereo filter parameters
-    if (name.toLowerCase().includes('stereo') && name.toLowerCase().includes('filter')) {
-      console.log('🎨 STEREO FILTER PARAMETER:', {
-        name,
-        paramValue,
-        attrInfo: node.attrInfo,
-        pinInfo: node.pinInfo,
-        nodeInfo: node.nodeInfo,
-        nodeHandle: node.handle,
-      });
+    // Debug logging for stereo parameters (broaden search to catch all stereo-related params)
+    if (name.toLowerCase().includes('stereo')) {
+      Logger.debug(
+        '🎨 STEREO PARAMETER:',
+        JSON.stringify(
+          {
+            name,
+            paramValue,
+            attrType: node.attrInfo.type,
+            pinType: node.pinInfo?.type,
+            floatInfo: node.pinInfo?.floatInfo,
+            nodeType: node.nodeInfo?.type,
+            nodeHandle: node.handle,
+          },
+          null,
+          2
+        )
+      );
     }
 
     return (

@@ -16,6 +16,7 @@ import React from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { AttrType } from '../../constants/OctaneTypes';
 import { formatColorValue } from '../../utils/ColorUtils';
+import { Logger } from '../../utils/Logger';
 import type { ParameterValue } from './hooks/useParameterValue';
 
 /**
@@ -65,16 +66,23 @@ export function ParameterControl({
 
   const { value, type } = paramValue;
 
-  // Debug logging for stereo filter parameters
+  // Debug logging for stereo parameters (broaden search to catch all stereo-related params)
   const nodeName = node.pinInfo?.staticLabel || node.name;
-  if (nodeName.toLowerCase().includes('stereo') && nodeName.toLowerCase().includes('filter')) {
-    console.log('🔧 ParameterControl RENDERING:', {
-      nodeName,
-      type,
-      value,
-      floatInfo: node.pinInfo?.floatInfo,
-      nodeType: node.nodeInfo?.type,
-    });
+  if (nodeName.toLowerCase().includes('stereo')) {
+    Logger.debug(
+      '🔧 ParameterControl RENDERING:',
+      JSON.stringify(
+        {
+          nodeName,
+          type,
+          value,
+          floatInfo: node.pinInfo?.floatInfo,
+          nodeType: node.nodeInfo?.type,
+        },
+        null,
+        2
+      )
+    );
   }
 
   // Controls must be wrapped in parameter-control-container or parameter-checkbox-container
@@ -180,29 +188,33 @@ export function ParameterControl({
         const dimCount = floatInfo?.dimCount ?? 3;
         const isColor = floatInfo?.isColor || node.nodeInfo?.type === 'NT_TEX_RGB';
 
-        // Debug logging for stereo filter color detection
-        if (
-          nodeName.toLowerCase().includes('stereo') &&
-          nodeName.toLowerCase().includes('filter')
-        ) {
-          console.log('🎨 AT_FLOAT3 COLOR DETECTION:', {
-            nodeName,
-            isColor,
-            floatInfoIsColor: floatInfo?.isColor,
-            nodeType: node.nodeInfo?.type,
-            value: { x, y, z },
-          });
+        // Debug logging for stereo color detection
+        if (nodeName.toLowerCase().includes('stereo')) {
+          Logger.debug(
+            '🎨 AT_FLOAT3 COLOR DETECTION:',
+            JSON.stringify(
+              {
+                nodeName,
+                isColor,
+                floatInfoIsColor: floatInfo?.isColor,
+                nodeType: node.nodeInfo?.type,
+                value: { x, y, z },
+              },
+              null,
+              2
+            )
+          );
         }
 
         // Check if this is a color (NT_TEX_RGB)
         if (isColor) {
           const hexColor = formatColorValue(value);
 
-          if (
-            nodeName.toLowerCase().includes('stereo') &&
-            nodeName.toLowerCase().includes('filter')
-          ) {
-            console.log('✅ RENDERING COLOR INPUT:', { nodeName, hexColor });
+          if (nodeName.toLowerCase().includes('stereo')) {
+            Logger.debug(
+              '✅ RENDERING COLOR INPUT:',
+              JSON.stringify({ nodeName, hexColor }, null, 2)
+            );
           }
 
           controlHtml = (
