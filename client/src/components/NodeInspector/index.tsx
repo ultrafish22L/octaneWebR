@@ -160,46 +160,6 @@ function NodeParameter({
 
   // Render as parameter node (end node with attrInfo)
   if (node.attrInfo) {
-    // Debug logging for stereo parameters (broaden search to catch all stereo-related params)
-    if (name.toLowerCase().includes('stereo')) {
-      Logger.debug(
-        '🎨 STEREO PARAMETER:',
-        JSON.stringify(
-          {
-            name,
-            paramValue,
-            attrType: node.attrInfo.type,
-            pinType: node.pinInfo?.type,
-            floatInfo: node.pinInfo?.floatInfo,
-            nodeType: node.nodeInfo?.type,
-            nodeHandle: node.handle,
-          },
-          null,
-          2
-        )
-      );
-    }
-
-    // Debug ALL AT_FLOAT3 parameters to find color inputs
-    if (node.attrInfo.type === 'AT_FLOAT3' && paramValue) {
-      const floatInfo = node.pinInfo?.floatInfo;
-      const isColor = floatInfo?.isColor || node.nodeInfo?.type === 'NT_TEX_RGB';
-      Logger.debug(
-        '🔍 AT_FLOAT3 PARAMETER:',
-        JSON.stringify(
-          {
-            name,
-            isColor,
-            value: paramValue.value,
-            floatInfo,
-            nodeType: node.nodeInfo?.type,
-          },
-          null,
-          2
-        )
-      );
-    }
-
     return (
       <div className={indentClass} style={{ display: 'block' }}>
         <div className="node-box-parameter" data-node-handle={node.handle} data-node-id={nodeId}>
