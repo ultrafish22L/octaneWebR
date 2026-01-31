@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - React 18 Modernization P2A: Suspense Boundaries (2025-02-03)
+
+- **Skeleton Loaders**: Context-aware loading placeholders for better UX
+  - Created comprehensive Skeleton component library with multiple variants
+  - `SkeletonTree` - Animated tree structure for SceneOutliner
+  - `SkeletonParameterList` - Parameter forms for NodeInspector
+  - `SkeletonViewport` - Viewport placeholder for render view
+  - `SkeletonMaterialGrid` - Material cards for MaterialDatabase
+  - Smooth shimmer animation with accessibility support (prefers-reduced-motion)
+  - Uses CSS variables for consistent theming
+  - Files: `client/src/components/Skeleton/index.tsx`, `client/src/components/Skeleton/skeleton.css`
+- **Enhanced Loading Boundaries**: Advanced Suspense wrapper with type-aware fallbacks
+  - Created LoadingBoundary component with intelligent fallback selection
+  - Supports multiple loading types: spinner, tree, parameters, viewport, materials
+  - DelayedFallback prevents loading flashes for fast operations (configurable delay)
+  - Type-safe API with TypeScript support
+  - Files: `client/src/components/LoadingBoundary/index.tsx`
+- **Improved Loading States**: Replaced generic spinners with contextual skeletons
+  - SceneOutliner: Scene tree, LiveDB, and LocalDB now use SkeletonTree
+  - MaterialDatabase: Material grid uses SkeletonMaterialGrid
+  - Better visual feedback during data fetches
+  - Reduced perceived loading time with skeleton placeholders
+
 ### Added - React 18 Modernization P1 (2025-02-03)
 
 - **Error Boundaries**: Production-grade error handling for all critical components

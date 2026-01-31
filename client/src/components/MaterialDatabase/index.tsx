@@ -12,6 +12,7 @@
 import { Logger } from '../../utils/Logger';
 import { useState, useEffect } from 'react';
 import { useOctane } from '../../hooks/useOctane';
+import { SkeletonMaterialGrid } from '../Skeleton';
 
 interface MaterialCategory {
   name: string;
@@ -141,8 +142,24 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
   if (!visible) return null;
 
   return (
-    <div className="material-database-overlay" onClick={onClose}>
-      <div className="material-database-window" onClick={e => e.stopPropagation()}>
+    <div
+      className="material-database-overlay"
+      onClick={onClose}
+      onKeyDown={e => {
+        if (e.key === 'Escape') onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Close dialog"
+    >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+      <div
+        className="material-database-window"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="material-database-header">
           <h2>Material Database</h2>
           <button className="close-button" onClick={onClose} title="Close">
@@ -190,7 +207,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
 
         {/* Material Grid */}
         <div className="material-database-content">
-          {loading && <div className="material-database-loading">Loading...</div>}
+          {loading && <SkeletonMaterialGrid count={12} />}
 
           {!loading && materials.length === 0 && selectedCategory && (
             <div className="material-database-empty">

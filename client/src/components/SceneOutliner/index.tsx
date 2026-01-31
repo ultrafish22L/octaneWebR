@@ -16,6 +16,7 @@ import { useLocalDB } from './hooks/useLocalDB';
 import { useLiveDB } from './hooks/useLiveDB';
 import { useContextMenuActions } from './hooks/useContextMenuActions';
 import { useTreeExpansion } from './hooks/useTreeExpansion';
+import { SkeletonTree } from '../Skeleton';
 
 interface SceneOutlinerProps {
   selectedNode?: SceneNode | null;
@@ -155,10 +156,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
           {!connected ? (
             <div className="scene-loading">Not connected</div>
           ) : loading ? (
-            <div className="scene-loading">
-              <div className="loading-spinner"></div>
-              <div className="scene-loading-text">Loading scene...</div>
-            </div>
+            <SkeletonTree count={12} />
           ) : sceneTree.length > 0 ? (
             <div className="scene-mesh-list">
               {/* Virtual scrolling: Only render visible nodes */}
@@ -181,7 +179,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
         data-content="livedb"
       >
         <div className="db-content">
-          {liveDB.liveDBLoading && <div className="scene-loading">Loading LiveDB...</div>}
+          {liveDB.liveDBLoading && <SkeletonTree count={8} />}
           {!liveDB.liveDBLoading && liveDB.liveDBCategories.length === 0 && (
             <div className="db-status">
               Live DB - No online materials available
@@ -211,7 +209,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
         data-content="localdb"
       >
         <div className="db-content">
-          {localDB.localDBLoading && <div className="scene-loading">Loading LocalDB...</div>}
+          {localDB.localDBLoading && <SkeletonTree count={8} />}
           {!localDB.localDBLoading && !localDB.localDBRoot && (
             <div className="db-status">
               Local DB - No materials found
