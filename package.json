@@ -29,6 +29,7 @@
     "google-protobuf": "^3.21.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-error-boundary": "^6.1.0",
     "react-window": "^2.2.5"
   },
   "devDependencies": {

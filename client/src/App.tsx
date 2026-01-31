@@ -14,10 +14,12 @@
  */
 
 import { Logger } from './utils/Logger';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { OctaneProvider, useOctane } from './hooks/useOctane';
 import { useResizablePanels } from './hooks/useResizablePanels';
 import { EditActionsProvider } from './contexts/EditActionsContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { LoadingFallback } from './components/LoadingFallback';
 import { MenuBar } from './components/MenuBar';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import {
@@ -28,12 +30,21 @@ import { RenderToolbar } from './components/RenderToolbar';
 import { SceneOutliner } from './components/SceneOutliner';
 import { NodeInspector } from './components/NodeInspector';
 import { NodeInspectorControls } from './components/NodeInspector/NodeInspectorControls';
-import { NodeGraphEditor } from './components/NodeGraph';
 import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
-import { MaterialDatabase } from './components/MaterialDatabase';
 import { SaveRenderDialog } from './components/dialogs/SaveRenderDialog';
 import { ExportPassesDialog } from './components/dialogs/ExportPassesDialog';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
+import './styles/error-boundary.css';
+
+// Lazy load heavy components
+const LazyNodeGraphEditor = lazy(() =>
+  import('./components/NodeGraph/index').then(module => ({ default: module.NodeGraphEditor }))
+);
+const LazyMaterialDatabase = lazy(() =>
+  import('./components/MaterialDatabase/index').then(module => ({
+    default: module.MaterialDatabase,
+  }))
+);
 
 function AppContent() {
   const { client, connect, connected } = useOctane();
@@ -356,18 +367,23 @@ function AppContent() {
                 <h3>Scene outliner</h3>
               </div>
               <div className="panel-content">
-                <SceneOutliner
-                  key={sceneRefreshTrigger}
-                  selectedNode={selectedNode}
-                  onNodeSelect={setSelectedNode}
-                  onSceneTreeChange={handleSceneTreeChange}
-                  onSyncStateChange={handleSyncStateChange}
-                />
+                <ErrorBoundary>
+                  <SceneOutliner
+                    key={sceneRefreshTrigger}
+                    selectedNode={selectedNode}
+                    onNodeSelect={setSelectedNode}
+                    onSceneTreeChange={handleSceneTreeChange}
+                    onSyncStateChange={handleSyncStateChange}
+                  />
+                </ErrorBoundary>
               </div>
             </aside>
 
             {/* Left Splitter - spans ALL rows (full height) */}
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <div
+              role="separator"
+              aria-label="Resize scene outliner panel"
               className="panel-splitter vertical left-splitter"
               onMouseDown={() => handleSplitterMouseDown('left')}
               style={{ gridRow: '1 / -1' }}
@@ -397,24 +413,26 @@ function AppContent() {
             </div>
 
             <div className="viewport-container">
-              {connected ? (
-                <CallbackRenderViewport
-                  ref={viewportRef}
-                  showWorldCoord={showWorldCoord}
-                  viewportLocked={viewportLocked}
-                  pickingMode={pickingMode}
-                  onExportPasses={handleExportPasses}
-                  onSetBackgroundImage={handleSetBackgroundImage}
-                  onToggleLockViewport={handleToggleLockViewport}
-                />
-              ) : (
-                <div className="viewport-overlay">
-                  <div className="viewport-info">
-                    <h2>Connecting to Octane...</h2>
-                    <p>Ensure Octane LiveLink is enabled (Help → LiveLink)</p>
+              <ErrorBoundary>
+                {connected ? (
+                  <CallbackRenderViewport
+                    ref={viewportRef}
+                    showWorldCoord={showWorldCoord}
+                    viewportLocked={viewportLocked}
+                    pickingMode={pickingMode}
+                    onExportPasses={handleExportPasses}
+                    onSetBackgroundImage={handleSetBackgroundImage}
+                    onToggleLockViewport={handleToggleLockViewport}
+                  />
+                ) : (
+                  <div className="viewport-overlay">
+                    <div className="viewport-info">
+                      <h2>Connecting to Octane...</h2>
+                      <p>Ensure Octane LiveLink is enabled (Help → LiveLink)</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </ErrorBoundary>
             </div>
 
             {/* Render Toolbar - Official Octane viewport controls */}
@@ -433,7 +451,10 @@ function AppContent() {
         {/* Center-Right Splitter & Right Panel: Node Inspector - spans ALL rows (full height) */}
         {panelVisibility.nodeInspector && (
           <>
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <div
+              role="separator"
+              aria-label="Resize node inspector panel"
               className="panel-splitter vertical center-right-splitter"
               onMouseDown={() => handleSplitterMouseDown('right')}
               style={{ gridRow: '1 / -1' }}
@@ -444,12 +465,14 @@ function AppContent() {
                 <h3>Node inspector</h3>
               </div>
               <div className="panel-content">
-                <div className="node-inspector-layout">
-                  <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={setSelectedNode} />
-                  <div className="node-inspector-main">
-                    <NodeInspector node={selectedNode} />
+                <ErrorBoundary>
+                  <div className="node-inspector-layout">
+                    <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={setSelectedNode} />
+                    <div className="node-inspector-main">
+                      <NodeInspector node={selectedNode} />
+                    </div>
                   </div>
-                </div>
+                </ErrorBoundary>
               </div>
             </aside>
           </>
@@ -459,7 +482,10 @@ function AppContent() {
         {panelVisibility.graphEditor && (
           <>
             {panelVisibility.renderViewport && (
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
               <div
+                role="separator"
+                aria-label="Resize viewport and node graph panels"
                 className="panel-splitter horizontal top-bottom-splitter"
                 onMouseDown={() => handleSplitterMouseDown('top')}
                 style={{ gridColumn: '3 / 4' }}
@@ -487,16 +513,20 @@ function AppContent() {
                     </button>
                   </div>
                   {/* Node Graph Toolbar - Figure 10 vertical buttons, docked left */}
-                  <NodeGraphEditor
-                    sceneTree={sceneTree}
-                    selectedNode={selectedNode}
-                    onNodeSelect={setSelectedNode}
-                    gridVisible={gridVisible}
-                    setGridVisible={setGridVisible}
-                    snapToGrid={snapToGrid}
-                    setSnapToGrid={setSnapToGrid}
-                    onRecenterViewReady={callback => setRecenterViewCallback(() => callback)}
-                  />
+                  <ErrorBoundary>
+                    <Suspense fallback={<LoadingFallback name="Node Graph" />}>
+                      <LazyNodeGraphEditor
+                        sceneTree={sceneTree}
+                        selectedNode={selectedNode}
+                        onNodeSelect={setSelectedNode}
+                        gridVisible={gridVisible}
+                        setGridVisible={setGridVisible}
+                        snapToGrid={snapToGrid}
+                        setSnapToGrid={setSnapToGrid}
+                        onRecenterViewReady={callback => setRecenterViewCallback(() => callback)}
+                      />
+                    </Suspense>
+                  </ErrorBoundary>
                 </div>
               </div>
             </section>
@@ -518,19 +548,30 @@ function AppContent() {
       </footer>
 
       {/* Material Database Modal */}
-      <MaterialDatabase visible={materialDatabaseVisible} onClose={handleMaterialDatabaseClose} />
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback name="Material Database" />}>
+          <LazyMaterialDatabase
+            visible={materialDatabaseVisible}
+            onClose={handleMaterialDatabaseClose}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Save Render Dialog */}
-      <SaveRenderDialog
-        isOpen={saveRenderDialogOpen}
-        onClose={() => setSaveRenderDialogOpen(false)}
-      />
+      <ErrorBoundary>
+        <SaveRenderDialog
+          isOpen={saveRenderDialogOpen}
+          onClose={() => setSaveRenderDialogOpen(false)}
+        />
+      </ErrorBoundary>
 
       {/* Export Passes Dialog */}
-      <ExportPassesDialog
-        isOpen={exportPassesDialogOpen}
-        onClose={() => setExportPassesDialogOpen(false)}
-      />
+      <ErrorBoundary>
+        <ExportPassesDialog
+          isOpen={exportPassesDialogOpen}
+          onClose={() => setExportPassesDialogOpen(false)}
+        />
+      </ErrorBoundary>
     </div>
   );
 }
