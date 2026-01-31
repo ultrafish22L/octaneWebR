@@ -1,9 +1,9 @@
 /**
  * Parameter Control Component
- * 
+ *
  * Renders parameter controls based on Octane attribute types.
  * Extracted from NodeInspector to improve code organization.
- * 
+ *
  * Features:
  * - All Octane attribute types (AT_BOOL, AT_INT*, AT_FLOAT*, AT_LONG*, AT_STRING)
  * - Vector inputs with dynamic dimension count
@@ -19,13 +19,33 @@ import { formatColorValue } from '../../utils/ColorUtils';
 import type { ParameterValue } from './hooks/useParameterValue';
 
 /**
- * Format float value to maximum 6 decimal places
+ * Format float value for display (minimum 3, maximum 6 decimal places)
+ * Examples: 36 → "36.000", 43.45 → "43.450", 43.455845 → "43.455845"
  */
-function formatFloat(value: number): number {
-  return parseFloat(value.toFixed(6));
+function formatFloatForDisplay(value: number): string {
+  const str = value.toFixed(6);
+  const [intPart, decPart] = str.split('.');
+
+  // Keep first 3 decimals, then remove trailing zeros from remaining 3
+  const minDecimals = decPart.slice(0, 3);
+  const extraDecimals = decPart.slice(3).replace(/0+$/, '');
+
+  return `${intPart}.${minDecimals}${extraDecimals}`;
 }
 
-type ParameterValueType = boolean | number | string | { x: number; y?: number; z?: number; w?: number };
+/**
+ * Parse float value from input (handles string input)
+ */
+function parseFloatValue(value: string | number): number {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return isNaN(num) ? 0 : parseFloat(num.toFixed(6));
+}
+
+type ParameterValueType =
+  | boolean
+  | number
+  | string
+  | { x: number; y?: number; z?: number; w?: number };
 
 interface ParameterControlProps {
   node: SceneNode;
@@ -69,7 +89,7 @@ export function ParameterControl({
     }
 
     case AttrType.AT_FLOAT: {
-      const floatValue = typeof value === 'number' ? formatFloat(value) : 0;
+      const floatValue = typeof value === 'number' ? value : 0;
       const floatInfo = node.pinInfo?.floatInfo;
       const useSliders = floatInfo?.useSliders ?? true;
       const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
@@ -78,11 +98,10 @@ export function ParameterControl({
         <div className="parameter-control-container">
           <div className="parameter-number-with-spinner">
             <input
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={floatValue || 0}
-              step={step}
-              onChange={e => onValueChange(formatFloat(parseFloat(e.target.value)))}
+              value={formatFloatForDisplay(floatValue)}
+              onChange={e => onValueChange(parseFloatValue(e.target.value))}
               autoComplete="off"
               name="octane-number-input-1"
             />
@@ -90,14 +109,14 @@ export function ParameterControl({
               <div className="parameter-spinner-container">
                 <button
                   className="parameter-spinner-btn"
-                  onClick={() => onValueChange(formatFloat((floatValue || 0) + step))}
+                  onClick={() => onValueChange(parseFloatValue((floatValue || 0) + step))}
                   title="Increase value"
                 >
                   ▲
                 </button>
                 <button
                   className="parameter-spinner-btn"
-                  onClick={() => onValueChange(formatFloat((floatValue || 0) - step))}
+                  onClick={() => onValueChange(parseFloatValue((floatValue || 0) - step))}
                   title="Decrease value"
                 >
                   ▼
@@ -115,28 +134,23 @@ export function ParameterControl({
         const { x = 0, y = 0 } = value;
         const floatInfo = node.pinInfo?.floatInfo;
         const dimCount = floatInfo?.dimCount ?? 2;
-        const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
 
         controlHtml = (
           <div className="parameter-control-container">
             <input
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={formatFloat(x)}
-              step={step}
-              onChange={e => onValueChange({ x: formatFloat(parseFloat(e.target.value)), y })}
+              value={formatFloatForDisplay(x)}
+              onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y })}
               autoComplete="off"
               name="octane-number-input-2"
             />
             {dimCount >= 2 && (
               <input
-                type="number"
+                type="text"
                 className="number-input parameter-control"
-                value={formatFloat(y)}
-                step={step}
-                onChange={e =>
-                  onValueChange({ x, y: formatFloat(parseFloat(e.target.value)) })
-                }
+                value={formatFloatForDisplay(y)}
+                onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value) })}
                 autoComplete="off"
                 name="octane-number-input-3"
               />
@@ -152,7 +166,6 @@ export function ParameterControl({
         const { x = 0, y = 0, z = 0 } = value;
         const floatInfo = node.pinInfo?.floatInfo;
         const dimCount = floatInfo?.dimCount ?? 3;
-        const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
         const isColor = floatInfo?.isColor || node.nodeInfo?.type === 'NT_TEX_RGB';
 
         // Check if this is a color (NT_TEX_RGB)
@@ -170,7 +183,11 @@ export function ParameterControl({
                   const r = parseInt(hex.substring(1, 3), 16) / 255;
                   const g = parseInt(hex.substring(3, 5), 16) / 255;
                   const b = parseInt(hex.substring(5, 7), 16) / 255;
-                  onValueChange({ x: formatFloat(r), y: formatFloat(g), z: formatFloat(b) });
+                  onValueChange({
+                    x: parseFloatValue(r),
+                    y: parseFloatValue(g),
+                    z: parseFloatValue(b),
+                  });
                 }}
                 autoComplete="off"
                 name="octane-color-input-4"
@@ -181,38 +198,29 @@ export function ParameterControl({
           controlHtml = (
             <div className="parameter-control-container">
               <input
-                type="number"
+                type="text"
                 className="number-input parameter-control"
-                value={formatFloat(x)}
-                step={step}
-                onChange={e =>
-                  onValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z })
-                }
+                value={formatFloatForDisplay(x)}
+                onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z })}
                 autoComplete="off"
                 name="octane-number-input-5"
               />
               {dimCount >= 2 && (
                 <input
-                  type="number"
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloat(y)}
-                  step={step}
-                  onChange={e =>
-                    onValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z })
-                  }
+                  value={formatFloatForDisplay(y)}
+                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z })}
                   autoComplete="off"
                   name="octane-number-input-6"
                 />
               )}
               {dimCount >= 3 && (
                 <input
-                  type="number"
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloat(z)}
-                  step={step}
-                  onChange={e =>
-                    onValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)) })
-                  }
+                  value={formatFloatForDisplay(z)}
+                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value) })}
                   autoComplete="off"
                   name="octane-number-input-7"
                 />
@@ -239,11 +247,9 @@ export function ParameterControl({
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(x)}
+                  value={formatFloatForDisplay(x)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                  }
+                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-8"
                 />
@@ -256,22 +262,18 @@ export function ParameterControl({
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(x)}
+                  value={formatFloatForDisplay(x)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                  }
+                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-9"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(y)}
+                  value={formatFloatForDisplay(y)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                  }
+                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
                   autoComplete="off"
                   name="octane-number-input-10"
                 />
@@ -284,33 +286,27 @@ export function ParameterControl({
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(x)}
+                  value={formatFloatForDisplay(x)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                  }
+                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-11"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(y)}
+                  value={formatFloatForDisplay(y)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                  }
+                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
                   autoComplete="off"
                   name="octane-number-input-12"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(z)}
+                  value={formatFloatForDisplay(z)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })
-                  }
+                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value), w })}
                   autoComplete="off"
                   name="octane-number-input-13"
                 />
@@ -324,44 +320,36 @@ export function ParameterControl({
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(x)}
+                  value={formatFloatForDisplay(x)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                  }
+                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-14"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(y)}
+                  value={formatFloatForDisplay(y)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                  }
+                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
                   autoComplete="off"
                   name="octane-number-input-15"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(z)}
+                  value={formatFloatForDisplay(z)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })
-                  }
+                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value), w })}
                   autoComplete="off"
                   name="octane-number-input-16"
                 />
                 <input
                   type="number"
                   className="number-input parameter-control"
-                  value={formatFloat(w)}
+                  value={formatFloatForDisplay(w)}
                   step={step}
-                  onChange={e =>
-                    onValueChange({ x, y, z, w: formatFloat(parseFloat(e.target.value)) })
-                  }
+                  onChange={e => onValueChange({ x, y, z, w: parseFloatValue(e.target.value) })}
                   autoComplete="off"
                   name="octane-number-input-17"
                 />

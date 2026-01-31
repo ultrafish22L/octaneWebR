@@ -84,14 +84,14 @@ function NodeParameter({
 
   const hasChildren = node.children && node.children.length > 0;
   const isEndNode = !hasChildren && !!node.attrInfo;
-  
+
   // Use parameter value management hook
   const { paramValue, handleValueChange } = useParameterValue(node, client, isEndNode);
   const nodeId = `node-${node.handle}`;
   const typeStr = String(node.type || node.outType || 'unknown');
   const icon = node.icon || getIconForType(typeStr, node.name);
   const name = node.pinInfo?.staticLabel || node.name;
-  var color = node.nodeInfo?.nodeColor ? formatNodeColor(node.nodeInfo.nodeColor) : '#666';
+  let color = node.nodeInfo?.nodeColor ? formatNodeColor(node.nodeInfo.nodeColor) : '#666';
   if (node.pinInfo) {
     const info = getPinTypeInfo(node.pinInfo.type as string);
     if (info) {
@@ -123,7 +123,7 @@ function NodeParameter({
     } catch (error) {
       Logger.error('❌ Failed to replace node:', error);
       // Note: Consider implementing a proper toast/notification system
-      // eslint-disable-next-line no-console
+
       console.error('Node replacement failed:', error);
     }
   };
@@ -139,7 +139,6 @@ function NodeParameter({
       handleToggle();
     }
   };
-
 
   // Determine the indent class (matching GenericNodeRenderer logic exactly)
   // octaneWeb logic: if ANY group exists at this level, ALL items at this level use node-indent-done
@@ -184,11 +183,17 @@ function NodeParameter({
               role={hasChildren ? 'button' : undefined}
               tabIndex={hasChildren ? 0 : undefined}
             >
-              {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-              <span className="node-title" title={buildTooltip()}>
-                {name}
-              </span>
-              <ParameterControl node={node} paramValue={paramValue} onValueChange={handleValueChange} />
+              <div className="node-label-text">
+                {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
+                <span className="node-title" title={buildTooltip()}>
+                  {name}:
+                </span>
+              </div>
+              <ParameterControl
+                node={node}
+                paramValue={paramValue}
+                onValueChange={handleValueChange}
+              />
             </div>
           </div>
         </div>
@@ -237,10 +242,12 @@ function NodeParameter({
             role={hasChildren ? 'button' : undefined}
             tabIndex={hasChildren ? 0 : undefined}
           >
-            {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-            <span className="node-title" title={buildTooltip()}>
-              {name}
-            </span>
+            <div className="node-label-text">
+              {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
+              <span className="node-title" title={buildTooltip()}>
+                {name}:
+              </span>
+            </div>
             {showDropdown && (
               <div
                 className="inspector-dropdown-inline"
@@ -413,7 +420,7 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
   // NOTE: Node expansion state is managed internally by NodeParameter component
-  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+
   const handleToggle = (_nodeId: string) => {
     // Placeholder for future centralized expansion state management
   };

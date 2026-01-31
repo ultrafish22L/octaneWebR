@@ -5,446 +5,426 @@
 
 /* Node Inspector Styling */
 .node-inspector-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 8px;
-    background-color: var(--bg-primary);
-    border-bottom: 1px solid var(--bg-header);
-    font-size: var(--font-size-small);
-    color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--bg-header);
+  font-size: var(--font-size-small);
+  color: var(--text-primary);
 }
 
 .node-inspector-header h3 {
-    margin: 0 0 8px 0;
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-bold);
-    color: var(--text-primary);
+  margin: 0 0 8px 0;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
 }
 
 .node-selector {
-    width: 100%;
-    padding: 4px 8px;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: var(--font-size-small);
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius);
-    cursor: pointer;
+  width: 100%;
+  padding: 4px 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-small);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
 }
 
 .parameter-icon {
-    width: 16px;
-    height: 16px;
-    text-align: center;
-    margin-right: 6px;
-    margin-left: 2px;
-    font-size: var(--font-size-xs);
-    flex-shrink: 0;
-    background: var(--accent-blue); /* Blue background like official Octane */
-    border: 1px solid var(--accent-blue);
-    border-radius: var(--border-radius-base); /* Slightly smaller rounded blue background */
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  width: 16px;
+  height: 16px;
+  text-align: center;
+  margin-right: 6px;
+  margin-left: 2px;
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+  background: var(--accent-blue); /* Blue background like official Octane */
+  border: 1px solid var(--accent-blue);
+  border-radius: var(--border-radius-base); /* Slightly smaller rounded blue background */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .parameter-label {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    font-size: var(--font-size-small);
-    color: var(--text-primary);
-    margin-right: 12px;
-    font-weight: var(--font-weight-normal);
-    min-width: 120px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  font-size: var(--font-size-small);
+  color: var(--text-primary);
+  margin-right: 12px;
+  font-weight: var(--font-weight-normal);
+  min-width: 120px;
 }
 
 .parameter-value {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    font-family: var(--font-family-mono);
-    margin-left: auto;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  font-family: var(--font-family-mono);
+  margin-left: auto;
 }
 
 /* Color parameter display (matching reference screenshot) */
 .color-parameter {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-    margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-left: auto;
 }
 
 .color-bar {
-    width: 120px;
-    height: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius-sm);
-    flex-shrink: 0;
+  width: 120px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  flex-shrink: 0;
 }
 
 /* Official Octane-style Input Controls - Compact Studio Design */
 .parameter-control-group {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-none);
-    position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-none);
+  position: relative;
 }
 
 .parameter-spinner-btn {
-    width: 12px;
-    height: 16px;
-    background: var(--border);
-    border: 1px solid var(--text-disabled);
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-tiny);
-    border-radius: var(--border-radius-none);
-    transition: all 0.15s ease;
-    font-family: var(--font-family-mono);
-    user-select: none;
+  width: 12px;
+  height: 16px;
+  background: var(--border);
+  border: 1px solid var(--text-disabled);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-tiny);
+  border-radius: var(--border-radius-none);
+  transition: all 0.15s ease;
+  font-family: var(--font-family-mono);
+  user-select: none;
 }
 
 .parameter-spinner-btn:first-child {
-    border-right: none;
-    border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+  border-right: none;
+  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
 }
 
 .parameter-spinner-btn:last-of-type {
-    border-left: none;
-    border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+  border-left: none;
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
 }
 
 .parameter-spinner-btn:hover {
-    background: var(--text-disabled);
-    color: var(--text-primary);
+  background: var(--text-disabled);
+  color: var(--text-primary);
 }
 
 .parameter-dropdown {
-    width: 160px; /* Consistent width matching Octane */
-    min-width: 160px;
-    max-width: 160px;
-    height: 22px;
-    padding: 0 20px 0 6px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius-sm);
-    color: var(--text-primary);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-normal);
-    appearance: none;
-    cursor: pointer;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+  width: 160px; /* Consistent width matching Octane */
+  min-width: 160px;
+  max-width: 160px;
+  height: 22px;
+  padding: 0 20px 0 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-normal);
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .parameter-number-input {
-    width: 50px;
-    height: 16px;
-    padding: 0 2px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-left: none;
-    border-right: none;
-    border-radius: var(--border-radius-none);
-    color: var(--text-primary);
-    font-size: var(--font-size-small);
-    text-align: center;
-    font-family: var(--font-family-mono);
-    font-weight: var(--font-weight-normal);
-    line-height: var(--line-height-pixel);
+  width: 50px;
+  height: 16px;
+  padding: 0 2px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-right: none;
+  border-radius: var(--border-radius-none);
+  color: var(--text-primary);
+  font-size: var(--font-size-small);
+  text-align: center;
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-pixel);
 }
 
 .parameter-number-input:focus {
-    outline: none;
-    background: var(--border-dark);
-    border-color: var(--accent-blue);
+  outline: none;
+  background: var(--border-dark);
+  border-color: var(--accent-blue);
 }
 
 /* Node Inspector Components - Professional Octane Style */
 
 .inspector-icon {
-    margin-right: 4px;
-    font-size: var(--font-size-normal);
+  margin-right: 4px;
+  font-size: var(--font-size-normal);
 }
 
 .inspector-dropdown {
-    display: flex;
-    align-items: center;
-    position: relative;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    font-size: var(--font-size-small);
-    padding: 2px 6px;
-    border-radius: var(--border-radius-sm);
-    min-width: 120px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: var(--font-size-small);
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  min-width: 120px;
 }
 
 .inspector-target-select {
-    background-color: var(--border-dark);
-    border: 1px solid var(--bg-header);
-    color: var(--text-primary);
-    padding: 2px 20px 2px 6px;
-    font-size: var(--font-size-small);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    appearance: none;
-    width: 160px; /* Consistent width matching Octane */
-    min-width: 160px;
-    max-width: 160px;
+  background-color: var(--border-dark);
+  border: 1px solid var(--bg-header);
+  color: var(--text-primary);
+  padding: 2px 20px 2px 6px;
+  font-size: var(--font-size-small);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  appearance: none;
+  width: 160px; /* Consistent width matching Octane */
+  min-width: 160px;
+  max-width: 160px;
 }
 
 .inspector-dropdown-inline {
-    display: inline-flex;
-    align-items: center;
-    position: relative;
-    margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  margin-left: auto;
 }
 
 .inspector-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0;
 }
 
 .inspector-title {
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-header);
-    color: var(--text-primary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-header);
+  color: var(--text-primary);
 }
 
 /* Parameter Sections */
 .parameter-section {
-    border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
-
-
-
 
 /* Parameter Subsections */
 .parameter-subsection {
-    padding: 0;
+  padding: 0;
 }
-
-
-
-
 
 /* Octane Parameter Rows (matching reference screenshot exactly) */
 
-
-
 /* CSS-based parameter icon (small blue circle with gear symbol) */
-
 
 /* Color parameter icon (palette icon instead of gear) */
 
-
-
-
 /* Parameter Input Containers */
-
-
 
 /* Parameter Control Wrappers (matching reference screenshot) */
 .parameter-control-wrapper {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .parameter-control-wrapper.parameter-vector3 {
-    gap: var(--spacing-xxs);
+  gap: var(--spacing-xxs);
 }
-
 
 /* Parameter Number Inputs (matching reference screenshot exactly) */
 /* Duplicate .parameter-number-input removed - see line 144 */
 
 .parameter-number-input:focus {
-    outline: none;
-    border-color: var(--accent-blue);
-    background-color: var(--border-dark);
+  outline: none;
+  border-color: var(--accent-blue);
+  background-color: var(--border-dark);
 }
 
 /* Parameter Color Bars (matching reference screenshot) */
 
-
 /* Parameter Checkboxes (matching reference screenshot) */
 .parameter-checkbox {
-    width: 12px;
-    height: 12px;
-    background-color: var(--viewport-bg);
-    border: 1px solid var(--node-bg);
-    border-radius: var(--border-radius-xs);
-    cursor: pointer;
-    appearance: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
+  width: 12px;
+  height: 12px;
+  background-color: var(--viewport-bg);
+  border: 1px solid var(--node-bg);
+  border-radius: var(--border-radius-xs);
+  cursor: pointer;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .parameter-checkbox:hover {
-    border-color: var(--accent-blue);
+  border-color: var(--accent-blue);
 }
 
 .parameter-checkbox:checked {
-    background-color: var(--viewport-bg);
-    border-color: var(--accent-blue);
+  background-color: var(--viewport-bg);
+  border-color: var(--accent-blue);
 }
 
 .parameter-checkbox:checked::after {
-    content: '✓';
-    font-size: var(--font-size-tiny);
-    font-weight: bold;
-    color: var(--accent-blue);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    line-height: var(--line-height-none);
+  content: '✓';
+  font-size: var(--font-size-tiny);
+  font-weight: bold;
+  color: var(--accent-blue);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: var(--line-height-none);
 }
 
 .parameter-controls {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xxs);
-    margin-left: -14px;
-    z-index: var(--z-low);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+  margin-left: -14px;
+  z-index: var(--z-low);
 }
 
 /* Duplicate .parameter-spinner-btn removed - see line 88 for definition */
 
 .parameter-spinner-btn:hover {
-    color: var(--text-muted);
+  color: var(--text-muted);
 }
 
 /* Parameter Sliders */
 
 .parameter-slider {
-    position: relative;
-    width: 100%;
-    height: 4px;
-    background: var(--bg-secondary);
-    border-radius: var(--border-radius-sm);
-    outline: none;
-    appearance: none;
-    cursor: pointer;
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
 }
-
-
-
 
 /* Parameter Checkboxes (matching octaneWeb exactly) */
 .parameter-checkbox-container {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 }
 
 /* Parameter Dropdowns - see line 119 for .parameter-dropdown definition */
 
 .parameter-dropdown:focus {
-    outline: none;
-    border-color: var(--accent-blue);
+  outline: none;
+  border-color: var(--accent-blue);
 }
 
 /* Color Parameter Controls (matching reference screenshot) */
 
-
-
 /* Node Inspector Layout - Official OTOY Design with Vertical Quick Access Buttons */
 .node-inspector-layout {
-    display: flex;
-    flex: 1;
-    height: 100%;
-    background: var(--bg-primary);    
+  display: flex;
+  flex: 1;
+  height: 100%;
+  background: var(--bg-primary);
 }
 
 /* Vertical Quick Access Buttons (Left Side) - Matching Official Octane Documentation Figure 2 */
 .node-inspector-controls-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xxs);
-    background: var(--bg-primary);
-    padding: 2px 2px 2px 2px;
-    width: 26px;
-    min-width: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+  background: var(--bg-primary);
+  padding: 2px 2px 2px 2px;
+  width: 26px;
+  min-width: 26px;
 }
 
 /* Main Node Inspector Content (Right Side) */
 .node-inspector-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    width: 240px;
-    min-width: 80px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  min-width: 80px;
 }
 
 .quick-btn {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 3px 2px 3px 2px;
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-small);
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s ease;
-    position: relative;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 2px 3px 2px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-small);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  position: relative;
 }
 
 .quick-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-    border-color: var(--accent-blue);
-    z-index: var(--z-low);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+  z-index: var(--z-low);
 }
 
 .quick-btn:active {
-    background: var(--accent-blue);
-    color: white;
+  background: var(--accent-blue);
+  color: white;
 }
 
 .quick-btn.active {
-    background: var(--accent-red);
-    color: white;
-    border-color: var(--accent-red);
+  background: var(--accent-red);
+  color: white;
+  border-color: var(--accent-red);
 }
 
 .controls-spacer {
-    width: 4px;
-    height: 16px;
-    border-left: 1px solid var(--border);
-    margin: 0 2px;
+  width: 4px;
+  height: 16px;
+  border-left: 1px solid var(--border);
+  margin: 0 2px;
 }
 
 /* Vertical spacer for the new vertical layout */
 .controls-spacer-vertical {
-    width: 20px;
-    height: 4px;
-    border-top: 1px solid var(--border);
-    margin: 2px 0;
+  width: 20px;
+  height: 4px;
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
 }
 
 /* Octane-Style Node Inspector */
 
 .inspector-header {
-    padding: 6px 8px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* Duplicate .inspector-title removed - see line 219 */
@@ -452,94 +432,78 @@
 /* Duplicate .inspector-dropdown removed - see line 181 */
 
 .section-header {
-    padding: 4px 8px;
-    background: var(--bg-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-header);
-    border-bottom: 1px solid var(--border);
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-header);
+  border-bottom: 1px solid var(--border);
 }
 
 .section-header:hover {
-    background: var(--bg-hover);
+  background: var(--bg-hover);
 }
 
 .section-toggle {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    width: 12px;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  width: 12px;
 }
 
 .section-title {
-    color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 .section-content {
-    padding: 2px 0;
+  padding: 2px 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .grid-button {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: var(--font-size-xs);
-    padding: 1px;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    min-width: 18px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  padding: 1px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  min-width: 18px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .grid-button:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .grid-button.active {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
 .file-path {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 4px 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 8px;
 }
 
 .file-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-left: 20px;
 }
 
 .file-path-text {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  font-family: var(--font-family-mono);
 }
 
 /* ========================================
@@ -549,29 +513,29 @@
 
 /* Loading and Error States */
 .loading-parameters {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
 }
 
 /* .loading-spinner consolidated in app.css (shared component) */
 /* @keyframes spin consolidated in app.css (shared animation) */
 
 .error-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
 }
 
 .error-icon {
-    font-size: var(--font-size-title);
-    margin-bottom: 12px;
+  font-size: var(--font-size-title);
+  margin-bottom: 12px;
 }
 
 /* Parameter Rows */
@@ -582,15 +546,15 @@
 /* Duplicate .parameter-icon removed - see line 37 */
 
 .parameter-name {
-    font-size: var(--font-size-small);
-    color: var(--text-primary);
-    font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-small);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-normal);
 }
 
 .parameter-control {
-    display: flex;
-    align-items: center;
-    flex: 1;
+  display: flex;
+  align-items: center;
+  flex: 1;
 }
 
 /* Numeric Slider Controls */
@@ -598,29 +562,25 @@
 /* Duplicate .parameter-slider removed - see line 337 */
 
 .parameter-slider::-webkit-slider-thumb {
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: var(--accent);
-    border-radius: var(--border-radius-circle);
-    cursor: pointer;
-    border: 1px solid var(--border);
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: var(--border-radius-circle);
+  cursor: pointer;
+  border: 1px solid var(--border);
 }
 
 .parameter-slider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    background: var(--accent);
-    border-radius: var(--border-radius-circle);
-    cursor: pointer;
-    border: 1px solid var(--border);
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: var(--border-radius-circle);
+  cursor: pointer;
+  border: 1px solid var(--border);
 }
 
-
-
-
 /* Numeric Input Controls */
-
 
 .param-increment,
 
@@ -634,11 +594,10 @@
 /* Dropdown Controls - see line 119 for .parameter-dropdown definition */
 
 .parameter-dropdown:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--bg-primary);
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-primary);
 }
-
 
 /* Parameter Animation Effects */
 /* .parameter-row consolidated in layout.css:223 */
@@ -648,567 +607,573 @@
 
 /* Parameter Value Indicators */
 .parameter-row[data-type="checkbox"] .parameter-checkbox:checked ~ .parameter-label .parameter-name {
-    color: var(--accent);
+  color: var(--accent);
 }
 
-.parameter-row[data-type="numeric-slider"] .parameter-slider:not([value="0"]) ~ .parameter-label .parameter-name,
-.parameter-row[data-type="numeric-input"] .parameter-number-input:not([value="0"]) ~ .parameter-label .parameter-name {
-    color: var(--text-primary);
+.parameter-row[data-type='numeric-slider']
+  .parameter-slider:not([value='0'])
+  ~ .parameter-label
+  .parameter-name,
+.parameter-row[data-type='numeric-input']
+  .parameter-number-input:not([value='0'])
+  ~ .parameter-label
+  .parameter-name {
+  color: var(--text-primary);
 }
 
 /* Enhanced Focus States */
 .parameter-control:focus-within .parameter-label .parameter-name {
-    color: var(--accent);
+  color: var(--accent);
 }
 
 .parameter-control:focus-within .parameter-icon {
-    color: var(--accent);
+  color: var(--accent);
 }
 
 /* ===== NODE INSPECTOR ===== */
 .inspector-group-indent {
-    background-color: var(--bg-secondary);
-    padding: 0 0 0 0;
-    margin: 0 0 0 20px;    
+  background-color: var(--bg-secondary);
+  padding: 0 0 0 0;
+  margin: 0 0 0 20px;
 }
 
 .inspector-group-header {
-    background: var(--bg-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xl);
-    font-size: var(--font-size-small);
-    color: var(--text-primary);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  font-size: var(--font-size-small);
+  color: var(--text-primary);
 }
 
 .inspector-group-header:hover {
-    background-color: var(--bg-hover);
+  background-color: var(--bg-hover);
 }
 
 .inspector-group-icon {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    transition: transform 0.2s ease;
-    min-width: 12px;
-    text-align: center;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+  min-width: 12px;
+  text-align: center;
 }
 
 .inspector-group-label {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    cursor: pointer;
-    user-select: none;
-    width: 100%;
-    min-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  min-height: 20px;
 }
 
 .inspector-group-content {
-    background-color: var(--bg-secondary);
+  background-color: var(--bg-secondary);
 }
 
 .node-box {
-    position: relative;
-    background: var(--bg-secondary);
-    display: flex;
-    align-items: center;
-    transition: all 0.2s ease;
+  position: relative;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
 }
 
 .node-box-parameter {
-    position: relative;
-    background: var(--bg-parameter);
-    border-radius: var(--border-radius-lg); 
-    display: flex;
-    align-items: center;
-    transition: all 0.2s ease;
-    padding: 0 4px 0 0;
+  position: relative;
+  background: var(--bg-parameter);
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  padding: 0 4px 0 0;
 }
 
 .node-box:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-hover);
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 .node-box.selected {
-    background: var(--accent-bg);
-    border-color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
 }
 
 .node-box.selected .node-title {
-    color: var(--accent);
+  color: var(--accent);
 }
 
 /* Level-based indentation system with consistent 24px increments - ONLY for Node Inspector */
 .node-inspector .node-indent-0 {
-    background-color: var(--bg-primary);
-    border: 1px solid var(--parameter-bg);
-    border-radius: var(--border-radius-lg); 
-    margin: 0 2px 2px 8px;
-    padding: 0 0 0 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--parameter-bg);
+  border-radius: var(--border-radius-lg);
+  margin: 0 2px 2px 8px;
+  padding: 0 0 0 0;
 }
 
 .node-inspector .node-indent {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--parameter-bg);
-    border-radius: var(--border-radius-lg); 
-    margin: 2px 2px 2px 20px;   
-    padding: 0 0 0 0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--parameter-bg);
+  border-radius: var(--border-radius-lg);
+  margin: 2px 2px 2px 20px;
+  padding: 0 0 0 0;
 }
 
 .node-inspector .node-indent-done {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--parameter-bg);
-    border-radius: var(--border-radius-lg); 
-    margin: 2px 2px 2px 1px;   
-    padding: 0 0 0 0; 
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--parameter-bg);
+  border-radius: var(--border-radius-lg);
+  margin: 2px 2px 2px 1px;
+  padding: 0 0 0 0;
 }
 
 .node-inspector .node-toggle-content {
-    background-color: var(--bg-secondary);
-    padding: 0;
-    margin: 0;
+  background-color: var(--bg-secondary);
+  padding: 0;
+  margin: 0;
 }
 
 /* Icon box with better visibility and positioning - ONLY for Node Inspector */
 .node-inspector .node-icon-box {
-    position: absolute;
-    left: -8px; 
-    width: 20px;
-    height: 20px;
-    border-radius: var(--border-radius-lg) 0 0 var(--border-radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-small);
-    border: 1px solid var(--highlight-medium); /* More visible border */
-    background: var(--overlay-subtle); /* Subtle background for better contrast */
-    box-shadow: 0 1px 2px var(--overlay-subtle); /* Subtle shadow for depth */
+  position: absolute;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--border-radius-lg) 0 0 var(--border-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-small);
+  border: 1px solid var(--highlight-medium); /* More visible border */
+  background: var(--overlay-subtle); /* Subtle background for better contrast */
+  box-shadow: 0 1px 2px var(--overlay-subtle); /* Subtle shadow for depth */
 }
 
 /* Node content area with improved spacing - ONLY for Node Inspector */
 .node-inspector .node-content {
-    flex: 1;
-    padding: 0 0 0 18px; /* Increased padding for better spacing */
-    min-height: 10px;
-    border-radius: var(--border-radius-lg); 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  flex: 1;
+  padding: 0 0 0 18px; /* Increased padding for better spacing */
+  min-height: 10px;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* Node parameters container - ONLY for Node Inspector */
 .node-inspector .node-parameters {
-    width: 100%;
-    margin-top: 4px;
-    padding-left: 0;
+  width: 100%;
+  margin-top: 4px;
+  padding-left: 0;
 }
 
 /* Node header with improved spacing and alignment - ONLY for Node Inspector */
 .node-inspector .node-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    width: 100%;
-    min-height: 20px;
-    gap: var(--spacing-none);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  min-height: 20px;
+  gap: 8px;
 }
 
 .node-inspector .node-label:hover {
-    background: var(--bg-hover);
+  background: var(--bg-hover);
 }
 
 /* Collapse/expand icon styling - ONLY for Node Inspector */
 .node-inspector .node-collapse-icon {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    transition: transform 0.2s ease;
-    min-width: 12px;
-    text-align: center;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+  min-width: 12px;
+  text-align: center;
 }
 
 .node-inspector .node-collapse-icon:hover {
-    color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Node label text wrapper - groups collapse icon and title */
+.node-inspector .node-label-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 /* Node title styling - ONLY for Node Inspector */
 .node-inspector .node-title {
-    padding: 0px 0px 0px 0px;
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-light);
-    color: var(--text-primary);
-    flex-shrink: 2;
-    display:grid;
-    width: 120px;
+  padding: 0px 0px 0px 0px;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-light);
+  color: var(--text-primary);
+  text-align: left;
+  white-space: nowrap;
 }
 
 /* Node parameter controls with better spacing - ONLY for Node Inspector */
 .node-inspector .node-parameter-controls {
-    margin-left: auto; /* Push dropdowns to right side */
-    flex: 0 0 auto; /* Don't grow or shrink - maintain consistent width */
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-none);
-    min-width: 160px; /* Consistent dropdown area width matching Octane */
+  justify-self: start; /* Align to left edge of grid column */
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-none);
+  width: 100%;
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown {
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-lg);
-    color: var(--bg-header);
-    padding: 4px 8px;
-    font-size: var(--font-size-small);
-    min-width: 120px;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-lg);
+  color: var(--bg-header);
+  padding: 4px 8px;
+  font-size: var(--font-size-small);
+  min-width: 120px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown:hover {
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--warning-bg-alpha);
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--warning-bg-alpha);
 }
 
 /* Child nodes container - ONLY for Node Inspector */
 .node-inspector .node-children {
-    width: 100%;
-    margin-top: 4px;
+  width: 100%;
+  margin-top: 4px;
 }
 
 /* ===== OCTANE PARAMETER ROW STYLES ===== */
 /* New parameter control styles for GenericNodeRenderer */
 
-
-
-
-
-
 /* Individual control styles - Match Octane Studio with 3D recessed effect */
 .checkbox {
-    width: 14px;
-    height: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    cursor: pointer;
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-sm);
-    box-shadow: inset 0 1px 3px var(--shadow-heavy);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    position: relative;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  cursor: pointer;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-sm);
+  box-shadow: inset 0 1px 3px var(--shadow-heavy);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
 }
 
 .checkbox:checked {
-    background: var(--bg-primary);
-    border-color: var(--accent);
+  background: var(--bg-primary);
+  border-color: var(--accent);
 }
 
 .checkbox:checked::after {
-    content: '✓';
-    color: var(--accent);
-    font-size: var(--font-size-xxs);
-    font-weight: bold;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+  content: '✓';
+  color: var(--accent);
+  font-size: var(--font-size-xxs);
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .number-input {
-    flex: 1;
-    min-width: 36px;
-    height: 18px;
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-base);
-    color: var(--bg-header);
-    font-size: var(--font-size-small);
-    padding: 0 8px;
-    font-family: var(--font-family-mono);
-    text-align: right;
-    box-shadow: inset 0 1px 3px var(--shadow-heavy);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+  flex: 1;
+  min-width: 36px;
+  height: 18px;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-base);
+  color: var(--bg-header);
+  font-size: var(--font-size-small);
+  padding: 0 8px;
+  font-family: var(--font-family-mono);
+  text-align: right;
+  box-shadow: inset 0 1px 3px var(--shadow-heavy);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .number-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--border-dark);
-    box-shadow: inset 0 1px 3px var(--shadow-heavy), 0 0 0 1px var(--accent);
+  outline: none;
+  border-color: var(--accent);
+  background: var(--border-dark);
+  box-shadow:
+    inset 0 1px 3px var(--shadow-heavy),
+    0 0 0 1px var(--accent);
 }
 
 /* Number input with spinners */
 .parameter-number-with-spinner {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-none);
-    position: relative;
-    flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-none);
+  position: relative;
+  flex: 1;
 }
 
 .parameter-number-with-spinner .number-input {
-    border-radius: var(--border-radius-base) 0 0 var(--border-radius-base);
-    border-right: none;
+  border-radius: var(--border-radius-base) 0 0 var(--border-radius-base);
+  border-right: none;
 }
 
 .parameter-spinner-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-none);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-none);
 }
 
 /* Duplicate .parameter-spinner-btn removed - see line 88 for definition */
 
 .parameter-spinner-btn:first-child {
-    border-bottom: none;
-    border-radius: 0 var(--border-radius-base) 0 0;
+  border-bottom: none;
+  border-radius: 0 var(--border-radius-base) 0 0;
 }
 
 .parameter-spinner-btn:last-child {
-    border-radius: 0 0 var(--border-radius-base) 0;
+  border-radius: 0 0 var(--border-radius-base) 0;
 }
 
 /* .parameter-spinner-btn:hover - see line 354 */
 
 .parameter-spinner-btn:active {
-    background: var(--border-light);
+  background: var(--border-light);
 }
 
 .text-input {
-    width: 80px;
-    height: 18px;
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-sm);
-    color: var(--bg-header);
-    font-size: var(--font-size-small);
-    padding: 1px 4px;
-    text-align: right;
-    box-shadow: inset 0 1px 3px var(--shadow-heavy);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+  width: 80px;
+  height: 18px;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-sm);
+  color: var(--bg-header);
+  font-size: var(--font-size-small);
+  padding: 1px 4px;
+  text-align: right;
+  box-shadow: inset 0 1px 3px var(--shadow-heavy);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .text-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--border-dark);
-    box-shadow: inset 0 1px 3px var(--shadow-heavy), 0 0 0 1px var(--accent);
+  outline: none;
+  border-color: var(--accent);
+  background: var(--border-dark);
+  box-shadow:
+    inset 0 1px 3px var(--shadow-heavy),
+    0 0 0 1px var(--accent);
 }
 
 .color-input {
-    width: 180px;
-    min-width: 60px;
-    height: 18px;
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    padding: 0;
-    background: var(--bg-primary);
-    box-shadow: inset 0 1px 3px var(--shadow-heavy);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+  width: 180px;
+  min-width: 60px;
+  height: 18px;
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  background: var(--bg-primary);
+  box-shadow: inset 0 1px 3px var(--shadow-heavy);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .color-input::-webkit-color-swatch-wrapper {
-    padding: 0;
+  padding: 0;
 }
 
 .color-input::-webkit-color-swatch {
-    border: none;
-    border-radius: var(--border-radius-xs);
+  border: none;
+  border-radius: var(--border-radius-xs);
 }
 
 .dropdown {
-    height: 18px;
-    background: var(--bg-primary);
-    border: 1px solid var(--bg-header);
-    border-radius: var(--border-radius-sm);
-    color: var(--bg-header);
-    font-size: var(--font-size-small);
-    padding: 0 4px;
-    width: 160px; /* Consistent width matching Octane */
-    min-width: 160px;
-    max-width: 160px;
-    cursor: pointer;
-    display: grid;
-    text-align: right;
-    box-shadow: inset 0 1px 3px var(--shadow-heavy);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+  height: 18px;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-header);
+  border-radius: var(--border-radius-sm);
+  color: var(--bg-header);
+  font-size: var(--font-size-small);
+  padding: 0 4px;
+  width: 160px; /* Consistent width matching Octane */
+  min-width: 160px;
+  max-width: 160px;
+  cursor: pointer;
+  display: grid;
+  text-align: right;
+  box-shadow: inset 0 1px 3px var(--shadow-heavy);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .dropdown:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: var(--border-dark);
-    box-shadow: inset 0 1px 3px var(--shadow-heavy), 0 0 0 1px var(--accent);
+  outline: none;
+  border-color: var(--accent);
+  background: var(--border-dark);
+  box-shadow:
+    inset 0 1px 3px var(--shadow-heavy),
+    0 0 0 1px var(--accent);
 }
 
 /* Vector control styles */
 
-
-
-
 /* Parameter rows within nodes - ONLY for Node Inspector */
 .node-inspector .node-parameter-row {
-    margin: 2px 0;
-    padding: 2px 0;
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    line-height: var(--line-height-tight);
+  margin: 2px 0;
+  padding: 2px 0;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  line-height: var(--line-height-tight);
 }
 
 /* Collapse/expand icons */
 .collapse-icon {
-    font-size: var(--font-size-small);
-    color: var(--text-secondary);
-    width: 12px;
-    margin: 0 8px 0 0;
-    text-align: center;
-    transition: transform 0.2s ease;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  width: 12px;
+  margin: 0 8px 0 0;
+  text-align: center;
+  transition: transform 0.2s ease;
 }
 
 .collapse-icon:hover {
-    color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 /* Node title */
 .node-title {
-    font-size: var(--font-size-small);
-    color: var(--text-primary);
-    font-weight: var(--font-weight-header);
+  font-size: var(--font-size-small);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-header);
 }
 
 /* Children container */
 .node-children {
-    margin-top: 2px;
-    padding-left: 0;
+  margin-top: 2px;
+  padding-left: 0;
 }
-
 
 /* Parameter specific styles */
 .parameter {
-    background: var(--bg-primary);
-    border-color: var(--border-light);
+  background: var(--bg-primary);
+  border-color: var(--border-light);
 }
 
 .parameter .node-label {
-    justify-content: space-between;
+  justify-content: space-between;
 }
 
 /* Hover states */
 
 .parameter:hover {
-    background: var(--bg-secondary);
+  background: var(--bg-secondary);
 }
 
 /* Selected state */
 
-
-.empty-message
-{
-    padding: 2px 6px;
-    text-align: left;
-    color: var(--text-secondary);
-    font-size: var(--font-size-small);
-    font-style: italic;
+.empty-message {
+  padding: 2px 6px;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: var(--font-size-small);
+  font-style: italic;
 }
 
 /* Parameter Control Styles for Interactive Node Inspector */
 .parameter-control-container {
-    display: inline-flex;
-    width: auto; /* Let content determine width, not parent */
-    align-items: center;
-    gap: var(--spacing-md);
+  display: inline-flex;
+  width: auto; /* Let content determine width, not parent */
+  align-items: center;
+  gap: var(--spacing-md);
 }
 /* Checkbox Controls - Match octaneWeb exactly (see line 1058 for .parameter-checkbox-container) */
 
 /* CONSOLIDATED: Merged 4 duplicate definitions into one comprehensive definition */
 .parameter-checkbox-custom {
-    width: 16px;
-    height: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius-md);
-    background: var(--bg-primary);
-    position: relative;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .parameter-checkbox:hover + .parameter-checkbox-custom {
-    border-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .parameter-checkbox-container:hover .parameter-checkbox-custom {
-    border-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .parameter-checkbox:checked + .parameter-checkbox-custom {
-    background-color: var(--bg-primary);
-    border-color: var(--accent);
+  background-color: var(--bg-primary);
+  border-color: var(--accent);
 }
 
 .parameter-checkbox:checked + .parameter-checkbox-custom::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: var(--font-size-xxs);
-    font-weight: var(--font-weight-bold);
-    color: var(--accent);
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--font-size-xxs);
+  font-weight: var(--font-weight-bold);
+  color: var(--accent);
 }
 
 /* Right Panel - Node Inspector */
 .right-panel {
-    background-color: var(--bg-secondary); /* Professional dark background */
-    border-left: none; /* No border - splitter acts as boundary */
-    border-right: none;
-    overflow-y: visible; /* Allow scrolling if content is tall */
-    display: flex;
-    flex-direction: column;
-    position: relative; /* Ensure proper stacking context */
-    z-index: var(--z-panel); /* Higher z-index than center panel */
-    height: 100%; /* Fill grid area height */
-    width: 100%; /* Fill grid area width */
-    /* Width controlled by grid layout - no explicit width needed */
+  background-color: var(--bg-secondary); /* Professional dark background */
+  border-left: none; /* No border - splitter acts as boundary */
+  border-right: none;
+  overflow-y: visible; /* Allow scrolling if content is tall */
+  display: flex;
+  flex-direction: column;
+  position: relative; /* Ensure proper stacking context */
+  z-index: var(--z-panel); /* Higher z-index than center panel */
+  height: 100%; /* Fill grid area height */
+  width: 100%; /* Fill grid area width */
+  /* Width controlled by grid layout - no explicit width needed */
 }
-
 
 /* Duplicate .node-selector removed - see line 25 */
 
 /* Octane-style sections and parameter groups */
 
 .node-inspector {
-    height: 100%;
-    overflow-y: visible;
-    color: var(--text-primary);
-    font-size: var(--font-size-small);
+  height: 100%;
+  overflow-y: visible;
+  color: var(--text-primary);
+  font-size: var(--font-size-small);
 }
 
 .inspector-loading {
-    padding: 20px;
-    text-align: center;
-    color: var(--text-muted);
-    font-style: italic;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
 }
-
