@@ -9,6 +9,7 @@ A React/TypeScript application that provides a browser-based interface for Octan
 ## 🎯 Overview
 
 octaneWebR is a web application that replicates the Octane Render Studio Standalone Edition interface, allowing users to:
+
 - Edit Octane scenes through an interactive node graph
 - Inspect and modify node parameters in real-time
 - View live render output with interactive viewport
@@ -24,19 +25,22 @@ All operations communicate directly with Octane Render via the LiveLink gRPC API
 See **[QUICKSTART.md](./QUICKSTART.md)** for detailed setup instructions.
 
 ### Prerequisites
+
 - **Octane Render gRPC build** installed and running (https://filedrop.otoy.com/f/393752)
 - **LiveLink enabled** in Octane (Help → LiveLink menu)
 - **Node.js 18+** installed
 
 ### Octane setup
+
 1. Launch **Octane Render gRPC 2026.1 Alpha 5** - (https://filedrop.otoy.com/f/393752)
-2. Open the menu File/Preferences: 
+2. Open the menu File/Preferences:
 3. Set **GRPC API/Enable GRPC Server : true**
 4. Set **GRPC API/GRPC Server Address: 127.0.0.1:51022** and OK
 5. Restart Octane
 6. Load sample scene (teapot.orbx), click on the Render Target
 
 ### Launch Application
+
 ```bash
 npm install              # First time only
 npm run dev              # Start development server
@@ -51,16 +55,19 @@ Open **http://localhost:57341** in your browser.
 octaneWebR supports both **Alpha 5 (2026.1)** and **Beta 2 (2026.1)** Octane gRPC APIs with automatic compatibility.
 
 **Quick Switch**: Edit `api-version.config.js` (line 22):
+
 ```javascript
-const USE_ALPHA5_API = true;  // false = Beta 2, true = Alpha 5 (default)
+const USE_ALPHA5_API = true; // false = Beta 2, true = Alpha 5 (default)
 ```
 
 Then rebuild and restart:
+
 ```bash
 npm run build && npm run dev
 ```
 
 **What's Included**:
+
 - ✅ Automatic method name translation (Beta 2 ↔ Alpha 5)
 - ✅ Automatic parameter structure transformation
 - ✅ Single config file for both client and server
@@ -75,7 +82,9 @@ See **[DEVELOPMENT.md](./DEVELOPMENT.md#api-version-configuration)** for detaile
 ### Core Components
 
 #### **Node Graph Editor**
+
 ReactFlow-based node graph editor with real-time Octane synchronization:
+
 - Create nodes via right-click context menu (755+ node types, 25 categories)
 - Connect pins with drag-and-drop (automatic edge coloring by pin type)
 - Multi-select, copy/paste, duplicate, delete operations
@@ -84,14 +93,18 @@ ReactFlow-based node graph editor with real-time Octane synchronization:
 - Minimap navigation and context menus
 
 #### **Scene Outliner**
+
 Hierarchical tree view of the Octane scene:
+
 - Expandable/collapsible scene tree with type-specific icons
 - Visibility toggles and bidirectional selection sync
 - LiveDB tab: Browse/download materials from OTOY library
 - LocalDB tab: Access locally saved materials and node groups
 
 #### **Node Inspector**
+
 Real-time parameter editor with complete type support:
+
 - Boolean checkboxes, numeric inputs (int/float), vector inputs
 - Color pickers (RGB/RGBA), enum dropdowns, text fields
 - **Node type dropdown** for non-end nodes (replace current node with compatible type)
@@ -99,7 +112,9 @@ Real-time parameter editor with complete type support:
 - Instant synchronization with Octane
 
 #### **Render Viewport**
+
 Live render output with interactive controls:
+
 - Real-time image streaming via Octane callback API
 - Camera controls (orbit, pan, zoom) synced to Octane
 - HDR display support, resolution and render mode controls
@@ -108,7 +123,9 @@ Live render output with interactive controls:
 ### Application Features
 
 #### **Menu System**
+
 Complete menu bar matching Octane SE:
+
 - **File**: New, Open, Save, Package, Render State, Preferences
 - **Edit**: Undo, Redo, Cut, Copy, Paste, Delete, Select All
 - **Script**: Batch Rendering, Daylight/Turntable Animation
@@ -117,7 +134,9 @@ Complete menu bar matching Octane SE:
 - **Help**: Documentation, Shortcuts, Report Bug, About
 
 #### **Keyboard Shortcuts**
+
 Platform-aware shortcuts (Ctrl on Windows/Linux, Cmd on macOS):
+
 - `Ctrl+N` - New scene
 - `Ctrl+O` - Open scene
 - `Ctrl+S` - Save scene
@@ -126,6 +145,7 @@ Platform-aware shortcuts (Ctrl on Windows/Linux, Cmd on macOS):
 - `F11` - Fullscreen
 
 #### **Infrastructure**
+
 - **TypeScript**: Strict type checking with full gRPC type coverage
 - **Embedded gRPC Proxy**: Vite plugin provides transparent proxy (no separate server)
 - **Logging System**: Multi-level logger (DEBUG/INFO/WARN/ERROR/NETWORK/API) with console filtering
@@ -139,6 +159,7 @@ Platform-aware shortcuts (Ctrl on Windows/Linux, Cmd on macOS):
 ## 🏗️ Architecture
 
 ### Technology Stack
+
 - **Frontend**: React 18 + TypeScript + Vite
 - **Node Graph**: ReactFlow v12 (custom nodes and edges)
 - **State Management**: React Context API (OctaneProvider, EditActionsProvider)
@@ -146,6 +167,7 @@ Platform-aware shortcuts (Ctrl on Windows/Linux, Cmd on macOS):
 - **Styling**: CSS Modules + CSS Variables (theme system)
 
 ### Service Layer
+
 octaneWebR uses a modular service architecture that wraps Octane's gRPC API:
 
 ```
@@ -169,6 +191,7 @@ services/
 ```
 
 **Service Architecture**:
+
 - All services extend `BaseService` for consistent event emission and error handling
 - **ApiService** handles gRPC conventions (objectPtr wrapping, service-to-ObjectType mapping)
 - **SceneService** builds scene tree recursively (NodeGraphs → owned items, Nodes → pins)
@@ -176,15 +199,18 @@ services/
 - **CommandHistory** enables full undo/redo with branching behavior (discards redo stack on new action)
 
 **Key Design Patterns**:
+
 - **Incremental Updates**: SceneService can rebuild single nodes instead of full tree
 - **Collapsed Node Cleanup**: NodeService removes orphaned nodes from scene.map after rewiring
 - **Depth Limiting**: Scene recursion limited to 5 levels (prevents circular graph loops)
 - **Level 1 Optimization**: Only top-level nodes build deep children (avoids exponential API calls)
 
 ### gRPC Integration
+
 octaneWebR communicates with Octane via gRPC-Web with a custom Vite plugin:
 
 **Architecture**:
+
 - **Vite Plugin** (`vite-plugin-octane-grpc.ts`): Embedded proxy server, no separate backend needed
 - **Proto Files**: 30+ .proto definitions in `server/proto/` (Beta 2) and `server/proto_old/` (Alpha 5)
 - **API Version Config** (`api-version.config.js`): Centralized configuration for Alpha 5/Beta 2 compatibility
@@ -193,18 +219,21 @@ octaneWebR communicates with Octane via gRPC-Web with a custom Vite plugin:
 - **Type Safety**: Full TypeScript coverage—no 'any' types in service layer
 
 **Connection Flow**:
+
 1. Browser → `http://localhost:57341/api/grpc/{service}/{method}` (HTTP/2)
 2. Vite plugin proxies to `localhost:51022` (Octane LiveLink gRPC server)
 3. WebSocket separate channel for callbacks (`ws://localhost:57341/ws`)
 4. Automatic reconnection with 5s delay on disconnect
 
 **API Conventions**:
+
 - **Handle "0"**: Represents disconnected pins or null nodes
 - **Cycle Checking**: All pin connections use `doCycleCheck: true` to prevent crashes
 - **Evaluate Flag**: Most operations trigger scene evaluation (`evaluate: true`)
 - **Pin Indexing**: 0-based pin indices (e.g., pin 15 = P_FILM_SETTINGS on RenderTarget)
 
 ### Styling & Theming
+
 octaneWebR uses a pure CSS variable-based theme system:
 
 ```
@@ -218,6 +247,7 @@ client/src/styles/
 ```
 
 **Theme System**:
+
 - `octane-theme.css` contains **only** CSS custom properties (134 variables)
 - All colors, spacing, typography defined as `--octane-*` variables
 - Matches official Octane SE dark theme
@@ -283,6 +313,7 @@ octaneWebR/
 ## 🛠️ Development
 
 ### Build Commands
+
 ```bash
 # Development server with hot reload
 npm run dev
@@ -298,12 +329,14 @@ ls -lh dist/client/
 ```
 
 ### Key Files
+
 - **`client/src/services/OctaneClient.ts`** - Main gRPC API wrapper
 - **`client/src/components/NodeGraph/NodeGraphEditor.tsx`** - Node graph editor (1500+ lines)
 - **`client/src/components/NodeGraph/OctaneNode.tsx`** - Custom ReactFlow node component
 - **`vite-plugin-octane-grpc.ts`** - Vite plugin providing embedded gRPC proxy
 
 ### Code Organization
+
 - **Services**: Business logic separated from UI components
 - **Components**: React components with clear single responsibility
 - **Hooks**: Reusable React hooks for common patterns
@@ -315,6 +348,7 @@ ls -lh dist/client/
 ## 🧪 Testing
 
 ### Manual Testing
+
 ```bash
 # 1. Start Octane with LiveLink enabled (Help → LiveLink menu)
 # 2. Start octaneWebR
@@ -336,11 +370,13 @@ npm run dev
 ```
 
 ### Health Check
+
 ```bash
 curl http://localhost:57341/api/health | python -m json.tool
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "ok",
@@ -354,9 +390,11 @@ curl http://localhost:57341/api/health | python -m json.tool
 ## 🆘 Troubleshooting
 
 ### Connection Issues
+
 **Symptom**: "Cannot connect to Octane" error
 
 **Solutions**:
+
 1. Ensure Octane is running
 2. Enable LiveLink: **Help → LiveLink** in Octane menu
 3. Check Octane LiveLink port (default: `51022`)
@@ -364,27 +402,33 @@ curl http://localhost:57341/api/health | python -m json.tool
 5. Try restarting Octane
 
 ### Build Errors
+
 **Symptom**: `npm run build` fails with TypeScript errors
 
 **Solutions**:
+
 1. Check error messages for specific file/line
 2. Ensure all imports are correct
 3. Verify proto files exist: `ls -la server/proto/`
 4. Clear cache: `rm -rf node_modules dist && npm install`
 
 ### Runtime Errors
+
 **Common Issues**:
+
 - **"Cannot read property of undefined"** → Scene not loaded, click Refresh
 - **"API call failed"** → Check method name in proto files
 - **"WebSocket closed"** → Octane disconnected, restart Octane
 - **"Invalid handle"** → Node deleted, refresh scene tree
 
 ### WebSocket Connection
+
 **Symptom**: WebSocket warnings in browser console on page refresh
 
 **Fix**: octaneWebR includes a 50ms delay in the WebSocket onopen handler to handle browser timing edge cases. Connection should be automatic and silent.
 
 **Debug**:
+
 1. Check browser console for `✅ WebSocket connected` message
 2. Verify `readyState: 1 (OPEN)` in debug logs
 3. Confirm `Sent subscribe message to WebSocket` appears
@@ -394,14 +438,16 @@ curl http://localhost:57341/api/health | python -m json.tool
 ## 📚 Documentation
 
 ### Core Documentation
+
 - **[README.md](./README.md)** - This file (project overview and features)
-- **[QUICKSTART.md](./QUICKSTART.md)** - First-time setup guide with copy-paste commands
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide with code patterns and architecture
-- **[AGENTS.md](./AGENTS.md)** - AI assistant memory (always-loaded essentials)
-- **[CHANGELOG.md](./CHANGELOG.md)** - Version history (Keep a Changelog format)
-- **[.openhands/skills/](./.openhands/skills/)** - On-demand domain knowledge for AI assistants
+- **[QUICKSTART.md](./QUICKSTART.md)** - First-time setup guide
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide and architecture
+- **[MODERNIZATION_GUIDE.md](./MODERNIZATION_GUIDE.md)** - Future modernization opportunities
+- **[AGENTS.md](./AGENTS.md)** - Repository memory for AI assistants
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history
 
 ### External Resources
+
 - [Octane SE Manual](https://docs.otoy.com/standaloneSE/) - Complete UI reference
 - [React 18 Docs](https://react.dev/) - Component patterns
 - [ReactFlow v12 Docs](https://reactflow.dev/) - Node graph library
@@ -411,14 +457,12 @@ curl http://localhost:57341/api/health | python -m json.tool
 
 ## 📊 Project Statistics
 
-- **Code**: ~18,000 lines of TypeScript/TSX (strict typing, no 'any')
+- **Code**: ~17,000 lines of TypeScript/TSX (strict typing)
 - **Components**: 35+ React components (functional with hooks)
 - **Services**: 11 modular gRPC service wrappers
 - **Node Types**: 755+ Octane node types (25 categories)
-- **Icons**: 300+ PNG icons for node types
 - **Proto Files**: 30+ gRPC API service definitions
-- **Logger Calls**: 670+ logging statements (66% DEBUG, 24% ERROR, 9% WARN)
-- **CSS Variables**: 126 theme variables (no prefix, semantic naming)
+- **CSS Variables**: 134 theme variables (semantic naming, no prefix)
 - **Commands**: Full undo/redo with 50-action history
 
 ---
@@ -426,6 +470,7 @@ curl http://localhost:57341/api/health | python -m json.tool
 ## 📅 Feature Timeline
 
 ### 2025-02-01
+
 - **CSS Theme Refactor**
   - Removed `octane-` prefix from all CSS variables (753 occurrences)
   - Cleaner naming: `--bg-primary` vs `--octane-bg-primary`
@@ -448,6 +493,7 @@ curl http://localhost:57341/api/health | python -m json.tool
   - Replaced all hardcoded colors with CSS variables
 
 ### 2025-01-31
+
 - **API Version Compatibility**
   - Centralized configuration for Alpha 5/Beta 2 API versions
   - Single source of truth: `api-version.config.js`
@@ -465,6 +511,7 @@ curl http://localhost:57341/api/health | python -m json.tool
   - Updated `AGENTS.md` with development status
 
 ### Earlier Development
+
 - **ReactFlow Migration** - Replaced custom 956-line SVG node graph with ReactFlow v12
 - **Node Type Dropdown** - Inspector allows replacing nodes with compatible types
 - **Connection Cutter** - Ctrl+Drag to cut multiple connections

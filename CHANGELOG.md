@@ -9,7 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Regression Fixes (2025-02-01)
+
+- **Color Picker Visibility**: Fixed missing color pickers for stereo filters and environment colors
+  - Root cause: `useParameterValue` was skipping AT_FLOAT3 parameters with PT_TEXTURE outType
+  - These are hybrid texture pins that can hold simple RGB values OR accept texture connections
+  - Solution: Added special case to fetch values for AT_FLOAT3+PT_TEXTURE combinations
+  - Affects: Left/Right stereo filter, Sky color, Sunset color, Base fog color
+  - Files: `client/src/components/NodeInspector/hooks/useParameterValue.ts`
+  - Commit: abbcf5a
+
+- **Scene Outliner Auto-Expansion**: Fixed scene tree not expanding at startup
+  - Root cause: Two `useTreeExpansion` hook instances created - second had empty expansion map
+  - First instance initialized expansion, second instance used for rendering (lost state)
+  - Solution: Use single hook instance with auto-initialization when sceneTree loads
+  - Files: `client/src/components/SceneOutliner/index.tsx`, `hooks/useTreeExpansion.ts`
+  - Commit: 45e9438
+
 ### Added - Render Target Management (2025-02-01)
+
 - **Automatic Render Target Activation**: Scene Outliner now automatically sets the active render target on scene load
   - Finds first `PT_RENDERTARGET` node in scene tree
   - Calls `ApiRenderEngineService.setRenderTargetNode` to activate it
@@ -29,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `client/src/components/SceneOutliner/index.tsx` - Auto-select and context menu integration
 
 ### Changed - CSS Theme System (2025-02-01)
+
 - **CSS Variable Naming Refactor**: Removed `octane-` prefix from all theme variables
   - Updated 753 occurrences across 7 files
   - Cleaner naming: `--bg-primary` instead of `--octane-bg-primary`
@@ -44,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `client/src/components/MenuBar/MenuDropdown.tsx` - Dynamic variable access
 
 ### Fixed - UI Issues (2025-02-01)
+
 - **React Flow Container Error**: Fixed "React Flow parent container needs width/height" console warning
   - Added explicit `width: 100%` and `height: 100%` to ReactFlow component style
   - React Flow requires dimensions on component itself, not just parent container
@@ -52,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents browser context menu from overlaying custom menus
 
 ### Changed - Tooltip Behavior (2025-02-01)
+
 - **Node Pin Tooltips**: Simplified to show only pin name
   - Removed type, description, and connection status info (was too verbose)
   - Cleaner, less cluttered hover experience
@@ -62,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Modified `client/src/components/NodeInspector/index.tsx`
 
 ### Changed - CSS Optimization (2025-02-01)
+
 - **Dead Code Removal**: Cleaned up CSS files
   - Removed 6 unused CSS variables
   - Removed 5 dead CSS selectors with broken variable references
@@ -70,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All colors now use theme system for consistency
 
 ### Commits (2025-02-01)
+
 - `5bebfcd` - Fix React Flow parent container sizing error
 - `20f1c5b` - Remove 'octane-' prefix from all CSS theme variables
 - `05b4e52` - Set Alpha 5 as default API version
@@ -92,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ### Added - API Version Compatibility (2025-01-31)
+
 - **Centralized API Configuration**: Single source of truth for Alpha 5/Beta 2 API versions
   - `api-version.config.js` - ES module configuration file
   - Switch between Alpha 5 (proto_old) and Beta 2 (proto) by editing one line
@@ -105,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `README.md` with API Version Support section
 
 ### Changed - Module System (2025-01-31)
+
 - **ES Module Conversion**: Fixed browser compatibility issues
   - Converted `api-version.config.js` from CommonJS to ES modules
   - Removed `apiVersionImport.ts` bridge (obsolete with Vite define approach)
@@ -115,6 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All code passes strict TypeScript compilation
 
 ### Fixed - Browser Errors (2025-01-31)
+
 - **Module Error**: Fixed `module is not defined` error in browser
   - Root cause: CommonJS `module.exports` not supported in browser
   - Solution: Convert to ES module `export` statements
@@ -123,6 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Current: Single config file ensures both client and server use same settings
 
 ### Commits (2025-01-31)
+
 - `bcf7574` - Docs: Update AGENTS.md with API version configuration status
 - `af1609b` - Fix: Convert API version config to ES modules and fix TypeScript errors
 - `4249989` - Add quick-start guide for API version switching
@@ -131,6 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ### Added - Code Quality (2025-01-30)
+
 - **Logger System**: Centralized multi-level logging (670+ calls)
   - `Logger.debug()`, `Logger.error()`, `Logger.warn()`, `Logger.info()`, `Logger.success()`
   - `Logger.network()`, `Logger.api()` for specialized logging
@@ -148,6 +176,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created `DOCUMENTATION_IMPROVEMENTS.md` summary
 
 ### Changed - Code Review (2025-01-30)
+
 - **Logging Conversion**: Replaced 400+ `console.*` calls with `Logger.*`
   - High-frequency operations → `Logger.debug()` (connection checks, position updates)
   - Errors → `Logger.error()` with descriptive messages
@@ -167,15 +196,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CommandHistory.ts`: Documented undo/redo branching with examples
 
 ### Commits (2025-01-30)
+
 - `56179eaf` - Improve code documentation for experienced programmers (+87 lines)
 - `83e67eb5` - Convert high-frequency network/success logs to DEBUG (pass 2)
-- `32a834e1` - Code review: Convert console.* to Logger.* with appropriate log levels (+899/-666)
+- `32a834e1` - Code review: Convert console._ to Logger._ with appropriate log levels (+899/-666)
 
 ---
 
 ## [1.0.1] - 2025-01-29
 
 ### Added
+
 - OpenHands skills system in `.openhands/skills/` directory
   - `octane-grpc/SKILL.md` - gRPC patterns and troubleshooting
   - `node-inspector/SKILL.md` - NodeInspector architecture and dropdown feature
@@ -185,6 +216,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Skills README.md documenting the on-demand knowledge system
 
 ### Changed
+
 - Refactored `AGENTS.md` from 595 lines to 315 lines (47% reduction)
 - Moved domain-specific knowledge from AGENTS.md to specialized skill files
 - Updated all core documentation files (README, QUICKSTART, DEVELOPMENT, CHANGELOG)
@@ -193,6 +225,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cleaned up 24 temporary markdown documentation files (icon extraction working docs, session reports, etc.)
 
 ### UI Refinements
+
 - **Scene Outliner Tabs**: Added tab bar with right-slanted overlap effect matching Octane SE
   - Black outline (1px solid) with 3px padding
   - Active tab: `--octane-bg-secondary`, Inactive: `--octane-bg-lighter`
@@ -210,6 +243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Core Features
 
 #### Node Graph Editor
+
 - ReactFlow-based node graph with 755+ node types
 - Right-click context menu with 25 categories
 - Drag-and-drop pin connections with automatic type-based coloring
@@ -220,6 +254,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bidirectional sync with Octane scene
 
 #### Scene Outliner
+
 - Hierarchical tree view with expand/collapse
 - Type-specific icons (300+ PNG icons)
 - Visibility toggles
@@ -228,6 +263,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LocalDB tab for local materials and node groups
 
 #### Node Inspector
+
 - Real-time parameter editor with full type support:
   - Boolean checkboxes
   - Numeric inputs (int/float with range validation)
@@ -240,6 +276,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Node type dropdown** for non-end nodes (replacing current node)
 
 #### Render Viewport
+
 - Real-time render output streaming
 - Interactive camera controls (orbit, pan, zoom)
 - HDR display support
@@ -248,6 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Canvas-based display with WebGL support
 
 #### Menu System
+
 - Complete menu bar matching Octane SE:
   - **File**: New, Open, Save, Package, Render State, Preferences
   - **Edit**: Undo, Redo, Cut, Copy, Paste, Delete, Select All
@@ -260,6 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Infrastructure
 
 #### Service Layer
+
 - `BaseService` - Abstract base class with event emitter
 - `ConnectionService` - WebSocket connection management
 - `SceneService` - Scene tree and node operations
@@ -271,6 +310,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `OctaneClient` - Main API facade
 
 #### gRPC Integration
+
 - Vite plugin for embedded gRPC-Web proxy
 - TypeScript types auto-generated from proto files
 - WebSocket-based callback streaming
@@ -278,6 +318,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection health monitoring
 
 #### Styling & Theming
+
 - CSS Variables theme system (134 variables)
 - `octane-theme.css` - Theme definitions
 - Component-scoped CSS files:
@@ -290,6 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No inline styles, no hardcoded colors
 
 ### Added - Build System
+
 - Vite 5 with HMR (Hot Module Replacement)
 - TypeScript strict mode with zero `any` types
 - Proto file compilation with `grpc-tools`
@@ -297,6 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production build with tree-shaking and minification
 
 ### Added - Documentation
+
 - `README.md` - Project overview and features
 - `QUICKSTART.md` - Setup guide
 - `DEVELOPMENT.md` - Architecture and patterns
@@ -308,6 +351,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.0] - 2025-01-20
 
 ### Added - Beta Features
+
 - Initial UI layout with resizable panels
 - Basic node graph with limited node types
 - Scene tree viewer (read-only)
@@ -316,6 +360,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Menu bar structure
 
 ### Changed
+
 - Migrated from REST to gRPC-Web for Octane communication
 - Switched from Redux to Zustand for state management
 - Refactored from class components to functional components + hooks
@@ -325,6 +370,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2025-01-15
 
 ### Added - Alpha Features
+
 - Proof-of-concept React app
 - Basic gRPC connection to Octane
 - Simple node creation test
@@ -335,6 +381,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-01-10
 
 ### Added - Initial Setup
+
 - Project structure
 - Dependencies (React, TypeScript, Vite)
 - gRPC proto files
@@ -344,18 +391,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Summary
 
-| Version | Date | Milestone |
-|---------|------|-----------|
+| Version   | Date       | Milestone                |
+| --------- | ---------- | ------------------------ |
 | **1.0.0** | 2025-01-22 | Production-ready release |
-| 0.9.0 | 2025-01-20 | Beta with core features |
-| 0.5.0 | 2025-01-15 | Alpha prototype |
-| 0.1.0 | 2025-01-10 | Initial setup |
+| 0.9.0     | 2025-01-20 | Beta with core features  |
+| 0.5.0     | 2025-01-15 | Alpha prototype          |
+| 0.1.0     | 2025-01-10 | Initial setup            |
 
 ---
 
 ## Feature Categories
 
 ### ✅ Complete
+
 - Node Graph Editor
 - Scene Outliner
 - Node Inspector
@@ -367,11 +415,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build Pipeline
 
 ### 🚧 In Progress
+
 - Material Database (LiveDB/LocalDB browsing working, drag-and-drop pending)
 - Picker Tools (UI complete, some tools pending)
 - Animation Scripts (menu items added, scripts pending)
 
 ### 📋 Planned
+
 - Keyboard shortcut customization
 - Custom themes (light theme, high contrast)
 - Plugin system
@@ -394,21 +444,25 @@ None yet (version 1.0.0 is first stable release).
 ### From 0.9.x to 1.0.0
 
 **API Changes:**
+
 - `NodeService.createNode()` now returns `Promise<number>` (node handle) instead of full node object
 - `SceneService.loadTree()` renamed to `SceneService.loadSceneTree()` for clarity
 - Event names standardized: `node-created` → `node:created`, `scene-loaded` → `scene:loaded`
 
 **UI Changes:**
+
 - Node Inspector now shows dropdown for compatible node types
 - Scene Outliner icons updated to match Octane SE 2023
 - Viewport controls repositioned to match Octane SE layout
 
 **Build Changes:**
+
 - Vite upgraded from 4.x to 5.x
 - TypeScript upgraded from 5.0 to 5.2
 - ReactFlow upgraded from 11.x to 12.x
 
 **Migration Steps:**
+
 1. Update imports: `import { loadTree }` → `import { loadSceneTree }`
 2. Update event listeners: `.on('node-created')` → `.on('node:created')`
 3. Update API calls: Handle `createNode()` returns number instead of object
