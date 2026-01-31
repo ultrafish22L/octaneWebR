@@ -15,23 +15,14 @@ import { Logger } from '../../utils/Logger';
 import React, { useState } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
-import { AttrType } from '../../constants/OctaneTypes';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
-import { formatColorValue, formatNodeColor } from '../../utils/ColorUtils';
+import { formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
 import { EditCommands } from '../../commands/EditCommands';
 import { getPinTypeInfo } from '../../constants/PinTypes';
 import { useParameterValue } from './hooks/useParameterValue';
-
-/**
- * Format float value to maximum 6 decimal places
- * Handles null/undefined by returning 0
- */
-function formatFloat(value: number | null | undefined): number {
-  if (value == null || isNaN(value)) return 0;
-  return parseFloat(value.toFixed(6));
-}
+import { ParameterControl } from './ParameterControl';
 
 interface NodeInspectorProps {
   node: SceneNode | null;
@@ -49,11 +40,22 @@ function ParameterGroup({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
+  const handleClick = () => setExpanded(!expanded);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setExpanded(!expanded);
+    }
+  };
+
   return (
     <div className="inspector-group-indent">
       <div
         className={`inspector-group-header ${expanded ? 'expanded' : 'collapsed'}`}
-        onClick={() => setExpanded(!expanded)}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
       >
         <span className="inspector-group-icon">{expanded ? '▼' : '▶'}</span>
         <span className="inspector-group-label">{groupName}</span>
@@ -74,7 +76,7 @@ function NodeParameter({
 }: {
   node: SceneNode;
   level: number;
-  onToggle: (nodeId: string) => void;
+  onToggle: (_: string) => void;
   hasGroupMap: Map<number, boolean>;
 }) {
   const { client } = useOctane();
@@ -120,7 +122,9 @@ function NodeParameter({
       Logger.debug(`✅ Node replaced successfully`);
     } catch (error) {
       Logger.error('❌ Failed to replace node:', error);
-      alert(`Failed to replace node: ${error}`);
+      // Note: Consider implementing a proper toast/notification system
+      // eslint-disable-next-line no-console
+      console.error('Node replacement failed:', error);
     }
   };
 
@@ -129,654 +133,13 @@ function NodeParameter({
     onToggle(nodeId);
   };
 
-  // Render the parameter control based on type (matching octaneWeb GenericNodeRenderer exactly)
-  const renderParameterControl = () => {
-    if (!paramValue) return null;
-
-    const { value, type } = paramValue;
-
-    // Controls must be wrapped in parameter-control-container or parameter-checkbox-container
-    // which are then wrapped in node-parameter-controls div (matching octaneWeb structure)
-    let controlHtml = null;
-
-    switch (type) {
-      case AttrType.AT_BOOL: {
-        const boolValue = typeof value === 'boolean' ? value : false;
-        controlHtml = (
-          <div className="parameter-checkbox-container">
-            <input
-              type="checkbox"
-              className="checkbox parameter-control"
-              checked={boolValue}
-              onChange={e => handleValueChange(e.target.checked)}
-              id={`checkbox-${node.handle}`}
-              autoComplete="off"
-              name="octane-checkbox-0"
-            />
-          </div>
-        );
-        break;
-      }
-
-      case AttrType.AT_FLOAT: {
-        const floatValue = typeof value === 'number' ? formatFloat(value) : 0;
-        const floatInfo = node.pinInfo?.floatInfo;
-        const useSliders = floatInfo?.useSliders ?? true;
-        const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
-
-        controlHtml = (
-          <div className="parameter-control-container">
-            <div className="parameter-number-with-spinner">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={floatValue || 0}
-                step={step}
-                onChange={e => handleValueChange(formatFloat(parseFloat(e.target.value)))}
-                autoComplete="off"
-                name="octane-number-input-1"
-              />
-              {useSliders && (
-                <div className="parameter-spinner-container">
-                  <button
-                    className="parameter-spinner-btn"
-                    onClick={() => handleValueChange(formatFloat((floatValue || 0) + step))}
-                    title="Increase value"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    className="parameter-spinner-btn"
-                    onClick={() => handleValueChange(formatFloat((floatValue || 0) - step))}
-                    title="Decrease value"
-                  >
-                    ▼
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-        break;
-      }
-
-      case AttrType.AT_FLOAT2: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0 } = value;
-          const floatInfo = node.pinInfo?.floatInfo;
-          const dimCount = floatInfo?.dimCount ?? 2;
-          const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
-
-          controlHtml = (
-            <div className="parameter-control-container">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={formatFloat(x)}
-                step={step}
-                onChange={e => handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y })}
-                autoComplete="off"
-                name="octane-number-input-2"
-              />
-              {dimCount >= 2 && (
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={formatFloat(y)}
-                  step={step}
-                  onChange={e =>
-                    handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)) })
-                  }
-                  autoComplete="off"
-                  name="octane-number-input-3"
-                />
-              )}
-            </div>
-          );
-        }
-        break;
-      }
-
-      case AttrType.AT_FLOAT3: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0, z = 0 } = value;
-          const floatInfo = node.pinInfo?.floatInfo;
-          const dimCount = floatInfo?.dimCount ?? 3;
-          const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
-          const isColor = floatInfo?.isColor || node.nodeInfo?.type === 'NT_TEX_RGB';
-
-          // Check if this is a color (NT_TEX_RGB)
-          if (isColor) {
-            const hexColor = formatColorValue(value);
-            controlHtml = (
-              <div className="parameter-control-container">
-                <input
-                  type="color"
-                  className="color-input parameter-control"
-                  value={hexColor}
-                  style={{ background: hexColor, color: hexColor }}
-                  onChange={e => {
-                    const hex = e.target.value;
-                    const r = parseInt(hex.substring(1, 3), 16) / 255;
-                    const g = parseInt(hex.substring(3, 5), 16) / 255;
-                    const b = parseInt(hex.substring(5, 7), 16) / 255;
-                    handleValueChange({ x: formatFloat(r), y: formatFloat(g), z: formatFloat(b) });
-                  }}
-                  autoComplete="off"
-                  name="octane-color-input-4"
-                />
-              </div>
-            );
-          } else {
-            controlHtml = (
-              <div className="parameter-control-container">
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={formatFloat(x)}
-                  step={step}
-                  onChange={e =>
-                    handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z })
-                  }
-                  autoComplete="off"
-                  name="octane-number-input-5"
-                />
-                {dimCount >= 2 && (
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(y)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-6"
-                  />
-                )}
-                {dimCount >= 3 && (
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(z)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)) })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-7"
-                  />
-                )}
-              </div>
-            );
-          }
-        }
-        break;
-      }
-
-      case AttrType.AT_FLOAT4: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0, z = 0, w = 0 } = value;
-          const floatInfo = node.pinInfo?.floatInfo;
-          const dimCount = floatInfo?.dimCount ?? 4;
-          const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
-
-          // Render based on dimension count (matching octaneWeb exactly)
-          switch (dimCount) {
-            case 1:
-              controlHtml = (
-                <div className="parameter-control-container">
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(x)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-8"
-                  />
-                </div>
-              );
-              break;
-            case 2:
-              controlHtml = (
-                <div className="parameter-control-container">
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(x)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-9"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(y)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-10"
-                  />
-                </div>
-              );
-              break;
-            case 3:
-              controlHtml = (
-                <div className="parameter-control-container">
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(x)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-11"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(y)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-12"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(z)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-13"
-                  />
-                </div>
-              );
-              break;
-            default: // 4 components
-              controlHtml = (
-                <div className="parameter-control-container">
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(x)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x: formatFloat(parseFloat(e.target.value)), y, z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-14"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(y)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y: formatFloat(parseFloat(e.target.value)), z, w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-15"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(z)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y, z: formatFloat(parseFloat(e.target.value)), w })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-16"
-                  />
-                  <input
-                    type="number"
-                    className="number-input parameter-control"
-                    value={formatFloat(w)}
-                    step={step}
-                    onChange={e =>
-                      handleValueChange({ x, y, z, w: formatFloat(parseFloat(e.target.value)) })
-                    }
-                    autoComplete="off"
-                    name="octane-number-input-17"
-                  />
-                </div>
-              );
-              break;
-          }
-        }
-        break;
-      }
-
-      case AttrType.AT_INT: {
-        const intValue = typeof value === 'number' ? value : 0;
-
-        // Check if this is an enum (NT_ENUM) - render dropdown
-        if (node.nodeInfo?.type === 'NT_ENUM' && node.pinInfo?.enumInfo?.values) {
-          const enumOptions = node.pinInfo.enumInfo.values;
-          controlHtml = (
-            <div className="parameter-control-container">
-              <select
-                className="dropdown parameter-control"
-                value={intValue || 0}
-                onChange={e => handleValueChange(parseInt(e.target.value))}
-                name="octane-dropdown-18"
-              >
-                {enumOptions.map((option: any, idx: number) => (
-                  <option key={idx} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        } else {
-          const intInfo = node.pinInfo?.intInfo;
-          const useSliders = intInfo?.useSliders ?? true;
-          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
-
-          controlHtml = (
-            <div className="parameter-control-container">
-              <div className="parameter-number-with-spinner">
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={intValue || 0}
-                  step={step}
-                  onChange={e => handleValueChange(parseInt(e.target.value))}
-                  autoComplete="off"
-                  name="octane-number-input-19"
-                />
-                {useSliders && (
-                  <div className="parameter-spinner-container">
-                    <button
-                      className="parameter-spinner-btn"
-                      onClick={() => handleValueChange((intValue || 0) + step)}
-                      title="Increase value"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      className="parameter-spinner-btn"
-                      onClick={() => handleValueChange((intValue || 0) - step)}
-                      title="Decrease value"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
-        break;
-      }
-
-      case AttrType.AT_INT2: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0 } = value;
-          const intInfo = node.pinInfo?.intInfo;
-          const dimCount = intInfo?.dimCount ?? 2;
-          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
-
-          controlHtml = (
-            <div className="parameter-control-container">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={x || 0}
-                step={step}
-                onChange={e => handleValueChange({ x: parseInt(e.target.value), y })}
-                autoComplete="off"
-                name="octane-number-input-20"
-              />
-              {dimCount >= 2 && (
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={y || 0}
-                  step={step}
-                  onChange={e => handleValueChange({ x, y: parseInt(e.target.value) })}
-                  autoComplete="off"
-                  name="octane-number-input-21"
-                />
-              )}
-            </div>
-          );
-        }
-        break;
-      }
-
-      case AttrType.AT_INT3: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0, z = 0 } = value;
-          const intInfo = node.pinInfo?.intInfo;
-          const dimCount = intInfo?.dimCount ?? 3;
-          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
-
-          controlHtml = (
-            <div className="parameter-control-container">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={x || 0}
-                step={step}
-                onChange={e => handleValueChange({ x: parseInt(e.target.value), y, z })}
-                autoComplete="off"
-                name="octane-number-input-22"
-              />
-              {dimCount >= 2 && (
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={y || 0}
-                  step={step}
-                  onChange={e => handleValueChange({ x, y: parseInt(e.target.value), z })}
-                  autoComplete="off"
-                  name="octane-number-input-23"
-                />
-              )}
-              {dimCount >= 3 && (
-                <input
-                  type="number"
-                  className="number-input parameter-control"
-                  value={z || 0}
-                  step={step}
-                  onChange={e => handleValueChange({ x, y, z: parseInt(e.target.value) })}
-                  autoComplete="off"
-                  name="octane-number-input-24"
-                />
-              )}
-            </div>
-          );
-        }
-        break;
-      }
-
-      case AttrType.AT_INT4: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0, z = 0, w = 0 } = value;
-          const intInfo = node.pinInfo?.intInfo;
-          const dimCount = intInfo?.dimCount ?? 4;
-          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
-
-          const inputs = [];
-          if (dimCount >= 1) {
-            inputs.push(
-              <input
-                key="x"
-                type="number"
-                className="number-input parameter-control"
-                value={x || 0}
-                step={step}
-                onChange={e => handleValueChange({ x: parseInt(e.target.value), y, z, w })}
-                autoComplete="off"
-                name="octane-number-input-25"
-              />
-            );
-          }
-          if (dimCount >= 2) {
-            inputs.push(
-              <input
-                key="y"
-                type="number"
-                className="number-input parameter-control"
-                value={y || 0}
-                step={step}
-                onChange={e => handleValueChange({ x, y: parseInt(e.target.value), z, w })}
-                autoComplete="off"
-                name="octane-number-input-26"
-              />
-            );
-          }
-          if (dimCount >= 3) {
-            inputs.push(
-              <input
-                key="z"
-                type="number"
-                className="number-input parameter-control"
-                value={z || 0}
-                step={step}
-                onChange={e => handleValueChange({ x, y, z: parseInt(e.target.value), w })}
-                autoComplete="off"
-                name="octane-number-input-27"
-              />
-            );
-          }
-          if (dimCount >= 4) {
-            inputs.push(
-              <input
-                key="w"
-                type="number"
-                className="number-input parameter-control"
-                value={w || 0}
-                step={step}
-                onChange={e => handleValueChange({ x, y, z, w: parseInt(e.target.value) })}
-                autoComplete="off"
-                name="octane-number-input-28"
-              />
-            );
-          }
-
-          controlHtml = <div className="parameter-control-container">{inputs}</div>;
-        }
-        break;
-      }
-
-      case AttrType.AT_LONG: {
-        const longValue = typeof value === 'number' ? value : 0;
-        controlHtml = (
-          <div className="parameter-control-container">
-            <div className="parameter-number-with-spinner">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={longValue || 0}
-                step="1"
-                onChange={e => handleValueChange(parseInt(e.target.value))}
-                autoComplete="off"
-                name="octane-number-input-29"
-              />
-              <div className="parameter-spinner-container">
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => handleValueChange((longValue || 0) + 1)}
-                  title="Increase value"
-                >
-                  ▲
-                </button>
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => handleValueChange((longValue || 0) - 1)}
-                  title="Decrease value"
-                >
-                  ▼
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-        break;
-      }
-
-      case AttrType.AT_LONG2: {
-        if (value && typeof value === 'object' && 'x' in value) {
-          const { x = 0, y = 0 } = value;
-          controlHtml = (
-            <div className="parameter-control-container">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={x || 0}
-                step="1"
-                onChange={e => handleValueChange({ x: parseInt(e.target.value), y })}
-                autoComplete="off"
-                name="octane-number-input-30"
-              />
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={y || 0}
-                step="1"
-                onChange={e => handleValueChange({ x, y: parseInt(e.target.value) })}
-                autoComplete="off"
-                name="octane-number-input-31"
-              />
-            </div>
-          );
-        }
-        break;
-      }
-
-      case AttrType.AT_STRING: {
-        const stringValue = typeof value === 'string' ? value : '';
-        controlHtml = (
-          <input
-            type="text"
-            className="text-input parameter-control"
-            value={stringValue}
-            onChange={e => handleValueChange(e.target.value)}
-            autoComplete="off"
-            name="octane-text-input-32"
-          />
-        );
-        break;
-      }
-
-      default: {
-        // For unknown types, render as text input
-        const stringValue = typeof value === 'string' ? value : '';
-        controlHtml = (
-          <input
-            type="text"
-            className="text-input parameter-control"
-            value={stringValue}
-            onChange={e => handleValueChange(e.target.value)}
-            autoComplete="off"
-            name="octane-text-input-33"
-          />
-        );
-        break;
-      }
+  const handleToggleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleToggle();
     }
-
-    // Wrap in node-parameter-controls div (matching octaneWeb GenericNodeRenderer structure)
-    return controlHtml ? <div className="node-parameter-controls">{controlHtml}</div> : null;
   };
+
 
   // Determine the indent class (matching GenericNodeRenderer logic exactly)
   // octaneWeb logic: if ANY group exists at this level, ALL items at this level use node-indent-done
@@ -814,12 +177,18 @@ function NodeParameter({
             />
           </div>
           <div className="node-content">
-            <div className="node-label" onClick={hasChildren ? handleToggle : undefined}>
+            <div
+              className="node-label"
+              onClick={hasChildren ? handleToggle : undefined}
+              onKeyDown={hasChildren ? handleToggleKeyDown : undefined}
+              role={hasChildren ? 'button' : undefined}
+              tabIndex={hasChildren ? 0 : undefined}
+            >
               {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
               <span className="node-title" title={buildTooltip()}>
                 {name}
               </span>
-              {renderParameterControl()}
+              <ParameterControl node={node} paramValue={paramValue} onValueChange={handleValueChange} />
             </div>
           </div>
         </div>
@@ -861,13 +230,28 @@ function NodeParameter({
           />
         </div>
         <div className="node-content">
-          <div className="node-label" onClick={hasChildren ? handleToggle : undefined}>
+          <div
+            className="node-label"
+            onClick={hasChildren ? handleToggle : undefined}
+            onKeyDown={hasChildren ? handleToggleKeyDown : undefined}
+            role={hasChildren ? 'button' : undefined}
+            tabIndex={hasChildren ? 0 : undefined}
+          >
             {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
             <span className="node-title" title={buildTooltip()}>
               {name}
             </span>
             {showDropdown && (
-              <div className="inspector-dropdown-inline" onClick={e => e.stopPropagation()}>
+              <div
+                className="inspector-dropdown-inline"
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation();
+                  }
+                }}
+                role="presentation"
+              >
                 <select
                   className="inspector-target-select"
                   name="inspector-target-select"
@@ -1029,6 +413,7 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
   // NOTE: Node expansion state is managed internally by NodeParameter component
+  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
   const handleToggle = (_nodeId: string) => {
     // Placeholder for future centralized expansion state management
   };
