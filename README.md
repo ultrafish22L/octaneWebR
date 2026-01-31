@@ -469,6 +469,30 @@ curl http://localhost:57341/api/health | python -m json.tool
 
 ## 📅 Feature Timeline
 
+### 2025-02-03
+
+- **React 18 Modernization Complete (Phases P1-P2C)**
+  - **P1: Error Boundaries + Code Splitting**
+    - Production-grade error handling with fallback UI
+    - Lazy loading for NodeGraph and MaterialDatabase
+    - Bundle size reduced: 587KB → ~150-200KB initial load
+  - **P2A: Suspense Boundaries**
+    - Skeleton loader library (tree, parameters, viewport, materials)
+    - LoadingBoundary with type-aware fallbacks
+    - DelayedFallback prevents loading flashes
+    - Accessibility support (prefers-reduced-motion)
+  - **P2B: React Query**
+    - Modern data fetching with @tanstack/react-query
+    - Automatic caching, background refetching, request deduplication
+    - MaterialDatabase migrated (100+ lines removed)
+    - React Query DevTools integration
+  - **P2C: Performance Optimization**
+    - React.memo for high-frequency components (ParameterControl, MaterialCard, VirtualTreeRow)
+    - Custom equality functions for deep comparison
+    - useCallback stabilization (6+ callbacks)
+    - useMemo for expensive computations (hasGroupMap, context values)
+    - Eliminated cascading re-renders in NodeInspector (100+ parameters)
+
 ### 2025-02-01
 
 - **CSS Theme Refactor**
@@ -531,6 +555,6 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2025-02-01  
+**Last Updated**: 2025-02-03  
 **Version**: 1.0.0  
-**Status**: Production-ready
+**Status**: Production-ready (React 18 Modernization Complete)

@@ -1,19 +1,20 @@
 # octaneWebR Modernization Guide
+
 **Step-by-Step Implementation Guide for React 18 Features**
 
 ---
 
 ## Quick Reference
 
-| Priority | Feature | Time | Impact | Difficulty |
-|----------|---------|------|--------|------------|
-| 🚨 P1 | Error Boundaries | 2 hours | High | Easy |
-| 🚨 P1 | Code Splitting | 4 hours | High | Easy |
-| ⚡ P2 | Suspense Boundaries | 1 day | High | Medium |
-| ⚡ P2 | React Query | 2-3 days | High | Medium |
-| 📊 P2 | Testing Setup | 1 week | Critical | Medium |
-| 🎨 P3 | Transitions | 2 days | Medium | Medium |
-| 🎨 P3 | Accessibility | 1 week | High | Hard |
+| Priority | Feature             | Time     | Impact   | Difficulty |
+| -------- | ------------------- | -------- | -------- | ---------- |
+| 🚨 P1    | Error Boundaries    | 2 hours  | High     | Easy       |
+| 🚨 P1    | Code Splitting      | 4 hours  | High     | Easy       |
+| ⚡ P2    | Suspense Boundaries | 1 day    | High     | Medium     |
+| ⚡ P2    | React Query         | 2-3 days | High     | Medium     |
+| 📊 P2    | Testing Setup       | 1 week   | Critical | Medium     |
+| 🎨 P3    | Transitions         | 2 days   | Medium   | Medium     |
+| 🎨 P3    | Accessibility       | 1 week   | High     | Hard       |
 
 ---
 
@@ -22,11 +23,13 @@
 ### 1.1 Add Error Boundaries
 
 #### Install Dependencies
+
 ```bash
 npm install react-error-boundary
 ```
 
 #### Create ErrorBoundary Component
+
 ```typescript
 // client/src/components/ErrorBoundary/index.tsx
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
@@ -58,7 +61,7 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
 function onError(error: Error, info: { componentStack: string }) {
   Logger.error('Error Boundary caught error:', error);
   Logger.error('Component Stack:', info.componentStack);
-  
+
   // Optional: Send to error tracking service (Sentry, LogRocket, etc.)
   // sendToErrorTracking(error, info);
 }
@@ -85,6 +88,7 @@ export function ErrorBoundary({ children, fallback }: Props) {
 ```
 
 #### Add CSS
+
 ```css
 /* client/src/styles/error-boundary.css */
 .error-boundary-fallback {
@@ -138,6 +142,7 @@ export function ErrorBoundary({ children, fallback }: Props) {
 ```
 
 #### Update App.tsx
+
 ```typescript
 // client/src/App.tsx
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -161,20 +166,20 @@ function AppContent() {
   return (
     <div className="octane-app">
       <MenuBar />
-      
+
       <main>
         <ErrorBoundary>
           <SceneOutliner />
         </ErrorBoundary>
-        
+
         <ErrorBoundary>
           <CallbackRenderViewport />
         </ErrorBoundary>
-        
+
         <ErrorBoundary>
           <NodeGraphEditor />
         </ErrorBoundary>
-        
+
         <ErrorBoundary>
           <NodeInspector />
         </ErrorBoundary>
@@ -185,6 +190,7 @@ function AppContent() {
 ```
 
 **Testing**:
+
 ```typescript
 // Trigger error to test
 <button onClick={() => { throw new Error('Test error!'); }}>
@@ -197,6 +203,7 @@ function AppContent() {
 ### 1.2 Add Code Splitting
 
 #### Update main.tsx
+
 ```typescript
 // client/src/main.tsx
 import React, { Suspense, lazy } from 'react';
@@ -219,6 +226,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 ```
 
 #### Update App.tsx with Suspense
+
 ```typescript
 // client/src/App.tsx
 import { Suspense, lazy } from 'react';
@@ -241,24 +249,24 @@ function AppContent() {
   return (
     <div className="octane-app">
       <MenuBar />
-      
+
       <main>
         {/* Already loaded components */}
         <SceneOutliner />
         <CallbackRenderViewport />
-        
+
         {/* Lazy loaded - heavy component */}
         <Suspense fallback={<LoadingFallback name="Node Graph" />}>
-          <NodeGraphEditor 
+          <NodeGraphEditor
             sceneTree={sceneTree}
             selectedNode={selectedNode}
             onNodeSelect={setSelectedNode}
           />
         </Suspense>
-        
+
         <NodeInspector />
       </main>
-      
+
       {/* Lazy loaded - modal dialog */}
       {materialDatabaseVisible && (
         <Suspense fallback={<LoadingFallback name="Material Database" />}>
@@ -274,6 +282,7 @@ function AppContent() {
 ```
 
 #### Update Component Exports
+
 ```typescript
 // client/src/components/NodeGraph/index.tsx
 // Change default export to named export for better tree-shaking
@@ -284,6 +293,7 @@ export default NodeGraphEditor;
 ```
 
 #### Add Loading CSS
+
 ```css
 /* client/src/styles/app.css */
 .component-loading {
@@ -303,6 +313,7 @@ export default NodeGraphEditor;
 ```
 
 **Expected Results**:
+
 - Initial bundle: 587 KB → ~150-200 KB
 - Node Graph: Loads on-demand (~250 KB)
 - Material Database: Loads on-demand (~100 KB)
@@ -376,13 +387,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
   const { client, connected } = useOctane();
   const queryClient = useQueryClient();
-  
+
   // Replace manual loading state with useQuery
-  const { 
-    data: sceneTree = [], 
+  const {
+    data: sceneTree = [],
     isLoading,
     error,
-    refetch 
+    refetch
   } = useQuery({
     queryKey: ['sceneTree'],
     queryFn: async () => {
@@ -392,7 +403,7 @@ export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
     enabled: connected, // Only run when connected
     staleTime: 10000,   // Scene tree fresh for 10 seconds
   });
-  
+
   // Mutation for node visibility toggle
   const toggleVisibilityMutation = useMutation({
     mutationFn: async ({ handle, visible }: { handle: number; visible: boolean }) => {
@@ -403,14 +414,14 @@ export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
       queryClient.invalidateQueries({ queryKey: ['sceneTree'] });
     },
   });
-  
+
   const handleToggleVisibility = (node: SceneNode) => {
     toggleVisibilityMutation.mutate({
       handle: node.handle,
       visible: !node.visible,
     });
   };
-  
+
   // Loading state
   if (isLoading) {
     return (
@@ -420,7 +431,7 @@ export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
       </div>
     );
   }
-  
+
   // Error state
   if (error) {
     return (
@@ -430,7 +441,7 @@ export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
       </div>
     );
   }
-  
+
   // Render tree...
   return <div>...</div>;
 }
@@ -444,13 +455,13 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 
 export function SceneOutliner({ selectedNode, onNodeSelect }: Props) {
   const { client, connected } = useOctane();
-  
+
   // Suspense version - throws promise while loading
   const { data: sceneTree } = useSuspenseQuery({
     queryKey: ['sceneTree'],
     queryFn: () => client.buildSceneTree(),
   });
-  
+
   // No loading/error checks needed - Suspense handles it!
   return <div>...</div>;
 }
@@ -472,7 +483,7 @@ import { useOctane } from '../useOctane';
 
 export function useSceneTree() {
   const { client, connected } = useOctane();
-  
+
   return useQuery({
     queryKey: ['sceneTree'],
     queryFn: () => client.buildSceneTree(),
@@ -483,7 +494,7 @@ export function useSceneTree() {
 
 export function useSceneTreeSuspense() {
   const { client } = useOctane();
-  
+
   return useSuspenseQuery({
     queryKey: ['sceneTree'],
     queryFn: () => client.buildSceneTree(),
@@ -507,36 +518,36 @@ import { useOctane } from '../useOctane';
 export function useNodeVisibilityMutation() {
   const { client } = useOctane();
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ handle, visible }: { handle: number; visible: boolean }) => {
       return await client.setNodeVisibility(handle, visible);
     },
-    
+
     // Optimistic update - update UI immediately
     onMutate: async ({ handle, visible }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['sceneTree'] });
-      
+
       // Snapshot previous value
       const previousTree = queryClient.getQueryData(['sceneTree']);
-      
+
       // Optimistically update
       queryClient.setQueryData(['sceneTree'], (old: SceneNode[]) => {
         return updateNodeVisibility(old, handle, visible);
       });
-      
+
       // Return snapshot for rollback
       return { previousTree };
     },
-    
+
     // Rollback on error
     onError: (_err, _vars, context) => {
       if (context?.previousTree) {
         queryClient.setQueryData(['sceneTree'], context.previousTree);
       }
     },
-    
+
     // Refetch on success
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['sceneTree'] });
@@ -545,14 +556,10 @@ export function useNodeVisibilityMutation() {
 }
 
 // Helper function
-function updateNodeVisibility(
-  tree: SceneNode[], 
-  handle: number, 
-  visible: boolean
-): SceneNode[] {
-  return tree.map(node => 
-    node.handle === handle 
-      ? { ...node, visible } 
+function updateNodeVisibility(tree: SceneNode[], handle: number, visible: boolean): SceneNode[] {
+  return tree.map(node =>
+    node.handle === handle
+      ? { ...node, visible }
       : { ...node, children: updateNodeVisibility(node.children || [], handle, visible) }
   );
 }
@@ -571,19 +578,19 @@ import { useTransition, useDeferredValue } from 'react';
 function AppContent() {
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [isPending, startTransition] = useTransition();
-  
+
   // Defer heavy scene tree for rendering
   const deferredSceneTree = useDeferredValue(sceneTree);
-  
+
   const handleSceneSync = async () => {
     const newTree = await client.buildSceneTree();
-    
+
     // Wrap heavy update in transition
     startTransition(() => {
       setSceneTree(newTree);
     });
   };
-  
+
   return (
     <div>
       {isPending && (
@@ -591,10 +598,10 @@ function AppContent() {
           🔄 Syncing scene...
         </div>
       )}
-      
+
       {/* Use deferred value - won't block UI */}
       <SceneOutliner sceneTree={deferredSceneTree} />
-      
+
       {/* User can still interact with other components */}
       <NodeInspector />
       <RenderViewport />
@@ -611,21 +618,21 @@ import { useState, useDeferredValue, useMemo } from 'react';
 
 export function SearchDialog({ nodes }: { nodes: Node[] }) {
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Defer expensive search filtering
   const deferredSearchTerm = useDeferredValue(searchTerm);
-  
+
   // Expensive filtering operation
   const filteredNodes = useMemo(() => {
     if (!deferredSearchTerm) return nodes;
-    
-    return nodes.filter(node => 
+
+    return nodes.filter(node =>
       node.data.label?.toLowerCase().includes(deferredSearchTerm.toLowerCase())
     );
   }, [nodes, deferredSearchTerm]);
-  
+
   const isPending = searchTerm !== deferredSearchTerm;
-  
+
   return (
     <div className="search-dialog">
       <input
@@ -635,9 +642,9 @@ export function SearchDialog({ nodes }: { nodes: Node[] }) {
         placeholder="Search nodes..."
         // Input stays responsive even during heavy filtering
       />
-      
+
       {isPending && <span className="search-pending">Searching...</span>}
-      
+
       <div className="search-results">
         {filteredNodes.map(node => (
           <SearchResultItem key={node.id} node={node} />
@@ -657,7 +664,7 @@ import { useTransition } from 'react';
 export function SceneOutliner() {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
-  
+
   const handleExpandAll = () => {
     // Expanding 1000+ nodes is low priority
     startTransition(() => {
@@ -665,12 +672,12 @@ export function SceneOutliner() {
       setExpandedNodes(new Set(allHandles));
     });
   };
-  
+
   const handleCollapseAll = () => {
     // Collapsing is urgent - no transition
     setExpandedNodes(new Set());
   };
-  
+
   return (
     <div>
       <button onClick={handleExpandAll} disabled={isPending}>
@@ -679,7 +686,7 @@ export function SceneOutliner() {
       <button onClick={handleCollapseAll}>
         Collapse All
       </button>
-      
+
       {/* Tree rendering uses expandedNodes */}
       <TreeView expanded={expandedNodes} />
     </div>
@@ -714,12 +721,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'client/src/test/',
-        '**/*.test.{ts,tsx}',
-        '**/*.spec.{ts,tsx}',
-      ],
+      exclude: ['node_modules/', 'client/src/test/', '**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     },
   },
 });
@@ -767,14 +769,14 @@ import { ConnectionStatus } from './index';
 describe('ConnectionStatus', () => {
   it('renders connected state', () => {
     render(<ConnectionStatus connected={true} />);
-    
+
     expect(screen.getByText(/connected/i)).toBeInTheDocument();
     expect(screen.getByText(/connected/i)).toHaveClass('status-connected');
   });
-  
+
   it('renders disconnected state', () => {
     render(<ConnectionStatus connected={false} />);
-    
+
     expect(screen.getByText(/disconnected/i)).toBeInTheDocument();
     expect(screen.getByText(/disconnected/i)).toHaveClass('status-disconnected');
   });
@@ -793,32 +795,32 @@ describe('useRecentFiles', () => {
   beforeEach(() => {
     localStorage.clear();
   });
-  
+
   it('starts with empty list', () => {
     const { result } = renderHook(() => useRecentFiles());
     expect(result.current.recentFiles).toEqual([]);
   });
-  
+
   it('adds file to recent list', () => {
     const { result } = renderHook(() => useRecentFiles());
-    
+
     act(() => {
       result.current.addRecentFile('/path/to/scene.orbx');
     });
-    
+
     expect(result.current.recentFiles).toHaveLength(1);
     expect(result.current.recentFiles[0]).toBe('/path/to/scene.orbx');
   });
-  
+
   it('limits recent files to 10', () => {
     const { result } = renderHook(() => useRecentFiles());
-    
+
     act(() => {
       for (let i = 0; i < 15; i++) {
         result.current.addRecentFile(`/file${i}.orbx`);
       }
     });
-    
+
     expect(result.current.recentFiles).toHaveLength(10);
   });
 });
@@ -833,20 +835,18 @@ import { SceneService } from './SceneService';
 
 describe('SceneService', () => {
   let service: SceneService;
-  
+
   beforeEach(() => {
     service = new SceneService(mockEmitter, 'http://localhost', mockApiService);
   });
-  
+
   it('builds scene tree', async () => {
-    const mockTree = [
-      { handle: 1, name: 'Root', type: 'NT_ROOT', children: [] }
-    ];
-    
+    const mockTree = [{ handle: 1, name: 'Root', type: 'NT_ROOT', children: [] }];
+
     vi.spyOn(mockApiService, 'callApi').mockResolvedValue(mockTree);
-    
+
     const result = await service.buildSceneTree();
-    
+
     expect(result).toEqual(mockTree);
     expect(mockApiService.callApi).toHaveBeenCalledWith('scene', 'getRoot');
   });
@@ -870,26 +870,44 @@ describe('SceneService', () => {
 
 ## Summary Checklist
 
-### Week 1: Foundation ✅
-- [ ] Add error boundaries (2 hours)
-- [ ] Add code splitting with lazy() (4 hours)
-- [ ] Test bundle size reduction
-- [ ] Deploy and verify stability
+### ✅ Phase 1: Foundation (COMPLETE)
 
-### Week 2: Data Fetching ✅
-- [ ] Install React Query (30 min)
-- [ ] Setup QueryProvider (1 hour)
-- [ ] Migrate SceneOutliner to useQuery (4 hours)
-- [ ] Migrate NodeInspector mutations (4 hours)
-- [ ] Add custom query hooks (4 hours)
+- [x] Add error boundaries (2 hours) ✅
+- [x] Add code splitting with lazy() (4 hours) ✅
+- [x] Test bundle size reduction ✅
+- [x] Deploy and verify stability ✅
 
-### Week 3: Concurrent Features ✅
-- [ ] Add Suspense boundaries (1 day)
+### ✅ Phase 2A: Suspense Boundaries (COMPLETE)
+
+- [x] Add Suspense boundaries (1 day) ✅
+- [x] Create skeleton loader library ✅
+- [x] LoadingBoundary with type-aware fallbacks ✅
+- [x] Enhanced loading UX in components ✅
+
+### ✅ Phase 2B: Data Fetching (COMPLETE)
+
+- [x] Install React Query (30 min) ✅
+- [x] Setup QueryProvider (1 hour) ✅
+- [x] Migrate MaterialDatabase to useQuery (4 hours) ✅
+- [x] Add custom query hooks (4 hours) ✅
+- [x] React Query DevTools integration ✅
+
+### ✅ Phase 2C: Performance Optimization (COMPLETE)
+
+- [x] Add React.memo to high-frequency components ✅
+- [x] Add useCallback for stable callbacks ✅
+- [x] Add useMemo for expensive computations ✅
+- [x] Custom equality functions for deep comparison ✅
+- [x] Test performance improvements ✅
+
+### 🔄 Phase 3: Concurrent Features (Optional)
+
 - [ ] Add useTransition for scene sync (1 day)
 - [ ] Add useDeferredValue for search (4 hours)
 - [ ] Test performance improvements
 
-### Week 4: Quality ✅
+### 🔄 Phase 4: Quality (Optional)
+
 - [ ] Setup Vitest (2 hours)
 - [ ] Write service tests (2 days)
 - [ ] Write component tests (2 days)
@@ -897,5 +915,26 @@ describe('SceneService', () => {
 
 ---
 
-**Next Steps**: Start with Priority 1 (Error Boundaries + Code Splitting) - highest ROI, lowest effort!
+## ✅ React 18 Modernization Complete (2025-02-03)
 
+**Completed Features:**
+
+- Error Boundaries with fallback UI
+- Code Splitting (NodeGraph, MaterialDatabase)
+- Suspense boundaries with skeleton loaders
+- React Query for data fetching
+- Performance optimization (React.memo, useCallback, useMemo)
+
+**Results:**
+
+- Bundle size: 587KB → ~150-200KB initial load
+- 100+ parameters optimized with React.memo
+- Material grid only re-renders changed cards
+- Tree rows use smart selection comparison
+- Automatic caching eliminates redundant API calls
+
+**Optional Next Steps:**
+
+- Phase 3: Concurrent Features (useTransition, useDeferredValue)
+- Phase 4: Testing Setup (Vitest + React Testing Library)
+- Accessibility improvements
