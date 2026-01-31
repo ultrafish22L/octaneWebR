@@ -363,43 +363,66 @@ export function ParameterControl({
 
     case AttrType.AT_INT: {
       const intValue = typeof value === 'number' ? value : 0;
-      const intInfo = node.pinInfo?.intInfo;
-      const useSliders = intInfo?.useSliders ?? true;
-      const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
 
-      controlHtml = (
-        <div className="parameter-control-container">
-          <div className="parameter-number-with-spinner">
-            <input
-              type="number"
-              className="number-input parameter-control"
+      // Check if this is an enum (NT_ENUM) - render dropdown
+      if (node.nodeInfo?.type === 'NT_ENUM' && node.pinInfo?.enumInfo?.values) {
+        const enumOptions = node.pinInfo.enumInfo.values;
+        controlHtml = (
+          <div className="parameter-control-container">
+            <select
+              className="parameter-dropdown parameter-control"
               value={intValue || 0}
-              step={step}
               onChange={e => onValueChange(parseInt(e.target.value))}
-              autoComplete="off"
-              name="octane-number-input-18"
-            />
-            {useSliders && (
-              <div className="parameter-spinner-container">
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => onValueChange((intValue || 0) + step)}
-                  title="Increase value"
-                >
-                  ▲
-                </button>
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => onValueChange((intValue || 0) - step)}
-                  title="Decrease value"
-                >
-                  ▼
-                </button>
-              </div>
-            )}
+              name="octane-dropdown-18"
+            >
+              {enumOptions.map((option: { value: number; label: string }, idx: number) => (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      );
+        );
+      } else {
+        // Regular integer input with spinners
+        const intInfo = node.pinInfo?.intInfo;
+        const useSliders = intInfo?.useSliders ?? true;
+        const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
+
+        controlHtml = (
+          <div className="parameter-control-container">
+            <div className="parameter-number-with-spinner">
+              <input
+                type="number"
+                className="number-input parameter-control"
+                value={intValue || 0}
+                step={step}
+                onChange={e => onValueChange(parseInt(e.target.value))}
+                autoComplete="off"
+                name="octane-number-input-18"
+              />
+              {useSliders && (
+                <div className="parameter-spinner-container">
+                  <button
+                    className="parameter-spinner-btn"
+                    onClick={() => onValueChange((intValue || 0) + step)}
+                    title="Increase value"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    className="parameter-spinner-btn"
+                    onClick={() => onValueChange((intValue || 0) - step)}
+                    title="Decrease value"
+                  >
+                    ▼
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
       break;
     }
 
