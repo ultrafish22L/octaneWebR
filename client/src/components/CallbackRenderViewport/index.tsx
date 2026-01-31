@@ -21,6 +21,7 @@ import { ViewportContextMenu } from './ViewportContextMenu';
 import { useImageBufferProcessor } from './hooks/useImageBufferProcessor';
 import { useCameraSync } from './hooks/useCameraSync';
 import { useMouseInteraction } from './hooks/useMouseInteraction';
+import { useViewportActions } from './hooks/useViewportActions';
 import Logger from '../../utils/Logger';
 
 interface OctaneImageData {
@@ -105,24 +106,13 @@ export const CallbackRenderViewport = React.memo(
         return () => {
           Logger.info('🎯 [VIEWPORT] CallbackRenderViewport component UNMOUNTED');
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
 
       // Region selection state (for render region picking)
       const [isSelectingRegion, setIsSelectingRegion] = useState(false);
       const [regionStart, setRegionStart] = useState<{ x: number; y: number } | null>(null);
       const [regionEnd, setRegionEnd] = useState<{ x: number; y: number } | null>(null);
-
-      // Context menu state (for right-click menu)
-      const [contextMenuVisible, setContextMenuVisible] = useState(false);
-      const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
-
-      // 2D Canvas transform state (for Ctrl+zoom and Ctrl+pan)
-      // Octane SE Manual: When viewport resolution lock is disabled, Ctrl+wheel zooms and Ctrl+drag pans the display
-      const [canvasTransform, setCanvasTransform] = useState({
-        scale: 1.0,
-        offsetX: 0,
-        offsetY: 0,
-      });
 
       // Camera state for mouse controls
       const cameraRef = useRef<CameraState>({
@@ -139,10 +129,35 @@ export const CallbackRenderViewport = React.memo(
       const triggerOctaneUpdate = useCallback(async () => {
         try {
           await client.callApi('ApiChangeManager', 'update', {});
-        } catch (error: any) {
-          Logger.error('Failed to trigger render:', error.message);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          Logger.error('Failed to trigger render:', errorMessage);
         }
       }, [client]);
+
+      // Viewport actions hook (Phase 4: Context menu & UI callbacks)
+      const {
+        contextMenuVisible,
+        setContextMenuVisible,
+        contextMenuPos,
+        setContextMenuPos,
+        canvasTransform,
+        setCanvasTransform,
+        copyToClipboard,
+        saveRenderToDisk,
+        recenterView,
+        handleCloseContextMenu,
+        handleContextCopyToClipboard,
+        handleContextSaveRender,
+        handleContextExportPasses,
+        handleContextSetBackgroundImage,
+        handleContextToggleLockViewport,
+      } = useViewportActions({
+        canvasRef,
+        onExportPasses,
+        onSetBackgroundImage,
+        onToggleLockViewport,
+      });
 
       // Image buffer processor hook
       const { displayImage } = useImageBufferProcessor({
@@ -158,138 +173,6 @@ export const CallbackRenderViewport = React.memo(
         cameraRef,
         triggerOctaneUpdate,
       });
-
-      /**
-       * Copy current render to clipboard
-       * Copies the canvas as PNG image in LDR format
-       */
-      const copyToClipboard = useCallback(async () => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-          Logger.warn('Cannot copy to clipboard: canvas not available');
-          return;
-        }
-
-        try {
-          Logger.debug('Copying render to clipboard...');
-
-          const blob = await new Promise<Blob | null>(resolve => {
-            canvas.toBlob(resolve, 'image/png');
-          });
-
-          if (!blob) {
-            throw new Error('Failed to convert canvas to blob');
-          }
-
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              'image/png': blob,
-            }),
-          ]);
-
-          Logger.info('Render copied to clipboard');
-        } catch (error: any) {
-          Logger.error('Failed to copy to clipboard:', error.message);
-          throw error;
-        }
-      }, []);
-
-      /**
-       * Save current render to disk
-       * Triggers browser download of canvas as PNG file
-       */
-      const saveRenderToDisk = useCallback(async () => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-          Logger.warn('Cannot save render: canvas not available');
-          return;
-        }
-
-        try {
-          Logger.debug('Saving render to disk...');
-
-          const blob = await new Promise<Blob | null>(resolve => {
-            canvas.toBlob(resolve, 'image/png');
-          });
-
-          if (!blob) {
-            throw new Error('Failed to convert canvas to blob');
-          }
-
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-          link.download = `octane-render-${timestamp}.png`;
-          link.href = url;
-
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          URL.revokeObjectURL(url);
-
-          Logger.info('Render saved to disk');
-        } catch (error: any) {
-          Logger.error('Failed to save render:', error.message);
-          throw error;
-        }
-      }, []);
-
-      /**
-       * Recenter View - Resets 2D canvas pan/zoom to default centered view
-       */
-      const recenterView = useCallback(() => {
-        Logger.debug('Recenter view - resetting 2D canvas transform');
-        setCanvasTransform({ scale: 1.0, offsetX: 0, offsetY: 0 });
-      }, []);
-
-      /**
-       * Context menu handlers
-       */
-      const handleCloseContextMenu = useCallback(() => {
-        setContextMenuVisible(false);
-      }, []);
-
-      const handleContextCopyToClipboard = useCallback(async () => {
-        try {
-          await copyToClipboard();
-        } catch (error) {
-          Logger.error('Context menu: Copy failed', error);
-        }
-      }, [copyToClipboard]);
-
-      const handleContextSaveRender = useCallback(async () => {
-        try {
-          await saveRenderToDisk();
-        } catch (error) {
-          Logger.error('Context menu: Save failed', error);
-        }
-      }, [saveRenderToDisk]);
-
-      const handleContextExportPasses = useCallback(() => {
-        if (onExportPasses) {
-          onExportPasses();
-        } else {
-          Logger.debug('Export Passes handler not provided');
-        }
-      }, [onExportPasses]);
-
-      const handleContextSetBackgroundImage = useCallback(() => {
-        if (onSetBackgroundImage) {
-          onSetBackgroundImage();
-        } else {
-          Logger.debug('Set Background Image handler not provided');
-        }
-      }, [onSetBackgroundImage]);
-
-      const handleContextToggleLockViewport = useCallback(() => {
-        if (onToggleLockViewport) {
-          onToggleLockViewport();
-        } else {
-          Logger.debug('Toggle Lock Viewport handler not provided');
-        }
-      }, [onToggleLockViewport]);
 
       // Expose methods to parent via ref
       useImperativeHandle(
@@ -310,7 +193,8 @@ export const CallbackRenderViewport = React.memo(
 
         if (!connected) {
           Logger.info('⚠️  [VIEWPORT] Not connected, skipping initialization');
-          setStatus('Disconnected from Octane');
+          // Defer setState to avoid cascading renders
+          setTimeout(() => setStatus('Disconnected from Octane'), 0);
           return;
         }
 
@@ -338,9 +222,10 @@ export const CallbackRenderViewport = React.memo(
             setStatus('Waiting for render...');
 
             Logger.info('✅ [VIEWPORT] Render viewport initialized');
-          } catch (error: any) {
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Logger.error('❌ [VIEWPORT] Failed to initialize rendering:', error);
-            setStatus(`Error: ${error.message}`);
+            setStatus(`Error: ${errorMessage}`);
           }
         };
 
