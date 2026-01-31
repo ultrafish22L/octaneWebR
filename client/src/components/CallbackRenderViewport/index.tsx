@@ -19,6 +19,7 @@ import React, {
 import { useOctane } from '../../hooks/useOctane';
 import { ViewportContextMenu } from './ViewportContextMenu';
 import { useImageBufferProcessor } from './hooks/useImageBufferProcessor';
+import { useCameraSync } from './hooks/useCameraSync';
 import Logger from '../../utils/Logger';
 
 interface OctaneImageData {
@@ -138,19 +139,6 @@ export const CallbackRenderViewport = React.memo(
       const hasRightDraggedRef = useRef(false); // Track if right-click involved dragging
       const lastMousePosRef = useRef({ x: 0, y: 0 });
 
-      // Camera update rate limiting (10 Hz = 100ms between updates)
-      const CAMERA_UPDATE_INTERVAL = 100; // ms
-      const lastCameraUpdateRef = useRef(0);
-      const pendingCameraUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-      const hasPendingUpdateRef = useRef(false);
-
-      // Image buffer processor hook
-      const { displayImage } = useImageBufferProcessor({
-        canvasRef,
-        onFrameRendered: () => setFrameCount(prev => prev + 1),
-        onStatusUpdate: setStatus,
-      });
-
       /**
        * Trigger Octane display update via ApiChangeManager
        */
@@ -162,40 +150,20 @@ export const CallbackRenderViewport = React.memo(
         }
       }, [client]);
 
-      /**
-       * Initialize camera from Octane's current camera settings
-       * Uses LiveLink.GetCamera to fetch current camera position and target
-       */
-      const initializeCameraFromOctane = useCallback(async () => {
-        try {
-          // Get current camera from Octane using LiveLink.GetCamera
-          const response = await client.getCamera();
+      // Image buffer processor hook
+      const { displayImage } = useImageBufferProcessor({
+        canvasRef,
+        onFrameRendered: () => setFrameCount(prev => prev + 1),
+        onStatusUpdate: setStatus,
+      });
 
-          if (!response || !response.position || !response.target) {
-            Logger.debug('No camera data from Octane, using defaults');
-            return;
-          }
-
-          const position = response.position;
-          const target = response.target;
-
-          Logger.debug('Camera from Octane:', { position, target });
-
-          cameraRef.current.center = [target.x, target.y, target.z];
-
-          const dx = position.x - target.x;
-          const dy = position.y - target.y;
-          const dz = position.z - target.z;
-
-          cameraRef.current.radius = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          cameraRef.current.theta = Math.atan2(dz, dx);
-          cameraRef.current.phi = Math.asin(dy / cameraRef.current.radius);
-
-          Logger.debug('Camera initialized:', cameraRef.current);
-        } catch (error: any) {
-          Logger.warn('Failed to initialize camera from Octane:', error.message);
-        }
-      }, [client]);
+      // Camera synchronization hook
+      const { initializeCamera, updateCameraThrottled, updateCameraImmediate } = useCameraSync({
+        client,
+        connected,
+        cameraRef,
+        triggerOctaneUpdate,
+      });
 
       /**
        * Copy current render to clipboard
@@ -341,87 +309,6 @@ export const CallbackRenderViewport = React.memo(
       );
 
       /**
-       * Update Octane camera from current state
-       * Uses LiveLink.SetCamera to update both position and target efficiently
-       */
-      const updateOctaneCamera = useCallback(async () => {
-        if (!connected) return;
-
-        try {
-          const { radius, theta, phi, center } = cameraRef.current;
-
-          // Convert spherical to Cartesian coordinates
-          const x = radius * Math.cos(phi) * Math.sin(theta);
-          const y = radius * Math.sin(phi);
-          const z = radius * Math.cos(phi) * Math.cos(theta);
-
-          const posX = x + center[0];
-          const posY = y + center[1];
-          const posZ = z + center[2];
-
-          // Set both camera position and target in one efficient call
-          await client.setCameraPositionAndTarget(
-            posX,
-            posY,
-            posZ,
-            center[0],
-            center[1],
-            center[2]
-          );
-
-          // Trigger render update
-          await triggerOctaneUpdate();
-        } catch (error: any) {
-          Logger.error('Failed to update camera:', error.message);
-        }
-      }, [connected, client, triggerOctaneUpdate]);
-
-      /**
-       * Throttled camera update - limits updates to 10 Hz for smooth performance
-       * Immediately updates local state, but rate-limits Octane API calls
-       */
-      const updateOctaneCameraThrottled = useCallback(() => {
-        const now = Date.now();
-        const timeSinceLastUpdate = now - lastCameraUpdateRef.current;
-
-        // Clear any pending timeout
-        if (pendingCameraUpdateRef.current) {
-          clearTimeout(pendingCameraUpdateRef.current);
-          pendingCameraUpdateRef.current = null;
-        }
-
-        if (timeSinceLastUpdate >= CAMERA_UPDATE_INTERVAL) {
-          // Enough time has passed, update immediately
-          lastCameraUpdateRef.current = now;
-          hasPendingUpdateRef.current = false;
-          updateOctaneCamera();
-        } else {
-          // Too soon, schedule update for later
-          const delay = CAMERA_UPDATE_INTERVAL - timeSinceLastUpdate;
-          hasPendingUpdateRef.current = true;
-          pendingCameraUpdateRef.current = setTimeout(() => {
-            lastCameraUpdateRef.current = Date.now();
-            hasPendingUpdateRef.current = false;
-            updateOctaneCamera();
-          }, delay);
-        }
-      }, [updateOctaneCamera]);
-
-      /**
-       * Force immediate camera update - used on mouse up to ensure final position is sent
-       */
-      const updateOctaneCameraImmediate = useCallback(() => {
-        // Clear any pending throttled update
-        if (pendingCameraUpdateRef.current) {
-          clearTimeout(pendingCameraUpdateRef.current);
-          pendingCameraUpdateRef.current = null;
-        }
-        hasPendingUpdateRef.current = false;
-        lastCameraUpdateRef.current = Date.now();
-        updateOctaneCamera();
-      }, [updateOctaneCamera]);
-
-      /**
        * Trigger initial render when connected
        */
       useEffect(() => {
@@ -443,7 +330,7 @@ export const CallbackRenderViewport = React.memo(
 
             // Initialize camera from Octane's current state
             Logger.info('📷 [VIEWPORT] Initializing camera from Octane...');
-            await initializeCameraFromOctane();
+            await initializeCamera();
             Logger.info('✅ [VIEWPORT] Camera initialized');
 
             setStatus('Triggering initial render...');
@@ -464,7 +351,7 @@ export const CallbackRenderViewport = React.memo(
         };
 
         initializeRendering();
-      }, [connected, initializeCameraFromOctane, triggerOctaneUpdate]);
+      }, [connected, initializeCamera, triggerOctaneUpdate]);
 
       /**
        * Setup callback listener for OnNewImage events
@@ -634,7 +521,7 @@ export const CallbackRenderViewport = React.memo(
           }
 
           // Update Octane camera with throttling (10 Hz rate limit)
-          updateOctaneCameraThrottled();
+          updateCameraThrottled();
         };
 
         const handleMouseUp = async (e: MouseEvent) => {
@@ -737,7 +624,7 @@ export const CallbackRenderViewport = React.memo(
                       `Camera target set to: [${x.toFixed(3)}, ${y.toFixed(3)}, ${z.toFixed(3)}]`
                     );
                     cameraRef.current.center = [x, y, z];
-                    await updateOctaneCamera();
+                    await updateCameraImmediate();
                   }
                 } else {
                   Logger.debug(' Camera target pick: No intersection found');
@@ -861,7 +748,7 @@ export const CallbackRenderViewport = React.memo(
             }
 
             // Send final camera position immediately to ensure accuracy
-            updateOctaneCameraImmediate();
+            updateCameraImmediate();
           }
         };
 
@@ -891,7 +778,7 @@ export const CallbackRenderViewport = React.memo(
           cameraRef.current.radius += e.deltaY * zoomSpeed;
           cameraRef.current.radius = Math.max(1.0, Math.min(100.0, cameraRef.current.radius));
 
-          await updateOctaneCamera();
+          await updateCameraThrottled();
         };
 
         canvas.addEventListener('mousedown', handleMouseDown);
@@ -919,18 +806,11 @@ export const CallbackRenderViewport = React.memo(
           canvas.removeEventListener('mouseleave', handleMouseUp);
           canvas.removeEventListener('wheel', handleWheel);
           canvas.removeEventListener('contextmenu', handleContextMenu);
-
-          // Cleanup any pending camera updates
-          if (pendingCameraUpdateRef.current) {
-            clearTimeout(pendingCameraUpdateRef.current);
-            pendingCameraUpdateRef.current = null;
-          }
         };
       }, [
         connected,
-        updateOctaneCamera,
-        updateOctaneCameraThrottled,
-        updateOctaneCameraImmediate,
+        updateCameraThrottled,
+        updateCameraImmediate,
         viewportLocked,
         pickingMode,
         isSelectingRegion,
