@@ -985,29 +985,31 @@
 .color-input {
   flex: 1; /* Responsive - fill available space */
   min-width: 60px;
-  height: 22px; /* Match other input heights for visibility */
-  border: 1px solid var(--border);
+  height: 20px;
+  border: 1px solid var(--bg-header);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
-  padding: 2px; /* Add padding so color swatch is visible */
-  background: var(--bg-secondary);
+  padding: 0;
+  background: transparent;
   box-sizing: border-box;
+  overflow: hidden; /* Ensure color fills entire space */
 }
 
+/* Chrome/Safari - make color swatch fill entire input */
 .color-input::-webkit-color-swatch-wrapper {
   padding: 0;
-  border-radius: var(--border-radius-xs);
+  border: none;
 }
 
 .color-input::-webkit-color-swatch {
   border: none;
-  border-radius: var(--border-radius-xs);
+  border-radius: 2px; /* Slight inner radius */
 }
 
-/* Firefox color input support */
+/* Firefox - make color swatch fill entire input */
 .color-input::-moz-color-swatch {
   border: none;
-  border-radius: var(--border-radius-xs);
+  border-radius: 2px;
 }
 
 .dropdown {

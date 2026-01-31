@@ -177,7 +177,6 @@ export function ParameterControl({
                 type="color"
                 className="color-input parameter-control"
                 value={hexColor}
-                style={{ background: hexColor, color: hexColor }}
                 onChange={e => {
                   const hex = e.target.value;
                   const r = parseInt(hex.substring(1, 3), 16) / 255;
