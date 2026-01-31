@@ -1,7 +1,7 @@
 /**
  * Centralized logging utility for OctaneWebR
  * Provides environment-aware logging with configurable log levels
- * 
+ *
  * DEBUG_MODE controls server-side file logging to /tmp/octaneWebR_client.log
  * Set to true to enable, false to disable
  */
@@ -34,17 +34,17 @@ class LoggerInstance {
   private config: LoggerConfig;
   private readonly isDevelopment: boolean;
   private logBuffer: LogEntry[] = [];
-  private flushInterval: NodeJS.Timeout | number | null = null;
+  private flushInterval: number | null = null;
   private readonly MAX_BUFFER_SIZE = 100;
   private readonly FLUSH_INTERVAL_MS = 1000;
 
   constructor() {
     // Detect environment
     this.isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-    
+
     // Default configuration
     this.config = {
-      level: this.isDevelopment ? LogLevel.INFO : LogLevel.WARN,
+      level: this.isDevelopment ? LogLevel.DEBUG : LogLevel.WARN, // Changed to DEBUG for parameter debugging
       prefix: '[OctaneWebR]',
       timestamp: this.isDevelopment,
       colors: true,
@@ -82,10 +82,10 @@ class LoggerInstance {
    */
   private startFlushTimer(): void {
     if (this.flushInterval) return;
-    
+
     this.flushInterval = setInterval(() => {
       this.flushLogs();
-    }, this.FLUSH_INTERVAL_MS);
+    }, this.FLUSH_INTERVAL_MS) as unknown as number;
   }
 
   /**
@@ -93,7 +93,7 @@ class LoggerInstance {
    */
   private stopFlushTimer(): void {
     if (this.flushInterval) {
-      clearInterval(this.flushInterval as number);
+      clearInterval(this.flushInterval);
       this.flushInterval = null;
     }
   }
@@ -147,12 +147,10 @@ class LoggerInstance {
         },
         body: JSON.stringify({
           level: logsToSend[logsToSend.length - 1].level,
-          message: logsToSend
-            .map(log => `[${log.level.toUpperCase()}] ${log.message}`)
-            .join('\n'),
+          message: logsToSend.map(log => `[${log.level.toUpperCase()}] ${log.message}`).join('\n'),
         }),
       });
-    } catch (error) {
+    } catch {
       // Silently fail if endpoint not available (e.g., production mode)
       // Don't log to avoid infinite loop
     }
@@ -171,20 +169,20 @@ class LoggerInstance {
    */
   private formatMessage(icon: string, ...args: unknown[]): unknown[] {
     const parts: string[] = [];
-    
+
     if (this.config.prefix) {
       parts.push(this.config.prefix);
     }
-    
+
     if (this.config.timestamp) {
       const time = new Date().toLocaleTimeString();
       parts.push(`[${time}]`);
     }
-    
+
     if (this.config.colors) {
       parts.push(icon);
     }
-    
+
     const prefix = parts.length > 0 ? parts.join(' ') : '';
     return prefix ? [prefix, ...args] : args;
   }
