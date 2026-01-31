@@ -1185,3 +1185,76 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Geometry Toolbar - Embedded toolbar for mesh/geometry nodes */
+.geometry-toolbar {
+  padding: 4px 8px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+}
+
+.geometry-toolbar-buttons {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 4px;
+  padding: 2px 0;
+}
+
+.geometry-toolbar-btn {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  transition: background-color 0.2s;
+}
+
+.geometry-toolbar-btn:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  border-color: var(--accent-blue);
+}
+
+.geometry-toolbar-btn:active:not(:disabled) {
+  background-color: var(--bg-active);
+}
+
+.geometry-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.geometry-toolbar-btn img {
+  display: block;
+  opacity: 0.9;
+}
+
+.geometry-toolbar-btn:hover:not(:disabled) img {
+  opacity: 1;
+}
+
+.geometry-file-path {
+  padding: 2px 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geometry-polygon-count {
+  padding: 2px 4px;
+  font-size: 11px;
+  color: var(--text-primary);
+  text-align: left;
+}

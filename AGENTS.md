@@ -209,6 +209,81 @@ import './MyComponent.css';
 
 ## Recent Major Changes
 
+### 2025-02-03: Geometry Node Toolbar ✅
+
+**Embedded Toolbar for Mesh/Geometry Nodes**
+
+- Created `GeometryToolbar` component for Node Inspector
+  - Displays toolbar with file operation icons: Load, Reload, Save, Clear
+  - Shows file path of loaded mesh (with monospace font)
+  - Displays polygon count information (formatted with commas)
+  - Files: `client/src/components/NodeInspector/GeometryToolbar.tsx`
+
+**Node Inspector Integration**
+
+- Geometry toolbar appears for NT_GEO_* node types
+  - Detects geometry nodes: NT_GEO_MESH, NT_GEO_OBJECT, NT_GEO_PLANE, etc.
+  - Renders toolbar between node header and parameters
+  - Matches Octane SE UI layout exactly
+  - Files: `client/src/components/NodeInspector/index.tsx`
+
+**Styling**
+
+- Professional dark theme matching Octane Studio
+  - Toolbar button styles with hover/active/disabled states
+  - File path display with text ellipsis overflow
+  - Polygon count info styled as metadata
+  - Files: `client/src/styles/node-inspector.css` (lines 1189-1260)
+
+**Visual Structure**:
+```
+┌─ Geometry: Mesh ──────────── [Mesh ▼] ──┐
+├─ Toolbar ──────────────────────────────┤
+│ [📁] [🔄] [💾] [🗑️]                     │
+│ C:\path\to\mesh.obj                     │
+│ 69,599 polygons                         │
+├─ Parameters ────────────────────────────┤
+```
+
+**Next Steps**:
+- Implement gRPC calls for load/reload/save mesh operations
+- Add file picker dialog for loading meshes
+- Fetch real polygon count from Octane via gRPC
+- Add error handling for file operations
+
+### 2025-02-03: Status Message System ✅
+
+**Live Status Bar Updates**
+
+- Created `StatusMessageContext` for centralized status message management
+  - Three methods: `setStatusMessage()`, `clearStatusMessage()`, `setTemporaryStatus()`
+  - Temporary messages auto-clear after configurable duration (default 3s)
+  - Timeout management prevents message overlap
+  - Files: `client/src/contexts/StatusMessageContext.tsx`
+
+**Scene Build Progress**
+
+- SceneService emits progress events during tree building
+  - `scene:buildStart` - "Building scene tree..."
+  - `scene:buildProgress` - "Building scene: [step]" (3 steps)
+  - `scene:buildComplete` - "Scene loaded: X nodes in Ys" (5s auto-clear)
+  - Files: `client/src/services/octane/SceneService.ts`
+
+**App Event Notifications**
+
+- App.tsx listens for events and updates status bar
+  - Node creation: "Node created" (2s)
+  - Node deletion: "Node deleted" (2s)
+  - Connection: "Connected to Octane" (3s) / "Disconnected from Octane"
+  - Files: `client/src/App.tsx`
+
+**Usage**:
+```typescript
+const { setStatusMessage, setTemporaryStatus } = useStatusMessage();
+setStatusMessage('Processing...'); // Persistent
+setTemporaryStatus('Success!', 3000); // Auto-clears
+```
+
 ### 2025-02-03: React 18 Modernization - P2C Performance Optimization ✅
 
 **React.memo Optimizations**
@@ -475,6 +550,16 @@ When investigating issues:
 - 11 gRPC service wrappers
 - 755+ Octane node types
 - 134 CSS variables
+
+**Recent Additions** (2025-02-03):
+
+**Status Message System** ✅
+
+- ✅ Live status bar updates with StatusMessageContext
+- ✅ Scene build progress tracking (3 steps)
+- ✅ App event notifications (node creation, deletion, connection)
+- ✅ Temporary messages with auto-clear (2-5s)
+- ✅ Zero new dependencies, fully type-safe
 
 **Completed React 18 Modernization** (2025-02-03):
 

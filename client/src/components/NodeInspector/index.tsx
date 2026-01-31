@@ -23,6 +23,7 @@ import { EditCommands } from '../../commands/EditCommands';
 import { getPinTypeInfo } from '../../constants/PinTypes';
 import { useParameterValue } from './hooks/useParameterValue';
 import { ParameterControl } from './ParameterControl';
+import { GeometryToolbar } from './GeometryToolbar';
 
 interface NodeInspectorProps {
   node: SceneNode | null;
@@ -218,6 +219,13 @@ function NodeParameter({
     );
   }
 
+  // Check if this is a geometry node that should show the geometry toolbar
+  const isGeometryNode = currentNodeType.startsWith('NT_GEO_MESH') || 
+                         currentNodeType.startsWith('NT_GEO_OBJECT') ||
+                         currentNodeType.startsWith('NT_GEO_PLANE') ||
+                         currentNodeType.startsWith('NT_GEO_SCATTER') ||
+                         currentNodeType === 'NT_GEO_MESH';
+
   // Render as node group (non-parameter nodes)
   return (
     <div className={indentClass} style={{ display: 'block' }}>
@@ -283,6 +291,10 @@ function NodeParameter({
           </div>
         </div>
       </div>
+      
+      {/* Geometry Toolbar - Show for mesh/geometry nodes */}
+      {isGeometryNode && <GeometryToolbar node={node} />}
+      
       {hasChildren && (
         <div
           className="node-toggle-content"

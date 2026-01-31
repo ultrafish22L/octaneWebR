@@ -21,6 +21,7 @@ import { queryClient } from './lib/queryClient';
 import { OctaneProvider, useOctane } from './hooks/useOctane';
 import { useResizablePanels } from './hooks/useResizablePanels';
 import { EditActionsProvider } from './contexts/EditActionsContext';
+import { StatusMessageProvider, useStatusMessage } from './contexts/StatusMessageContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
 import { MenuBar } from './components/MenuBar';
@@ -51,6 +52,7 @@ const LazyMaterialDatabase = lazy(() =>
 
 function AppContent() {
   const { client, connect, connected } = useOctane();
+  const { statusMessage, setStatusMessage, setTemporaryStatus } = useStatusMessage();
   const [selectedNode, setSelectedNode] = useState<SceneNode | null>(null);
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [sceneRefreshTrigger, setSceneRefreshTrigger] = useState(0);
@@ -321,6 +323,58 @@ function AppContent() {
     };
   }, [client]); // Only re-register when client changes, not on every selection
 
+  // Listen for scene build events and update status bar
+  useEffect(() => {
+    if (!client) return;
+
+    const handleBuildStart = () => {
+      setStatusMessage('Building scene tree...');
+    };
+
+    const handleBuildProgress = (data: { step: string }) => {
+      setStatusMessage(`Building scene: ${data.step}`);
+    };
+
+    const handleBuildComplete = (data: { nodeCount: number; topLevelCount: number; elapsedTime: string }) => {
+      setTemporaryStatus(
+        `Scene loaded: ${data.nodeCount} nodes (${data.topLevelCount} top-level) in ${data.elapsedTime}s`,
+        5000
+      );
+    };
+
+    const handleNodeAdded = () => {
+      setTemporaryStatus('Node created', 2000);
+    };
+
+    const handleNodeDeletedStatus = () => {
+      setTemporaryStatus('Node deleted', 2000);
+    };
+
+    const handleConnectionChanged = (connectionData: { connected: boolean }) => {
+      if (connectionData.connected) {
+        setTemporaryStatus('Connected to Octane', 3000);
+      } else {
+        setStatusMessage('Disconnected from Octane');
+      }
+    };
+
+    client.on('scene:buildStart', handleBuildStart);
+    client.on('scene:buildProgress', handleBuildProgress);
+    client.on('scene:buildComplete', handleBuildComplete);
+    client.on('nodeAdded', handleNodeAdded);
+    client.on('nodeDeleted', handleNodeDeletedStatus);
+    client.on('connection:changed', handleConnectionChanged);
+
+    return () => {
+      client.off('scene:buildStart', handleBuildStart);
+      client.off('scene:buildProgress', handleBuildProgress);
+      client.off('scene:buildComplete', handleBuildComplete);
+      client.off('nodeAdded', handleNodeAdded);
+      client.off('nodeDeleted', handleNodeDeletedStatus);
+      client.off('connection:changed', handleConnectionChanged);
+    };
+  }, [client, setStatusMessage, setTemporaryStatus]);
+
   return (
     <div className="app-container">
       {/* Top Menu Bar */}
@@ -540,7 +594,7 @@ function AppContent() {
       {/* Status Bar */}
       <footer className="status-bar">
         <div className="status-left">
-          <span className="status-item">OctaneWebR - React TypeScript + Node.js gRPC</span>
+          <span className="status-item">{statusMessage}</span>
         </div>
         <div className="status-center"></div>
         <div className="status-right">
@@ -583,9 +637,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <OctaneProvider>
-        <EditActionsProvider>
-          <AppContent />
-        </EditActionsProvider>
+        <StatusMessageProvider>
+          <EditActionsProvider>
+            <AppContent />
+          </EditActionsProvider>
+        </StatusMessageProvider>
       </OctaneProvider>
       {/* React Query DevTools - only included in development builds */}
       <ReactQueryDevtools initialIsOpen={false} />

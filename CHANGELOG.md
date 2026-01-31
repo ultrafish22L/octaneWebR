@@ -9,6 +9,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Geometry Node Toolbar (2025-02-03)
+
+- **Geometry Toolbar Component**: Embedded toolbar for mesh/geometry nodes in Node Inspector
+  - Created `GeometryToolbar` component with file operation buttons
+  - Displays toolbar with icons: Load, Reload, Save, Clear mesh
+  - Shows file path of loaded mesh file
+  - Displays polygon count information
+  - Files: `client/src/components/NodeInspector/GeometryToolbar.tsx`
+
+- **Node Inspector Integration**: Geometry toolbar appears for NT_GEO_* node types
+  - Detects geometry nodes (NT_GEO_MESH, NT_GEO_OBJECT, NT_GEO_PLANE, etc.)
+  - Renders toolbar between node header and parameters
+  - Matches Octane SE UI layout exactly
+  - Files: `client/src/components/NodeInspector/index.tsx`
+
+- **Styling**: Professional dark theme matching Octane Studio
+  - Toolbar button styles with hover/active states
+  - File path display with monospace font
+  - Polygon count info display
+  - Files: `client/src/styles/node-inspector.css`
+
+**Visual Structure:**
+```
+┌─ Geometry Node Header ────────────────┐
+│ [Icon] Geometry: Mesh Name     [▼]    │
+├─ Toolbar ─────────────────────────────┤
+│ [Load] [Reload] [Save] [Clear]        │
+│ C:\path\to\mesh\file.obj               │
+│ 69,599 polygons                        │
+├─ Parameters ───────────────────────────┤
+│ ... node parameters ...                │
+└────────────────────────────────────────┘
+```
+
+**Benefits:**
+- ✅ **File Operations**: Quick access to load/reload/save mesh files
+- ✅ **Mesh Info**: Instant visibility of file path and polygon count
+- ✅ **Octane SE Clone**: Pixel-perfect match with Octane Standalone Edition
+- ✅ **User Experience**: Embedded toolbar right where needed
+- ✅ **Type-Safe**: Full TypeScript support
+
+### Added - Status Message System (2025-02-03)
+
+- **Live Status Bar Updates**: Real-time status messages in the status bar
+  - Created `StatusMessageContext` for centralized status message management
+  - Three methods: `setStatusMessage()`, `clearStatusMessage()`, `setTemporaryStatus()`
+  - Temporary messages auto-clear after configurable duration (default 3s)
+  - Added to provider hierarchy: `QueryClient → Octane → StatusMessage → EditActions`
+  - Files: `client/src/contexts/StatusMessageContext.tsx`
+  
+- **Scene Build Progress**: Status bar shows scene tree building progress
+  - Emits `scene:buildStart` when building begins
+  - Emits `scene:buildProgress` at each major step (root graph, checking, building)
+  - Emits `scene:buildComplete` with statistics (node count, timing)
+  - Messages: "Building scene tree...", "Building scene: [step]", "Scene loaded: X nodes in Ys"
+  - Files: `client/src/services/octane/SceneService.ts`
+
+- **App Event Notifications**: Status updates for key application events
+  - Node creation: "Node created" (2s)
+  - Node deletion: "Node deleted" (2s)
+  - Connection: "Connected to Octane" (3s) / "Disconnected from Octane" (persistent)
+  - Event listeners integrated in AppContent useEffect hooks
+  - Files: `client/src/App.tsx`
+
+- **Documentation**: Complete feature documentation
+  - Usage examples and API reference
+  - Status message catalog with durations
+  - Future enhancement suggestions
+  - Files: `STATUS_MESSAGE_FEATURE.md`
+
+**Benefits:**
+- ✅ **User Feedback**: Real-time visual feedback for all major operations
+- ✅ **Progress Visibility**: Scene building progress shown step-by-step
+- ✅ **Non-Intrusive**: Temporary messages auto-clear, no user action needed
+- ✅ **Extensible**: Easy to add status updates from any component
+- ✅ **Type-Safe**: Full TypeScript support with context pattern
+
 ### Added - React 18 Modernization P2C: Performance Optimization (2025-02-03)
 
 - **React.memo Optimizations**: Prevented unnecessary re-renders in high-frequency components

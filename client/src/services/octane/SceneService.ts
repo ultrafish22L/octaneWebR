@@ -74,6 +74,7 @@ export class SceneService extends BaseService {
      * Used on initial connection or when incremental updates aren't sufficient.
      */
     Logger.info('🌳 Building scene tree...');
+    this.emit('scene:buildStart');
     
     this.scene = {
       tree: [],
@@ -88,6 +89,7 @@ export class SceneService extends BaseService {
       }
       
       Logger.debug('🔍 Step 1: Getting root node graph...');
+      this.emit('scene:buildProgress', { step: 'Getting root node graph' });
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
         throw new Error('Failed to get root node graph');
@@ -102,6 +104,7 @@ export class SceneService extends BaseService {
       }
       
       Logger.debug('🔍 Step 2: Checking if root is graph...');
+      this.emit('scene:buildProgress', { step: 'Checking root node' });
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
@@ -115,6 +118,7 @@ export class SceneService extends BaseService {
       const startTime = performance.now();
 
       Logger.debug('🔍 Step 3: Building tree synchronously...');
+      this.emit('scene:buildProgress', { step: 'Building scene tree' });
       this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
       
@@ -124,6 +128,11 @@ export class SceneService extends BaseService {
 
 
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
+      this.emit('scene:buildComplete', { 
+        nodeCount: this.scene.map.size, 
+        topLevelCount: this.scene.tree.length,
+        elapsedTime 
+      });
       this.emit('sceneTreeUpdated', this.scene);
       Logger.info('✅ SceneTreeUpdated event emitted');
       
