@@ -1,9 +1,13 @@
 /**
  * Virtual Tree Row Component
  * Renders a single row in the virtualized scene tree
+ *
+ * Performance:
+ * - Memoized with React.memo to prevent unnecessary re-renders
+ * - Custom comparison for index and flatNode changes only
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { getIconForType } from '../../constants/PinTypes';
 import { FlattenedNode } from '../../utils/TreeFlattener';
@@ -34,10 +38,10 @@ export interface VirtualTreeRowProps {
 }
 
 /**
- * Virtual Tree Row Component
+ * Virtual Tree Row Component (internal)
  * React-window v2 rowComponent receives built-in props + custom props from rowProps
  */
-export function VirtualTreeRow(
+function VirtualTreeRowComponent(
   props: {
     ariaAttributes: {
       'aria-posinset': number;
@@ -61,9 +65,17 @@ export function VirtualTreeRow(
       style={style}
       className={`tree-node level-${depth} ${isSelected ? 'selected' : ''}`}
       data-handle={node.handle}
+      role="button"
+      tabIndex={0}
       onClick={() => {
         // Don't select the synthetic Scene root
         if (node.type !== 'SceneRoot') {
+          onSelect(node);
+        }
+      }}
+      onKeyDown={e => {
+        if ((e.key === 'Enter' || e.key === ' ') && node.type !== 'SceneRoot') {
+          e.preventDefault();
           onSelect(node);
         }
       }}
@@ -78,9 +90,18 @@ export function VirtualTreeRow(
         {hasChildren ? (
           <span
             className={`node-toggle ${isExpanded ? 'expanded' : 'collapsed'}`}
+            role="button"
+            tabIndex={0}
             onClick={e => {
               e.stopPropagation();
               onToggle(uniqueKey);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggle(uniqueKey);
+              }
             }}
           >
             {isExpanded ? '−' : '+'}
@@ -105,3 +126,71 @@ export function VirtualTreeRow(
     </div>
   );
 }
+
+/**
+ * Custom comparison function for React.memo
+ * VirtualTreeRow should only re-render when index or the flatNode data changes
+ */
+function arePropsEqual(
+  prevProps: {
+    index: number;
+    style: React.CSSProperties;
+  } & VirtualTreeRowProps,
+  nextProps: {
+    index: number;
+    style: React.CSSProperties;
+  } & VirtualTreeRowProps
+): boolean {
+  // If index changed, different row - must re-render
+  if (prevProps.index !== nextProps.index) {
+    return false;
+  }
+
+  // If style changed (position/size), must re-render
+  if (prevProps.style !== nextProps.style) {
+    return false;
+  }
+
+  // Compare the flatNode at this index
+  const prevNode = prevProps.flattenedNodes[prevProps.index];
+  const nextNode = nextProps.flattenedNodes[nextProps.index];
+
+  // If either is missing, re-render
+  if (!prevNode || !nextNode) {
+    return prevNode === nextNode;
+  }
+
+  // Compare critical flatNode properties
+  if (
+    prevNode.node.handle !== nextNode.node.handle ||
+    prevNode.depth !== nextNode.depth ||
+    prevNode.hasChildren !== nextNode.hasChildren ||
+    prevNode.isExpanded !== nextNode.isExpanded ||
+    prevNode.node.name !== nextNode.node.name
+  ) {
+    return false;
+  }
+
+  // Compare selection state
+  if (prevProps.selectedHandle !== nextProps.selectedHandle) {
+    // Only re-render if this row is selected or was selected
+    const isAffected =
+      prevProps.selectedHandle === prevNode.node.handle ||
+      nextProps.selectedHandle === nextNode.node.handle;
+    if (isAffected) {
+      return false;
+    }
+  }
+
+  // Props are equal, skip re-render
+  return true;
+}
+
+/**
+ * Memoized VirtualTreeRow component
+ * Only re-renders when index or flatNode data actually changes
+ */
+export const VirtualTreeRow = memo(
+  VirtualTreeRowComponent,
+  arePropsEqual
+) as typeof VirtualTreeRowComponent;

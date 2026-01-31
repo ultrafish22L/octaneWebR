@@ -5,7 +5,7 @@
  */
 
 import { Logger } from '../utils/Logger';
-import { createContext, useContext, useRef, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useRef, useCallback, useMemo, ReactNode } from 'react';
 
 export interface EditActionsHandler {
   cut?: () => void;
@@ -18,7 +18,6 @@ export interface EditActionsHandler {
 }
 
 export interface EditActionsContextType {
-  // eslint-disable-next-line no-unused-vars
   registerHandlers: (handlers: EditActionsHandler) => void;
   unregisterHandlers: () => void;
   cut: () => void;
@@ -99,23 +98,23 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  return (
-    <EditActionsContext.Provider
-      value={{
-        registerHandlers,
-        unregisterHandlers,
-        cut,
-        copy,
-        paste,
-        delete: deleteAction,
-        group,
-        ungroup,
-        find,
-      }}
-    >
-      {children}
-    </EditActionsContext.Provider>
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(
+    () => ({
+      registerHandlers,
+      unregisterHandlers,
+      cut,
+      copy,
+      paste,
+      delete: deleteAction,
+      group,
+      ungroup,
+      find,
+    }),
+    [registerHandlers, unregisterHandlers, cut, copy, paste, deleteAction, group, ungroup, find]
   );
+
+  return <EditActionsContext.Provider value={contextValue}>{children}</EditActionsContext.Provider>;
 }
 
 export function useEditActions() {

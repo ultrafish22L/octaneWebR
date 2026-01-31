@@ -12,7 +12,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
@@ -499,6 +499,17 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
     // TODO: Implement Lua browser navigation
   };
 
+  // Build hasGroup map for all levels (matches octaneWeb's hasGroup[] array logic)
+  // This ensures that all siblings at the same level have consistent indentation
+  // Memoized to avoid rebuilding on every render
+  // NOTE: Must be called before early return to comply with Rules of Hooks
+  const hasGroupMap = useMemo(() => {
+    if (!node) return new Map<number, boolean>();
+    const map = new Map<number, boolean>();
+    buildHasGroupMap(node, 0, map);
+    return map;
+  }, [node]);
+
   if (!node) {
     return (
       <div className="node-inspector">
@@ -508,11 +519,6 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
       </div>
     );
   }
-
-  // Build hasGroup map for all levels (matches octaneWeb's hasGroup[] array logic)
-  // This ensures that all siblings at the same level have consistent indentation
-  const hasGroupMap = new Map<number, boolean>();
-  buildHasGroupMap(node, 0, hasGroupMap);
 
   return (
     <div className="node-inspector" onContextMenu={handleContextMenu}>

@@ -10,9 +10,13 @@
  * - Color pickers for RGB values
  * - Number spinners for numeric inputs
  * - Matches octaneWeb GenericNodeRenderer structure
+ *
+ * Performance:
+ * - Memoized with React.memo to prevent unnecessary re-renders
+ * - Custom comparison function for deep equality checks on paramValue
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { AttrType } from '../../constants/OctaneTypes';
 import { formatColorValue } from '../../utils/ColorUtils';
@@ -57,7 +61,7 @@ interface ParameterControlProps {
 /**
  * Renders parameter controls based on attribute type
  */
-export function ParameterControl({
+function ParameterControlComponent({
   node,
   paramValue,
   onValueChange,
@@ -697,3 +701,65 @@ export function ParameterControl({
   // Wrap in node-parameter-controls div (matching octaneWeb GenericNodeRenderer structure)
   return controlHtml ? <div className="node-parameter-controls">{controlHtml}</div> : null;
 }
+
+/**
+ * Custom comparison function for React.memo
+ * Compares node.handle and paramValue deeply to prevent unnecessary re-renders
+ */
+function arePropsEqual(
+  prevProps: ParameterControlProps,
+  nextProps: ParameterControlProps
+): boolean {
+  // Compare node handle (most important - if node changed, re-render)
+  if (prevProps.node.handle !== nextProps.node.handle) {
+    return false;
+  }
+
+  // Compare paramValue (null checks)
+  if (prevProps.paramValue === null && nextProps.paramValue === null) {
+    return true;
+  }
+  if (prevProps.paramValue === null || nextProps.paramValue === null) {
+    return false;
+  }
+
+  // Compare paramValue type
+  if (prevProps.paramValue.type !== nextProps.paramValue.type) {
+    return false;
+  }
+
+  // Deep compare paramValue.value (handles primitives and objects like {x, y, z})
+  const prevValue = prevProps.paramValue.value;
+  const nextValue = nextProps.paramValue.value;
+
+  if (typeof prevValue !== typeof nextValue) {
+    return false;
+  }
+
+  if (typeof prevValue === 'object' && prevValue !== null && nextValue !== null) {
+    // Compare object properties (for vectors like {x, y, z, w})
+    const prevKeys = Object.keys(prevValue);
+    const nextKeys = Object.keys(nextValue);
+
+    if (prevKeys.length !== nextKeys.length) {
+      return false;
+    }
+
+    for (const key of prevKeys) {
+      if (prevValue[key] !== nextValue[key]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Primitive comparison
+  return prevValue === nextValue;
+}
+
+/**
+ * Memoized ParameterControl component
+ * Only re-renders when node handle or paramValue actually changes
+ */
+export const ParameterControl = memo(ParameterControlComponent, arePropsEqual);

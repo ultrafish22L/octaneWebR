@@ -12,7 +12,7 @@
  * - Type conversion for all Octane attribute types
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
@@ -139,97 +139,100 @@ export function useParameterValue(
     fetchValue();
   }, [isEndNode, node.handle, node.attrInfo, node.name, node.outType, client]);
 
-  // Handle parameter value change
-  const handleValueChange = async (newValue: any) => {
-    if (!node.handle || !node.attrInfo) return;
+  // Handle parameter value change (memoized with useCallback)
+  const handleValueChange = useCallback(
+    async (newValue: any) => {
+      if (!node.handle || !node.attrInfo) return;
 
-    try {
-      const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
+      try {
+        const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-      // Determine the correct value field name based on type
-      // CRITICAL: Must match exact field names used by octaneWeb and Octane API
-      let valueField: string;
-      let formattedValue: any;
+        // Determine the correct value field name based on type
+        // CRITICAL: Must match exact field names used by octaneWeb and Octane API
+        let valueField: string;
+        let formattedValue: any;
 
-      switch (expectedType) {
-        case AttrType.AT_BOOL:
-          valueField = 'bool_value';
-          formattedValue = Boolean(newValue);
-          break;
-        case AttrType.AT_INT:
-          valueField = 'int_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_INT2:
-          valueField = 'int2_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_INT3:
-          valueField = 'int3_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_INT4:
-          valueField = 'int4_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_LONG:
-          valueField = 'long_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_LONG2:
-          valueField = 'long2_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_FLOAT:
-          valueField = 'float_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_FLOAT2:
-          valueField = 'float2_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_FLOAT3:
-          valueField = 'float3_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_FLOAT4:
-          valueField = 'float4_value';
-          formattedValue = newValue;
-          break;
-        case AttrType.AT_STRING:
-          valueField = 'string_value';
-          formattedValue = String(newValue);
-          break;
-        default:
-          Logger.warn(`⚠️  Unsupported type for setValue: ${node.attrInfo.type}`);
-          return;
+        switch (expectedType) {
+          case AttrType.AT_BOOL:
+            valueField = 'bool_value';
+            formattedValue = Boolean(newValue);
+            break;
+          case AttrType.AT_INT:
+            valueField = 'int_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_INT2:
+            valueField = 'int2_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_INT3:
+            valueField = 'int3_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_INT4:
+            valueField = 'int4_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_LONG:
+            valueField = 'long_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_LONG2:
+            valueField = 'long2_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_FLOAT:
+            valueField = 'float_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_FLOAT2:
+            valueField = 'float2_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_FLOAT3:
+            valueField = 'float3_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_FLOAT4:
+            valueField = 'float4_value';
+            formattedValue = newValue;
+            break;
+          case AttrType.AT_STRING:
+            valueField = 'string_value';
+            formattedValue = String(newValue);
+            break;
+          default:
+            Logger.warn(`⚠️  Unsupported type for setValue: ${node.attrInfo.type}`);
+            return;
+        }
+
+        Logger.debug(`📝 Setting ${node.name} = ${JSON.stringify(formattedValue)}`);
+
+        // Call setValueByAttrID to update the value in Octane
+        // Note: evaluate: false is required (matches octaneWeb behavior)
+        await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
+          attribute_id: AttributeId.A_VALUE,
+          expected_type: expectedType,
+          [valueField]: formattedValue,
+          evaluate: false, // Required parameter from octaneWeb
+        });
+
+        // Update local state to reflect the change
+        setParamValue({
+          value: formattedValue,
+          type: expectedType,
+        });
+
+        Logger.debug(`✅ Successfully updated ${node.name}`);
+
+        // Trigger render update to see changes
+        await client.callApi('ApiChangeManager', 'update', {});
+      } catch (error: any) {
+        Logger.error(`❌ Failed to update ${node.name}:`, error.message || error);
       }
-
-      Logger.debug(`📝 Setting ${node.name} = ${JSON.stringify(formattedValue)}`);
-
-      // Call setValueByAttrID to update the value in Octane
-      // Note: evaluate: false is required (matches octaneWeb behavior)
-      await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
-        attribute_id: AttributeId.A_VALUE,
-        expected_type: expectedType,
-        [valueField]: formattedValue,
-        evaluate: false, // Required parameter from octaneWeb
-      });
-
-      // Update local state to reflect the change
-      setParamValue({
-        value: formattedValue,
-        type: expectedType,
-      });
-
-      Logger.debug(`✅ Successfully updated ${node.name}`);
-
-      // Trigger render update to see changes
-      await client.callApi('ApiChangeManager', 'update', {});
-    } catch (error: any) {
-      Logger.error(`❌ Failed to update ${node.name}:`, error.message || error);
-    }
-  };
+    },
+    [node.handle, node.attrInfo, node.name, client]
+  );
 
   return {
     paramValue,

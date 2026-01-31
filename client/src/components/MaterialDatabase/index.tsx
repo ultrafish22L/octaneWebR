@@ -12,17 +12,51 @@
  * - Uses React Query (useMaterialCategories, useMaterialsForCategory, useDownloadMaterial)
  * - Automatic caching and background refetching
  * - Declarative data fetching with loading/error states
+ * - Memoized MaterialCard component for optimal rendering performance
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import {
   useMaterialCategories,
   useMaterialsForCategory,
   useDownloadMaterial,
   type DBType,
+  type Material,
 } from '../../hooks/useMaterialQueries';
 import { SkeletonMaterialGrid } from '../Skeleton';
+
+/**
+ * Material Card Component - Memoized for performance
+ * Only re-renders when material data changes
+ */
+interface MaterialCardProps {
+  material: Material;
+  onDownload: (materialId: number, materialName: string) => void;
+}
+
+const MaterialCard = memo<MaterialCardProps>(({ material, onDownload }) => {
+  const handleDoubleClick = useCallback(() => {
+    onDownload(material.id, material.name);
+  }, [material.id, material.name, onDownload]);
+
+  return (
+    <div
+      className="material-card"
+      onDoubleClick={handleDoubleClick}
+      title={`Double-click to download: ${material.name}`}
+    >
+      <div className="material-preview">
+        {material.preview ? (
+          <img src={material.preview} alt={material.name} />
+        ) : (
+          <div className="material-preview-placeholder">No Preview</div>
+        )}
+      </div>
+      <div className="material-name">{material.name}</div>
+    </div>
+  );
+});
 
 interface MaterialDatabaseProps {
   visible: boolean;
@@ -44,34 +78,37 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
   const loading = categoriesQuery.isLoading || materialsQuery.isLoading;
   const error = categoriesQuery.error?.message || materialsQuery.error?.message || null;
 
-  // Handle material download using React Query mutation
-  const handleDownloadMaterial = (materialId: number, materialName: string) => {
-    downloadMaterialMutation.mutate(
-      { materialId, materialName, dbType: activeTab },
-      {
-        onSuccess: () => {
-          Logger.debug(`✅ Download complete: ${materialName}`);
-          // TODO: Show success notification
-        },
-        onError: (error: any) => {
-          Logger.error(`❌ Download failed: ${materialName}`, error);
-          // Error is already logged by the mutation hook
-        },
-      }
-    );
-  };
+  // Handle material download using React Query mutation (memoized with useCallback)
+  const handleDownloadMaterial = useCallback(
+    (materialId: number, materialName: string) => {
+      downloadMaterialMutation.mutate(
+        { materialId, materialName, dbType: activeTab },
+        {
+          onSuccess: () => {
+            Logger.debug(`✅ Download complete: ${materialName}`);
+            // TODO: Show success notification
+          },
+          onError: (error: any) => {
+            Logger.error(`❌ Download failed: ${materialName}`, error);
+            // Error is already logged by the mutation hook
+          },
+        }
+      );
+    },
+    [downloadMaterialMutation, activeTab]
+  );
 
-  const handleCategoryChange = (categoryId: string) => {
+  const handleCategoryChange = useCallback((categoryId: string) => {
     const id = parseInt(categoryId, 10);
     setSelectedCategory(id);
     // React Query will automatically fetch materials for the new category
-  };
+  }, []);
 
-  const handleTabChange = (tab: DBType) => {
+  const handleTabChange = useCallback((tab: DBType) => {
     setActiveTab(tab);
     setSelectedCategory(null); // Reset category when switching tabs
     // React Query will automatically refetch categories for the new tab
-  };
+  }, []);
 
   if (!visible) return null;
 
@@ -154,21 +191,11 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
           {!loading && materials.length > 0 && (
             <div className="material-grid">
               {materials.map(material => (
-                <div
+                <MaterialCard
                   key={material.id}
-                  className="material-card"
-                  onDoubleClick={() => handleDownloadMaterial(material.id, material.name)}
-                  title={`Double-click to download: ${material.name}`}
-                >
-                  <div className="material-preview">
-                    {material.preview ? (
-                      <img src={material.preview} alt={material.name} />
-                    ) : (
-                      <div className="material-preview-placeholder">No Preview</div>
-                    )}
-                  </div>
-                  <div className="material-name">{material.name}</div>
-                </div>
+                  material={material}
+                  onDownload={handleDownloadMaterial}
+                />
               ))}
             </div>
           )}

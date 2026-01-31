@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - React 18 Modernization P2C: Performance Optimization (2025-02-03)
+
+- **React.memo Optimizations**: Prevented unnecessary re-renders in high-frequency components
+  - `ParameterControl` component with custom `arePropsEqual` comparator
+    - Deep equality check for `paramValue` (handles primitives and vector objects)
+    - Compares node handle and parameter type for accurate re-render decisions
+    - Critical for NodeInspector with 100+ parameters
+  - `MaterialCard` component extracted from inline JSX
+    - Memoized with stable `onDownload` callback
+    - Prevents re-render of entire material grid on hover/interaction
+  - `VirtualTreeRow` component with custom comparator
+    - Smart comparison of index, flatNode data, and selection state
+    - Only re-renders affected rows on selection changes
+    - Critical for SceneOutliner with hundreds of tree nodes
+  - Files: `client/src/components/NodeInspector/ParameterControl.tsx`,
+    `client/src/components/MaterialDatabase/index.tsx`,
+    `client/src/components/SceneOutliner/VirtualTreeRow.tsx`
+
+- **useCallback Optimizations**: Stabilized function references to enable memoization
+  - `useParameterValue` hook: Memoized `handleValueChange` callback
+    - Prevents ParameterControl re-renders from changing callbacks
+    - Dependencies: node.handle, node.attrInfo, node.name, client
+  - `MaterialDatabase`: Memoized event handlers
+    - `handleDownloadMaterial`, `handleCategoryChange`, `handleTabChange`
+    - Enables MaterialCard memoization to work effectively
+  - Files: `client/src/components/NodeInspector/hooks/useParameterValue.ts`,
+    `client/src/components/MaterialDatabase/index.tsx`
+
+- **useMemo Optimizations**: Cached expensive computations
+  - `NodeInspector`: Memoized `hasGroupMap` calculation
+    - Recursive tree traversal now cached and only recomputed on node changes
+    - Prevents rebuilding indent map on every render
+  - `EditActionsContext`: Memoized context value object
+    - Prevents all context consumers from re-rendering unnecessarily
+    - All callback dependencies properly tracked
+  - Files: `client/src/components/NodeInspector/index.tsx`,
+    `client/src/contexts/EditActionsContext.tsx`
+
+**Performance Impact:**
+
+- ✅ **ParameterControl**: 100+ parameter controls in NodeInspector now skip re-renders when unchanged
+- ✅ **MaterialCard**: Material grid (12-50+ items) only re-renders changed cards
+- ✅ **VirtualTreeRow**: Tree with 100+ nodes only re-renders visible affected rows
+- ✅ **Stable Callbacks**: useCallback prevents cascading re-renders from prop changes
+- ✅ **Cached Computations**: useMemo eliminates redundant expensive calculations
+- ✅ **Context Optimization**: EditActions consumers only re-render when callbacks actually change
+
+**Technical Details:**
+
+- Custom `arePropsEqual` functions provide precise control over memoization
+- Deep equality checks for complex parameter values (vectors, colors)
+- Smart selection state comparison only re-renders affected tree rows
+- TypeScript type assertions maintain compatibility with third-party libs (react-window)
+
 ### Added - React 18 Modernization P2B: React Query (2025-02-03)
 
 - **React Query Integration**: Modern data fetching and state management

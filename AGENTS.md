@@ -209,6 +209,66 @@ import './MyComponent.css';
 
 ## Recent Major Changes
 
+### 2025-02-03: React 18 Modernization - P2C Performance Optimization ✅
+
+**React.memo Optimizations**
+
+- `ParameterControl`: Custom comparator for deep equality checks
+  - Prevents unnecessary re-renders of 100+ parameter controls in NodeInspector
+  - Deep comparison of paramValue (primitives and vector objects)
+- `MaterialCard`: Extracted from inline JSX, memoized with stable callbacks
+  - Material grid (12-50+ items) only re-renders changed cards
+- `VirtualTreeRow`: Smart selection state comparison
+  - Tree with 100+ nodes only re-renders visible affected rows
+
+**useCallback Optimizations**
+
+- `useParameterValue` hook: Stabilized `handleValueChange` callback
+- `MaterialDatabase`: Memoized all event handlers (`handleDownloadMaterial`, `handleCategoryChange`, `handleTabChange`)
+- Enables React.memo components to skip re-renders effectively
+
+**useMemo Optimizations**
+
+- `NodeInspector`: Cached recursive `hasGroupMap` tree traversal
+- `EditActionsContext`: Memoized context value object to prevent cascading re-renders
+
+**Performance Impact**:
+
+- ✅ 100+ parameter controls skip re-renders when unchanged
+- ✅ Material grid only re-renders affected cards
+- ✅ Tree rows with smart selection comparison
+- ✅ Eliminated redundant expensive calculations
+- ✅ Context consumers only re-render when necessary
+
+### 2025-02-03: React 18 Modernization - P2B React Query ✅
+
+**React Query Integration**
+
+- Installed `@tanstack/react-query@^5.90.20` + devtools
+- Centralized QueryClient with Octane-optimized config (5min stale, 10min cache)
+- Query keys factory for type safety and consistency
+
+**Material Database Hooks**
+
+- `useMaterialCategories`: Fetches categories with automatic caching
+- `useMaterialsForCategory`: Smart query dependencies and invalidation
+- `useDownloadMaterial`: Mutation hook with optimistic updates
+
+**MaterialDatabase Migration**
+
+- Removed 100+ lines of manual useState/useEffect state management
+- Declarative data fetching with automatic loading/error states
+- Background refetching keeps data fresh during long sessions
+- Automatic request deduplication and caching
+
+**Benefits**:
+
+- ✅ Automatic caching eliminates redundant API calls
+- ✅ Background refetching without blocking UI
+- ✅ Request deduplication for efficient data sharing
+- ✅ Optimistic updates for better perceived performance
+- ✅ React Query DevTools for debugging
+
 ### 2025-02-01: Refactoring Completion ✅
 
 **SceneOutliner Hook Extraction**
