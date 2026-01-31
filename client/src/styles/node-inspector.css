@@ -773,13 +773,13 @@
 /* Node header with improved spacing and alignment - ONLY for Node Inspector */
 .node-inspector .node-label {
   display: grid;
-  grid-template-columns: 175px 1fr;
+  grid-template-columns: 148px 1fr;
   align-items: center;
   cursor: pointer;
   user-select: none;
   width: 100%;
   min-height: 20px;
-  gap: 8px;
+  gap: 22px;
 }
 
 .node-inspector .node-label:hover {
