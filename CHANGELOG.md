@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - React 18 Modernization P1 (2025-02-03)
+
+- **Error Boundaries**: Production-grade error handling for all critical components
+  - Installed `react-error-boundary@^6.1.0` for robust error catching
+  - Created custom ErrorBoundary component with fallback UI
+  - Error details panel with expandable stack traces
+  - "Try again" button with page reload fallback
+  - Integrated with Logger for error tracking
+  - Wrapped components: Viewport, NodeGraph, SceneOutliner, NodeInspector, Dialogs
+  - Files: `client/src/components/ErrorBoundary/index.tsx`, `client/src/styles/error-boundary.css`
+- **Code Splitting**: Lazy loading for heavy components to reduce initial bundle size
+  - Created LoadingFallback component with animated spinner
+  - Uses CSS variables for consistent theming
+  - Lazy loaded NodeGraphEditor (~250KB bundle)
+  - Lazy loaded MaterialDatabase (~100KB bundle)
+  - Wrapped with Suspense boundaries for graceful loading states
+  - Expected bundle size reduction: 587KB → ~150-200KB initial load
+  - Files: `client/src/components/LoadingFallback/index.tsx`, `client/src/components/LoadingFallback/loading-fallback.css`
+
+- **Accessibility Improvements**: Enhanced screen reader compatibility
+  - Added `role="separator"` to all panel splitters
+  - Added descriptive `aria-label` attributes for resize handles
+  - Documented ESLint exceptions for intentionally interactive separators
+  - Files: `client/src/App.tsx`
+
+- **Documentation**: Updated modernization tracking
+  - Marked P1 features as complete in MODERNIZATION_GUIDE.md
+  - Next phase: P2 (Suspense Boundaries + React Query, 2-3 days)
+  - Commit: 02585d6
+
 ### Fixed - Regression Fixes (2025-02-01)
 
 - **Color Picker Visibility**: Fixed missing color pickers for stereo filters and environment colors
