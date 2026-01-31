@@ -29,6 +29,22 @@ export function useTreeExpansion({
 }: UseTreeExpansionProps) {
   const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(new Map());
 
+  // Auto-initialize expansion when sceneTree first loads
+  React.useEffect(() => {
+    if (sceneTree.length > 0 && expansionMap.size === 0) {
+      const syntheticRoot: SceneNode[] = [
+        {
+          handle: -1,
+          name: 'Scene',
+          type: 'SceneRoot',
+          typeEnum: 0,
+          children: sceneTree,
+        },
+      ];
+      setExpansionMap(initializeExpansionMap(syntheticRoot));
+    }
+  }, [sceneTree, expansionMap.size]);
+
   // Toggle node expansion
   const handleToggleExpansion = useCallback((nodeKey: string) => {
     setExpansionMap(prevMap => toggleExpansion(prevMap, nodeKey));

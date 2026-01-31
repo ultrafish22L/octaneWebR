@@ -38,23 +38,15 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   // Context menu actions
   const contextMenu = useContextMenuActions({ onNodeSelect });
 
-  // Tree expansion management (temporary initialization)
-  const treeExpansionInit = useTreeExpansion({
-    sceneTree: [],
-    selectedNode,
-    onNodeSelect,
-    onNodeContextMenu: contextMenu.handleNodeContextMenu,
-  });
-
   // Scene tree management
   const { sceneTree, loading, loadSceneTree } = useSceneTree({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
-    initializeExpansion: treeExpansionInit.initializeExpansion,
+    initializeExpansion: () => {}, // No-op, auto-initialization happens in useTreeExpansion now
   });
 
-  // Update tree expansion with current sceneTree
+  // Tree expansion management (auto-initializes when sceneTree loads)
   const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll } = useTreeExpansion({
     sceneTree,
     selectedNode,
