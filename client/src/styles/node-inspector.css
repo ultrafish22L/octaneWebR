@@ -983,6 +983,7 @@
 }
 
 .color-input {
+  display: block !important; /* Override .parameter-control flex */
   flex: 1; /* Responsive - fill available space */
   min-width: 60px;
   height: 20px;
