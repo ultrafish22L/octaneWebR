@@ -176,3 +176,72 @@ export interface CameraState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
+
+/**
+ * Progressive Scene Loading Types
+ * Added 2025-02-03 for Sprint 1: Progressive Scene Loading optimization
+ */
+
+/**
+ * Stages of progressive scene loading
+ */
+export enum SceneLoadStage {
+  IDLE = 'idle',
+  ROOT = 'root',
+  LEVEL_0 = 'level_0',
+  PINS = 'pins',
+  CONNECTIONS = 'connections',
+  DEEP_NODES = 'deep_nodes',
+  COMPLETE = 'complete'
+}
+
+/**
+ * Progressive load progress event data
+ */
+export interface ProgressiveLoadEvent {
+  stage: SceneLoadStage;
+  progress: number;        // 0-100
+  message: string;
+  nodesLoaded: number;
+  totalEstimate?: number;
+}
+
+/**
+ * Result from loading a level of the scene tree
+ */
+export interface LevelLoadResult {
+  level: number;
+  nodes: SceneNode[];
+  hasMore: boolean;
+}
+
+/**
+ * Incremental scene update delta
+ */
+export interface SceneUpdateDelta {
+  added: SceneNode[];
+  updated: Array<{ handle: number; changes: Partial<SceneNode> }>;
+  removed: number[];
+}
+
+/**
+ * Configuration for progressive loading
+ */
+export interface ProgressiveConfig {
+  enabled: boolean;
+  maxParallelRequests: number;
+  yieldInterval: number;      // ms between yields to UI
+  batchSize: number;          // nodes per batch
+  deepLoadDelay: number;      // ms before starting deep load
+}
+
+/**
+ * Scene node with loading state tracking
+ * Extends SceneNode with progressive loading metadata
+ */
+export interface SceneNodeWithState extends SceneNode {
+  loadState?: 'pending' | 'loading' | 'loaded' | 'error';
+  pinsLoaded?: boolean;
+  connectionsLoaded?: boolean;
+  childrenLoaded?: boolean;
+}

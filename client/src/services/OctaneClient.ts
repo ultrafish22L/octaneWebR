@@ -26,6 +26,8 @@ import {
   MaterialCategory,
   Material
 } from './octane';
+import { ProgressiveSceneService } from './octane/ProgressiveSceneService';
+import { FEATURES } from '../config/features';
 
 // Re-export types for backward compatibility
 export type {
@@ -57,6 +59,9 @@ export class OctaneClient extends EventEmitter {
   private nodeService: NodeService;
   private materialDatabaseService: MaterialDatabaseService;
   private renderExportService: RenderExportService;
+  
+  // Optimization services (Sprint 1+)
+  private progressiveSceneService: ProgressiveSceneService;
 
   constructor(serverUrl?: string) {
     super();
@@ -74,6 +79,9 @@ export class OctaneClient extends EventEmitter {
     this.nodeService = new NodeService(this, this.serverUrl, this.apiService, this.sceneService);
     this.materialDatabaseService = new MaterialDatabaseService(this, this.serverUrl, this.apiService, this.sceneService);
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
+    
+    // Initialize optimization services (Sprint 1+)
+    this.progressiveSceneService = new ProgressiveSceneService(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
@@ -129,8 +137,36 @@ export class OctaneClient extends EventEmitter {
 
   // ==================== Scene Methods ====================
   
+  /**
+   * Build scene tree with optional progressive loading
+   * Uses ProgressiveSceneService if PROGRESSIVE_LOADING feature flag is enabled
+   * Falls back to traditional sequential loading otherwise
+   */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
-    return this.sceneService.buildSceneTree(newNodeHandle);
+    // Incremental update (add single node) - always use traditional service
+    if (newNodeHandle !== undefined) {
+      return this.sceneService.buildSceneTree(newNodeHandle);
+    }
+    
+    // Full scene load - use progressive if enabled
+    if (FEATURES.PROGRESSIVE_LOADING) {
+      Logger.info('🚀 Using progressive scene loading');
+      return this.progressiveSceneService.buildSceneProgressive();
+    }
+    
+    // Fallback to traditional sequential loading
+    Logger.debug('📦 Using traditional scene loading');
+    return this.sceneService.buildSceneTree();
+  }
+  
+  /**
+   * Abort current scene loading operation
+   * Only effective when progressive loading is enabled
+   */
+  abortSceneLoad(): void {
+    if (FEATURES.PROGRESSIVE_LOADING) {
+      this.progressiveSceneService.abort();
+    }
   }
 
   lookupItem(handle: number): SceneNode | null {
@@ -149,7 +185,14 @@ export class OctaneClient extends EventEmitter {
     return this.sceneService.setNodeVisibility(handle, visible);
   }
 
+  /**
+   * Get current scene
+   * Returns scene from progressive service if it was used, otherwise from traditional service
+   */
   getScene(): Scene {
+    if (FEATURES.PROGRESSIVE_LOADING && this.progressiveSceneService.getScene().tree.length > 0) {
+      return this.progressiveSceneService.getScene();
+    }
     return this.sceneService.getScene();
   }
 
