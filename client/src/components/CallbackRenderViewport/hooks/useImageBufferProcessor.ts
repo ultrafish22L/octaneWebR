@@ -7,8 +7,9 @@
  * CRITICAL: Direct port of octaneWeb buffer processing logic - preserves buffer isolation
  */
 
-import { useCallback, RefObject, useRef } from 'react';
+import { useCallback, RefObject } from 'react';
 import Logger from '../../../utils/Logger';
+import { useCanvasRenderer } from './useCanvasRenderer';
 
 interface OctaneImageData {
   type: number | string; // Can be numeric (0, 1) or string enum ("IMAGE_TYPE_LDR_RGBA", etc.)
@@ -37,10 +38,6 @@ export function useImageBufferProcessor({
   onFrameRendered,
   onStatusUpdate,
 }: UseImageBufferProcessorParams) {
-  // ✅ Throttle status updates to human-readable rate (Phase 1 optimization)
-  const lastStatusUpdateRef = useRef(0);
-  const STATUS_UPDATE_INTERVAL = 500; // ms (2 updates per second max)
-
   /**
    * Convert LDR RGBA buffer to canvas
    * CRITICAL: Exact port from octaneWeb - preserves buffer isolation
@@ -185,14 +182,25 @@ export function useImageBufferProcessor({
     [convertLDRRGBA, convertHDRRGBA]
   );
 
+  // ✅ Phase 2: RAF-based renderer with frame coalescing
+  const { scheduleRender } = useCanvasRenderer({
+    canvasRef,
+    onFrameRendered,
+    onStatusUpdate,
+    convertBufferToCanvas,
+  });
+
   /**
    * Display image from callback data
-   * CRITICAL: Direct port of octaneWeb buffer processing logic
+   * ✅ Phase 2: Now schedules RAF instead of immediate rendering
+   * - Validates image data
+   * - Schedules RAF render (automatic frame coalescing)
+   * - RAF loop handles actual canvas rendering
    */
   const displayImage = useCallback(
     (imageData: OctaneImageData) => {
-      Logger.debug('🎯🎯🎯 [VIEWPORT] displayCallbackImage CALLED');
-      Logger.debug('📊 [VIEWPORT] Image data:', {
+      Logger.debug('🎯 [VIEWPORT] displayImage CALLED (RAF scheduling)');
+      Logger.debugV('📊 [VIEWPORT] Image data:', {
         hasSize: !!imageData.size,
         width: imageData.size?.x,
         height: imageData.size?.y,
@@ -202,24 +210,10 @@ export function useImageBufferProcessor({
       });
 
       try {
-        const canvas = canvasRef.current;
-        Logger.debug('🎯 [VIEWPORT] Canvas ref:', !!canvas);
-
-        if (!canvas) {
-          Logger.error('❌ [VIEWPORT] Canvas ref is null - cannot display image!');
+        // Quick validation
+        if (!canvasRef.current) {
+          Logger.error('❌ [VIEWPORT] Canvas ref is null');
           return;
-        }
-
-        Logger.debug('📊 [VIEWPORT] Canvas element:', {
-          width: canvas.width,
-          height: canvas.height,
-          offsetWidth: canvas.offsetWidth,
-          offsetHeight: canvas.offsetHeight,
-          parentElement: !!canvas.parentElement,
-        });
-
-        if (onFrameRendered) {
-          onFrameRendered();
         }
 
         if (!imageData.buffer || !imageData.buffer.data) {
@@ -227,91 +221,17 @@ export function useImageBufferProcessor({
           return;
         }
 
-        // Decode base64 buffer
-        const bufferData: any = imageData.buffer.data; // Can be string or Buffer object
-        const width = imageData.size.x;
-        const height = imageData.size.y;
-
-        // ✅ Only resize canvas when dimensions actually change (Phase 1 optimization)
-        // Setting canvas.width/height clears the canvas, so avoid it when unnecessary
-        if (canvas.width !== width || canvas.height !== height) {
-          canvas.width = width;
-          canvas.height = height;
-          canvas.style.width = `${width}px`;
-          canvas.style.height = `${height}px`;
-        }
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          Logger.debug('[displayCallbackImage] Failed to get 2d context');
-          return;
-        }
-
-        const canvasImageData = ctx.createImageData(width, height);
-
-        // Handle buffer data - could be base64 string or Node.js Buffer object
-        let bytes: Uint8Array;
-
-        // Check if it's a Node.js Buffer serialized as JSON {type: "Buffer", data: [bytes]}
-        if (
-          typeof bufferData === 'object' &&
-          bufferData.type === 'Buffer' &&
-          Array.isArray(bufferData.data)
-        ) {
-          bytes = new Uint8Array(bufferData.data);
-        } else if (typeof bufferData === 'string') {
-          // It's a base64 string
-          try {
-            const binaryString = atob(bufferData);
-            bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-          } catch (error: any) {
-            Logger.debug(
-              '[displayCallbackImage] Base64 decode error:',
-              error?.message || error?.toString() || JSON.stringify(error)
-            );
-            return;
-          }
-        } else {
-          Logger.debug(
-            '[displayCallbackImage] Unknown buffer format:',
-            typeof bufferData,
-            bufferData
-          );
-          return;
-        }
-
-        // Convert buffer to RGBA format for canvas
-        Logger.debug('🎨 [VIEWPORT] Converting buffer to canvas format...');
-        convertBufferToCanvas(bytes, imageData, canvasImageData);
-        Logger.debug('✅ [VIEWPORT] Buffer conversion complete');
-
-        Logger.debug('🎨 [VIEWPORT] Rendering to canvas...');
-        ctx.putImageData(canvasImageData, 0, 0);
-        Logger.debug('✅ [VIEWPORT] Image rendered to canvas successfully!');
-
-        // ✅ Throttled status updates (Phase 1 optimization)
-        // Only update status 2 times per second max (human-readable rate)
-        if (onStatusUpdate) {
-          const now = Date.now();
-          if (now - lastStatusUpdateRef.current >= STATUS_UPDATE_INTERVAL) {
-            lastStatusUpdateRef.current = now;
-            const newStatus =
-              `${width}x${height} | ` +
-              `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
-              `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
-            onStatusUpdate(newStatus);
-            Logger.debug('📊 [VIEWPORT] Status updated:', newStatus);
-          }
-        }
+        // ✅ Phase 2: Schedule RAF render instead of immediate rendering
+        // This enables frame coalescing - if RAF hasn't fired yet, this
+        // image replaces the previous pending image
+        scheduleRender(imageData);
+        Logger.debugV('✅ [VIEWPORT] Render scheduled via RAF');
       } catch (error: any) {
-        Logger.error('❌ [VIEWPORT] Error displaying callback image:', error);
+        Logger.error('❌ [VIEWPORT] Error scheduling render:', error);
         Logger.error('❌ [VIEWPORT] Stack:', error.stack);
       }
     },
-    [canvasRef, onFrameRendered, onStatusUpdate, convertBufferToCanvas]
+    [canvasRef, scheduleRender]
   );
 
   return { displayImage };
