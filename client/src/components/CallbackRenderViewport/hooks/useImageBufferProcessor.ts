@@ -7,7 +7,7 @@
  * CRITICAL: Direct port of octaneWeb buffer processing logic - preserves buffer isolation
  */
 
-import { useCallback, RefObject } from 'react';
+import { useCallback, RefObject, useRef } from 'react';
 import Logger from '../../../utils/Logger';
 
 interface OctaneImageData {
@@ -37,6 +37,10 @@ export function useImageBufferProcessor({
   onFrameRendered,
   onStatusUpdate,
 }: UseImageBufferProcessorParams) {
+  // ✅ Throttle status updates to human-readable rate (Phase 1 optimization)
+  const lastStatusUpdateRef = useRef(0);
+  const STATUS_UPDATE_INTERVAL = 500; // ms (2 updates per second max)
+
   /**
    * Convert LDR RGBA buffer to canvas
    * CRITICAL: Exact port from octaneWeb - preserves buffer isolation
@@ -228,13 +232,14 @@ export function useImageBufferProcessor({
         const width = imageData.size.x;
         const height = imageData.size.y;
 
-        // Set canvas internal resolution
-        canvas.width = width;
-        canvas.height = height;
-
-        // Set CSS display size to match (actual pixel size)
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
+        // ✅ Only resize canvas when dimensions actually change (Phase 1 optimization)
+        // Setting canvas.width/height clears the canvas, so avoid it when unnecessary
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
+        }
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -287,14 +292,19 @@ export function useImageBufferProcessor({
         ctx.putImageData(canvasImageData, 0, 0);
         Logger.debug('✅ [VIEWPORT] Image rendered to canvas successfully!');
 
-        // Update status
+        // ✅ Throttled status updates (Phase 1 optimization)
+        // Only update status 2 times per second max (human-readable rate)
         if (onStatusUpdate) {
-          const newStatus =
-            `${width}x${height} | ` +
-            `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
-            `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
-          onStatusUpdate(newStatus);
-          Logger.debug('📊 [VIEWPORT] Status updated:', newStatus);
+          const now = Date.now();
+          if (now - lastStatusUpdateRef.current >= STATUS_UPDATE_INTERVAL) {
+            lastStatusUpdateRef.current = now;
+            const newStatus =
+              `${width}x${height} | ` +
+              `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
+              `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
+            onStatusUpdate(newStatus);
+            Logger.debug('📊 [VIEWPORT] Status updated:', newStatus);
+          }
         }
       } catch (error: any) {
         Logger.error('❌ [VIEWPORT] Error displaying callback image:', error);

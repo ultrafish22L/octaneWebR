@@ -781,18 +781,20 @@ export const NodeGraphEditor = React.memo(function NodeGraphEditor({
   onRecenterViewReady,
 }: NodeGraphEditorProps) {
   return (
-    <ReactFlowProvider>
-      <NodeGraphEditorInner
-        sceneTree={sceneTree}
-        selectedNode={selectedNode}
-        onNodeSelect={onNodeSelect}
-        gridVisible={gridVisible}
-        setGridVisible={setGridVisible}
-        snapToGrid={snapToGrid}
-        setSnapToGrid={setSnapToGrid}
-        onRecenterViewReady={onRecenterViewReady}
-      />
-    </ReactFlowProvider>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <ReactFlowProvider>
+        <NodeGraphEditorInner
+          sceneTree={sceneTree}
+          selectedNode={selectedNode}
+          onNodeSelect={onNodeSelect}
+          gridVisible={gridVisible}
+          setGridVisible={setGridVisible}
+          snapToGrid={snapToGrid}
+          setSnapToGrid={setSnapToGrid}
+          onRecenterViewReady={onRecenterViewReady}
+        />
+      </ReactFlowProvider>
+    </div>
   );
 });
 

@@ -15,6 +15,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 import { ViewportContextMenu } from './ViewportContextMenu';
@@ -291,6 +292,21 @@ export const CallbackRenderViewport = React.memo(
         setContextMenuVisible,
       });
 
+      // ✅ Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
+      // Stable object reference prevents unnecessary React DOM updates
+      const canvasStyle = useMemo(
+        () => ({
+          border: '1px solid #444',
+          imageRendering: 'pixelated' as const,
+          display: frameCount > 0 ? 'block' : 'none',
+          transform: `translate(${canvasTransform.offsetX}px, ${canvasTransform.offsetY}px) scale(${canvasTransform.scale})`,
+          transformOrigin: 'center center',
+          transition: 'none',
+          willChange: 'transform', // GPU optimization hint
+        }),
+        [frameCount, canvasTransform.offsetX, canvasTransform.offsetY, canvasTransform.scale]
+      );
+
       return (
         <div className="callback-render-viewport" ref={viewportRef}>
           <div className="viewport-canvas-container">
@@ -309,18 +325,7 @@ export const CallbackRenderViewport = React.memo(
                 <div>{status}</div>
               </div>
             )}
-            <canvas
-              ref={canvasRef}
-              className="render-canvas"
-              style={{
-                border: '1px solid #444',
-                imageRendering: 'pixelated',
-                display: frameCount > 0 ? 'block' : 'none',
-                transform: `translate(${canvasTransform.offsetX}px, ${canvasTransform.offsetY}px) scale(${canvasTransform.scale})`,
-                transformOrigin: 'center center',
-                transition: 'none',
-              }}
-            />
+            <canvas ref={canvasRef} className="render-canvas" style={canvasStyle} />
 
             {/* World Coordinate Axis Overlay - Octane SE Manual: Display World Coordinate */}
             {showWorldCoord && frameCount > 0 && (
