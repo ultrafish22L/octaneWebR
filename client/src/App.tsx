@@ -38,6 +38,7 @@ import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
 import { SaveRenderDialog } from './components/dialogs/SaveRenderDialog';
 import { ExportPassesDialog } from './components/dialogs/ExportPassesDialog';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
+import { logFeatureFlags } from './config/features';
 import './styles/error-boundary.css';
 
 // Lazy load heavy components
@@ -247,6 +248,10 @@ function AppContent() {
   useEffect(() => {
     // Auto-connect on mount
     Logger.debug('🚀 OctaneWebR starting...');
+    
+    // Log enabled feature flags
+    logFeatureFlags();
+    
     connect()
       .then(success => {
         if (success) {
