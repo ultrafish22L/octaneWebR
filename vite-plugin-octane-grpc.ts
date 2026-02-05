@@ -677,7 +677,15 @@ export function octaneGrpcPlugin(): Plugin {
         }
         // Client log clear endpoint
         if (url === '/api/logclear' && req.method === 'POST') {
-          fs.rm('/tmp/octaneWebR_client.log');
+          try {
+            fs.rmSync('/tmp/octaneWebR_client.log', { force: true });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok', message: 'Log cleared' }));
+          } catch (error: any) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'error', error: error.message }));
+          }
+          return;
         }
 
         // Client logging endpoint
