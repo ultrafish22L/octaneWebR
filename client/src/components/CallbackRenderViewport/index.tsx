@@ -194,7 +194,8 @@ export const CallbackRenderViewport = React.memo(
       });
 
       // ✅ Phase 3: Image buffer processor hook (now receives isDragging for throttling)
-      const { displayImage } = useImageBufferProcessor({
+      // ✅ Phase 4: Now returns flushPendingFrame to clear stale progressive renders
+      const { displayImage, flushPendingFrame } = useImageBufferProcessor({
         canvasRef,
         onFrameRendered: () => setFrameCount(prev => prev + 1),
         onStatusUpdate: setStatus,
@@ -294,6 +295,22 @@ export const CallbackRenderViewport = React.memo(
       }, [connected, client, displayImage]);
 
       /**
+       * ✅ Phase 4: Flush stale progressive render images when camera drag starts/changes
+       * 
+       * CRITICAL for smooth progressive rendering:
+       * - Octane sends 1000s of onNewImage for a single render (progressive refinement)
+       * - When camera moves, old images from previous position queue up in RAF
+       * - Flush clears these stale images so viewport shows latest position immediately
+       * - Result: No lag/choppiness during camera drag!
+       */
+      useEffect(() => {
+        if (isDragging) {
+          Logger.debugV('[VIEWPORT] 🚮 Camera drag detected - flushing stale progressive renders');
+          flushPendingFrame();
+        }
+      }, [isDragging, flushPendingFrame]);
+
+      /**
        * Listen for programmatic camera changes (e.g., Reset Camera button)
        * Re-sync local camera state when camera is moved externally
        */
@@ -302,6 +319,10 @@ export const CallbackRenderViewport = React.memo(
 
         const handleCameraReset = () => {
           Logger.debug('🔔 [VIEWPORT] Camera reset event received, re-syncing camera state');
+          
+          // ✅ Phase 4: Flush stale renders when camera is reset
+          flushPendingFrame();
+          
           initializeCamera().catch(err => {
             Logger.error('❌ Failed to re-sync camera after reset:', err);
           });
@@ -312,7 +333,7 @@ export const CallbackRenderViewport = React.memo(
         return () => {
           client.off('camera:reset', handleCameraReset);
         };
-      }, [connected, client, initializeCamera]);
+      }, [connected, client, initializeCamera, flushPendingFrame]);
 
       // ✅ Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
       // Stable object reference prevents unnecessary React DOM updates

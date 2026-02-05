@@ -191,7 +191,8 @@ export function useImageBufferProcessor({
   );
 
   // ✅ Phase 2: RAF-based renderer with frame coalescing
-  const { scheduleRender } = useCanvasRenderer({
+  // ✅ Phase 4: Flush mechanism for progressive rendering
+  const { scheduleRender, flushPendingFrame } = useCanvasRenderer({
     canvasRef,
     onFrameRendered,
     onStatusUpdate,
@@ -265,5 +266,5 @@ export function useImageBufferProcessor({
     [canvasRef, scheduleRender, isDragging]
   );
 
-  return { displayImage };
+  return { displayImage, flushPendingFrame };
 }

@@ -178,6 +178,32 @@ export function useCanvasRenderer({
   );
 
   /**
+   * Flush pending frame (called when camera changes or API updates)
+   * 
+   * This is CRITICAL for progressive rendering:
+   * - Octane sends 1000s of images for a single render (progressive refinement)
+   * - When camera moves, we need to DISCARD old images from previous position
+   * - Without flush: viewport shows stale images = lag/choppiness
+   * - With flush: viewport immediately shows latest position = smooth!
+   * 
+   * Phase 4 Optimization: Clear stale progressive render images
+   */
+  const flushPendingFrame = useCallback(() => {
+    // Cancel any scheduled RAF (don't render stale image)
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+      Logger.debugV('[RAF] 🚮 Cancelled pending RAF (camera changed)');
+    }
+
+    // Clear pending image (discard stale frame)
+    if (pendingImageRef.current !== null) {
+      pendingImageRef.current = null;
+      Logger.debugV('[RAF] 🚮 Flushed pending image (stale data)');
+    }
+  }, []);
+
+  /**
    * Cleanup on unmount
    */
   useEffect(() => {
@@ -190,5 +216,5 @@ export function useCanvasRenderer({
     };
   }, []);
 
-  return { scheduleRender };
+  return { scheduleRender, flushPendingFrame };
 }
