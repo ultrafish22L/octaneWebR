@@ -32,7 +32,7 @@ import { NodeTypeContextMenu } from './NodeTypeContextMenu';
 import { NodeContextMenu } from './NodeContextMenu';
 import { SearchDialog } from './SearchDialog';
 import { EditCommands } from '../../commands/EditCommands';
-import Logger from '../../utils/Logger';
+import { Logger } from '../../utils/Logger';
 import { getPinColor } from '../../utils/PinColorUtils';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';

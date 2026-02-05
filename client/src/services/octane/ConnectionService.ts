@@ -6,7 +6,7 @@
 import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
 import { EventEmitter } from '../../utils/EventEmitter';
-import Logger from '../../utils/Logger';
+import { Logger } from '../../utils/Logger';
 
 /**
  * WebSocket reconnection configuration

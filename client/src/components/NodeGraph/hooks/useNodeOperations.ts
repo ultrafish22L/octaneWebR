@@ -19,7 +19,7 @@ import type { OctaneClient } from '../../../services/OctaneClient';
 import { OctaneNodeData } from '../OctaneNode';
 import { NodeType } from '../../../constants/OctaneTypes';
 import { EditCommands } from '../../../commands/EditCommands';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 import type { EditActionsContextType } from '../../../contexts/EditActionsContext';
 
 interface UseNodeOperationsParams {

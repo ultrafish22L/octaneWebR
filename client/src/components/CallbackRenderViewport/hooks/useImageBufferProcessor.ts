@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useRef, RefObject } from 'react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 import { useCanvasRenderer } from './useCanvasRenderer';
 
 interface OctaneImageData {

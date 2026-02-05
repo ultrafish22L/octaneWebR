@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useRef, useEffect, RefObject } from 'react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 
 interface OctaneImageData {
   type: number | string;

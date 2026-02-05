@@ -5,7 +5,7 @@
 
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
 import { BaseService } from './BaseService';
-import Logger from '../../utils/Logger';
+import { Logger } from '../../utils/Logger';
 import {
   getCompatibleMethodName,
   transformRequestParams,

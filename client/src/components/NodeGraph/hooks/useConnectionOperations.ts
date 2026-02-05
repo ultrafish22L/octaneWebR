@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import { OnReconnectEnd } from '@xyflow/system';
 import { OctaneNodeData } from '../OctaneNode';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 import { getPinColor } from '../../../utils/PinColorUtils';
 import { OctaneClient } from '../../../services/OctaneClient';
 

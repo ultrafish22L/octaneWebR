@@ -23,7 +23,7 @@ import { useImageBufferProcessor } from './hooks/useImageBufferProcessor';
 import { useCameraSync } from './hooks/useCameraSync';
 import { useMouseInteraction } from './hooks/useMouseInteraction';
 import { useViewportActions } from './hooks/useViewportActions';
-import Logger from '../../utils/Logger';
+import { Logger } from '../../utils/Logger';
 
 interface OctaneImageData {
   type: number | string; // Can be numeric (0, 1) or string enum ("IMAGE_TYPE_LDR_RGBA", etc.)

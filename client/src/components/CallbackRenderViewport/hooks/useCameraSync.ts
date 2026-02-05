@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useRef, MutableRefObject } from 'react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 
 interface CameraState {
   radius: number;

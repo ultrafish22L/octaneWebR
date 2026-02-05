@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback, RefObject } from 'react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 
 interface UseViewportActionsProps {
   canvasRef: RefObject<HTMLCanvasElement>;

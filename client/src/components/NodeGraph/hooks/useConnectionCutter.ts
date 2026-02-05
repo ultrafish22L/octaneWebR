@@ -12,7 +12,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Edge, Node } from '@xyflow/react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 import { OctaneNodeData } from '../../NodeGraph/OctaneNode';
 import type { OctaneClient } from '../../../services/OctaneClient';
 

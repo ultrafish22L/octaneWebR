@@ -15,7 +15,7 @@ import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/O
 import { useOctane } from '../../../hooks/useOctane';
 import { OctaneNodeData } from '../OctaneNode';
 import { getPinColor } from '../../../utils/PinColorUtils';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 
 interface UseGraphSyncProps {
   sceneTree: SceneNode[];

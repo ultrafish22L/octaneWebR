@@ -124,8 +124,6 @@ function NodeParameter({
     } catch (error) {
       Logger.error('❌ Failed to replace node:', error);
       // Note: Consider implementing a proper toast/notification system
-
-      console.error('Node replacement failed:', error);
     }
   };
 

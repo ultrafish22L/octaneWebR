@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState, MutableRefObject } from 'react';
-import Logger from '../../../utils/Logger';
+import { Logger } from '../../../utils/Logger';
 
 interface CameraState {
   radius: number;
