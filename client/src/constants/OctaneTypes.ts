@@ -136,6 +136,7 @@ export function getObjectTypeName(type: number): string {
  */
 export const AttributeId = {
   A_VALUE: 185,
+  A_FILENAME: 34,
   // Add more as needed
 } as const;
 

@@ -186,9 +186,7 @@ function NodeParameter({
             >
               <div className="node-label-text">
                 {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-                <span className="node-title" title={buildTooltip()}>
-                  {name}:
-                </span>
+                <span className="node-title" title={buildTooltip()}>{name}:</span>
               </div>
               <ParameterControl
                 node={node}

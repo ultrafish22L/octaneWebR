@@ -73,28 +73,28 @@ export function useParameterValue(
         return; // Skip nodes that aren't simple value types
       }
 
-      if (isFloat3TexturePin) {
-        Logger.debug(
-          `✅ AT_FLOAT3 texture pin detected: ${node.name} - fetching RGB value for color picker`
-        );
-      }
-
       // Alpha 5 uses 'getByAttrID', Beta 2 uses 'getValueByAttrID'
       const methodName = USE_ALPHA5_API ? 'getByAttrID' : 'getValueByAttrID';
-      Logger.debug(`✅ Calling ${methodName} for ${node.name} (outType: ${node.outType})`);
 
       try {
         // attrInfo.type is already a STRING like "AT_FLOAT3" from the API
         // Use it directly, no conversion needed
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-        if (USE_ALPHA5_API) {
-          Logger.debug(`🔍 Alpha 5 API call: ApiItem.${methodName}`);
-          Logger.debug(`  - handle: ${node.handle}`);
-          Logger.debug(`  - attribute_id: ${AttributeId.A_VALUE} (A_VALUE)`);
-          Logger.debug(`  - expected_type: ${expectedType} (${node.attrInfo.type})`);
+        const responseHas = await requestQueue.enqueue(() =>
+          client.callApi(
+            'ApiItem',
+            'hasAttr', 
+            node.handle, // Pass handle as string
+            {
+              id: AttributeId.A_VALUE,
+            }
+          )
+        );
+        if (responseHas && responseHas.result == false) {
+          Logger.warn("hasAttr", '{responseHas}');
+          return;
         }
-
         // Queue the API call to prevent connection pool exhaustion
         // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
         // This queues them with max 4 concurrent requests to stay within browser limits
@@ -117,9 +117,7 @@ export function useParameterValue(
           const valueField = response.value || Object.keys(response)[0];
           const actualValue = response[valueField];
 
-          if (USE_ALPHA5_API) {
-            Logger.debug(`✅ Alpha 5 value fetch SUCCESS for ${node.name}: ${actualValue}`);
-          }
+          Logger.debugV(`✅ ApiItem:${methodName} for ${node.name}: ${actualValue}`);
 
           setParamValue({
             value: actualValue,

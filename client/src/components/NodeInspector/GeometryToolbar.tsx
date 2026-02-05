@@ -8,10 +8,12 @@
  * - Polygon count information
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { Logger } from '../../utils/Logger';
+import { requestQueue } from '../../utils/RequestQueue';
+import { AttributeId, AttrType } from '../../constants/OctaneTypes';
 
 interface GeometryToolbarProps {
   node: SceneNode;
@@ -34,26 +36,26 @@ export function GeometryToolbar({ node }: GeometryToolbarProps) {
     let filePath: string | undefined;
     let polygonCount: number | undefined;
 
-    // Recursively search for file path parameter
-    const findFileParam = (n: SceneNode): void => {
-      if (n.pinInfo?.name === 'File' || n.pinInfo?.name === 'file' || n.pinInfo?.name === 'filename') {
-        // File parameter - extract the value if it's a string
-        if (n.value && typeof n.value === 'string') {
-          filePath = n.value;
+    const response = requestQueue.enqueue(() =>
+      client.callApi(
+        'ApiItem',
+        "getByAttrID",
+        node.handle, 
+        {
+          attribute_id: AttributeId.A_FILENAME,
+          expected_type: AttrType.AT_STRING,
         }
-      }
-      
-      if (n.children) {
-        n.children.forEach(findFileParam);
-      }
-    };
+      )
+    );
 
-    findFileParam(node);
+    if (response) {
+      // Extract the actual value from the response
+      // API returns format like: {float_value: 2, value: "float_value"}
+      // We need to get the value from the field indicated by response.value
+      const valueField = Object.keys(response)[0];
+      filePath = Object(response)[valueField];
+    }
 
-    // For now, we'll need to get polygon count from gRPC
-    // This would require a new API call to get mesh statistics
-    // Placeholder for now - will be populated via gRPC call
-    
     setMeshInfo({ filePath, polygonCount });
   }, [node]);
 
@@ -70,27 +72,10 @@ export function GeometryToolbar({ node }: GeometryToolbarProps) {
     // This would call client.geometry.reloadMesh() or similar
   };
 
-  const handleSaveMesh = () => {
-    Logger.debug('Save mesh clicked for node:', node.name);
-    // TODO: Open save dialog to export mesh
-  };
-
-  const handleClearMesh = () => {
-    Logger.debug('Clear mesh clicked for node:', node.name);
-    // TODO: Clear/unload mesh
-  };
-
   // Format polygon count with thousands separator
   const formatPolygonCount = (count: number | undefined): string => {
     if (count === undefined) return '';
     return count.toLocaleString();
-  };
-
-  // Extract filename from full path
-  const getFilename = (path: string | undefined): string => {
-    if (!path) return 'No node';
-    const parts = path.split(/[\\/]/);
-    return parts[parts.length - 1] || path;
   };
 
   return (
@@ -102,7 +87,7 @@ export function GeometryToolbar({ node }: GeometryToolbarProps) {
           onClick={handleLoadMesh}
           title="Load mesh file"
         >
-          <img src="/icons/load geometry.png" alt="Load" width={16} height={16} />
+          <img src="/icons/load geometry.png" alt="Load new mesh" width={16} height={16} />
         </button>
         <button
           className="geometry-toolbar-btn"
@@ -110,21 +95,14 @@ export function GeometryToolbar({ node }: GeometryToolbarProps) {
           title="Reload mesh"
           disabled={!meshInfo.filePath}
         >
-          <img src="/icons/RELOAD general.png" alt="Reload" width={16} height={16} />
+          <img src="/icons/RELOAD general.png" alt="Reload mesh" width={16} height={16} />
         </button>
         <button
           className="geometry-toolbar-btn"
-          onClick={handleSaveMesh}
+//          onClick={handleSaveMesh}
           title="Save/export mesh"
         >
-          <img src="/icons/save-general.png" alt="Save" width={16} height={16} />
-        </button>
-        <button
-          className="geometry-toolbar-btn"
-          onClick={handleClearMesh}
-          title="Clear mesh"
-        >
-          <img src="/icons/UNLOAD_all.png" alt="Clear" width={16} height={16} />
+          <img src="/icons/CUSTOMIZE general.png" alt="Edit Settings for this geometry file" width={16} height={16} />
         </button>
       </div>
 

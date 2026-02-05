@@ -70,7 +70,6 @@ export class ApiService extends BaseService {
 
       if (objectType !== undefined) {
         body.objectPtr = createObjectPtr(String(handle), objectType);
-        Logger.debug('Created objectPtr:', body.objectPtr);
       } else {
         body.handle = handle;
       }
@@ -85,16 +84,16 @@ export class ApiService extends BaseService {
       // Log if parameters were transformed
       const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
       if (paramsChanged) {
-        Logger.debug(`🔄 API Compatibility: Parameter transformation applied`);
-        Logger.debug(`   Original:`, params);
-        Logger.debug(`   Transformed:`, transformedParams);
+        Logger.debugV(`🔄 API Compatibility: Parameter transformation applied`);
+        Logger.debugV(`   Original:`, params);
+        Logger.debugV(`   Transformed:`, transformedParams);
       }
 
       body = { ...body, ...transformedParams };
-      Logger.debug('Added params:', transformedParams);
+      Logger.debugV('Added params:', transformedParams);
     }
 
-    Logger.debug('Request body:', JSON.stringify(body));
+    Logger.debugV('Request body:', JSON.stringify(body));
 
     try {
       const response = await fetch(url, {
@@ -109,7 +108,7 @@ export class ApiService extends BaseService {
       }
 
       const data = await response.json();
-      Logger.debug(`${service}.${method} success`);
+      Logger.debugV(`${service}.${method} success`);
       return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

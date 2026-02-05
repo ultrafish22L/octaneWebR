@@ -7,14 +7,15 @@
  */
 
 // Debug mode flag - when true, sends logs to /api/log endpoint for file logging
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  NONE = 4,
+  DEBUGV = 4,
+  NONE = 5,
 }
 
 export interface LoggerConfig {
@@ -49,6 +50,19 @@ class LoggerInstance {
       timestamp: this.isDevelopment,
       colors: true,
     };
+
+    try {
+      // Send to server endpoint (handled by vite-plugin-octane-grpc.ts in dev mode)
+      fetch('/api/logClear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch {
+      // Silently fail if endpoint not available (e.g., production mode)
+      // Don't log to avoid infinite loop
+    }
 
     // Start flush timer if DEBUG_MODE is enabled
     if (DEBUG_MODE) {
@@ -188,6 +202,16 @@ class LoggerInstance {
   }
 
   /**
+   * Debug Verbose level logging (development only)
+   */
+  debugV(...args: unknown[]): void {
+    if (this.config.level >= LogLevel.DEBUGV) {
+      console.log(...this.formatMessage('🔍', ...args));
+      this.addToBuffer('debug', ...args);
+    }
+  }
+  
+  /**
    * Debug level logging (development only)
    */
   debug(...args: unknown[]): void {
@@ -261,7 +285,7 @@ class LoggerInstance {
   api(service: string, method: string, handle?: unknown): void {
     if (this.config.level <= LogLevel.DEBUG) {
       const handleStr = handle ? `(handle: ${handle})` : '';
-      this.debug(`📤 ${service}.${method}`, handleStr);
+      this.debugV(`📤 ${service}.${method}`, handleStr);
     }
   }
 

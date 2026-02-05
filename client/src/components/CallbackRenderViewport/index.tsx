@@ -207,21 +207,21 @@ export const CallbackRenderViewport = React.memo(
             setStatus('Initializing camera...');
 
             // Initialize camera from Octane's current state
-            Logger.info('📷 [VIEWPORT] Initializing camera from Octane...');
+            Logger.debug('📷 [VIEWPORT] Initializing camera from Octane...');
             await initializeCamera();
-            Logger.info('✅ [VIEWPORT] Camera initialized');
+            Logger.debug('✅ [VIEWPORT] Camera initialized');
 
             setStatus('Triggering initial render...');
 
             // Trigger initial render via ApiChangeManager
-            Logger.info('🎬 [VIEWPORT] Triggering initial render...');
+            Logger.debug('🎬 [VIEWPORT] Triggering initial render...');
             await triggerOctaneUpdate();
-            Logger.info('✅ [VIEWPORT] Initial render triggered');
+            Logger.debug('✅ [VIEWPORT] Initial render triggered');
 
             setIsRendering(true);
             setStatus('Waiting for render...');
 
-            Logger.info('✅ [VIEWPORT] Render viewport initialized');
+            Logger.debug('✅ [VIEWPORT] Render viewport initialized');
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Logger.error('❌ [VIEWPORT] Failed to initialize rendering:', error);
@@ -236,7 +236,7 @@ export const CallbackRenderViewport = React.memo(
        * Setup callback listener for OnNewImage events
        */
       useEffect(() => {
-        Logger.info('🎯 [VIEWPORT] OnNewImage listener useEffect triggered, connected:', connected);
+        Logger.debugV('🎯 [VIEWPORT] OnNewImage listener useEffect triggered, connected:', connected);
 
         if (!connected) {
           Logger.info('⚠️  [VIEWPORT] Not connected, skipping callback listener setup');
@@ -244,28 +244,24 @@ export const CallbackRenderViewport = React.memo(
         }
 
         const handleNewImage = (data: CallbackData) => {
-          Logger.debug('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
-          Logger.debug('📊 [VIEWPORT] Callback data:', {
+          Logger.debugV('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
+          Logger.debugV('📊 [VIEWPORT] Callback data:', {
             hasRenderImages: !!data.render_images,
             hasData: !!data.render_images?.data,
             imageCount: data.render_images?.data?.length || 0,
           });
 
           if (data.render_images && data.render_images.data && data.render_images.data.length > 0) {
-            Logger.debug('✅ [VIEWPORT] Valid image data received, calling displayImage');
+            Logger.debugV('✅ [VIEWPORT] Valid image data received, calling displayImage');
             displayImage(data.render_images.data[0]);
           } else {
             Logger.warn('⚠️  [VIEWPORT] No valid image data in callback');
             // Logger.warn('   [VIEWPORT] data:', data);
           }
         };
-
-        Logger.info('📡 [VIEWPORT] Registering OnNewImage listener with client');
         client.on('OnNewImage', handleNewImage);
-        Logger.info('✅ [VIEWPORT] OnNewImage listener registered');
 
         return () => {
-          Logger.info('🔌 [VIEWPORT] Unregistering OnNewImage listener');
           client.off('OnNewImage', handleNewImage);
         };
       }, [connected, client, displayImage]);

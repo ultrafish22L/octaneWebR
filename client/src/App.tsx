@@ -16,7 +16,7 @@
 import { Logger } from './utils/Logger';
 import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+//import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
 import { OctaneProvider, useOctane } from './hooks/useOctane';
 import { useResizablePanels } from './hooks/useResizablePanels';
@@ -644,7 +644,6 @@ function App() {
         </StatusMessageProvider>
       </OctaneProvider>
       {/* React Query DevTools - only included in development builds */}
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

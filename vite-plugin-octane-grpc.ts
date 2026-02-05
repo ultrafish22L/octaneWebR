@@ -19,6 +19,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { IncomingMessage } from 'http';
 
+
 // ============================================================================
 // SERVER LOGGING CONFIGURATION
 // ============================================================================
@@ -674,7 +675,11 @@ export function octaneGrpcPlugin(): Plugin {
           })();
           return;
         }
-        
+        // Client log clear endpoint
+        if (url === '/api/logclear' && req.method === 'POST') {
+          fs.rm('/tmp/octaneWebR_client.log');
+        }
+
         // Client logging endpoint
         if (url === '/api/log' && req.method === 'POST') {
           let body = '';
