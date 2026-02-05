@@ -293,6 +293,27 @@ export const CallbackRenderViewport = React.memo(
         };
       }, [connected, client, displayImage]);
 
+      /**
+       * Listen for programmatic camera changes (e.g., Reset Camera button)
+       * Re-sync local camera state when camera is moved externally
+       */
+      useEffect(() => {
+        if (!connected) return;
+
+        const handleCameraReset = () => {
+          Logger.debug('🔔 [VIEWPORT] Camera reset event received, re-syncing camera state');
+          initializeCamera().catch(err => {
+            Logger.error('❌ Failed to re-sync camera after reset:', err);
+          });
+        };
+
+        client.on('camera:reset', handleCameraReset);
+
+        return () => {
+          client.off('camera:reset', handleCameraReset);
+        };
+      }, [connected, client, initializeCamera]);
+
       // ✅ Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
       // Stable object reference prevents unnecessary React DOM updates
       const canvasStyle = useMemo(

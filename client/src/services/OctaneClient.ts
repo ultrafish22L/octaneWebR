@@ -117,9 +117,10 @@ export class OctaneClient extends EventEmitter {
 
   async setCameraPositionAndTarget(
     posX: number, posY: number, posZ: number,
-    targetX: number, targetY: number, targetZ: number
+    targetX: number, targetY: number, targetZ: number,
+    silent = false
   ): Promise<void> {
-    return this.cameraService.setCameraPositionAndTarget(posX, posY, posZ, targetX, targetY, targetZ);
+    return this.cameraService.setCameraPositionAndTarget(posX, posY, posZ, targetX, targetY, targetZ, silent);
   }
   
   async resetCamera(): Promise<void> {

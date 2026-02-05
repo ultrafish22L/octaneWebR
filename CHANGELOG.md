@@ -48,6 +48,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wasted frames: **30-40/sec → 0/sec** (eliminated)
 - Jank/stutter: **Frequent → None** (eliminated) ✅
 
+### Bug Fix - Camera State Synchronization (2025-02-03)
+
+**Problem**: Viewport camera drag operations used stale position after programmatic camera updates (Reset Camera, Camera Presets).
+
+**Root Cause**: When camera was reset or moved via presets, Octane's camera updated but viewport's local `cameraRef` was not re-synced, causing next drag to start from old position (jump/snap behavior).
+
+**Solution**: Event-driven camera sync
+- ✅ **CameraService**: Emit `camera:reset` event on programmatic camera changes
+  - `resetCamera()` emits event after updating Octane
+  - `setCameraPositionAndTarget()` accepts `silent` param
+  - `silent=false` (default): Emit event for presets/reset
+  - `silent=true`: Skip event for viewport drag operations (avoid loop)
+- ✅ **Viewport**: Listen for `camera:reset` and re-sync local state
+  - New `useEffect` listens for `camera:reset` event
+  - Calls `initializeCamera()` to fetch fresh camera from Octane
+  - Updates `cameraRef` with current theta/phi/radius
+- ✅ **useCameraSync**: Pass `silent=true` for drag operations
+  - Viewport drag → `setCameraPositionAndTarget(..., true)`
+  - Prevents infinite event loop
+
+**Files Changed**:
+- `services/octane/CameraService.ts` - Emit events on camera updates
+- `services/OctaneClient.ts` - Add `silent` parameter passthrough
+- `components/CallbackRenderViewport/index.tsx` - Listen for camera:reset event
+- `components/CallbackRenderViewport/hooks/useCameraSync.ts` - Pass silent=true for drags
+
+**Result**: 
+- ✅ Reset Camera → Next drag starts from reset position (no jump)
+- ✅ Camera Presets → Next drag starts from preset position (no jump)
+- ✅ Drag operations → No performance impact (silent=true)
+- ✅ Clean event-driven architecture
+
+**Documentation**: See `CAMERA_SYNC_FIX.md` for full details.
+
 **Documentation**:
 - `VIEWPORT_CANVAS_OPTIMIZATION.md`: 400+ line technical analysis
 - `REACTFLOW_WARNING_FIX.md`: React Flow layout fix details

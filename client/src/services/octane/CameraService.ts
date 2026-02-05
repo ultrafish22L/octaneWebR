@@ -38,13 +38,24 @@ export class CameraService extends BaseService {
 
   async setCameraPositionAndTarget(
     posX: number, posY: number, posZ: number,
-    targetX: number, targetY: number, targetZ: number
+    targetX: number, targetY: number, targetZ: number,
+    silent = false // Set to true to skip event emission (for viewport drag operations)
   ): Promise<void> {
     // More efficient: set both position and target in one call
     await this.apiService.callApi('LiveLink', 'SetCamera', {
       position: { x: posX, y: posY, z: posZ },
       target: { x: targetX, y: targetY, z: targetZ }
     });
+    
+    // 🔔 Emit event to notify viewport of programmatic camera changes
+    // (unless silent=true for viewport drag operations)
+    if (!silent) {
+      this.emit('camera:reset', {
+        position: { x: posX, y: posY, z: posZ },
+        target: { x: targetX, y: targetY, z: targetZ }
+      });
+      Logger.debug('🔔 Emitted camera:reset event');
+    }
   }
   
   async resetCamera(): Promise<void> {
@@ -56,6 +67,11 @@ export class CameraService extends BaseService {
     
     Logger.debug('📷 Resetting camera to original state:', this.originalCameraState);
     await this.apiService.callApi('LiveLink', 'SetCamera', this.originalCameraState);
+    
+    // 🔔 Emit event to notify viewport that camera was programmatically moved
+    // Viewport will re-sync its local camera state from Octane
+    this.emit('camera:reset', { state: this.originalCameraState });
+    Logger.debug('🔔 Emitted camera:reset event');
   }
 
   async captureOriginalCameraState(): Promise<void> {

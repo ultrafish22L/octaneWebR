@@ -30,7 +30,8 @@ interface OctaneClient {
     posZ: number,
     targetX: number,
     targetY: number,
-    targetZ: number
+    targetZ: number,
+    silent?: boolean
   ) => Promise<void>;
 }
 
@@ -112,7 +113,8 @@ export function useCameraSync({
       const posZ = z + center[2];
 
       // Set both camera position and target in one efficient call
-      await client.setCameraPositionAndTarget(posX, posY, posZ, center[0], center[1], center[2]);
+      // silent=true prevents event emission (this is viewport updating Octane, not external update)
+      await client.setCameraPositionAndTarget(posX, posY, posZ, center[0], center[1], center[2], true);
 
       // Trigger render update
       await triggerOctaneUpdate();
