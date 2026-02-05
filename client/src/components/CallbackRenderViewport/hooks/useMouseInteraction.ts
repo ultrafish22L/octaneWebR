@@ -17,7 +17,7 @@
  * Mouse controls match Octane SE behavior documented in the manual.
  */
 
-import { useEffect, useRef, MutableRefObject } from 'react';
+import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import Logger from '../../../utils/Logger';
 
 interface CameraState {
@@ -92,7 +92,11 @@ export function useMouseInteraction({
   setCanvasTransform,
   setContextMenuPos,
   setContextMenuVisible,
-}: UseMouseInteractionParams): void {
+}: UseMouseInteractionParams) {
+  // ✅ Phase 3: Drag state for viewport throttling
+  // Tracks if ANY camera manipulation is in progress (orbit, pan, 2D pan)
+  const [isDragging, setIsDragging] = useState(false);
+
   // Mouse drag state refs (internal to hook)
   const isDraggingRef = useRef(false); // Left button = orbit
   const isPanningRef = useRef(false); // Right button = pan
@@ -135,6 +139,7 @@ export function useMouseInteraction({
         // CTRL+LEFT: 2D Canvas Pan (Octane SE Manual: Control key + left mouse button pans the rendered display)
         if (e.ctrlKey || e.metaKey) {
           is2DPanningRef.current = true;
+          setIsDragging(true); // ✅ Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
           canvas.style.cursor = 'move';
           e.preventDefault();
@@ -152,12 +157,14 @@ export function useMouseInteraction({
         } else {
           // CAMERA MODE: Orbit
           isDraggingRef.current = true;
+          setIsDragging(true); // ✅ Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
           canvas.style.cursor = 'grabbing';
         }
       } else if (e.button === 2) {
         // Right button = PAN (always available)
         isPanningRef.current = true;
+        setIsDragging(true); // ✅ Phase 3: Track drag for throttling
         hasRightDraggedRef.current = false; // Reset drag tracking
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'move';
@@ -432,6 +439,7 @@ export function useMouseInteraction({
       // 2D CANVAS PAN MODE: Complete pan
       if (is2DPanningRef.current) {
         is2DPanningRef.current = false;
+        setIsDragging(false); // ✅ Phase 3: End drag throttling
         canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
         return;
       }
@@ -441,6 +449,7 @@ export function useMouseInteraction({
         const wasPanning = isPanningRef.current;
         isDraggingRef.current = false;
         isPanningRef.current = false;
+        setIsDragging(false); // ✅ Phase 3: End drag throttling
         canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
 
         // Show context menu if right-click without drag (Octane SE behavior)
@@ -532,4 +541,7 @@ export function useMouseInteraction({
     setContextMenuPos,
     setContextMenuVisible,
   ]);
+
+  // ✅ Phase 3: Return drag state for viewport throttling
+  return { isDragging };
 }

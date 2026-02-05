@@ -7,7 +7,7 @@
  * CRITICAL: Direct port of octaneWeb buffer processing logic - preserves buffer isolation
  */
 
-import { useCallback, RefObject } from 'react';
+import { useCallback, useRef, RefObject } from 'react';
 import Logger from '../../../utils/Logger';
 import { useCanvasRenderer } from './useCanvasRenderer';
 
@@ -28,16 +28,24 @@ interface UseImageBufferProcessorParams {
   canvasRef: RefObject<HTMLCanvasElement>;
   onFrameRendered?: () => void;
   onStatusUpdate?: (status: string) => void;
+  isDragging?: boolean; // ✅ Phase 3: Drag state for input-side throttling
 }
 
 /**
  * Hook for processing Octane image buffers and rendering to canvas
+ * ✅ Phase 3: Now supports input-side throttling during camera drag
  */
 export function useImageBufferProcessor({
   canvasRef,
   onFrameRendered,
   onStatusUpdate,
+  isDragging = false, // ✅ Phase 3: Drag state for input-side throttling
 }: UseImageBufferProcessorParams) {
+  // ✅ Phase 3: Input-side throttling during camera drag
+  // Track last accepted image time to throttle to 30 FPS during drag
+  const lastAcceptedTimeRef = useRef(0);
+  const DRAG_THROTTLE_INTERVAL = 33; // ms (30 FPS = 1000ms / 30 = 33.33ms)
+
   /**
    * Convert LDR RGBA buffer to canvas
    * CRITICAL: Exact port from octaneWeb - preserves buffer isolation
@@ -193,7 +201,9 @@ export function useImageBufferProcessor({
   /**
    * Display image from callback data
    * ✅ Phase 2: Now schedules RAF instead of immediate rendering
+   * ✅ Phase 3: Input-side throttling during camera drag (30 FPS)
    * - Validates image data
+   * - Throttles image acceptance to 30 FPS during drag
    * - Schedules RAF render (automatic frame coalescing)
    * - RAF loop handles actual canvas rendering
    */
@@ -221,6 +231,27 @@ export function useImageBufferProcessor({
           return;
         }
 
+        // ✅ Phase 3: Input-side throttling during camera drag
+        // During drag, only accept 1 image every 33ms (30 FPS)
+        // This gives CPU more time per frame (33ms vs 16.6ms at 60 FPS)
+        // Result: Smooth 30 FPS with relaxed CPU vs choppy 60 FPS with stressed CPU
+        if (isDragging) {
+          const now = Date.now();
+          const timeSinceLastAccepted = now - lastAcceptedTimeRef.current;
+
+          if (timeSinceLastAccepted < DRAG_THROTTLE_INTERVAL) {
+            Logger.debugV(
+              `🚦 [THROTTLE] Ignored image (${timeSinceLastAccepted}ms < ${DRAG_THROTTLE_INTERVAL}ms)`
+            );
+            return; // IGNORE - too soon after last accepted image
+          }
+
+          lastAcceptedTimeRef.current = now;
+          Logger.debugV(
+            `✅ [THROTTLE] Accepted image (${timeSinceLastAccepted}ms >= ${DRAG_THROTTLE_INTERVAL}ms)`
+          );
+        }
+
         // ✅ Phase 2: Schedule RAF render instead of immediate rendering
         // This enables frame coalescing - if RAF hasn't fired yet, this
         // image replaces the previous pending image
@@ -231,7 +262,7 @@ export function useImageBufferProcessor({
         Logger.error('❌ [VIEWPORT] Stack:', error.stack);
       }
     },
-    [canvasRef, scheduleRender]
+    [canvasRef, scheduleRender, isDragging]
   );
 
   return { displayImage };

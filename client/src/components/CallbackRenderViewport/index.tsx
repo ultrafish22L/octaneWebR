@@ -160,19 +160,45 @@ export const CallbackRenderViewport = React.memo(
         onToggleLockViewport,
       });
 
-      // Image buffer processor hook
-      const { displayImage } = useImageBufferProcessor({
-        canvasRef,
-        onFrameRendered: () => setFrameCount(prev => prev + 1),
-        onStatusUpdate: setStatus,
-      });
-
-      // Camera synchronization hook
+      // Camera synchronization hook (needed by useMouseInteraction)
       const { initializeCamera, updateCameraThrottled, updateCameraImmediate } = useCameraSync({
         client,
         connected,
         cameraRef,
         triggerOctaneUpdate,
+      });
+
+      /**
+       * MOUSE CONTROLS: Camera orbit, pan, zoom, and picker tools
+       * ✅ Phase 3: Now returns isDragging state for viewport throttling
+       */
+      const { isDragging } = useMouseInteraction({
+        canvasRef,
+        cameraRef,
+        connected,
+        viewportLocked,
+        pickingMode,
+        isSelectingRegion,
+        regionStart,
+        regionEnd,
+        client,
+        updateCameraThrottled,
+        updateCameraImmediate,
+        triggerOctaneUpdate,
+        setIsSelectingRegion,
+        setRegionStart,
+        setRegionEnd,
+        setCanvasTransform,
+        setContextMenuPos,
+        setContextMenuVisible,
+      });
+
+      // ✅ Phase 3: Image buffer processor hook (now receives isDragging for throttling)
+      const { displayImage } = useImageBufferProcessor({
+        canvasRef,
+        onFrameRendered: () => setFrameCount(prev => prev + 1),
+        onStatusUpdate: setStatus,
+        isDragging, // ✅ Phase 3: Pass drag state for input-side throttling
       });
 
       // Expose methods to parent via ref
@@ -266,31 +292,6 @@ export const CallbackRenderViewport = React.memo(
           client.off('OnNewImage', handleNewImage);
         };
       }, [connected, client, displayImage]);
-
-      /**
-       * MOUSE CONTROLS: Camera orbit, pan, zoom, and picker tools
-       * Delegated to useMouseInteraction hook for all mouse and wheel event handling
-       */
-      useMouseInteraction({
-        canvasRef,
-        cameraRef,
-        connected,
-        viewportLocked,
-        pickingMode,
-        isSelectingRegion,
-        regionStart,
-        regionEnd,
-        client,
-        updateCameraThrottled,
-        updateCameraImmediate,
-        triggerOctaneUpdate,
-        setIsSelectingRegion,
-        setRegionStart,
-        setRegionEnd,
-        setCanvasTransform,
-        setContextMenuPos,
-        setContextMenuVisible,
-      });
 
       // ✅ Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
       // Stable object reference prevents unnecessary React DOM updates
