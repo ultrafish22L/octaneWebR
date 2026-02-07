@@ -17,7 +17,7 @@ interface PanelSizes {
 const DEFAULT_PANEL_SIZES: PanelSizes = {
   left: 260, // Scene Outliner width
   center: 0, // Will be calculated
-  right: 440, // Node Inspector width
+  right: 550, // Node Inspector width
   top: 0, // Will be calculated as 60% of window height on mount
   bottom: 0, // Will be calculated from window height - top
 };

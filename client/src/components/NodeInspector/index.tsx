@@ -84,7 +84,7 @@ function NodeParameter({
   const [expanded, setExpanded] = useState(level < 2);
 
   const hasChildren = node.children && node.children.length > 0;
-  const isEndNode = !hasChildren && !!node.attrInfo;
+  const isEndNode = !hasChildren; // && !!node.attrInfo;
 
   // Use parameter value management hook
   const { paramValue, handleValueChange } = useParameterValue(node, client, isEndNode);
@@ -158,7 +158,8 @@ function NodeParameter({
   };
 
   // Render as parameter node (end node with attrInfo)
-  if (node.attrInfo) {
+  if (!node.children || node.children.length === 0) {
+//    if (node.attrInfo) {
     return (
       <div className={indentClass} style={{ display: 'block' }}>
         <div className="node-box-parameter" data-node-handle={node.handle} data-node-id={nodeId}>

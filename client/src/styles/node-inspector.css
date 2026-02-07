@@ -354,6 +354,7 @@
   padding: 2px 2px 2px 2px;
   width: 26px;
   min-width: 26px;
+  height:100%;
 }
 
 /* Main Node Inspector Content (Right Side) */
@@ -827,6 +828,8 @@
   align-items: center;
   gap: var(--spacing-none);
   width: 100%;
+  overflow: hidden; /* Ensure color fills entire space */
+  text-overflow: ellipsis;    
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown {
@@ -1156,7 +1159,7 @@
 
 /* Right Panel - Node Inspector */
 .right-panel {
-  background-color: var(--bg-secondary); /* Professional dark background */
+  background-color: var(--bg-primary); /* Professional dark background */
   border-left: none; /* No border - splitter acts as boundary */
   border-right: none;
   overflow-y: visible; /* Allow scrolling if content is tall */

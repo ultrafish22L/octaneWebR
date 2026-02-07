@@ -436,22 +436,22 @@ export class SceneService extends BaseService {
       const children = await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       
-      if (children.length === 0) {
-        try {
-          const attrInfoResponse = await this.apiService.callApi(
-            'ApiItem',
-            'attrInfo',
-            item.handle,
-            { id: AttributeId.A_VALUE }
-          );
-          
-          if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
-            item.attrInfo = attrInfoResponse.result;
-            Logger.debug(`  📊 End node: ${item.name} (${attrInfoResponse.result.type})`);
-          }
-        } catch (attrError: any) {
-          Logger.debug(`  ℹ️ No attrInfo for ${item.name}`);
+      try {
+        const attrInfoResponse = await this.apiService.callApi(
+          'ApiItem',
+          'attrInfo',
+          item.handle,
+          { id: AttributeId.A_VALUE }
+        );
+        if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+          item.attrInfo = attrInfoResponse.result;
+          Logger.info(` ${item.name} (${attrInfoResponse.result.type})`);
         }
+      } catch (attrError: any) {
+        Logger.warn(`  ℹ️ No attrInfo for ${item.name}`);
+      }
+      if (children.length === 0) {
+        Logger.debug(`  📊 End node: ${item.name})`);
       } else {
         Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);
       }
