@@ -100,12 +100,12 @@ export const CallbackRenderViewport = React.memo(
 
       // Component mount logging
       useEffect(() => {
-        Logger.info('🎯 [VIEWPORT] CallbackRenderViewport component MOUNTED');
-        Logger.info('🎯 [VIEWPORT] Initial connected state:', connected);
-        Logger.info('🎯 [VIEWPORT] Canvas ref available:', !!canvasRef.current);
-        Logger.info('🎯 [VIEWPORT] Viewport ref available:', !!viewportRef.current);
+        Logger.debug('🎯 [VIEWPORT] CallbackRenderViewport component MOUNTED');
+        Logger.debug('🎯 [VIEWPORT] Initial connected state:', connected);
+        Logger.debug('🎯 [VIEWPORT] Canvas ref available:', !!canvasRef.current);
+        Logger.debug('🎯 [VIEWPORT] Viewport ref available:', !!viewportRef.current);
         return () => {
-          Logger.info('🎯 [VIEWPORT] CallbackRenderViewport component UNMOUNTED');
+          Logger.debug('🎯 [VIEWPORT] CallbackRenderViewport component UNMOUNTED');
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
@@ -217,7 +217,7 @@ export const CallbackRenderViewport = React.memo(
        * Trigger initial render when connected
        */
       useEffect(() => {
-        Logger.info('🎯 [VIEWPORT] Initialization useEffect triggered, connected:', connected);
+        Logger.debug('🎯 [VIEWPORT] Initialization useEffect triggered, connected:', connected);
 
         if (!connected) {
           Logger.info('⚠️  [VIEWPORT] Not connected, skipping initialization');
@@ -228,9 +228,9 @@ export const CallbackRenderViewport = React.memo(
 
         const initializeRendering = async () => {
           try {
-            Logger.info('🎯 [VIEWPORT] Starting initialization...');
-            Logger.info('🎯 [VIEWPORT] Canvas ref at init:', !!canvasRef.current);
-            Logger.info('🎯 [VIEWPORT] Viewport ref at init:', !!viewportRef.current);
+            Logger.debug('🎯 [VIEWPORT] Starting initialization...');
+            Logger.debug('🎯 [VIEWPORT] Canvas ref at init:', !!canvasRef.current);
+            Logger.debug('🎯 [VIEWPORT] Viewport ref at init:', !!viewportRef.current);
 
             setStatus('Initializing camera...');
 

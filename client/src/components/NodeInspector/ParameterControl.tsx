@@ -73,7 +73,7 @@ function ParameterControlComponent({
   // Debug logging for stereo parameters (broaden search to catch all stereo-related params)
   const nodeName = node.pinInfo?.staticLabel || node.name;
   if (nodeName.toLowerCase().includes('stereo')) {
-    Logger.debug(
+    Logger.debugV(
       '🔧 ParameterControl RENDERING:',
       JSON.stringify(
         {

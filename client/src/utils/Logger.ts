@@ -7,7 +7,7 @@
  */
 
 // Debug mode flag - when true, sends logs to /api/log endpoint for file logging
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 export enum LogLevel {
   DEBUG = 0,
@@ -205,7 +205,7 @@ class LoggerInstance {
    * Debug Verbose level logging (development only)
    */
   debugV(...args: unknown[]): void {
-    if (this.config.level >= LogLevel.DEBUGV) {
+    if (this.config.level === LogLevel.DEBUGV) {
       console.log(...this.formatMessage('🔍', ...args));
       this.addToBuffer('debug', ...args);
     }

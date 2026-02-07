@@ -9,7 +9,6 @@ import { Logger } from '../../utils/Logger';
 import {
   getCompatibleMethodName,
   transformRequestParams,
-  getApiVersion,
 } from '../../config/apiVersionConfig';
 
 /**
@@ -49,7 +48,7 @@ export class ApiService extends BaseService {
     const compatibleMethod = getCompatibleMethodName(service, method);
 
     if (method !== compatibleMethod) {
-      Logger.debug(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
+//      Logger.debugV(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
     }
 
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;

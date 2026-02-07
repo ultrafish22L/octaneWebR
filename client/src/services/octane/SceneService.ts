@@ -8,7 +8,7 @@ import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
 import { Scene, SceneNode } from './types';
 import { getIconForType } from '../../constants/PinTypes';
-import { AttributeId } from '../../constants/OctaneTypes';
+import { AttrType, AttributeId } from '../../constants/OctaneTypes';
 
 export class SceneService extends BaseService {
   private apiService: ApiService;
@@ -125,7 +125,6 @@ export class SceneService extends BaseService {
       Logger.info(`✅ Scene tree built in ${elapsedTime}s:`);
       Logger.info(`   - ${this.scene.tree.length} top-level items`);
       Logger.info(`   - ${this.scene.map.size} total nodes`);
-
 
       Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
       this.emit('scene:buildComplete', { 
@@ -436,29 +435,74 @@ export class SceneService extends BaseService {
       const children = await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
       item.children = children;
       
-      try {
-        const attrInfoResponse = await this.apiService.callApi(
-          'ApiItem',
-          'attrInfo',
-          item.handle,
-          { id: AttributeId.A_VALUE }
-        );
-        if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
-          item.attrInfo = attrInfoResponse.result;
-          Logger.info(` ${item.name} (${attrInfoResponse.result.type})`);
+      const attrInfoResponse = await this.apiService.callApi(
+        'ApiItem',
+        'attrInfo',
+        item.handle,
+        { id: AttributeId.A_VALUE }
+      );      
+      if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+        item.attrInfo = attrInfoResponse.result;
+        Logger.debugV(` ${item.name} ${JSON.stringify(attrInfoResponse.result)}`);
+      }
+      const responseHas = await this.apiService.callApi(
+        'ApiItem',
+        'hasAttr', 
+        item.handle, // Pass handle as string
+        {
+          id: AttributeId.A_FILENAME,
         }
-      } catch (attrError: any) {
-        Logger.warn(`  ℹ️ No attrInfo for ${item.name}`);
+      );
+      if (responseHas && responseHas.result == true) {
+        const response = await this.apiService.callApi(
+          'ApiItem',
+          'getByAttrID', // Use correct method name for API version
+          item.handle, // Pass handle as string
+          {
+            attribute_id: AttributeId.A_FILENAME, 
+            expected_type: AttrType.AT_STRING, 
+          }
+        )
+  //    [OCTANE-SERVER] ✅ ApiItem.getByAttrID → {"string_value":"assets\\teapot.obj","value":"string_value"}
+        if (response) {
+          // Extract the actual value from the response
+          // API returns format like: {float_value: 2, value: "float_value"}
+          // We need to get the value from the field indicated by response.value
+          const valueField = Object.keys(response)[1];
+          item.filePath = Object(response)[Object(response)[valueField]] as string;
+          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
+
+          const responseHasIndices = await this.apiService.callApi(
+            'ApiItem',
+            'hasAttr', 
+            item.handle, // Pass handle as string
+            {
+              id: AttributeId.A_POLY_OBJECT_INDICES,
+            }
+          );
+          if (responseHasIndices && responseHasIndices.result == true) {
+            const response = await this.apiService.callApi(
+              'ApiItem',
+              'getByAttrID', // Use correct method name for API version
+              item.handle, // Pass handle as string
+              {
+                attribute_id: AttributeId.A_POLY_OBJECT_INDICES,
+                expected_type: AttrType.AT_INT,
+              }
+            );
+            if (response) {
+              const valueField = Object.keys(response)[1];
+              item.vertsPerPoly = Object(response)[Object(response)[valueField]] as Array<number>;
+              Logger.info(`vertsPerPoly for ${item.name}: ${valueField} ${item.vertsPerPoly.length}`);
+              Logger.info(`vertsPerPoly ${JSON.stringify(Object(response))} ${item.vertsPerPoly}`);
+            }
+          }
+        }
       }
-      if (children.length === 0) {
-        Logger.debug(`  📊 End node: ${item.name})`);
-      } else {
-        Logger.debug(`  👶 Added ${children.length} children to ${item.name}`);
-      }
-      
     } catch (error: any) {
       Logger.error('❌ addItemChildren failed:', error.message);
     }
+    return;
   }
 
   private getNodeIcon(outType: string | number, name?: string): string {

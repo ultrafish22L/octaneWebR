@@ -16,7 +16,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
-import { USE_ALPHA5_API } from '../../../config/apiVersionConfig';
 import { Logger } from '../../../utils/Logger';
 import { requestQueue } from '../../../utils/RequestQueue';
 
@@ -54,8 +53,6 @@ export function useParameterValue(
       if (!node.attrInfo || !node.handle || !isEndNode) {
         return; // Skip without verbose logging
       }
-      const methodName = 'getValueByAttrID';
-
       try {
         // attrInfo.type is already a STRING like "AT_FLOAT3" from the API
         // Use it directly, no conversion needed
@@ -81,7 +78,7 @@ export function useParameterValue(
         const response = await requestQueue.enqueue(() =>
           client.callApi(
             'ApiItem',
-            methodName, // Use correct method name for API version
+            'getValueByAttrID', // Use correct method name for API version
             node.handle, // Pass handle as string
             {
               attribute_id: AttributeId.A_VALUE, // 185 - Use constant instead of hardcoded value
@@ -97,7 +94,7 @@ export function useParameterValue(
           const valueField = response.value || Object.keys(response)[0];
           const actualValue = response[valueField];
 
-          Logger.debugV(`✅ ApiItem:${methodName} for ${node.name}: ${actualValue}`);
+          Logger.debugV(`✅ ApiItem:getValueByAttrID for ${node.name}: ${actualValue}`);
 
           setParamValue({
             value: actualValue,
@@ -106,11 +103,9 @@ export function useParameterValue(
         }
       } catch (error: any) {
         // Log Alpha 5 errors for debugging, silently ignore Beta 2 errors
-        if (USE_ALPHA5_API) {
-          Logger.error(
-            `❌ Alpha 5 ${methodName} error for ${node.name}: ${error.message || error}`
-          );
-        }
+        Logger.error(
+          `❌ getValueByAttrID error for ${node.name}: ${error.message || error}`
+        );
       }
     };
 

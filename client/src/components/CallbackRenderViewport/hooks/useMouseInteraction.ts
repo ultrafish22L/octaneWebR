@@ -105,8 +105,8 @@ export function useMouseInteraction({
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    Logger.info('🖱️  [VIEWPORT] Mouse interaction hook mounted');
-    Logger.info('📊 [VIEWPORT] Connected:', connected);
+    Logger.debug('🎯 [VIEWPORT] Mouse interaction hook mounted');
+    Logger.debug('🎯 [VIEWPORT] Connected:', connected);
 
     const canvas = canvasRef.current;
     if (!canvas || !connected) {
@@ -114,10 +114,10 @@ export function useMouseInteraction({
       return;
     }
 
-    Logger.info('🖱️  [VIEWPORT] Setting up mouse event handlers...');
+    Logger.debug('🎯 [VIEWPORT] Setting up mouse event handlers...');
 
     const handleMouseDown = (e: MouseEvent) => {
-      Logger.info('🖱️  [VIEWPORT] handleMouseDown CALLED', {
+      Logger.debug('🎯 [VIEWPORT] handleMouseDown CALLED', {
         button: e.button,
         x: e.clientX,
         y: e.clientY,
@@ -132,7 +132,7 @@ export function useMouseInteraction({
       const rect = canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
-      Logger.info('📊 [VIEWPORT] Canvas coords:', { canvasX, canvasY });
+      Logger.debug('🎯 [VIEWPORT] Canvas coords:', { canvasX, canvasY });
 
       if (e.button === 0) {
         // Left button
@@ -501,7 +501,7 @@ export function useMouseInteraction({
     canvas.addEventListener('mouseleave', handleMouseUp);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('contextmenu', handleContextMenu);
-    Logger.info('✅ [VIEWPORT] All mouse event listeners attached');
+    Logger.debug('✅ [VIEWPORT] All mouse event listeners attached');
 
     // Set cursor based on viewport lock state and picking mode
     if (viewportLocked) {
@@ -511,7 +511,7 @@ export function useMouseInteraction({
     } else {
       canvas.style.cursor = 'grab';
     }
-    Logger.info('🖱️  [VIEWPORT] Cursor style set to:', canvas.style.cursor);
+    Logger.debug('🎯 [VIEWPORT] Cursor style set to:', canvas.style.cursor);
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
