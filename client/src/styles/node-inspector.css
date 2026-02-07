@@ -1244,12 +1244,9 @@
 
 .geometry-file-path {
   padding: 2px 4px;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 10px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: 2px;
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;

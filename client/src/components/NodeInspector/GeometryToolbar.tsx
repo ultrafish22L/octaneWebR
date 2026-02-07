@@ -65,7 +65,7 @@ export function GeometryToolbar({ node }: GeometryToolbarProps) {
           onClick={handleLoadMesh}
           title="Load mesh file"
         >
-          <img src="/icons/load geometry.png" alt="Load new mesh" width={16} height={16} />
+          <img src="/icons/LOAD general.png" alt="Load new mesh" width={16} height={16} />
         </button>
         <button
           className="geometry-toolbar-btn"
