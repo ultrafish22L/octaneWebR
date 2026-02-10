@@ -468,8 +468,9 @@ export class ProgressiveSceneService extends BaseService {
     }
     
     // Skip unconnected pins (handle 0) - they have no children and no valid API reference
-    if (!node.handle || node.handle === 0) {
-      Logger.info(`⚪ Skipping unconnected pin "${node.name}" (handle: 0)`);
+    // Use == to handle both string "0" and number 0
+    if (!node.handle || node.handle == 0) {
+      Logger.info(`⚪ Skipping unconnected pin "${node.name}" (handle: ${node.handle})`);
       node.childrenLoaded = true;
       return;
     }
@@ -535,6 +536,12 @@ export class ProgressiveSceneService extends BaseService {
     level: number
   ): Promise<SceneNodeWithState[]> {
     const children: SceneNodeWithState[] = [];
+    
+    // Safety check - should never be called with handle 0
+    if (!node.handle || node.handle == 0) {
+      Logger.warn(`⚠️ loadGraphChildren called with invalid handle for "${node.name}"`);
+      return children;
+    }
     
     // Get owned items
     Logger.info(`🔍 Calling ApiNodeGraph.getOwnedItems for "${node.name}"...`);
@@ -630,6 +637,12 @@ export class ProgressiveSceneService extends BaseService {
     level: number
   ): Promise<SceneNodeWithState[]> {
     const children: SceneNodeWithState[] = [];
+    
+    // Safety check - should never be called with handle 0
+    if (!node.handle || node.handle == 0) {
+      Logger.warn(`⚠️ loadPinChildren called with invalid handle for "${node.name}"`);
+      return children;
+    }
     
     Logger.info(`📌 Getting pin count for "${node.name}"...`);
     const pinCountResponse = await this.apiService.callApi(
