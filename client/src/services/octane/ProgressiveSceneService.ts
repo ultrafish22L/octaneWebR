@@ -132,9 +132,23 @@ export class ProgressiveSceneService extends BaseService {
         Logger.info(`📌 Processing level ${currentLevel}: ${currentLevelNodes.length} nodes`);
         
         const nextLevelNodes: Array<{ node: SceneNode, parent: SceneNode | null }> = [];
+        const processedHandles = new Set<number>(); // 🔑 Deduplicate by handle
 
         for (let i = 0; i < currentLevelNodes.length; i++) {
           const { node } = currentLevelNodes[i];
+          
+          // Safety check
+          if (!node.handle) {
+            Logger.warn(`⚠️ Node missing handle: "${node.name}"`);
+            continue;
+          }
+          
+          // 🚫 Skip if already processed this handle at this level
+          if (processedHandles.has(node.handle)) {
+            Logger.debug(`  ⏭️ Skipping duplicate handle ${node.handle} ("${node.name}")`);
+            continue;
+          }
+          processedHandles.add(node.handle);
           
           // Load ONLY immediate children (shallow, non-recursive)
           await this.addItemChildrenShallow(node);
@@ -148,7 +162,7 @@ export class ProgressiveSceneService extends BaseService {
             });
             Logger.info(`  ✅ Level ${currentLevel} [${i + 1}/${currentLevelNodes.length}]: "${node.name}" → ${childrenAfter} children`);
             
-            // Add newly loaded children to next level queue
+            // Add newly loaded children to next level queue (may contain duplicates)
             for (const child of node.children || []) {
               nextLevelNodes.push({ node: child, parent: node });
             }
