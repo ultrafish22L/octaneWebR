@@ -89,8 +89,8 @@ export class ProgressiveSceneService extends BaseService {
 
       Logger.info(`📦 Found ${size} level 0 nodes`);
 
-      // === STAGE 1: Load ALL level 0 nodes (basic info only) ===
-      Logger.info('📦 STAGE 1: Loading level 0 nodes (basic info)...');
+      // === STAGE 1: Load ALL level 0 nodes (basic info + attrInfo) ===
+      Logger.info('📦 STAGE 1: Loading level 0 nodes (basic info + attrInfo)...');
       
       for (let i = 0; i < size; i++) {
         const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
@@ -99,7 +99,25 @@ export class ProgressiveSceneService extends BaseService {
           // Load basic node info WITHOUT children
           const node = await this.addSceneItem(this.scene.tree, itemResponse.result, null, 1);
           
-          if (node) {
+          if (node && node.handle && node.handle !== 0) {
+            // 🎯 Load attrInfo immediately so Node Inspector shows parameter values
+            try {
+              const attrInfoResponse = await this.apiService.callApi(
+                'ApiItem',
+                'attrInfo',
+                node.handle,
+                { id: AttributeId.A_VALUE }
+              );
+              
+              if (attrInfoResponse?.result && attrInfoResponse.result.type !== "AT_UNKNOWN") {
+                node.attrInfo = attrInfoResponse.result;
+                Logger.debug(`  ✅ Loaded attrInfo for "${node.name}" (type: ${attrInfoResponse.result.type})`);
+              }
+            } catch (attrError: any) {
+              // Some nodes don't have A_VALUE attribute, that's OK
+              Logger.debug(`  ⚪ No attrInfo for "${node.name}": ${attrError.message}`);
+            }
+            
             // 🎯 EMIT: Level 0 node added → NodeGraph shows it immediately
             this.emit('scene:nodeAdded', { node, level: 0 });
             Logger.info(`✅ Level 0 [${i + 1}/${size}]: "${node.name}"`);
