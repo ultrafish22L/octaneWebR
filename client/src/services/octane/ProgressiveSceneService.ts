@@ -430,39 +430,53 @@ export class ProgressiveSceneService extends BaseService {
     level: number,
     maxLevel: number = 10
   ): Promise<void> {
+    Logger.info(`🔍 loadNodeChildrenRecursive: Starting for "${node.name}" (handle: ${node.handle}, level: ${level})`);
+    
     if (level > maxLevel) {
-      Logger.debug(`Max recursion level ${maxLevel} reached for node ${node.handle}`);
+      Logger.info(`⚠️ Max recursion level ${maxLevel} reached for node ${node.handle}`);
       return;
     }
     
     try {
       // Check if node is a graph (has children)
+      Logger.info(`🔍 Checking if "${node.name}" is a graph...`);
       const isGraphResponse = await this.apiService.callApi(
         'ApiItem',
         'isGraph',
         node.handle
       );
       
+      Logger.info(`📊 isGraph result for "${node.name}": ${isGraphResponse?.result}`);
+      
       if (!isGraphResponse?.result) {
+        Logger.info(`❌ "${node.name}" is NOT a graph, skipping children`);
         node.childrenLoaded = true;
         return; // Not a graph, no children
       }
       
+      Logger.info(`✅ "${node.name}" IS a graph, loading children...`);
+      
       // Get owned items
+      Logger.info(`🔍 Calling ApiNodeGraph.getOwnedItems for "${node.name}"...`);
       const ownedResponse = await this.apiService.callApi(
         'ApiNodeGraph',
         'getOwnedItems',
         node.handle
       );
       
+      Logger.info(`📊 getOwnedItems result for "${node.name}":`, ownedResponse);
+      
       if (!ownedResponse?.list?.handle) {
+        Logger.info(`❌ "${node.name}" has no owned items list, marking as complete`);
         node.childrenLoaded = true;
         return;
       }
       
       const ownedItemsHandle = ownedResponse.list.handle;
+      Logger.info(`✅ "${node.name}" owned items handle: ${ownedItemsHandle}`);
       
       // Get count
+      Logger.info(`🔍 Getting size of owned items for "${node.name}"...`);
       const sizeResponse = await this.apiService.callApi(
         'ApiItemArray',
         'size',
@@ -470,10 +484,15 @@ export class ProgressiveSceneService extends BaseService {
       );
       const size = sizeResponse?.result || 0;
       
+      Logger.info(`📊 "${node.name}" has ${size} children`);
+      
       if (size === 0) {
+        Logger.info(`❌ "${node.name}" has 0 children, marking as complete`);
         node.childrenLoaded = true;
         return;
       }
+      
+      Logger.info(`✅ "${node.name}" has ${size} children, loading them...`);
       
       // Load children
       const children: SceneNodeWithState[] = [];
@@ -481,6 +500,7 @@ export class ProgressiveSceneService extends BaseService {
       for (let i = 0; i < size; i++) {
         this.checkAborted();
         
+        Logger.info(`🔍 Loading child ${i + 1}/${size} for "${node.name}"...`);
         const itemResponse = await this.apiService.callApi(
           'ApiItemArray',
           'get',
@@ -488,13 +508,18 @@ export class ProgressiveSceneService extends BaseService {
           { index: i }
         );
         
+        Logger.info(`📊 Child ${i + 1} response:`, itemResponse);
+        
         if (itemResponse?.result?.handle) {
           const childHandle = itemResponse.result.handle;
+          Logger.info(`✅ Got child handle: ${childHandle}`);
           
           // Get basic info
+          Logger.info(`🔍 Getting basic info for child ${childHandle}...`);
           const child = await this.getBasicNodeInfo(childHandle, level);
           
           if (child) {
+            Logger.info(`✅ Child loaded: "${child.name}" (${child.handle})`);
             children.push(child);
             this.scene.map.set(childHandle, child);
             
@@ -504,7 +529,11 @@ export class ProgressiveSceneService extends BaseService {
               level, 
               parent: node.handle 
             });
+          } else {
+            Logger.info(`❌ Failed to get basic info for child ${childHandle}`);
           }
+        } else {
+          Logger.info(`❌ Child ${i + 1} has no handle in response`);
         }
         
         // Yield periodically
@@ -512,6 +541,9 @@ export class ProgressiveSceneService extends BaseService {
           await this.yieldToUI();
         }
       }
+      
+      Logger.info(`✅ Loaded ${children.length} children for "${node.name}"`);
+      
       
       // Update node
       node.children = children;
@@ -527,7 +559,12 @@ export class ProgressiveSceneService extends BaseService {
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        Logger.error(`Failed to load children for node ${node.handle}:`, error);
+        Logger.error(`❌ Failed to load children for node "${node.name}" (${node.handle}):`, error);
+        Logger.error(`   Error name: ${error.name}`);
+        Logger.error(`   Error message: ${error.message}`);
+        Logger.error(`   Error stack:`, error.stack);
+      } else {
+        Logger.info(`🚫 Load aborted for "${node.name}"`);
       }
       node.childrenLoaded = true;
     }
