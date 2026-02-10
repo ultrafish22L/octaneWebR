@@ -95,6 +95,30 @@ function AppContent() {
   const handleSceneTreeChange = (tree: SceneNode[]) => {
     Logger.debug('🔄 App.tsx: handleSceneTreeChange called with', tree.length, 'nodes');
     setSceneTree(tree);
+    
+    // Update selected node reference if it exists in the new tree
+    // This is critical for progressive loading - when children are added to a node,
+    // we need to update selectedNode to point to the updated node object
+    if (selectedNode && selectedNode.handle) {
+      const findNodeInTree = (nodes: SceneNode[], handle: number): SceneNode | null => {
+        for (const node of nodes) {
+          if (node.handle === handle) {
+            return node;
+          }
+          if (node.children && node.children.length > 0) {
+            const found = findNodeInTree(node.children, handle);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      const updatedNode = findNodeInTree(tree, selectedNode.handle);
+      if (updatedNode) {
+        Logger.debug(`🔄 App.tsx: Updating selected node "${selectedNode.name}" with ${updatedNode.children?.length || 0} children`);
+        setSelectedNode(updatedNode);
+      }
+    }
   };
 
   // Scene sync state handler

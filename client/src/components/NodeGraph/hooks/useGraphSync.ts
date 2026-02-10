@@ -180,6 +180,9 @@ export function useGraphSync({
   /**
    * Load scene graph when sceneTree changes
    * Optimization: Skip full rebuild if incremental add/delete handlers are active
+   * 
+   * NOTE: Progressive loading can add children to existing nodes without changing
+   * the root tree length. We need to rebuild when this happens to show new connections.
    */
   useEffect(() => {
     Logger.debug('📊 NodeGraphEditor: sceneTree changed, length =', sceneTree?.length || 0);
@@ -191,37 +194,16 @@ export function useGraphSync({
       return;
     }
 
-    // Check if we're handling incremental operations
-    // - nodeAdded: currentNodes.length < sceneTree.length
-    // - nodeDeleted: currentNodes.length > sceneTree.length
-    // If so, skip full rebuild - the event handlers will update incrementally
-    setNodes(currentNodes => {
-      Logger.debug(
-        `📊 NodeGraphEditor: currentNodes=${currentNodes.length}, sceneTree=${sceneTree.length}`
-      );
-
-      // If current graph has fewer nodes, nodeAdded is handling it
-      if (currentNodes.length < sceneTree.length && currentNodes.length > 0) {
-        Logger.debug('📊 NodeGraphEditor: Skipping full rebuild - nodeAdded handler active');
-        return currentNodes; // Don't rebuild
-      }
-
-      // If current graph has more nodes, nodeDeleted is handling it
-      if (currentNodes.length > sceneTree.length && currentNodes.length > 0) {
-        Logger.debug('📊 NodeGraphEditor: Skipping full rebuild - nodeDeleted handler active');
-        return currentNodes; // Don't rebuild
-      }
-
-      // Full rebuild needed (initial load, sync issues, or other changes)
-      Logger.debug('📊 NodeGraphEditor: Full graph rebuild triggered');
-      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
-      Logger.debug(
-        `📊 NodeGraphEditor: Rebuilt graph with ${graphNodes.length} nodes, ${graphEdges.length} edges`
-      );
-      setEdges(graphEdges);
-      return graphNodes;
-    });
-  }, [sceneTree, convertSceneToGraph, setEdges, setNodes]);
+    // Always rebuild the graph when sceneTree changes
+    // This ensures progressive loading updates (children added to existing nodes) are reflected
+    Logger.debug('📊 NodeGraphEditor: Full graph rebuild triggered');
+    const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
+    Logger.debug(
+      `📊 NodeGraphEditor: Rebuilt graph with ${graphNodes.length} nodes, ${graphEdges.length} edges`
+    );
+    setNodes(graphNodes);
+    setEdges(graphEdges);
+  }, [sceneTree, convertSceneToGraph, setNodes, setEdges]);
 
   /**
    * Handle incremental node additions (no full graph rebuild)
