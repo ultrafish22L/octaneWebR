@@ -114,7 +114,7 @@ export class ProgressiveSceneService extends BaseService {
       }
 
       Logger.info(`✅ STAGE 1 complete: ${this.scene.tree.length} level 0 nodes loaded`);
-      this.emit('scene:level0Complete', { count: this.scene.tree.length });
+      this.emit('scene:level0Complete', { nodes: this.scene.tree });
 
       // === STAGE 2: Load children (pins) for each level 0 node ===
       Logger.info('📌 STAGE 2: Loading children for level 0 nodes...');
