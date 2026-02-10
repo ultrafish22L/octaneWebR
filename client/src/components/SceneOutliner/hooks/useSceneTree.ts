@@ -168,26 +168,36 @@ export function useSceneTree({
       if (!FEATURES.PROGRESSIVE_LOADING) return;
       
       Logger.info(`📥 UI: Received scene:childrenLoaded for "${parent.name}" (handle: ${parent.handle}): ${children.length} children`);
+      Logger.info(`   Children names: ${children.map(c => c.name).join(', ')}`);
       
       setSceneTree(prev => {
+        Logger.info(`   Current tree size: ${prev.length} root nodes`);
+        Logger.info(`   Root handles: ${prev.map(n => `${n.handle}:${n.name}`).join(', ')}`);
+        
         // Recursively find and update parent node with children
-        const updateNodeWithChildren = (nodes: SceneNode[]): SceneNode[] => {
+        const updateNodeWithChildren = (nodes: SceneNode[], depth = 0): SceneNode[] => {
           return nodes.map(node => {
             if (node.handle === parent.handle) {
               // Found the parent - add children
-              Logger.info(`✅ UI: Found parent node in tree, adding ${children.length} children`);
+              Logger.info(`✅ UI: Found parent at depth ${depth}: "${node.name}" (${node.handle}), adding ${children.length} children`);
               return { ...node, children };
             }
             if (node.children && node.children.length > 0) {
               // Recursively check children
-              return { ...node, children: updateNodeWithChildren(node.children) };
+              return { ...node, children: updateNodeWithChildren(node.children, depth + 1) };
             }
             return node;
           });
         };
         
         const updated = updateNodeWithChildren(prev);
-        Logger.info(`🔄 UI: Tree updated, triggering onSceneTreeChange`);
+        Logger.info(`🔄 UI: Tree updated, new tree size: ${updated.length}, triggering onSceneTreeChange`);
+        
+        // Log first node's children count
+        if (updated.length > 0) {
+          Logger.info(`   First node "${updated[0].name}" now has ${updated[0].children?.length || 0} children`);
+        }
+        
         setTimeout(() => onSceneTreeChange?.(updated), 0);
         return updated;
       });
