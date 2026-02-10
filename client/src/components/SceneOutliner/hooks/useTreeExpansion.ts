@@ -84,6 +84,18 @@ export function useTreeExpansion({
     setExpansionMap(collapseAll(syntheticRoot));
   }, [sceneTree]);
 
+  // 🎯 NEW: Expand specific nodes by handle (for progressive loading)
+  const expandNodes = useCallback((handles: number[]) => {
+    setExpansionMap(prevMap => {
+      const newMap = new Map(prevMap);
+      handles.forEach(handle => {
+        const key = `${handle}`;
+        newMap.set(key, true);
+      });
+      return newMap;
+    });
+  }, []);
+
   // Initialize expansion map when scene tree changes
   const initializeExpansion = useCallback((tree: SceneNode[]) => {
     const syntheticRoot: SceneNode[] = [
@@ -135,5 +147,6 @@ export function useTreeExpansion({
     handleExpandAll,
     handleCollapseAll,
     initializeExpansion,
+    expandNodes, // 🎯 NEW: Expose for progressive loading
   };
 }

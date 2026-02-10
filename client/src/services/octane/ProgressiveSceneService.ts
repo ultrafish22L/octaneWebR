@@ -113,8 +113,10 @@ export class ProgressiveSceneService extends BaseService {
           message: `Loaded ${i + 1}/${size} level 0 nodes` 
         });
 
-        // 🎯 Yield to browser to allow React to render level 0 nodes progressively
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // 🎯 CRITICAL: Yield to browser paint cycle for progressive rendering
+        // requestAnimationFrame + delay ensures browser paints between updates
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms = visible pause
       }
 
       Logger.info(`✅ STAGE 1 complete: ${this.scene.tree.length} level 0 nodes`);
@@ -179,10 +181,10 @@ export class ProgressiveSceneService extends BaseService {
             message: `Level ${currentLevel}: ${i + 1}/${currentLevelNodes.length} nodes` 
           });
 
-          // 🎯 CRITICAL: Yield to browser event loop to allow React to render!
-          // Without this, React 18 batches all setState calls and renders only once at the end.
-          // setTimeout(0) queues a microtask, giving React a chance to flush updates.
-          await new Promise(resolve => setTimeout(resolve, 0));
+          // 🎯 CRITICAL: Yield to browser paint cycle for progressive rendering
+          // requestAnimationFrame syncs with browser paint, delay ensures visible update
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => setTimeout(resolve, 50)); // 50ms = 3 frames at 60fps
         }
 
         Logger.info(`✅ Level ${currentLevel} complete: processed ${currentLevelNodes.length} nodes, found ${nextLevelNodes.length} children`);

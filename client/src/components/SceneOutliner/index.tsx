@@ -35,6 +35,10 @@ export const SceneOutliner = React.memo(function SceneOutliner({
 }: SceneOutlinerProps) {
   const { connected } = useOctane();
   const [activeTab, setActiveTab] = useState<TabType>('scene');
+  
+  // List ref for forcing re-renders
+  const listRef = React.useRef<any>(null);
+  const [listKey, setListKey] = React.useState(0);
 
   // Context menu actions
   const contextMenu = useContextMenuActions({ onNodeSelect });
@@ -44,21 +48,43 @@ export const SceneOutliner = React.memo(function SceneOutliner({
     // No-op, auto-initialization happens in useTreeExpansion now
   }, []);
 
+  // 🎯 Use ref to break circular dependency between useSceneTree and useTreeExpansion
+  const expandNodesRef = React.useRef<((handles: number[]) => void) | null>(null);
+  
+  // Stable callback that uses ref (so useSceneTree can call it without depending on expandNodes)
+  const handleExpandNodes = useCallback((handles: number[]) => {
+    if (expandNodesRef.current) {
+      expandNodesRef.current(handles);
+    }
+  }, []);
+
   // Scene tree management
   const { sceneTree, loading, loadSceneTree } = useSceneTree({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
     initializeExpansion: handleInitializeExpansion,
+    onExpandNodes: handleExpandNodes, // Stable callback that uses ref
   });
 
   // Tree expansion management (auto-initializes when sceneTree loads)
-  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll } = useTreeExpansion({
+  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll, expandNodes } = useTreeExpansion({
     sceneTree,
     selectedNode,
     onNodeSelect,
     onNodeContextMenu: contextMenu.handleNodeContextMenu,
   });
+  
+  // Update ref when expandNodes changes
+  React.useEffect(() => {
+    expandNodesRef.current = expandNodes;
+  }, [expandNodes]);
+  
+  // 🎯 Force List re-render when flattenedNodes change
+  // This ensures virtual scrolling cache is invalidated
+  React.useEffect(() => {
+    setListKey(prev => prev + 1);
+  }, [flattenedNodes.length]);
 
   // LocalDB management
   const localDB = useLocalDB({ activeTab });
@@ -166,6 +192,8 @@ export const SceneOutliner = React.memo(function SceneOutliner({
             <div className="scene-mesh-list">
               {/* Virtual scrolling: Only render visible nodes */}
               <List
+                key={listKey}
+                listRef={listRef}
                 rowCount={flattenedNodes.length}
                 rowHeight={20}
                 rowComponent={VirtualTreeRow}

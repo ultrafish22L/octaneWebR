@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
@@ -20,6 +21,7 @@ interface UseSceneTreeProps {
   onSyncStateChange?: (syncing: boolean) => void;
   onNodeSelect?: (node: SceneNode | null) => void;
   initializeExpansion: (tree: SceneNode[]) => void;
+  onExpandNodes?: (handles: number[]) => void; // NEW: Callback to expand nodes
 }
 
 export function useSceneTree({
@@ -27,6 +29,7 @@ export function useSceneTree({
   onSyncStateChange,
   onNodeSelect,
   initializeExpansion,
+  onExpandNodes,
 }: UseSceneTreeProps) {
   const { client, connected } = useOctane();
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
@@ -125,17 +128,21 @@ export function useSceneTree({
       
       // Level 0 nodes: Add to root of tree
       if (level === 0) {
-        setSceneTree(prev => {
-          // Check if node already exists (avoid duplicates)
-          const exists = prev.some(n => n.handle === node.handle);
-          if (exists) {
-            Logger.debug('⚠️ Progressive: Node already exists, skipping');
-            return prev;
-          }
-          
-          const updated = [...prev, node];
-          setTimeout(() => onSceneTreeChange?.(updated), 0);
-          return updated;
+        // 🎯 CRITICAL: Use flushSync to force immediate DOM update for level 0 nodes
+        // This ensures top-level nodes appear immediately, not batched with children
+        flushSync(() => {
+          setSceneTree(prev => {
+            // Check if node already exists (avoid duplicates)
+            const exists = prev.some(n => n.handle === node.handle);
+            if (exists) {
+              Logger.debug('⚠️ Progressive: Node already exists, skipping');
+              return prev;
+            }
+            
+            const updated = [...prev, node];
+            setTimeout(() => onSceneTreeChange?.(updated), 0);
+            return updated;
+          });
         });
       }
       // Nested nodes: Will be handled by childrenLoaded event
@@ -196,6 +203,20 @@ export function useSceneTree({
         // Log first node's children count
         if (updated.length > 0) {
           Logger.info(`   First node "${updated[0].name}" now has ${updated[0].children?.length || 0} children`);
+        }
+        
+        // 🎯 CRITICAL: Auto-expand parent and children so they're visible
+        const childHandles = children
+          .map(c => c.handle)
+          .filter((h): h is number => typeof h === 'number' && h !== 0);
+        const handlesToExpand = [
+          ...(parent.handle ? [parent.handle] : []),
+          ...childHandles
+        ];
+        
+        if (onExpandNodes && handlesToExpand.length > 0) {
+          Logger.info(`🔓 UI: Auto-expanding ${handlesToExpand.length} nodes: ${handlesToExpand.join(', ')}`);
+          onExpandNodes(handlesToExpand);
         }
         
         setTimeout(() => onSceneTreeChange?.(updated), 0);
