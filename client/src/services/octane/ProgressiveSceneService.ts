@@ -678,29 +678,78 @@ export class ProgressiveSceneService extends BaseService {
           if (pinInfo) {
             pinInfo.ix = i;
             
-            // Create child node (even if unconnected - shows as pin in tree)
-            const childHandle = connectedNode?.handle || 0;
-            const childName = pinInfo.staticLabel || `Pin ${i}`;
+            // Match SceneService.addSceneItem() pattern EXACTLY
+            const itemName = connectedNode?.name || pinInfo?.staticLabel || 'Unnamed';
+            let outType = pinInfo?.outType || '';
+            let graphInfo = null;
+            let nodeInfo = null;
+            let isGraph = false;
             
-            Logger.info(`🔍 Getting basic info for pin child "${childName}" (handle: ${childHandle})...`);
-            
-            let child: SceneNodeWithState | null = null;
-            
-            if (childHandle !== 0) {
-              // Connected pin - load full node info
-              child = await this.getBasicNodeInfo(childHandle, level + 1);
-              if (child) {
-                // Add pin info to the child
-                child.pinInfo = pinInfo;
-                child.name = pinInfo.staticLabel || child.name;
+            // Only fetch API data if handle is valid (SAME AS SceneService line 335!)
+            if (connectedNode != null && connectedNode.handle != 0) {
+              const handleNum = Number(connectedNode.handle);
+              
+              // Check if already loaded
+              const existing = this.scene.map.get(handleNum);
+              if (existing && existing.handle) {
+                existing.pinInfo = pinInfo;
+                children.push(existing);
+                continue; // Already loaded, skip
               }
+              
+              // Fetch node data
+              const nameResponse = await this.apiService.callApi('ApiItem', 'name', connectedNode.handle);
+              const name = nameResponse?.result || itemName;
+              
+              const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', connectedNode.handle);
+              outType = outTypeResponse?.result || outType;
+              
+              const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', connectedNode.handle);
+              isGraph = isGraphResponse?.result || false;
+              
+              if (isGraph) {
+                const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', connectedNode.handle);
+                graphInfo = infoResponse?.result || null;
+              } else {
+                const infoResponse = await this.apiService.callApi('ApiNode', 'info', connectedNode.handle);
+                nodeInfo = infoResponse?.result || null;
+              }
+              
+              // Create connected node
+              const child: SceneNodeWithState = {
+                handle: handleNum,
+                name: pinInfo.staticLabel || name,
+                type: outType,
+                icon: getIconForType(outType),
+                level: level + 1,
+                children: [],
+                graphInfo,
+                nodeInfo,
+                pinInfo,
+                loadState: 'loaded',
+                pinsLoaded: false,
+                connectionsLoaded: false,
+                childrenLoaded: false
+              };
+              
+              Logger.info(`✅ Pin child loaded: "${child.name}" (handle: ${child.handle})`);
+              children.push(child);
+              this.scene.map.set(handleNum, child);
+              
+              this.emit('scene:nodeAdded', { 
+                node: child, 
+                level: level + 1, 
+                parent: node.handle 
+              });
             } else {
-              // Unconnected pin - create placeholder node
-              child = {
-                handle: 0,
-                name: childName,
-                type: pinInfo.outType || 'UNKNOWN',
-                icon: getIconForType(pinInfo.outType || ''),
+              // Unconnected pin - create placeholder (SAME AS SceneService line 386!)
+              Logger.info(`⚪ Unconnected pin: ${itemName}`);
+              
+              const child: SceneNodeWithState = {
+                handle: connectedNode?.handle || 0,
+                name: pinInfo.staticLabel || itemName,
+                type: outType,
+                icon: getIconForType(outType),
                 level: level + 1,
                 children: [],
                 pinInfo,
@@ -709,17 +758,10 @@ export class ProgressiveSceneService extends BaseService {
                 connectionsLoaded: true,
                 childrenLoaded: true
               };
-            }
-            
-            if (child) {
-              Logger.info(`✅ Pin child loaded: "${child.name}" (handle: ${child.handle})`);
+              
+              Logger.info(`✅ Unconnected pin node created: "${child.name}"`);
               children.push(child);
               
-              if (childHandle !== 0) {
-                this.scene.map.set(childHandle, child);
-              }
-              
-              // Emit incremental update
               this.emit('scene:nodeAdded', { 
                 node: child, 
                 level: level + 1, 
