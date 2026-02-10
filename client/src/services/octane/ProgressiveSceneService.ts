@@ -315,7 +315,7 @@ export class ProgressiveSceneService extends BaseService {
     for (const node of level0Nodes) {
       this.checkAborted();
       
-      Logger.debug(`🔄 STAGE 4: Loading children for "${node.name}" (${node.handle})`);
+      Logger.info(`🔄 STAGE 4: Loading children for "${node.name}" (${node.handle})`);
       await this.loadNodeChildrenRecursive(node, 1);
       
       // Yield frequently to keep UI responsive
