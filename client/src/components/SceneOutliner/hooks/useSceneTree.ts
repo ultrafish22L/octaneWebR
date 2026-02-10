@@ -1,12 +1,19 @@
 /**
  * useSceneTree - Scene tree loading and event handling
  * Manages scene tree state, loading, and incremental updates
+ * 
+ * Supports both traditional and progressive scene loading:
+ * - Traditional: Load entire scene, then render
+ * - Progressive: Render nodes as they load (level 0 → pins → connections → deep nodes)
+ * 
+ * Updated: 2025-02-03 - Added progressive loading support
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
+import { FEATURES } from '../../../config/features';
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
@@ -103,8 +110,102 @@ export function useSceneTree({
   useEffect(() => {
     if (!client) return;
 
+    // =================================================================
+    // PROGRESSIVE LOADING EVENTS (Sprint 1)
+    // =================================================================
+    
+    /**
+     * Progressive: Individual node added during initial load
+     * Only handles level 0 nodes during initial load
+     */
+    const handleProgressiveNodeAdded = ({ node, level, parent }: any) => {
+      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      
+      Logger.debug(`🚀 Progressive: Node added at level ${level}: "${node.name}" (handle: ${node.handle})`);
+      
+      // Level 0 nodes: Add to root of tree
+      if (level === 0) {
+        setSceneTree(prev => {
+          // Check if node already exists (avoid duplicates)
+          const exists = prev.some(n => n.handle === node.handle);
+          if (exists) {
+            Logger.debug('⚠️ Progressive: Node already exists, skipping');
+            return prev;
+          }
+          
+          const updated = [...prev, node];
+          setTimeout(() => onSceneTreeChange?.(updated), 0);
+          return updated;
+        });
+      }
+      // Nested nodes: Will be handled by childrenLoaded event
+    };
+
+    /**
+     * Progressive: Level 0 complete - replace tree with complete level 0 nodes
+     * This ensures consistent state after all level 0 nodes are loaded
+     */
+    const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
+      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      
+      Logger.info(`✅ Progressive: Level 0 complete (${nodes.length} nodes)`);
+      setSceneTree(nodes);
+      setTimeout(() => onSceneTreeChange?.(nodes), 0);
+      
+      // Initialize expansion AFTER setting tree
+      setTimeout(() => {
+        if (nodes.length > 0) {
+          initializeExpansion(nodes);
+        }
+      }, 0);
+    };
+
+    /**
+     * Progressive: Children loaded for a parent node
+     * Updates the tree to add children to their parent
+     */
+    const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
+      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      
+      Logger.debug(`🌲 Progressive: Children loaded for "${parent.name}": ${children.length} children`);
+      
+      setSceneTree(prev => {
+        // Recursively find and update parent node with children
+        const updateNodeWithChildren = (nodes: SceneNode[]): SceneNode[] => {
+          return nodes.map(node => {
+            if (node.handle === parent.handle) {
+              // Found the parent - add children
+              return { ...node, children };
+            }
+            if (node.children && node.children.length > 0) {
+              // Recursively check children
+              return { ...node, children: updateNodeWithChildren(node.children) };
+            }
+            return node;
+          });
+        };
+        
+        const updated = updateNodeWithChildren(prev);
+        setTimeout(() => onSceneTreeChange?.(updated), 0);
+        return updated;
+      });
+    };
+
+    // Register progressive event listeners
+    if (FEATURES.PROGRESSIVE_LOADING) {
+      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE event listeners');
+      client.on('scene:nodeAdded', handleProgressiveNodeAdded);
+      client.on('scene:level0Complete', handleLevel0Complete);
+      client.on('scene:childrenLoaded', handleChildrenLoaded);
+      Logger.debug('✅ useSceneTree: Progressive event listeners registered');
+    }
+
+    // =================================================================
+    // TRADITIONAL EVENTS (Always active for post-load operations)
+    // =================================================================
+
     const handleNodeAdded = (event: NodeAddedEvent) => {
-      Logger.debug('🌲 SceneOutliner: Adding node incrementally:', event.node.name);
+      Logger.debug('🌲 Traditional: Adding node incrementally:', event.node.name);
       setSceneTree(prev => {
         const updated = [...prev, event.node];
         // Schedule parent callback after state update completes
@@ -208,11 +309,20 @@ export function useSceneTree({
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
 
     return () => {
+      // Remove progressive event listeners (if they were registered)
+      if (FEATURES.PROGRESSIVE_LOADING) {
+        Logger.debug('🔇 useSceneTree: Removing progressive event listeners');
+        client.off('scene:nodeAdded', handleProgressiveNodeAdded);
+        client.off('scene:level0Complete', handleLevel0Complete);
+        client.off('scene:childrenLoaded', handleChildrenLoaded);
+      }
+      
+      // Remove traditional event listeners
       client.off('nodeAdded', handleNodeAdded);
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
     };
-  }, [client, onSceneTreeChange]);
+  }, [client, onSceneTreeChange, initializeExpansion]);
 
   return {
     sceneTree,

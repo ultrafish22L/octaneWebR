@@ -38,7 +38,7 @@ import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
 import { SaveRenderDialog } from './components/dialogs/SaveRenderDialog';
 import { ExportPassesDialog } from './components/dialogs/ExportPassesDialog';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
-import { logFeatureFlags } from './config/features';
+import { logFeatureFlags, FEATURES } from './config/features';
 import './styles/error-boundary.css';
 
 // Lazy load heavy components
@@ -336,8 +336,11 @@ function AppContent() {
       setStatusMessage('Building scene tree...');
     };
 
-    const handleBuildProgress = (data: { step: string }) => {
-      setStatusMessage(`Building scene: ${data.step}`);
+    const handleBuildProgress = (data: { step?: string; message?: string; progress?: number }) => {
+      // Support both traditional and progressive progress events
+      const message = data.message || data.step || 'Loading scene...';
+      const progressText = data.progress !== undefined ? ` (${Math.round(data.progress)}%)` : '';
+      setStatusMessage(`Building scene: ${message}${progressText}`);
     };
 
     const handleBuildComplete = (data: { nodeCount: number; topLevelCount: number; elapsedTime: string }) => {
@@ -369,6 +372,24 @@ function AppContent() {
     client.on('nodeAdded', handleNodeAdded);
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
+
+    // Progressive loading debug listeners (Sprint 1)
+    if (FEATURES.PROGRESSIVE_LOADING) {
+      const handleLevel0Complete = (data: any) => {
+        Logger.debug(`📊 App: scene:level0Complete event received (${data.nodes?.length || 0} nodes)`);
+        setTemporaryStatus(`Level 0 loaded: ${data.nodes?.length || 0} nodes`, 2000);
+      };
+
+      const handleSceneComplete = (data: any) => {
+        Logger.debug(`📊 App: scene:complete event received (${data.totalNodes} total nodes)`);
+      };
+
+      client.on('scene:level0Complete', handleLevel0Complete);
+      client.on('scene:complete', handleSceneComplete);
+
+      Logger.debug('✅ App: Progressive loading event listeners registered');
+    }
+
 /*
     return () => {
       client.off('scene:buildStart', handleBuildStart);
