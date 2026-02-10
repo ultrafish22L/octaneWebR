@@ -473,102 +473,27 @@ export class ProgressiveSceneService extends BaseService {
       
       Logger.info(`📊 "${node.name}" isGraph check: ${isGraph} (has graphInfo: ${node.graphInfo !== null})`);
       
-      if (!isGraph) {
-        Logger.info(`❌ "${node.name}" is NOT a graph, skipping children`);
-        node.childrenLoaded = true;
-        return; // Not a graph, no children
-      }
+      let children: SceneNodeWithState[] = [];
       
-      Logger.info(`✅ "${node.name}" IS a graph, loading children...`);
-      
-      // Get owned items
-      Logger.info(`🔍 Calling ApiNodeGraph.getOwnedItems for "${node.name}"...`);
-      const ownedResponse = await this.apiService.callApi(
-        'ApiNodeGraph',
-        'getOwnedItems',
-        node.handle
-      );
-      
-      Logger.info(`📊 getOwnedItems result for "${node.name}":`, ownedResponse);
-      
-      if (!ownedResponse?.list?.handle) {
-        Logger.info(`❌ "${node.name}" has no owned items list, marking as complete`);
+      if (isGraph) {
+        Logger.info(`✅ "${node.name}" IS a graph, loading via getOwnedItems...`);
+        children = await this.loadGraphChildren(node, level);
+      } else if (node.handle && node.handle !== 0) {
+        Logger.info(`✅ "${node.name}" is a regular node, loading via pins...`);
+        children = await this.loadPinChildren(node, level);
+      } else {
+        Logger.info(`❌ "${node.name}" has no handle, skipping children`);
         node.childrenLoaded = true;
         return;
       }
       
-      const ownedItemsHandle = ownedResponse.list.handle;
-      Logger.info(`✅ "${node.name}" owned items handle: ${ownedItemsHandle}`);
-      
-      // Get count
-      Logger.info(`🔍 Getting size of owned items for "${node.name}"...`);
-      const sizeResponse = await this.apiService.callApi(
-        'ApiItemArray',
-        'size',
-        ownedItemsHandle
-      );
-      const size = sizeResponse?.result || 0;
-      
-      Logger.info(`📊 "${node.name}" has ${size} children`);
-      
-      if (size === 0) {
-        Logger.info(`❌ "${node.name}" has 0 children, marking as complete`);
+      if (children.length === 0) {
+        Logger.info(`❌ "${node.name}" has no children`);
         node.childrenLoaded = true;
         return;
-      }
-      
-      Logger.info(`✅ "${node.name}" has ${size} children, loading them...`);
-      
-      // Load children
-      const children: SceneNodeWithState[] = [];
-      
-      for (let i = 0; i < size; i++) {
-        this.checkAborted();
-        
-        Logger.info(`🔍 Loading child ${i + 1}/${size} for "${node.name}"...`);
-        const itemResponse = await this.apiService.callApi(
-          'ApiItemArray',
-          'get',
-          ownedItemsHandle,
-          { index: i }
-        );
-        
-        Logger.info(`📊 Child ${i + 1} response:`, itemResponse);
-        
-        if (itemResponse?.result?.handle) {
-          const childHandle = itemResponse.result.handle;
-          Logger.info(`✅ Got child handle: ${childHandle}`);
-          
-          // Get basic info
-          Logger.info(`🔍 Getting basic info for child ${childHandle}...`);
-          const child = await this.getBasicNodeInfo(childHandle, level);
-          
-          if (child) {
-            Logger.info(`✅ Child loaded: "${child.name}" (${child.handle})`);
-            children.push(child);
-            this.scene.map.set(childHandle, child);
-            
-            // Emit incremental update
-            this.emit('scene:nodeAdded', { 
-              node: child, 
-              level, 
-              parent: node.handle 
-            });
-          } else {
-            Logger.info(`❌ Failed to get basic info for child ${childHandle}`);
-          }
-        } else {
-          Logger.info(`❌ Child ${i + 1} has no handle in response`);
-        }
-        
-        // Yield periodically
-        if (i > 0 && i % 5 === 0) {
-          await this.yieldToUI();
-        }
       }
       
       Logger.info(`✅ Loaded ${children.length} children for "${node.name}"`);
-      
       
       // Update node
       node.children = children;
@@ -593,6 +518,228 @@ export class ProgressiveSceneService extends BaseService {
       }
       node.childrenLoaded = true;
     }
+  }
+
+  /**
+   * Load children for a graph node (via getOwnedItems)
+   */
+  private async loadGraphChildren(
+    node: SceneNodeWithState,
+    level: number
+  ): Promise<SceneNodeWithState[]> {
+    const children: SceneNodeWithState[] = [];
+    
+    // Get owned items
+    Logger.info(`🔍 Calling ApiNodeGraph.getOwnedItems for "${node.name}"...`);
+    const ownedResponse = await this.apiService.callApi(
+      'ApiNodeGraph',
+      'getOwnedItems',
+      node.handle
+    );
+    
+    Logger.info(`📊 getOwnedItems result for "${node.name}":`, ownedResponse);
+    
+    if (!ownedResponse?.list?.handle) {
+      Logger.info(`❌ "${node.name}" has no owned items list`);
+      return children;
+    }
+    
+    const ownedItemsHandle = ownedResponse.list.handle;
+    Logger.info(`✅ "${node.name}" owned items handle: ${ownedItemsHandle}`);
+    
+    // Get count
+    Logger.info(`🔍 Getting size of owned items for "${node.name}"...`);
+    const sizeResponse = await this.apiService.callApi(
+      'ApiItemArray',
+      'size',
+      ownedItemsHandle
+    );
+    const size = sizeResponse?.result || 0;
+    
+    Logger.info(`📊 "${node.name}" has ${size} owned items`);
+    
+    if (size === 0) {
+      return children;
+    }
+    
+    Logger.info(`✅ Loading ${size} owned items for "${node.name}"...`);
+    
+    // Load children
+    for (let i = 0; i < size; i++) {
+      this.checkAborted();
+      
+      Logger.info(`🔍 Loading owned item ${i + 1}/${size} for "${node.name}"...`);
+      const itemResponse = await this.apiService.callApi(
+        'ApiItemArray',
+        'get',
+        ownedItemsHandle,
+        { index: i }
+      );
+      
+      Logger.info(`📊 Item ${i + 1} response:`, itemResponse);
+      
+      if (itemResponse?.result?.handle) {
+        const childHandle = itemResponse.result.handle;
+        Logger.info(`✅ Got child handle: ${childHandle}`);
+        
+        // Get basic info
+        Logger.info(`🔍 Getting basic info for child ${childHandle}...`);
+        const child = await this.getBasicNodeInfo(childHandle, level + 1);
+        
+        if (child) {
+          Logger.info(`✅ Child loaded: "${child.name}" (${child.handle})`);
+          children.push(child);
+          this.scene.map.set(childHandle, child);
+          
+          // Emit incremental update
+          this.emit('scene:nodeAdded', { 
+            node: child, 
+            level: level + 1, 
+            parent: node.handle 
+          });
+        } else {
+          Logger.info(`❌ Failed to get basic info for child ${childHandle}`);
+        }
+      } else {
+        Logger.info(`❌ Item ${i + 1} has no handle in response`);
+      }
+      
+      // Yield periodically
+      if (i > 0 && i % 5 === 0) {
+        await this.yieldToUI();
+      }
+    }
+    
+    Logger.info(`✅ Loaded ${children.length} graph children for "${node.name}"`);
+    return children;
+  }
+
+  /**
+   * Load children for a regular node (via pins)
+   * Ported from SceneService.syncSceneSequential()
+   */
+  private async loadPinChildren(
+    node: SceneNodeWithState,
+    level: number
+  ): Promise<SceneNodeWithState[]> {
+    const children: SceneNodeWithState[] = [];
+    
+    Logger.info(`📌 Getting pin count for "${node.name}"...`);
+    const pinCountResponse = await this.apiService.callApi(
+      'ApiNode',
+      'pinCount',
+      node.handle
+    );
+    const pinCount = pinCountResponse?.result || 0;
+    
+    Logger.info(`📊 "${node.name}" has ${pinCount} pins`);
+    
+    if (pinCount === 0) {
+      return children;
+    }
+    
+    Logger.info(`✅ Loading ${pinCount} pins for "${node.name}"...`);
+    
+    // Iterate through pins to find connected nodes
+    for (let i = 0; i < pinCount; i++) {
+      this.checkAborted();
+      
+      try {
+        Logger.info(`🔍 Loading pin ${i + 1}/${pinCount} for "${node.name}"...`);
+        
+        // Get connected node
+        const connectedResponse = await this.apiService.callApi(
+          'ApiNode',
+          'connectedNodeIx',
+          node.handle,
+          { pinIx: i, enterWrapperNode: true }
+        );
+        
+        const connectedNode = connectedResponse?.result || null;
+        Logger.info(`📊 Pin ${i + 1} connected node:`, connectedNode);
+        
+        // Get pin info
+        const pinInfoHandleResponse = await this.apiService.callApi(
+          'ApiNode',
+          'pinInfoIx',
+          node.handle,
+          { index: i }
+        );
+        
+        if (pinInfoHandleResponse?.result?.handle) {
+          const pinInfoResponse = await this.apiService.callApi(
+            'ApiNodePinInfoEx',
+            'getApiNodePinInfo',
+            pinInfoHandleResponse.result.handle
+          );
+          
+          const pinInfo = pinInfoResponse?.nodePinInfo || null;
+          
+          if (pinInfo) {
+            pinInfo.ix = i;
+            
+            // Create child node (even if unconnected - shows as pin in tree)
+            const childHandle = connectedNode?.handle || 0;
+            const childName = pinInfo.staticLabel || `Pin ${i}`;
+            
+            Logger.info(`🔍 Getting basic info for pin child "${childName}" (handle: ${childHandle})...`);
+            
+            let child: SceneNodeWithState | null = null;
+            
+            if (childHandle !== 0) {
+              // Connected pin - load full node info
+              child = await this.getBasicNodeInfo(childHandle, level + 1);
+              if (child) {
+                // Add pin info to the child
+                child.pinInfo = pinInfo;
+                child.name = pinInfo.staticLabel || child.name;
+              }
+            } else {
+              // Unconnected pin - create placeholder node
+              child = {
+                handle: 0,
+                name: childName,
+                type: pinInfo.outType || 'UNKNOWN',
+                icon: getIconForType(pinInfo.outType || ''),
+                level: level + 1,
+                children: [],
+                pinInfo,
+                loadState: 'loaded',
+                pinsLoaded: true,
+                connectionsLoaded: true,
+                childrenLoaded: true
+              };
+            }
+            
+            if (child) {
+              Logger.info(`✅ Pin child loaded: "${child.name}" (handle: ${child.handle})`);
+              children.push(child);
+              
+              if (childHandle !== 0) {
+                this.scene.map.set(childHandle, child);
+              }
+              
+              // Emit incremental update
+              this.emit('scene:nodeAdded', { 
+                node: child, 
+                level: level + 1, 
+                parent: node.handle 
+              });
+            }
+          }
+        }
+      } catch (pinError: any) {
+        Logger.warn(`⚠️ Failed to load pin ${i} for "${node.name}":`, pinError.message);
+      }
+      
+      // Yield periodically
+      if (i > 0 && i % 5 === 0) {
+        await this.yieldToUI();
+      }
+    }
+    
+    Logger.info(`✅ Loaded ${children.length} pin children for "${node.name}"`);
+    return children;
   }
 
   /**
