@@ -167,7 +167,7 @@ export function useSceneTree({
     const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
       if (!FEATURES.PROGRESSIVE_LOADING) return;
       
-      Logger.debug(`🌲 Progressive: Children loaded for "${parent.name}": ${children.length} children`);
+      Logger.info(`📥 UI: Received scene:childrenLoaded for "${parent.name}" (handle: ${parent.handle}): ${children.length} children`);
       
       setSceneTree(prev => {
         // Recursively find and update parent node with children
@@ -175,6 +175,7 @@ export function useSceneTree({
           return nodes.map(node => {
             if (node.handle === parent.handle) {
               // Found the parent - add children
+              Logger.info(`✅ UI: Found parent node in tree, adding ${children.length} children`);
               return { ...node, children };
             }
             if (node.children && node.children.length > 0) {
@@ -186,6 +187,7 @@ export function useSceneTree({
         };
         
         const updated = updateNodeWithChildren(prev);
+        Logger.info(`🔄 UI: Tree updated, triggering onSceneTreeChange`);
         setTimeout(() => onSceneTreeChange?.(updated), 0);
         return updated;
       });

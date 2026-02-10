@@ -301,24 +301,28 @@ export class ProgressiveSceneService extends BaseService {
    * Goal: Complete scene in background while user interacts
    */
   private async loadStage4_DeepNodes(): Promise<void> {
+    Logger.info('🚀 STAGE 4: Starting deep node loading...');
+    
     // Small delay before starting deep load (let UI settle)
     await this.delay(this.config.deepLoadDelay);
     
     this.emitProgress(SceneLoadStage.DEEP_NODES, 90, 'Loading nested nodes...');
     
     const level0Nodes = this.scene.tree as SceneNodeWithState[];
+    Logger.info(`📦 STAGE 4: Found ${level0Nodes.length} level 0 nodes to process`);
     
     // Load children recursively, in background
     for (const node of level0Nodes) {
       this.checkAborted();
       
+      Logger.debug(`🔄 STAGE 4: Loading children for "${node.name}" (${node.handle})`);
       await this.loadNodeChildrenRecursive(node, 1);
       
       // Yield frequently to keep UI responsive
       await this.yieldToUI();
     }
     
-    Logger.info('✅ Deep nodes loaded');
+    Logger.info('✅ STAGE 4: Deep nodes loaded');
     this.emitProgress(SceneLoadStage.COMPLETE, 100, 'Scene fully loaded');
     this.emit('scene:deepNodesComplete', {});
     this.emit('scene:complete', { 
@@ -514,6 +518,7 @@ export class ProgressiveSceneService extends BaseService {
       node.childrenLoaded = true;
       
       // Emit update
+      Logger.info(`📤 Emitting scene:childrenLoaded for "${node.name}": ${children.length} children`);
       this.emit('scene:childrenLoaded', { parent: node, children });
       
       // Recursively load grandchildren (in background)
