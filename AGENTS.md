@@ -551,9 +551,24 @@ When investigating issues:
 - 755+ Octane node types
 - 134 CSS variables
 
-**Recent Additions** (2025-02-03):
+**Recent Additions**:
 
-**Status Message System** ✅
+**Progressive Scene Loading Fixes** (2025-02-03) ✅
+
+- ✅ Progressive Scene Outliner - Nodes appear one-by-one during load (commit 13187f2)
+  - Fixed React 18 automatic batching with flushSync()
+  - Added virtual scrolling cache invalidation with List key prop
+  - Implemented auto-expansion for parent and children nodes
+  - Documentation: PROGRESSIVE_LOADING_FIX.md
+
+- ✅ Node Inspector attrInfo Fix - Shows actual parameter values (commit d72a8fa)
+  - Level 0 nodes now fetch attrInfo immediately during Stage 1
+  - Node Inspector displays real values: booleans, numbers, colors
+  - No more "Bool value", "Float value" generic labels
+  - Trade-off: Stage 1 ~50% slower, but Inspector immediately functional
+  - Documentation: NODE_INSPECTOR_ATTRINFO_FIX.md
+
+**Status Message System** (2025-02-03) ✅
 
 - ✅ Live status bar updates with StatusMessageContext
 - ✅ Scene build progress tracking (3 steps)
@@ -605,4 +620,4 @@ When investigating issues:
 
 ---
 
-**Last Updated**: 2025-02-03
+**Last Updated**: 2025-02-03 (Progressive Loading + attrInfo Fixes)
