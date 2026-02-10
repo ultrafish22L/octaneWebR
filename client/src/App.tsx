@@ -369,7 +369,7 @@ function AppContent() {
     client.on('nodeAdded', handleNodeAdded);
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
-
+/*
     return () => {
       client.off('scene:buildStart', handleBuildStart);
       client.off('scene:buildProgress', handleBuildProgress);
@@ -378,6 +378,7 @@ function AppContent() {
       client.off('nodeDeleted', handleNodeDeletedStatus);
       client.off('connection:changed', handleConnectionChanged);
     };
+ */   
   }, [client, setStatusMessage, setTemporaryStatus]);
 
   return (

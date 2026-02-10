@@ -568,7 +568,7 @@ export class ProgressiveSceneService extends BaseService {
       nodesLoaded: this.scene.map.size
     };
     
-    this.emit('scene:progress', event);
+    this.emit('scene:buildProgress', event);
     Logger.debug(`📊 ${message} (${progress.toFixed(0)}%)`);
   }
 

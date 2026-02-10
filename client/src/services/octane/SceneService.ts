@@ -87,9 +87,9 @@ export class SceneService extends BaseService {
       if (signal.aborted) {
         throw new Error('Scene tree build was cancelled');
       }
-      
+      this.emit('scene:buildProgress', { step: 'Building scene tree' });            
       Logger.debug('🔍 Step 1: Getting root node graph...');
-      this.emit('scene:buildProgress', { step: 'Getting root node graph' });
+
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse || !rootResponse.result || !rootResponse.result.handle) {
         throw new Error('Failed to get root node graph');
@@ -104,7 +104,6 @@ export class SceneService extends BaseService {
       }
       
       Logger.debug('🔍 Step 2: Checking if root is graph...');
-      this.emit('scene:buildProgress', { step: 'Checking root node' });
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const isGraph = isGraphResponse?.result || false;
       Logger.debug('📍 Is graph:', isGraph);
@@ -118,7 +117,6 @@ export class SceneService extends BaseService {
       const startTime = performance.now();
 
       Logger.debug('🔍 Step 3: Building tree synchronously...');
-      this.emit('scene:buildProgress', { step: 'Building scene tree' });
       this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
       
@@ -255,9 +253,7 @@ export class SceneService extends BaseService {
         if (level === 1) {
           Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items`);
           for (const item of sceneItems) {
-            Logger.debug(`📍 Before addItemChildren for ${item.name} (handle: ${item.handle})`);
             await this.addItemChildren(item);
-            Logger.debug(`📍 After addItemChildren for ${item.name}, children count: ${item.children?.length || 0}`);
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           Logger.debug(`✅ Finished building children for all level 1 items`);
@@ -415,7 +411,7 @@ export class SceneService extends BaseService {
       const handleNum = Number(item.handle);
       this.scene.map.set(handleNum, entry);
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
-      
+
       if (level > 1) {
         await this.addItemChildren(entry);
       }
@@ -444,6 +440,9 @@ export class SceneService extends BaseService {
       if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
         item.attrInfo = attrInfoResponse.result;
         Logger.debugV(` ${item.name} ${JSON.stringify(attrInfoResponse.result)}`);
+      }
+      else {
+        this.emit('scene:buildProgress', { step: `adding node ${item.name}`});
       }
       const responseHas = await this.apiService.callApi(
         'ApiItem',
@@ -496,6 +495,14 @@ export class SceneService extends BaseService {
               Logger.info(`vertsPerPoly for ${item.name}: ${valueField} ${item.vertsPerPoly.length}`);
               Logger.info(`vertsPerPoly ${JSON.stringify(Object(response))} ${item.vertsPerPoly}`);
             }
+          }
+        }
+        if (!item.attrInfo) {
+          if (item.filePath) {
+            this.emit('scene:buildProgress', { step: `adding node ${item.name}: ${item.filePath}`});
+          }
+          else {  
+            this.emit('scene:buildProgress', { step: `adding node ${item.name}`});
           }
         }
       }
