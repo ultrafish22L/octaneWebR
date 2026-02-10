@@ -136,8 +136,8 @@ export class ProgressiveSceneService extends BaseService {
         for (let i = 0; i < currentLevelNodes.length; i++) {
           const { node } = currentLevelNodes[i];
           
-          // Load children (pins) for this node
-          await this.addItemChildren(node);
+          // Load ONLY immediate children (shallow, non-recursive)
+          await this.addItemChildrenShallow(node);
           const childrenAfter = node.children?.length || 0;
           
           // 🎯 EMIT: Children loaded → Update parent's pin list
@@ -326,18 +326,85 @@ export class ProgressiveSceneService extends BaseService {
       this.scene.map.set(handleNum, entry);
       Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
 
-      // Don't load children here for level 1 - we do it separately in stage 2
-      // But DO load children for level > 1 (same as SceneService)
-      if (level > 1) {
-        await this.addItemChildren(entry);
-      }
+      // 🚫 PROGRESSIVE LOADING: NEVER auto-load children here
+      // All children are loaded explicitly and shallowly in the breadth-first loop
+      // This is the key difference from SceneService which recursively loads everything
     }
     
     return entry;
   }
 
   /**
+   * Add item children SHALLOW - Load only immediate children, don't recurse
+   * This is the key difference from SceneService.addItemChildren which loads entire subtree
+   */
+  private async addItemChildrenShallow(item: SceneNode): Promise<void> {
+    if (!item || !item.handle) {
+      return;
+    }
+
+    const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
+    const sceneItems: SceneNode[] = [];
+    const childLevel = (item.level || 1) + 1;
+
+    try {
+      if (isGraph) {
+        // NodeGraph: Load owned items
+        const ownedResponse = await this.apiService.callApi('ApiNodeGraph', 'getOwnedItems', item.handle);
+        if (!ownedResponse?.list?.handle) {
+          item.children = [];
+          return;
+        }
+
+        const ownedItemsHandle = ownedResponse.list.handle;
+        const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
+        const size = sizeResponse?.result || 0;
+
+        for (let i = 0; i < size; i++) {
+          const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
+          if (itemResponse?.result?.handle) {
+            // Load child WITHOUT recursing (level check in addSceneItem prevents recursion)
+            await this.addSceneItem(sceneItems, itemResponse.result, null, childLevel);
+          }
+        }
+      } else {
+        // Regular Node: Load pins
+        const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', item.handle);
+        const pinCount = pinCountResponse?.result || 0;
+
+        for (let pinIndex = 0; pinIndex < pinCount; pinIndex++) {
+          try {
+            const pinInfoResponse = await this.apiService.callApi('ApiNode', 'pinInfo', item.handle, { index: pinIndex });
+            if (!pinInfoResponse?.result) continue;
+
+            const pinInfo = pinInfoResponse.result;
+            const connectedResponse = await this.apiService.callApi('ApiNode', 'connectedNodeIx', item.handle, { index: pinIndex });
+            
+            if (connectedResponse?.result?.handle) {
+              // Load connected node WITHOUT recursing
+              await this.addSceneItem(sceneItems, connectedResponse.result, pinInfo, childLevel);
+            } else {
+              // Unconnected pin
+              await this.addSceneItem(sceneItems, { handle: 0 }, pinInfo, childLevel);
+            }
+          } catch (pinError: any) {
+            if (!pinError.message?.includes('invalid object reference')) {
+              Logger.warn(`⚠️ Failed to load pin ${pinIndex}:`, pinError.message);
+            }
+          }
+        }
+      }
+
+      item.children = sceneItems;
+    } catch (error: any) {
+      Logger.error(`❌ addItemChildrenShallow failed for "${item.name}":`, error.message);
+      item.children = [];
+    }
+  }
+
+  /**
    * Add item children - EXACT COPY from SceneService.addItemChildren
+   * (Kept for compatibility, but progressive loading uses addItemChildrenShallow)
    */
   private async addItemChildren(item: SceneNode): Promise<void> {
     if (!item || !item.handle) {
