@@ -332,8 +332,8 @@ export class ProgressiveSceneService extends BaseService {
   }
 
   /**
-   * Get basic node info (name, type, icon only)
-   * Fast - doesn't load pins/connections/children
+   * Get basic node info (name, type, icon, graphInfo/nodeInfo)
+   * Matches SceneService.addSceneItem() structure
    */
   private async getBasicNodeInfo(
     handle: number,
@@ -358,6 +358,34 @@ export class ProgressiveSceneService extends BaseService {
       
       const type = typeResponse?.result || 'UNKNOWN';
       
+      // Check if this is a graph (has children)
+      const isGraphResponse = await this.apiService.callApi(
+        'ApiItem',
+        'isGraph',
+        handle
+      );
+      const isGraph = isGraphResponse?.result || false;
+      
+      // Load graphInfo or nodeInfo based on type (SAME AS SceneService!)
+      let graphInfo = null;
+      let nodeInfo = null;
+      
+      if (isGraph) {
+        const infoResponse = await this.apiService.callApi(
+          'ApiNodeGraph',
+          'info1',
+          handle
+        );
+        graphInfo = infoResponse?.result || null;
+      } else {
+        const infoResponse = await this.apiService.callApi(
+          'ApiNode',
+          'info',
+          handle
+        );
+        nodeInfo = infoResponse?.result || null;
+      }
+      
       const node: SceneNodeWithState = {
         handle,
         name,
@@ -365,6 +393,8 @@ export class ProgressiveSceneService extends BaseService {
         icon: getIconForType(type),
         level,
         children: [],
+        graphInfo,      // Store graphInfo like SceneService does
+        nodeInfo,       // Store nodeInfo like SceneService does
         loadState: 'loaded',
         pinsLoaded: false,
         connectionsLoaded: false,
@@ -438,17 +468,12 @@ export class ProgressiveSceneService extends BaseService {
     }
     
     try {
-      // Check if node is a graph (has children)
-      Logger.info(`🔍 Checking if "${node.name}" is a graph...`);
-      const isGraphResponse = await this.apiService.callApi(
-        'ApiItem',
-        'isGraph',
-        node.handle
-      );
+      // Check if node is a graph using stored graphInfo (SAME AS SceneService!)
+      const isGraph = node.graphInfo !== null && node.graphInfo !== undefined;
       
-      Logger.info(`📊 isGraph result for "${node.name}": ${isGraphResponse?.result}`);
+      Logger.info(`📊 "${node.name}" isGraph check: ${isGraph} (has graphInfo: ${node.graphInfo !== null})`);
       
-      if (!isGraphResponse?.result) {
+      if (!isGraph) {
         Logger.info(`❌ "${node.name}" is NOT a graph, skipping children`);
         node.childrenLoaded = true;
         return; // Not a graph, no children
