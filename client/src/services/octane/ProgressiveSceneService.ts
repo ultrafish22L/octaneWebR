@@ -214,21 +214,33 @@ export class ProgressiveSceneService extends BaseService {
     item: any,
     pinInfo: any,
     level: number
-  ): Promise<SceneNode | null> {
-    const itemName = item?.handle ? 
-      (await this.apiService.callApi('ApiItem', 'name', item.handle))?.result || `Item ${item.handle}` :
-      'NO_ITEM';
-
-    let outType: string | number = '';
+  ): Promise<SceneNode | undefined> {
+    let itemName = item?.name || pinInfo?.staticLabel || 'Unnamed';
+    let outType = pinInfo?.outType || '';
     let graphInfo = null;
     let nodeInfo = null;
     let isGraph = false;
-    let position = undefined;
-
+    let position: { x: number; y: number } | null = null;
+    
     if (item != null && item.handle != 0) {
+      const handleNum = Number(item.handle);
+      const existing = this.scene.map.get(handleNum);
+      if (existing && existing.handle) {
+        existing.pinInfo = pinInfo;
+        if (level > 1) {
+          sceneItems.push(existing);
+        }
+        return existing;
+      }
+      
       try {
+        const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
+        itemName = nameResponse?.result || 'Unnamed';
+        
         const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
         outType = outTypeResponse?.result || '';
+        
+        Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
         
         const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
         isGraph = isGraphResponse?.result || false;
@@ -242,9 +254,10 @@ export class ProgressiveSceneService extends BaseService {
                 x: posResponse.result.x || 0,
                 y: posResponse.result.y || 0
               };
+              Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
             }
           } catch (posError: any) {
-            Logger.warn(`⚠️ Failed to get position for ${itemName}:`, posError.message);
+            Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, posError.message);
           }
         }
         
@@ -259,6 +272,8 @@ export class ProgressiveSceneService extends BaseService {
       } catch (error: any) {
         Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
       }
+    } else {
+      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
     }
     
     const displayName = pinInfo?.staticLabel || itemName;
@@ -268,9 +283,9 @@ export class ProgressiveSceneService extends BaseService {
       level,
       name: displayName,
       handle: item?.handle,
-      type: String(outType),
+      type: outType,
       typeEnum: typeof outType === 'number' ? outType : 0,
-      outType: String(outType),
+      outType: outType,
       icon,
       visible: true,
       graphInfo,
@@ -285,10 +300,13 @@ export class ProgressiveSceneService extends BaseService {
     if (item != null && item.handle != 0) {
       const handleNum = Number(item.handle);
       this.scene.map.set(handleNum, entry);
-      Logger.debug(`📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
+      Logger.debug(`  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`);
 
-      // Don't load children here - we do it separately for progressive updates
-      // (SceneService does it here for level > 1, we handle it in stage 2)
+      // Don't load children here for level 1 - we do it separately in stage 2
+      // But DO load children for level > 1 (same as SceneService)
+      if (level > 1) {
+        await this.addItemChildren(entry);
+      }
     }
     
     return entry;
