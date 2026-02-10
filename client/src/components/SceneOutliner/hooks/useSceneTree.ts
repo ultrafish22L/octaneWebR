@@ -118,7 +118,7 @@ export function useSceneTree({
      * Progressive: Individual node added during initial load
      * Only handles level 0 nodes during initial load
      */
-    const handleProgressiveNodeAdded = ({ node, level, parent }: any) => {
+    const handleProgressiveNodeAdded = ({ node, level }: any) => {
       if (!FEATURES.PROGRESSIVE_LOADING) return;
       
       Logger.debug(`🚀 Progressive: Node added at level ${level}: "${node.name}" (handle: ${node.handle})`);
