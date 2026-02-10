@@ -467,6 +467,13 @@ export class ProgressiveSceneService extends BaseService {
       return;
     }
     
+    // Skip unconnected pins (handle 0) - they have no children and no valid API reference
+    if (!node.handle || node.handle === 0) {
+      Logger.info(`⚪ Skipping unconnected pin "${node.name}" (handle: 0)`);
+      node.childrenLoaded = true;
+      return;
+    }
+    
     try {
       // Check if node is a graph using stored graphInfo (SAME AS SceneService!)
       const isGraph = node.graphInfo !== null && node.graphInfo !== undefined;
