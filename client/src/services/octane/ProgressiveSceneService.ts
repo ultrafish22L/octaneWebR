@@ -382,29 +382,46 @@ export class ProgressiveSceneService extends BaseService {
           }
         }
       } else {
-        // Regular Node: Load pins
+        // Regular Node: Load pins - EXACT COPY of SceneService logic
         const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', item.handle);
         const pinCount = pinCountResponse?.result || 0;
 
-        for (let pinIndex = 0; pinIndex < pinCount; pinIndex++) {
+        for (let i = 0; i < pinCount; i++) {
           try {
-            const pinInfoResponse = await this.apiService.callApi('ApiNode', 'pinInfo', item.handle, { index: pinIndex });
-            if (!pinInfoResponse?.result) continue;
-
-            const pinInfo = pinInfoResponse.result;
-            const connectedResponse = await this.apiService.callApi('ApiNode', 'connectedNodeIx', item.handle, { index: pinIndex });
+            // 1. Get connected node FIRST
+            const connectedResponse = await this.apiService.callApi(
+              'ApiNode',
+              'connectedNodeIx',
+              item.handle,
+              { pinIx: i, enterWrapperNode: true }
+            );
             
-            if (connectedResponse?.result?.handle) {
-              // Load connected node WITHOUT recursing
-              await this.addSceneItem(sceneItems, connectedResponse.result, pinInfo, childLevel);
-            } else {
-              // Unconnected pin
-              await this.addSceneItem(sceneItems, { handle: 0 }, pinInfo, childLevel);
+            const connectedNode = connectedResponse?.result || null;
+            
+            // 2. Get pin info SECOND
+            const pinInfoHandleResponse = await this.apiService.callApi(
+              'ApiNode',
+              'pinInfoIx',
+              item.handle,
+              { index: i }
+            );
+            
+            if (pinInfoHandleResponse && pinInfoHandleResponse.result && pinInfoHandleResponse.result.handle) {
+              const pinInfoResponse = await this.apiService.callApi(
+                'ApiNodePinInfoEx',
+                'getApiNodePinInfo',
+                pinInfoHandleResponse.result.handle
+              );
+              
+              const pinInfo = pinInfoResponse?.nodePinInfo || null;
+              if (pinInfo) {
+                pinInfo.ix = i;
+                // Call addSceneItem with connectedNode (may be null for unconnected pins)
+                await this.addSceneItem(sceneItems, connectedNode, pinInfo, childLevel);
+              }
             }
           } catch (pinError: any) {
-            if (!pinError.message?.includes('invalid object reference')) {
-              Logger.warn(`⚠️ Failed to load pin ${pinIndex}:`, pinError.message);
-            }
+            Logger.warn(`⚠️ Failed to load pin ${i}:`, pinError.message);
           }
         }
       }
