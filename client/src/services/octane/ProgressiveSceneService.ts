@@ -345,10 +345,10 @@ export class ProgressiveSceneService extends BaseService {
       
       const name = nameResponse?.result || `Node ${handle}`;
       
-      // Get node type (for icon)
+      // Get node type (for icon) - using outType not type!
       const typeResponse = await this.apiService.callApi(
         'ApiItem',
-        'type',
+        'outType',
         handle
       );
       

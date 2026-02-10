@@ -3,7 +3,7 @@
  * Hierarchical tree view of Octane scene with virtual scrolling
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { List } from 'react-window';
 import { useOctane } from '../../hooks/useOctane';
 import { SceneNode } from '../../services/OctaneClient';
@@ -39,12 +39,17 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   // Context menu actions
   const contextMenu = useContextMenuActions({ onNodeSelect });
 
+  // Stable no-op callback for initializeExpansion (prevents useEffect re-runs)
+  const handleInitializeExpansion = useCallback(() => {
+    // No-op, auto-initialization happens in useTreeExpansion now
+  }, []);
+
   // Scene tree management
   const { sceneTree, loading, loadSceneTree } = useSceneTree({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
-    initializeExpansion: () => {}, // No-op, auto-initialization happens in useTreeExpansion now
+    initializeExpansion: handleInitializeExpansion,
   });
 
   // Tree expansion management (auto-initializes when sceneTree loads)
