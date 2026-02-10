@@ -89,70 +89,94 @@ export class ProgressiveSceneService extends BaseService {
 
       Logger.info(`📦 Found ${size} level 0 nodes`);
 
-      // Load each level 0 node and emit immediately
+      // === STAGE 1: Load ALL level 0 nodes (basic info only) ===
+      Logger.info('📦 STAGE 1: Loading level 0 nodes (basic info)...');
+      
       for (let i = 0; i < size; i++) {
         const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
         
         if (itemResponse?.result?.handle) {
-          // Create the node entry (same as SceneService)
+          // Load basic node info WITHOUT children
           const node = await this.addSceneItem(this.scene.tree, itemResponse.result, null, 1);
           
           if (node) {
-            // 🎯 PROGRESSIVE EMIT: Node added to tree
+            // 🎯 EMIT: Level 0 node added → NodeGraph shows it immediately
             this.emit('scene:nodeAdded', { node, level: 0 });
-            Logger.info(`✅ Level 0 node added: ${node.name} (${i + 1}/${size})`);
+            Logger.info(`✅ Level 0 [${i + 1}/${size}]: "${node.name}"`);
           }
         }
 
-        // Update progress
-        const progress = 10 + (i / size) * 20; // 10-30%
+        const progress = 10 + ((i + 1) / size) * 20; // 10-30%
         this.emit('scene:buildProgress', { 
           stage: 'level0', 
           progress, 
-          message: `Loaded ${i + 1}/${size} top-level nodes` 
+          message: `Loaded ${i + 1}/${size} level 0 nodes` 
         });
       }
 
-      Logger.info(`✅ STAGE 1 complete: ${this.scene.tree.length} level 0 nodes loaded`);
+      Logger.info(`✅ STAGE 1 complete: ${this.scene.tree.length} level 0 nodes`);
       this.emit('scene:level0Complete', { nodes: this.scene.tree });
 
-      // === STAGE 2: Load children (pins) for each level 0 node ===
-      Logger.info('📌 STAGE 2: Loading children for level 0 nodes...');
-      this.emit('scene:buildProgress', { stage: 'children', progress: 30 });
+      // === STAGE 2+: Load children level-by-level (breadth-first) ===
+      Logger.info('📌 STAGE 2+: Loading children by level...');
+      
+      // Queue of nodes to process: [node, parentNode]
+      let currentLevelNodes: Array<{ node: SceneNode, parent: SceneNode | null }> = 
+        this.scene.tree.map(node => ({ node, parent: null }));
+      
+      let currentLevel = 1;
+      let totalProcessed = 0;
+      const estimatedTotal = size * 10; // Rough estimate for progress
 
-      const level0Nodes = [...this.scene.tree]; // Snapshot to avoid mutation issues
-      const totalNodes = level0Nodes.length;
+      while (currentLevelNodes.length > 0) {
+        Logger.info(`📌 Processing level ${currentLevel}: ${currentLevelNodes.length} nodes`);
+        
+        const nextLevelNodes: Array<{ node: SceneNode, parent: SceneNode | null }> = [];
 
-      for (let i = 0; i < totalNodes; i++) {
-        const node = level0Nodes[i];
-        
-        Logger.info(`🔄 Loading children for "${node.name}" (${i + 1}/${totalNodes})...`);
-        
-        // Load children (same logic as SceneService.addItemChildren)
-        await this.addItemChildren(node);
-        
-        // 🎯 PROGRESSIVE EMIT: Children loaded for this node
-        this.emit('scene:childrenLoaded', { 
-          parent: node, 
-          children: node.children || [] 
-        });
-        
-        Logger.info(`✅ Children loaded for "${node.name}": ${node.children?.length || 0} children`);
+        for (let i = 0; i < currentLevelNodes.length; i++) {
+          const { node } = currentLevelNodes[i];
+          
+          // Load children (pins) for this node
+          await this.addItemChildren(node);
+          const childrenAfter = node.children?.length || 0;
+          
+          // 🎯 EMIT: Children loaded → Update parent's pin list
+          if (childrenAfter > 0) {
+            this.emit('scene:childrenLoaded', { 
+              parent: node, 
+              children: node.children || [] 
+            });
+            Logger.info(`  ✅ Level ${currentLevel} [${i + 1}/${currentLevelNodes.length}]: "${node.name}" → ${childrenAfter} children`);
+            
+            // Add newly loaded children to next level queue
+            for (const child of node.children || []) {
+              nextLevelNodes.push({ node: child, parent: node });
+            }
+          }
 
-        // Update progress
-        const progress = 30 + ((i + 1) / totalNodes) * 60; // 30-90%
-        this.emit('scene:buildProgress', { 
-          stage: 'children', 
-          progress,
-          message: `Loaded children for ${i + 1}/${totalNodes} nodes` 
-        });
+          totalProcessed++;
+          const progress = 30 + (totalProcessed / estimatedTotal) * 60; // 30-90%
+          this.emit('scene:buildProgress', { 
+            stage: `level${currentLevel}`, 
+            progress: Math.min(progress, 90),
+            message: `Level ${currentLevel}: ${i + 1}/${currentLevelNodes.length} nodes` 
+          });
+        }
 
-        // Small delay to allow UI to update
-        await new Promise(resolve => setTimeout(resolve, 50));
+        Logger.info(`✅ Level ${currentLevel} complete: processed ${currentLevelNodes.length} nodes, found ${nextLevelNodes.length} children`);
+        
+        // Move to next level
+        currentLevelNodes = nextLevelNodes;
+        currentLevel++;
+        
+        // Safety limit (prevent infinite loops)
+        if (currentLevel > 20) {
+          Logger.warn('⚠️ Reached max level depth (20), stopping');
+          break;
+        }
       }
 
-      Logger.info('✅ STAGE 2 complete: All children loaded');
-      this.emit('scene:childrenComplete', { count: totalNodes });
+      Logger.info(`✅ PROGRESSIVE LOADING complete: ${currentLevel - 1} levels processed`);
 
       // === STAGE 3: Final validation ===
       Logger.info('🔍 STAGE 3: Final validation...');
