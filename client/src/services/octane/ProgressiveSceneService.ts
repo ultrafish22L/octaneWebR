@@ -435,6 +435,44 @@ export class ProgressiveSceneService extends BaseService {
       }
 
       item.children = sceneItems;
+
+      // 🎯 Load attrInfo for this node (needed for Node Inspector to show parameter values)
+      try {
+        const attrInfoResponse = await this.apiService.callApi(
+          'ApiItem',
+          'attrInfo',
+          item.handle,
+          { id: AttributeId.A_VALUE }
+        );
+        
+        if (attrInfoResponse?.result && attrInfoResponse.result.type != "AT_UNKNOWN") {
+          item.attrInfo = attrInfoResponse.result;
+        }
+      } catch (attrError: any) {
+        // Some nodes don't have A_VALUE attribute, that's OK
+        Logger.debug(`No attrInfo for "${item.name}": ${attrError.message}`);
+      }
+
+      // 🎯 Also load attrInfo for each CHILD (pin) node
+      for (const child of sceneItems) {
+        if (child.handle && child.handle !== 0) {
+          try {
+            const childAttrResponse = await this.apiService.callApi(
+              'ApiItem',
+              'attrInfo',
+              child.handle,
+              { id: AttributeId.A_VALUE }
+            );
+            
+            if (childAttrResponse?.result && childAttrResponse.result.type != "AT_UNKNOWN") {
+              child.attrInfo = childAttrResponse.result;
+            }
+          } catch (childAttrError: any) {
+            // Unconnected pins (handle 0) or nodes without values
+            Logger.debug(`No attrInfo for child "${child.name}": ${childAttrError.message}`);
+          }
+        }
+      }
     } catch (error: any) {
       Logger.error(`❌ addItemChildrenShallow failed for "${item.name}":`, error.message);
       item.children = [];
