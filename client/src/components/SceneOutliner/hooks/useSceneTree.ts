@@ -57,11 +57,20 @@ export function useSceneTree({
     try {
       const tree = await client.buildSceneTree();
 
-      setSceneTree(tree);
-      onSceneTreeChange?.(tree);
-
-      // Initialize expansion map for virtual scrolling
-      initializeExpansion(tree);
+      // V2 Progressive: Tree is already populated via events, don't overwrite
+      // V1 Progressive: Also uses events for incremental updates
+      // Traditional: Set tree from result
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+        // Traditional synchronous loading - set tree from result
+        setSceneTree(tree);
+        onSceneTreeChange?.(tree);
+        initializeExpansion(tree);
+      }
+      // For progressive loading (V1/V2), tree was already updated via events
+      // Just ensure expansion is initialized
+      if ((FEATURES.PROGRESSIVE_LOADING || FEATURES.PROGRESSIVE_LOADING_V2) && tree.length > 0) {
+        initializeExpansion(tree);
+      }
 
       Logger.debug(`✅ Loaded ${tree.length} top-level items`);
 
@@ -131,7 +140,7 @@ export function useSceneTree({
      * Only handles level 0 nodes during initial load
      */
     const handleProgressiveNodeAdded = ({ node, level }: any) => {
-      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
       
       Logger.debug(`🚀 Progressive: Node added at level ${level}: "${node.name}" (handle: ${node.handle})`);
       
@@ -162,7 +171,7 @@ export function useSceneTree({
      * This ensures consistent state after all level 0 nodes are loaded
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
       
       Logger.info(`✅ Progressive: Level 0 complete (${nodes.length} nodes)`);
       setSceneTree(nodes);
@@ -181,7 +190,7 @@ export function useSceneTree({
      * Updates the tree to add children to their parent
      */
     const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
       
       Logger.info(`📥 UI: Received scene:childrenLoaded for "${parent.name}" (handle: ${parent.handle}): ${children.length} children`);
       Logger.info(`   Children names: ${children.map(c => c.name).join(', ')}`);

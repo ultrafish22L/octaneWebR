@@ -200,9 +200,8 @@ export const SceneOutliner = React.memo(function SceneOutliner({
         <div className="scene-tree">
           {!connected ? (
             <div className="scene-loading">Not connected</div>
-          ) : loading ? (
-            <SkeletonTree count={12} />
           ) : sceneTree.length > 0 ? (
+            // Show tree as soon as we have data (even during progressive loading)
             <div className="scene-mesh-list">
               {/* Virtual scrolling: Only render visible nodes */}
               <List
@@ -215,6 +214,9 @@ export const SceneOutliner = React.memo(function SceneOutliner({
                 onRowsRendered={handleRowsRendered}
               />
             </div>
+          ) : loading ? (
+            // Only show skeleton if loading AND no data yet
+            <SkeletonTree count={12} />
           ) : (
             <div className="scene-loading">Click refresh to load scene</div>
           )}
