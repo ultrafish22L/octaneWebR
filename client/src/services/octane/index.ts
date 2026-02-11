@@ -19,4 +19,5 @@ export { RenderExportService } from './RenderExportService';
 // Progressive loading services
 export { ProgressiveSceneService } from './ProgressiveSceneService';
 export { ProgressiveSceneServiceV2 } from './ProgressiveSceneServiceV2';
+export { ProgressiveSceneServiceV3 } from './ProgressiveSceneServiceV3';
 export { LoadingScheduler } from './LoadingScheduler';

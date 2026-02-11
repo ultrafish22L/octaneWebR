@@ -22,17 +22,21 @@ export const FEATURES = {
   PROGRESSIVE_LOADING: import.meta.env.VITE_PROGRESSIVE_LOADING === 'true' || false,
 
   /**
-   * Progressive Scene Loading V2 (visibility-aware)
-   * Loads visible nodes first, continues in background
-   * Features:
-   * - Skeleton nodes for instant feedback
-   * - Priority queue for visible items
-   * - Pause/resume on scroll
-   * - On-demand attrInfo loading
-   * Expected impact: 50x faster perceived load time
-   * Status: Active development
+   * Progressive Scene Loading V2 (visibility-aware) - BROKEN, DO NOT USE
+   * Status: Deprecated - breaks tree structure
    */
   PROGRESSIVE_LOADING_V2: import.meta.env.VITE_PROGRESSIVE_LOADING_V2 === 'true' || false,
+
+  /**
+   * Progressive Scene Loading V3 (correct tree structure)
+   * Uses identical logic to SceneService, adds progressive events
+   * Features:
+   * - Correct parent-child tree structure (same as sync)
+   * - Events emitted as nodes load for UI updates
+   * - Yields to browser between nodes for responsive UI
+   * Status: Active development
+   */
+  PROGRESSIVE_LOADING_V3: import.meta.env.VITE_PROGRESSIVE_LOADING_V3 === 'true' || false,
 
   /**
    * Lazy attrInfo Loading

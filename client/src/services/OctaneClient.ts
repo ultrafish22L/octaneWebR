@@ -19,6 +19,7 @@ import {
   RenderExportService,
   ProgressiveSceneService,
   ProgressiveSceneServiceV2,
+  ProgressiveSceneServiceV3,
   RenderState,
   SceneNode,
   Scene,
@@ -64,6 +65,7 @@ export class OctaneClient extends EventEmitter {
   // Optimization services (Sprint 1+)
   private progressiveSceneService: ProgressiveSceneService;
   private progressiveSceneServiceV2: ProgressiveSceneServiceV2;
+  private progressiveSceneServiceV3: ProgressiveSceneServiceV3;
 
   constructor(serverUrl?: string) {
     super();
@@ -85,6 +87,7 @@ export class OctaneClient extends EventEmitter {
     // Initialize optimization services (Sprint 1+)
     this.progressiveSceneService = new ProgressiveSceneService(this, this.serverUrl, this.apiService);
     this.progressiveSceneServiceV2 = new ProgressiveSceneServiceV2(this, this.serverUrl, this.apiService);
+    this.progressiveSceneServiceV3 = new ProgressiveSceneServiceV3(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
@@ -142,7 +145,8 @@ export class OctaneClient extends EventEmitter {
   
   /**
    * Build scene tree with optional progressive loading
-   * Priority: V2 > V1 > Traditional sequential
+   * Priority: V3 > V1 > Traditional sequential
+   * Note: V2 is deprecated (breaks tree structure)
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Incremental update (add single node) - always use traditional service
@@ -150,9 +154,15 @@ export class OctaneClient extends EventEmitter {
       return this.sceneService.buildSceneTree(newNodeHandle);
     }
     
-    // V2: Visibility-aware progressive loading (newest, best)
+    // V3: Progressive loading with correct tree structure (recommended)
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      Logger.info('🚀 Using progressive scene loading V3 (correct tree structure)');
+      return this.progressiveSceneServiceV3.buildSceneProgressive();
+    }
+    
+    // V2: DEPRECATED - breaks tree structure, do not use
     if (FEATURES.PROGRESSIVE_LOADING_V2) {
-      Logger.info('🚀 Using progressive scene loading V2 (visibility-aware)');
+      Logger.warn('⚠️ V2 progressive loading is deprecated - use V3 instead');
       return this.progressiveSceneServiceV2.buildSceneProgressive();
     }
     

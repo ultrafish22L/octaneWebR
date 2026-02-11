@@ -5,10 +5,11 @@
  * Supports multiple loading modes:
  * - Traditional: Load entire scene, then render
  * - Progressive V1: Render nodes as they load (level 0 → pins → connections → deep nodes)
- * - Progressive V2: Visibility-aware loading (visible first, background completion)
+ * - Progressive V2: DEPRECATED - breaks tree structure
+ * - Progressive V3: Correct tree structure with progressive events (recommended)
  * 
  * Updated: 2025-02-03 - Added progressive loading support
- * Updated: 2025-02-11 - Added V2 progressive loading support
+ * Updated: 2025-02-11 - Added V2 and V3 progressive loading support
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -60,7 +61,7 @@ export function useSceneTree({
       // V2 Progressive: Tree is already populated via events, don't overwrite
       // V1 Progressive: Also uses events for incremental updates
       // Traditional: Set tree from result
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
         // Traditional synchronous loading - set tree from result
         setSceneTree(tree);
         onSceneTreeChange?.(tree);
@@ -68,7 +69,7 @@ export function useSceneTree({
       }
       // For progressive loading (V1/V2), tree was already updated via events
       // Just ensure expansion is initialized
-      if ((FEATURES.PROGRESSIVE_LOADING || FEATURES.PROGRESSIVE_LOADING_V2) && tree.length > 0) {
+      if ((FEATURES.PROGRESSIVE_LOADING || FEATURES.PROGRESSIVE_LOADING_V2 || FEATURES.PROGRESSIVE_LOADING_V3) && tree.length > 0) {
         initializeExpansion(tree);
       }
 
@@ -140,7 +141,7 @@ export function useSceneTree({
      * Only handles level 0 nodes during initial load
      */
     const handleProgressiveNodeAdded = ({ node, level }: any) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
       
       Logger.debug(`🚀 Progressive: Node added at level ${level}: "${node.name}" (handle: ${node.handle})`);
       
@@ -171,7 +172,7 @@ export function useSceneTree({
      * This ensures consistent state after all level 0 nodes are loaded
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
       
       Logger.info(`✅ Progressive: Level 0 complete (${nodes.length} nodes)`);
       setSceneTree(nodes);
@@ -190,7 +191,7 @@ export function useSceneTree({
      * Updates the tree to add children to their parent
      */
     const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) return;
+      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
       
       Logger.info(`📥 UI: Received scene:childrenLoaded for "${parent.name}" (handle: ${parent.handle}): ${children.length} children`);
       Logger.info(`   Children names: ${children.map(c => c.name).join(', ')}`);
@@ -242,13 +243,22 @@ export function useSceneTree({
       });
     };
 
-    // Register progressive V1 event listeners
-    if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+    // Register progressive V1 event listeners (also used by V3)
+    if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
       Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V1 event listeners');
       client.on('scene:nodeAdded', handleProgressiveNodeAdded);
       client.on('scene:level0Complete', handleLevel0Complete);
       client.on('scene:childrenLoaded', handleChildrenLoaded);
       Logger.debug('✅ useSceneTree: Progressive V1 event listeners registered');
+    }
+    
+    // Register progressive V3 event listeners (same events as V1, but V3 produces correct tree)
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V3 event listeners');
+      client.on('scene:nodeAdded', handleProgressiveNodeAdded);
+      client.on('scene:level0Complete', handleLevel0Complete);
+      client.on('scene:childrenLoaded', handleChildrenLoaded);
+      Logger.debug('✅ useSceneTree: Progressive V3 event listeners registered');
     }
 
     // =================================================================
@@ -424,8 +434,16 @@ export function useSceneTree({
 
     return () => {
       // Remove progressive V1 event listeners (if they were registered)
-      if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+      if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
         Logger.debug('🔇 useSceneTree: Removing progressive V1 event listeners');
+        client.off('scene:nodeAdded', handleProgressiveNodeAdded);
+        client.off('scene:level0Complete', handleLevel0Complete);
+        client.off('scene:childrenLoaded', handleChildrenLoaded);
+      }
+      
+      // Remove progressive V3 event listeners
+      if (FEATURES.PROGRESSIVE_LOADING_V3) {
+        Logger.debug('🔇 useSceneTree: Removing progressive V3 event listeners');
         client.off('scene:nodeAdded', handleProgressiveNodeAdded);
         client.off('scene:level0Complete', handleLevel0Complete);
         client.off('scene:childrenLoaded', handleChildrenLoaded);
