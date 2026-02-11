@@ -252,12 +252,68 @@ export function useSceneTree({
       Logger.debug('✅ useSceneTree: Progressive V1 event listeners registered');
     }
     
-    // Register progressive V3 event listeners (same events as V1, but V3 produces correct tree)
+    // =================================================================
+    // PROGRESSIVE LOADING V3 EVENTS (Two-pass with per-pin emission)
+    // =================================================================
+
+    /**
+     * V3: Per-pin progressive update.
+     * Service has already pushed the child to parent.children (mutated in place).
+     * We just force a re-render by creating a new root array reference.
+     * Do NOT call onSceneTreeChange here — it's expensive (O(n) tree walk in App.tsx).
+     * That fires on scene:childrenLoaded instead.
+     */
+    const handlePinAdded = () => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
+      setSceneTree(prev => [...prev]);
+    };
+
+    /**
+     * V3: All direct children loaded for a parent.
+     * Children are already attached to parent.children by the service.
+     * Force re-render, auto-expand parent, and notify App.tsx.
+     */
+    const handleChildrenLoadedV3 = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
+      Logger.debug(`📥 V3: Children loaded for "${parent.name}": ${children.length} children`);
+
+      setSceneTree(prev => {
+        const updated = [...prev];
+
+        // Auto-expand parent so children are visible in Outliner
+        if (onExpandNodes && parent.handle) {
+          onExpandNodes([parent.handle]);
+        }
+
+        setTimeout(() => onSceneTreeChange?.(updated), 0);
+        return updated;
+      });
+    };
+
+    /**
+     * V3: Scene complete — final re-render to ensure consistency.
+     */
+    const handleSceneComplete = () => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+      Logger.info('✅ V3: Scene load complete');
+
+      setSceneTree(prev => {
+        const updated = [...prev];
+        setTimeout(() => onSceneTreeChange?.(updated), 0);
+        return updated;
+      });
+    };
+
+    // Register V3 event listeners
     if (FEATURES.PROGRESSIVE_LOADING_V3) {
       Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V3 event listeners');
       client.on('scene:nodeAdded', handleProgressiveNodeAdded);
       client.on('scene:level0Complete', handleLevel0Complete);
-      client.on('scene:childrenLoaded', handleChildrenLoaded);
+      client.on('scene:pinAdded', handlePinAdded);
+      client.on('scene:childrenLoaded', handleChildrenLoadedV3);
+      client.on('scene:complete', handleSceneComplete);
       Logger.debug('✅ useSceneTree: Progressive V3 event listeners registered');
     }
 
@@ -446,7 +502,9 @@ export function useSceneTree({
         Logger.debug('🔇 useSceneTree: Removing progressive V3 event listeners');
         client.off('scene:nodeAdded', handleProgressiveNodeAdded);
         client.off('scene:level0Complete', handleLevel0Complete);
-        client.off('scene:childrenLoaded', handleChildrenLoaded);
+        client.off('scene:pinAdded', handlePinAdded);
+        client.off('scene:childrenLoaded', handleChildrenLoadedV3);
+        client.off('scene:complete', handleSceneComplete);
       }
       
       // Remove progressive V2 event listeners
