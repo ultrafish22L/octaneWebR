@@ -182,7 +182,9 @@ export class OctaneClient extends EventEmitter {
    * Works with both V1 and V2 progressive loading
    */
   abortSceneLoad(): void {
-    if (FEATURES.PROGRESSIVE_LOADING_V2) {
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      this.progressiveSceneServiceV3.abort();
+    } else if (FEATURES.PROGRESSIVE_LOADING_V2) {
       this.progressiveSceneServiceV2.abort();
     } else if (FEATURES.PROGRESSIVE_LOADING) {
       this.progressiveSceneService.abort();
@@ -196,6 +198,17 @@ export class OctaneClient extends EventEmitter {
   setVisibleHandles(handles: number[]): void {
     if (FEATURES.PROGRESSIVE_LOADING_V2) {
       this.progressiveSceneServiceV2.setVisibleHandles(handles);
+    }
+  }
+
+  /**
+   * Promote a node to the front of the deep-load queue (V3).
+   * Call when the user expands a node in the Outliner or selects it in the Inspector
+   * and its children haven't been loaded yet (Pass 2 pending).
+   */
+  promoteNode(handle: number): void {
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      this.progressiveSceneServiceV3.promoteNode(handle);
     }
   }
   
@@ -232,7 +245,11 @@ export class OctaneClient extends EventEmitter {
    * Returns scene from the service that was used for loading
    */
   getScene(): Scene {
-    // V2 takes priority
+    // V3 takes priority
+    if (FEATURES.PROGRESSIVE_LOADING_V3 && this.progressiveSceneServiceV3.getScene().tree.length > 0) {
+      return this.progressiveSceneServiceV3.getScene();
+    }
+    // V2
     if (FEATURES.PROGRESSIVE_LOADING_V2 && this.progressiveSceneServiceV2.getScene().tree.length > 0) {
       return this.progressiveSceneServiceV2.getScene();
     }
