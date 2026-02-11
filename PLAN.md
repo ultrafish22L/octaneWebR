@@ -33,49 +33,116 @@ Specifically in `ProgressiveSceneServiceV3.ts`:
 ## Staged Plan
 
 ### Stage 1: Fix Progressive Emission (Core Fix)
-**Goal**: Make nodes actually pop in at ALL levels, not just level 0.
+**Goal**: Make nodes pop in at ALL levels with a two-pass visibility-aware approach, and progressively show pins as they load.
 
-**Changes**:
-1. **Rewrite `ProgressiveSceneServiceV3.addItemChildren()`** to yield between each child and emit `scene:childrenLoaded` incrementally:
-   - After loading each individual pin/child of a node, yield to browser
-   - Emit `scene:childrenLoaded` with the parent and its children-so-far (or the newly added child)
-   - For deeper levels (level > 2), batch yields (e.g., every 3-5 children) to avoid excessive event overhead
+#### The Problem Restated
+Currently `addItemChildren()` recursively builds an entire subtree depth-first with zero yields and zero events. The user sees top-level nodes appear, then a long freeze, then everything else appears at once. Most of the frozen time is spent loading deep children that aren't even visible (collapsed in the Outliner, not shown in NodeGraph, irrelevant to NodeInspector until selected).
 
-2. **Rewrite `syncSceneProgressive()` for levels > 1** to yield between items at all levels, not just level 1:
-   - Add `yieldToBrowser()` calls after processing each item at any level
-   - Emit `scene:nodeAdded` for nodes at all levels (with parent handle) so the UI can add them incrementally
-   - Throttle yields for deep levels (level 3+) to every N nodes to balance responsiveness vs speed
+#### Design: Two-Pass Loading with Per-Pin Emission
 
-3. **Remove the final `sceneTreeUpdated` emission** (line 92) since the tree is already built progressively via events. Instead, emit a `scene:complete` event that tells the UI "you already have the final tree."
+**Pass 1 — Visible/Structural (fast, yields to UI after every node)**:
+1. Load all level-1 nodes with full metadata (name, outType, isGraph, position, nodeInfo/graphInfo). Emit `scene:nodeAdded` + yield after each. *(Already works.)*
+2. Emit `scene:level0Complete`.
+3. For each level-1 node, load its **immediate children (pins)** one at a time:
+   - For each pin: fetch `connectedNodeIx` + `pinInfoIx` + `getApiNodePinInfo`, create the child SceneNode, **append it to parent.children**, then **emit `scene:pinAdded`** (new event: `{ parent, child, pinIndex }`).
+   - Yield to browser after each pin so the Outliner/Inspector show pins popping in one by one.
+   - Do NOT recurse into the child's own children yet — just create the node with `children: []`.
+   - After all pins for a parent are loaded, emit `scene:childrenLoaded` for that parent (signals "this node's direct children are complete").
+4. At the end of Pass 1, emit `scene:structureComplete` — the full level-1 + level-2 skeleton is in place. All panels can render a meaningful tree.
+
+**Pass 2 — Deep/Background (non-visible nodes, no UI urgency)**:
+5. Build a work queue of all level-2 nodes that need their own children loaded (nodes where `isGraph || pinCount > 0`).
+6. Process this queue breadth-first. For each node:
+   - Load its children (pins or owned items) using the same per-pin emit pattern as Pass 1.
+   - Yield to browser every N children (e.g., every 3-5) rather than every single one — these nodes are typically collapsed/invisible, so we trade per-node feedback for throughput.
+   - Emit `scene:childrenLoaded` for each parent after its children complete.
+   - If a node becomes visible mid-load (user expands it in Outliner or selects it in Inspector), promote it to the front of the queue.
+7. After all deep nodes are done, emit `scene:complete`.
+
+**Pass 2 can also be interrupted**: if the user triggers a scene refresh or loads a new file, the existing `abortController` cancels in-flight work.
+
+#### Key Changes in `ProgressiveSceneServiceV3.ts`
+
+1. **Split `syncSceneProgressive()` into two phases**: `loadImmediateChildren()` (Pass 1) and `loadDeepChildren()` (Pass 2).
+
+2. **New `loadImmediateChildren(parent)`** method:
+   - If parent is a graph: get owned items, iterate, create each child node, emit `scene:pinAdded`, yield.
+   - If parent is a node: get pin count, iterate pins, load connectedNode + pinInfo, create child node, emit `scene:pinAdded`, yield.
+   - Does NOT recurse — children are created with `children: []`.
+
+3. **New `loadDeepChildren()` method**:
+   - Takes a queue of nodes from Pass 1 that need deeper loading.
+   - Processes breadth-first.
+   - Calls `loadImmediateChildren()` for each, with reduced yield frequency (every 3-5 children).
+   - Supports priority promotion via `promoteNode(handle)`.
+
+4. **Remove the inline `addItemChildren(entry)` call at line 336** (`addSceneItem` level > 1). Instead, just create the node and add it to the deep-load queue.
+
+5. **New event: `scene:pinAdded`** — lightweight event for single-pin additions:
+   ```ts
+   { parent: SceneNode, child: SceneNode, pinIndex: number }
+   ```
+   This is the key to per-pin progressive display. The UI can append a single child to a parent without rebuilding the whole tree.
+
+6. **Remove the final `sceneTreeUpdated` emission** (line 92). The tree is already built via events. Emit `scene:complete` instead.
+
+7. **`addSceneItem()` no longer calls `addItemChildren()` for level > 1** — it just creates the node entry with `children: []` and registers it in `scene.map`. The deep-load queue handles populating children later.
+
+#### Visibility-Awareness
+
+The service doesn't need to know the UI expansion state directly. The two-pass design naturally handles it:
+- **Pass 1** loads what's always visible: level-1 nodes (NodeGraph, Outliner root) and their immediate pins (NodeInspector when selected, Outliner when expanded).
+- **Pass 2** loads everything else in the background.
+- A `promoteNode(handle)` API lets the UI signal "user just expanded/selected this node, load its children next" — the service moves that node to the front of the deep-load queue.
+
+#### attrInfo Loading
+- **Pass 1**: Load attrInfo for level-1 nodes (they're visible in Inspector immediately if selected).
+- **Pass 2**: Load attrInfo for deeper nodes as they're processed. Emit `scene:nodeUpdated` with the updated attrInfo so the Inspector can refresh if showing that node.
+- The existing `LAZY_ATTR_INFO` flag can gate whether attrInfo is loaded eagerly (in the pass) or only on selection.
 
 **Files modified**:
 - `client/src/services/octane/ProgressiveSceneServiceV3.ts`
 
 ### Stage 2: Optimize UI Event Consumption
-**Goal**: Make the SceneOutliner, NodeGraph, and NodeInspector respond correctly to progressive events.
+**Goal**: Make the SceneOutliner, NodeGraph, and NodeInspector respond correctly to progressive events, including the new `scene:pinAdded` event and visibility promotion.
 
 **Changes**:
 
-1. **Rewrite `handleChildrenLoaded` in `useSceneTree.ts`** to use the scene map for O(1) parent lookup instead of O(n) tree traversal:
-   - Since `ProgressiveSceneServiceV3` maintains a `scene.map` (handle -> SceneNode), the emitted `parent` object IS the actual node in the tree (same reference). The UI handler can simply trigger a re-render by bumping a version counter rather than doing an immutable tree walk.
-   - Alternatively, use a Map<handle, SceneNode> in React state alongside the tree array, so lookups are O(1).
+1. **Handle new `scene:pinAdded` event in `useSceneTree.ts`**:
+   - This is the per-pin incremental update. Handler appends a single child to the parent node.
+   - Use the emitted `parent` reference (same object in the service's tree) to avoid O(n) lookup.
+   - Bump a version counter to trigger re-render rather than doing immutable tree mapping for each pin.
+   - Throttle re-renders: collect pin additions in a microtask batch and flush once per animation frame.
 
-2. **Remove `flushSync` from level-0 handler** -- `flushSync` forces synchronous re-renders which blocks the event loop. Instead, batch level-0 nodes and update once per animation frame.
+2. **Rewrite `handleChildrenLoaded`** to be a lightweight "children complete" signal:
+   - Since individual pins are already added via `scene:pinAdded`, `childrenLoaded` just confirms "all direct children are done for this parent."
+   - Trigger a single re-render if one hasn't already fired, and update expansion state.
 
-3. **Stop the `handleLevel0Complete` from replacing the tree** -- it currently calls `setSceneTree(nodes)` which wipes out any children that may have been added by concurrent `childrenLoaded` events. Instead, just ensure consistency without replacement.
+3. **Remove `flushSync` from level-0 handler** -- `flushSync` forces synchronous re-renders which blocks the event loop. Instead, batch level-0 nodes and update once per animation frame.
 
-4. **Make NodeGraph respond to progressive events**:
-   - Subscribe to `scene:nodeAdded` and `scene:childrenLoaded` in the NodeGraph component
-   - Add new ReactFlow nodes as they arrive rather than waiting for full `sceneTree` prop change
-   - Update edges incrementally when children (connections) are loaded
+4. **Stop `handleLevel0Complete` from replacing the tree** -- it currently calls `setSceneTree(nodes)` which wipes out children that may have been added by concurrent events. Instead, just ensure consistency without full replacement.
 
-5. **Make NodeInspector update when selected node's children change**:
-   - The `handleSceneTreeChange` in App.tsx already re-finds the selected node (lines 102-121), but it does a full tree search. Instead, keep a ref to the node's handle and subscribe to events for that handle specifically.
+5. **Make NodeGraph respond to progressive events**:
+   - Subscribe to `scene:nodeAdded` in NodeGraph to add ReactFlow nodes as they arrive (level-1 only — NodeGraph only shows top-level).
+   - Subscribe to `scene:childrenLoaded` to update edges: when a level-1 node's children (pins/connections) are fully loaded, rebuild edges for just that node.
+   - No need to listen to `scene:pinAdded` — NodeGraph only cares about complete connection info.
+
+6. **Make NodeInspector update on per-pin additions**:
+   - When the selected node receives `scene:pinAdded` events, the Inspector should show each pin popping in.
+   - Subscribe to `scene:pinAdded` and `scene:nodeUpdated` (for attrInfo) filtered by the currently selected node's handle.
+   - When the user selects a node whose deep children haven't loaded yet (Pass 2 pending), call `client.promoteNode(handle)` to prioritize loading that subtree.
+
+7. **Visibility promotion from SceneOutliner**:
+   - When the user expands a node in the Outliner, if that node's children are `[]` (not yet loaded by Pass 2), call `client.promoteNode(handle)` to move it to the front of the deep-load queue.
+   - Show a subtle loading indicator (e.g., skeleton children) while waiting for the promoted node's children to arrive.
 
 **Files modified**:
 - `client/src/components/SceneOutliner/hooks/useSceneTree.ts`
+- `client/src/components/SceneOutliner/hooks/useTreeExpansion.ts` (promote on expand)
 - `client/src/components/NodeGraph/index.tsx`
+- `client/src/components/NodeInspector/index.tsx` (per-pin updates)
 - `client/src/App.tsx`
+- `client/src/services/OctaneClient.ts` (expose `promoteNode()`)
 
 ### Stage 3: Batch API Calls for Speed
 **Goal**: Reduce total load time by parallelizing independent API calls.
@@ -171,8 +238,8 @@ Stage 1 (Core Fix) ──> Stage 2 (UI Consumption) ──> Stage 3 (API Paralle
 
 | Stage | UX Improvement |
 |-------|---------------|
-| 1 | Nodes pop in at all tree depths, not just top level |
-| 2 | All panels (Outliner, NodeGraph, Inspector) update progressively |
-| 3 | 2-4x faster total load time (parallel API calls) |
-| 4 | Smoother UI during load (fewer jank frames from excessive re-renders) |
+| 1 | Pass 1: Level-1 nodes + their pins pop in individually. Pass 2: Deep children load in background without blocking UI. Expanding a not-yet-loaded node promotes it to load immediately. |
+| 2 | All panels update progressively: Outliner shows pins appearing one by one, NodeGraph adds edges as connections resolve, Inspector shows pins filling in for the selected node. |
+| 3 | 2-4x faster total load time (parallel API calls reduce sequential round-trips) |
+| 4 | Smoother UI during load (fewer jank frames from throttled re-renders) |
 | 5 | Cleaner codebase, easier to debug and maintain |
