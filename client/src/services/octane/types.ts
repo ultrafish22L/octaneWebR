@@ -245,3 +245,95 @@ export interface SceneNodeWithState extends SceneNode {
   connectionsLoaded?: boolean;
   childrenLoaded?: boolean;
 }
+
+/**
+ * Progressive Scene Loading V2 Types
+ * Added 2025-02-11 for visibility-aware progressive loading
+ */
+
+/**
+ * Skeleton node - minimal data for instant UI feedback
+ * Contains only essential info, full details loaded on-demand
+ */
+export interface SkeletonNode {
+  handle: number;
+  name: string;
+  level: number;
+  loadState: 'skeleton' | 'loading' | 'loaded' | 'error';
+  estimatedChildCount?: number;
+  children?: SkeletonNode[];
+}
+
+/**
+ * V2 Loading phases
+ */
+export enum LoadPhase {
+  IDLE = 'idle',
+  SKELETON = 'skeleton',        // Phase 1: Basic structure
+  VISIBLE_FIRST = 'visible',    // Phase 2: Visible nodes details
+  BACKGROUND = 'background',    // Phase 3: Non-visible nodes
+  COMPLETE = 'complete'
+}
+
+/**
+ * V2 Progress event data
+ */
+export interface V2ProgressEvent {
+  phase: LoadPhase;
+  progress: number;           // 0-100 within phase
+  overallProgress: number;    // 0-100 overall
+  message: string;
+  nodesLoaded: number;
+  totalNodes: number;
+  visibleNodesLoaded: number;
+}
+
+/**
+ * V2 Node details loaded event
+ */
+export interface V2DetailsLoadedEvent {
+  handle: number;
+  node: SceneNode;
+  phase: LoadPhase;
+}
+
+/**
+ * V2 Children loaded event
+ */
+export interface V2ChildrenLoadedEvent {
+  parentHandle: number;
+  children: SceneNode[];
+  isVisible: boolean;
+}
+
+/**
+ * Visibility range from virtual scroll
+ */
+export interface VisibleRange {
+  startIndex: number;
+  stopIndex: number;
+  handles: number[];
+}
+
+/**
+ * Loading scheduler item
+ */
+export interface LoadItem {
+  handle: number;
+  priority: 'high' | 'normal' | 'low';
+  type: 'details' | 'children' | 'attrInfo';
+  addedAt: number;
+}
+
+/**
+ * V2 Configuration options
+ */
+export interface ProgressiveConfigV2 {
+  enabled: boolean;
+  parallelLimit: number;        // Max concurrent API calls
+  skeletonDelay: number;        // MS between skeleton emissions (for visual effect)
+  visibleBatchSize: number;     // Load visible nodes in batches
+  backgroundPauseOnScroll: boolean;
+  lazyAttrInfo: boolean;        // Load attrInfo only on selection
+  debugMode: boolean;
+}

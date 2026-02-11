@@ -540,18 +540,59 @@ When investigating issues:
 ## Current Status
 
 **Version**: 1.0.0  
-**Status**: React 18 Modernization Phase Complete (P1-P2C)  
-**Next**: Optional Phase 3 - Concurrent Features (useTransition, useDeferredValue) or Testing Setup
+**Status**: React 18 Modernization Phase Complete (P1-P2C) + Progressive Loading V2  
+**Next**: Testing Setup (Vitest + React Testing Library)
 
 **Key Stats**:
 
-- ~17,000 lines of TypeScript
+- ~17,500 lines of TypeScript
 - 35+ React components
-- 11 gRPC service wrappers
+- 12 gRPC service wrappers (including V2 progressive)
 - 755+ Octane node types
 - 134 CSS variables
 
 **Recent Additions**:
+
+**Progressive Scene Loading V2** (2025-02-11) ✅
+
+Visibility-aware progressive loading for dramatically improved perceived performance:
+
+- ✅ Phase 1 (Skeleton): Load basic structure (~200ms)
+  - Just handle + name for instant UI feedback
+  - Emits `scene:nodeAdded` for progressive UI updates
+  
+- ✅ Phase 2 (Visible First): Load details for visible nodes
+  - Uses `onRowsRendered` from react-window to track visibility
+  - LoadingScheduler prioritizes visible items
+  - ~500ms to fully interactive visible content
+  
+- ✅ Phase 3 (Background): Load remaining nodes
+  - Non-blocking async loading
+  - Pause/resume on scroll (backgroundPauseOnScroll config)
+  - Parallel API calls with concurrency limiting (6 concurrent)
+
+- ✅ Phase 4 (On-demand): Lazy attrInfo loading
+  - Only loads attribute info when node selected
+  - Configurable via VITE_LAZY_ATTR_INFO
+
+**New Files**:
+- `services/octane/LoadingScheduler.ts` - Priority queue for visibility-aware loading
+- `services/octane/ProgressiveSceneServiceV2.ts` - Main V2 implementation
+- `PROGRESSIVE_LOADING_V2_PLAN.md` - Architecture documentation
+
+**Feature Flags** (in `.env.development`):
+```bash
+VITE_PROGRESSIVE_LOADING=false       # V1 (deprecated)
+VITE_PROGRESSIVE_LOADING_V2=true     # V2 (visibility-aware)
+VITE_LAZY_ATTR_INFO=true             # On-demand attrInfo
+```
+
+**Expected Performance**:
+- 10-60x faster perceived load time
+- Visible content interactive in ~500ms
+- Full scene loads in background
+
+---
 
 **Progressive Scene Loading Fixes** (2025-02-03) ✅
 
@@ -620,4 +661,4 @@ When investigating issues:
 
 ---
 
-**Last Updated**: 2025-02-03 (Progressive Loading + attrInfo Fixes)
+**Last Updated**: 2025-02-11 (Progressive Loading V2 - Visibility-aware)

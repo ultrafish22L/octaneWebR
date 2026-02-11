@@ -2,26 +2,30 @@
  * useSceneTree - Scene tree loading and event handling
  * Manages scene tree state, loading, and incremental updates
  * 
- * Supports both traditional and progressive scene loading:
+ * Supports multiple loading modes:
  * - Traditional: Load entire scene, then render
- * - Progressive: Render nodes as they load (level 0 → pins → connections → deep nodes)
+ * - Progressive V1: Render nodes as they load (level 0 → pins → connections → deep nodes)
+ * - Progressive V2: Visibility-aware loading (visible first, background completion)
  * 
  * Updated: 2025-02-03 - Added progressive loading support
+ * Updated: 2025-02-11 - Added V2 progressive loading support
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
 import { FEATURES } from '../../../config/features';
+import { LoadPhase, V2ProgressEvent, V2DetailsLoadedEvent } from '../../../services/octane/types';
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
   onSyncStateChange?: (syncing: boolean) => void;
   onNodeSelect?: (node: SceneNode | null) => void;
   initializeExpansion: (tree: SceneNode[]) => void;
-  onExpandNodes?: (handles: number[]) => void; // NEW: Callback to expand nodes
+  onExpandNodes?: (handles: number[]) => void;
+  onVisibleRangeChange?: (handles: number[]) => void; // V2: Report visible handles
 }
 
 export function useSceneTree({
@@ -30,10 +34,15 @@ export function useSceneTree({
   onNodeSelect,
   initializeExpansion,
   onExpandNodes,
+  onVisibleRangeChange,
 }: UseSceneTreeProps) {
   const { client, connected } = useOctane();
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadPhase, setLoadPhase] = useState<LoadPhase>(LoadPhase.IDLE);
+  
+  // Track visible handles for V2
+  const visibleHandlesRef = useRef<number[]>([]);
 
   // Load scene tree from Octane
   const loadSceneTree = useCallback(async () => {
@@ -224,13 +233,76 @@ export function useSceneTree({
       });
     };
 
-    // Register progressive event listeners
-    if (FEATURES.PROGRESSIVE_LOADING) {
-      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE event listeners');
+    // Register progressive V1 event listeners
+    if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V1 event listeners');
       client.on('scene:nodeAdded', handleProgressiveNodeAdded);
       client.on('scene:level0Complete', handleLevel0Complete);
       client.on('scene:childrenLoaded', handleChildrenLoaded);
-      Logger.debug('✅ useSceneTree: Progressive event listeners registered');
+      Logger.debug('✅ useSceneTree: Progressive V1 event listeners registered');
+    }
+
+    // =================================================================
+    // PROGRESSIVE LOADING V2 EVENTS (Visibility-aware)
+    // =================================================================
+    
+    /**
+     * V2: Progress updates with phase tracking
+     */
+    const handleV2Progress = (event: V2ProgressEvent) => {
+      setLoadPhase(event.phase);
+      Logger.debug(`📊 V2 Progress: ${event.phase} ${event.overallProgress.toFixed(0)}% - ${event.message}`);
+    };
+    
+    /**
+     * V2: Details loaded for a specific node
+     */
+    const handleV2DetailsLoaded = ({ handle, node, phase }: V2DetailsLoadedEvent) => {
+      // Update the node in the tree with full details
+      setSceneTree(prev => {
+        const updateNode = (nodes: SceneNode[]): SceneNode[] => {
+          return nodes.map(n => {
+            if (n.handle === handle) {
+              // Merge loaded details while preserving children
+              return { ...n, ...node, children: n.children || node.children };
+            }
+            if (n.children?.length) {
+              return { ...n, children: updateNode(n.children) };
+            }
+            return n;
+          });
+        };
+        
+        const updated = updateNode(prev);
+        
+        // Notify parent of tree change
+        if (phase === LoadPhase.VISIBLE_FIRST) {
+          // For visible nodes, update immediately
+          setTimeout(() => onSceneTreeChange?.(updated), 0);
+        }
+        
+        return updated;
+      });
+    };
+    
+    /**
+     * V2: Scene complete - final update
+     */
+    const handleV2Complete = ({ totalNodes, elapsedMs }: { totalNodes: number; elapsedMs: number }) => {
+      Logger.info(`✅ V2 Complete: ${totalNodes} nodes loaded in ${elapsedMs}ms`);
+      setLoadPhase(LoadPhase.COMPLETE);
+    };
+    
+    // Register V2 event listeners
+    if (FEATURES.PROGRESSIVE_LOADING_V2) {
+      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V2 event listeners');
+      client.on('scene:nodeAdded', handleProgressiveNodeAdded); // Reuse V1 handler for skeleton nodes
+      client.on('scene:level0Complete', handleLevel0Complete);  // Reuse V1 handler
+      client.on('scene:childrenLoaded', handleChildrenLoaded);  // Reuse V1 handler
+      client.on('scene:v2:progress', handleV2Progress);
+      client.on('scene:v2:detailsLoaded', handleV2DetailsLoaded);
+      client.on('scene:v2:complete', handleV2Complete);
+      Logger.debug('✅ useSceneTree: Progressive V2 event listeners registered');
     }
 
     // =================================================================
@@ -342,12 +414,23 @@ export function useSceneTree({
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
 
     return () => {
-      // Remove progressive event listeners (if they were registered)
-      if (FEATURES.PROGRESSIVE_LOADING) {
-        Logger.debug('🔇 useSceneTree: Removing progressive event listeners');
+      // Remove progressive V1 event listeners (if they were registered)
+      if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2) {
+        Logger.debug('🔇 useSceneTree: Removing progressive V1 event listeners');
         client.off('scene:nodeAdded', handleProgressiveNodeAdded);
         client.off('scene:level0Complete', handleLevel0Complete);
         client.off('scene:childrenLoaded', handleChildrenLoaded);
+      }
+      
+      // Remove progressive V2 event listeners
+      if (FEATURES.PROGRESSIVE_LOADING_V2) {
+        Logger.debug('🔇 useSceneTree: Removing progressive V2 event listeners');
+        client.off('scene:nodeAdded', handleProgressiveNodeAdded);
+        client.off('scene:level0Complete', handleLevel0Complete);
+        client.off('scene:childrenLoaded', handleChildrenLoaded);
+        client.off('scene:v2:progress', handleV2Progress);
+        client.off('scene:v2:detailsLoaded', handleV2DetailsLoaded);
+        client.off('scene:v2:complete', handleV2Complete);
       }
       
       // Remove traditional event listeners
@@ -357,9 +440,20 @@ export function useSceneTree({
     };
   }, [client, onSceneTreeChange, initializeExpansion]);
 
+  // V2: Notify service of visible handles
+  const updateVisibleHandles = useCallback((handles: number[]) => {
+    if (FEATURES.PROGRESSIVE_LOADING_V2 && client) {
+      visibleHandlesRef.current = handles;
+      client.setVisibleHandles(handles);
+      onVisibleRangeChange?.(handles);
+    }
+  }, [client, onVisibleRangeChange]);
+
   return {
     sceneTree,
     loading,
+    loadPhase,
+    updateVisibleHandles,
     loadSceneTree,
   };
 }

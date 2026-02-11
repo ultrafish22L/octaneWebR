@@ -59,7 +59,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   }, []);
 
   // Scene tree management
-  const { sceneTree, loading, loadSceneTree } = useSceneTree({
+  const { sceneTree, loading, loadPhase: _loadPhase, updateVisibleHandles, loadSceneTree } = useSceneTree({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
@@ -74,6 +74,20 @@ export const SceneOutliner = React.memo(function SceneOutliner({
     onNodeSelect,
     onNodeContextMenu: contextMenu.handleNodeContextMenu,
   });
+  
+  // V2: Track visible rows for priority loading
+  // react-window v2 uses onRowsRendered with startIndex/stopIndex
+  const handleRowsRendered = useCallback(
+    (visibleRows: { startIndex: number; stopIndex: number }) => {
+      const visibleHandles = flattenedNodes
+        .slice(visibleRows.startIndex, visibleRows.stopIndex + 1)
+        .map(n => n.node.handle) // FlattenedNode has .node.handle
+        .filter((h): h is number => typeof h === 'number' && h !== 0);
+      
+      updateVisibleHandles(visibleHandles);
+    },
+    [flattenedNodes, updateVisibleHandles]
+  );
   
   // Update ref when expandNodes changes
   React.useEffect(() => {
@@ -198,6 +212,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
                 rowHeight={20}
                 rowComponent={VirtualTreeRow}
                 rowProps={rowProps}
+                onRowsRendered={handleRowsRendered}
               />
             </div>
           ) : (

@@ -17,6 +17,8 @@ import {
   NodeService,
   MaterialDatabaseService,
   RenderExportService,
+  ProgressiveSceneService,
+  ProgressiveSceneServiceV2,
   RenderState,
   SceneNode,
   Scene,
@@ -26,7 +28,6 @@ import {
   MaterialCategory,
   Material
 } from './octane';
-import { ProgressiveSceneService } from './octane/ProgressiveSceneService';
 import { FEATURES } from '../config/features';
 
 // Re-export types for backward compatibility
@@ -62,6 +63,7 @@ export class OctaneClient extends EventEmitter {
   
   // Optimization services (Sprint 1+)
   private progressiveSceneService: ProgressiveSceneService;
+  private progressiveSceneServiceV2: ProgressiveSceneServiceV2;
 
   constructor(serverUrl?: string) {
     super();
@@ -82,6 +84,7 @@ export class OctaneClient extends EventEmitter {
     
     // Initialize optimization services (Sprint 1+)
     this.progressiveSceneService = new ProgressiveSceneService(this, this.serverUrl, this.apiService);
+    this.progressiveSceneServiceV2 = new ProgressiveSceneServiceV2(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
@@ -139,8 +142,7 @@ export class OctaneClient extends EventEmitter {
   
   /**
    * Build scene tree with optional progressive loading
-   * Uses ProgressiveSceneService if PROGRESSIVE_LOADING feature flag is enabled
-   * Falls back to traditional sequential loading otherwise
+   * Priority: V2 > V1 > Traditional sequential
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Incremental update (add single node) - always use traditional service
@@ -148,25 +150,55 @@ export class OctaneClient extends EventEmitter {
       return this.sceneService.buildSceneTree(newNodeHandle);
     }
     
-    // Full scene load - use progressive if enabled
+    // V2: Visibility-aware progressive loading (newest, best)
+    if (FEATURES.PROGRESSIVE_LOADING_V2) {
+      Logger.info('🚀 Using progressive scene loading V2 (visibility-aware)');
+      return this.progressiveSceneServiceV2.buildSceneProgressive();
+    }
+    
+    // V1: Original progressive loading (deprecated but kept for comparison)
     if (FEATURES.PROGRESSIVE_LOADING) {
-      Logger.info('🚀 Using progressive scene loading');
+      Logger.info('🚀 Using progressive scene loading V1');
       return this.progressiveSceneService.buildSceneProgressive();
     }
     
     // Fallback to traditional sequential loading
-    Logger.debug('📦 Using traditional scene loading');
+    Logger.debug('📦 Using traditional scene loading (synchronous)');
     return this.sceneService.buildSceneTree();
   }
   
   /**
    * Abort current scene loading operation
-   * Only effective when progressive loading is enabled
+   * Works with both V1 and V2 progressive loading
    */
   abortSceneLoad(): void {
-    if (FEATURES.PROGRESSIVE_LOADING) {
+    if (FEATURES.PROGRESSIVE_LOADING_V2) {
+      this.progressiveSceneServiceV2.abort();
+    } else if (FEATURES.PROGRESSIVE_LOADING) {
       this.progressiveSceneService.abort();
     }
+  }
+  
+  /**
+   * Update visible handles for V2 progressive loading
+   * Called by UI when visible items change (scroll)
+   */
+  setVisibleHandles(handles: number[]): void {
+    if (FEATURES.PROGRESSIVE_LOADING_V2) {
+      this.progressiveSceneServiceV2.setVisibleHandles(handles);
+    }
+  }
+  
+  /**
+   * Load attrInfo on-demand for lazy loading
+   */
+  async loadAttrInfo(handle: number): Promise<any> {
+    if (FEATURES.PROGRESSIVE_LOADING_V2 || FEATURES.LAZY_ATTR_INFO) {
+      return this.progressiveSceneServiceV2.loadAttrInfo(handle);
+    }
+    // Return from existing node if available
+    const node = this.sceneService.getNodeByHandle(handle);
+    return node?.attrInfo || null;
   }
 
   lookupItem(handle: number): SceneNode | null {
@@ -187,12 +219,18 @@ export class OctaneClient extends EventEmitter {
 
   /**
    * Get current scene
-   * Returns scene from progressive service if it was used, otherwise from traditional service
+   * Returns scene from the service that was used for loading
    */
   getScene(): Scene {
+    // V2 takes priority
+    if (FEATURES.PROGRESSIVE_LOADING_V2 && this.progressiveSceneServiceV2.getScene().tree.length > 0) {
+      return this.progressiveSceneServiceV2.getScene();
+    }
+    // V1 fallback
     if (FEATURES.PROGRESSIVE_LOADING && this.progressiveSceneService.getScene().tree.length > 0) {
       return this.progressiveSceneService.getScene();
     }
+    // Traditional service
     return this.sceneService.getScene();
   }
 
