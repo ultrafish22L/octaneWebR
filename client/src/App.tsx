@@ -14,7 +14,7 @@
  */
 
 import { Logger } from './utils/Logger';
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 //import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
@@ -93,18 +93,16 @@ function AppContent() {
 
   // Scene tree change handler
   const handleSceneTreeChange = (tree: SceneNode[]) => {
-    Logger.debug('🔄 App.tsx: handleSceneTreeChange called with', tree.length, 'nodes');
     setSceneTree(tree);
-    
-    // Update selected node reference if it exists in the new tree
-    // This is critical for progressive loading - when children are added to a node,
-    // we need to update selectedNode to point to the updated node object
+
+    // Update selected node reference if it exists in the new tree.
+    // Only call setSelectedNode if the found node is a different reference
+    // (structural sharing means unchanged nodes keep the same reference).
+    // This prevents redundant NodeInspector re-renders during progressive loading.
     if (selectedNode && selectedNode.handle) {
       const findNodeInTree = (nodes: SceneNode[], handle: number): SceneNode | null => {
         for (const node of nodes) {
-          if (node.handle === handle) {
-            return node;
-          }
+          if (node.handle === handle) return node;
           if (node.children && node.children.length > 0) {
             const found = findNodeInTree(node.children, handle);
             if (found) return found;
@@ -112,14 +110,23 @@ function AppContent() {
         }
         return null;
       };
-      
+
       const updatedNode = findNodeInTree(tree, selectedNode.handle);
-      if (updatedNode) {
-        Logger.debug(`🔄 App.tsx: Updating selected node "${selectedNode.name}" with ${updatedNode.children?.length || 0} children`);
+      if (updatedNode && updatedNode !== selectedNode) {
         setSelectedNode(updatedNode);
       }
     }
   };
+
+  // Node selection handler — also promotes node in V3 deep-load queue
+  // so its children are prioritized if not yet loaded (Pass 2).
+  // Wrapped in useCallback so downstream useEffects don't re-register on every render.
+  const handleNodeSelect = useCallback((node: SceneNode | null) => {
+    setSelectedNode(node);
+    if (node?.handle && FEATURES.PROGRESSIVE_LOADING_V3 && client) {
+      client.promoteNode(node.handle);
+    }
+  }, [client]);
 
   // Scene sync state handler
   const handleSyncStateChange = (syncing: boolean) => {
@@ -397,21 +404,12 @@ function AppContent() {
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
 
-    // Progressive loading debug listeners (Sprint 1)
-    if (FEATURES.PROGRESSIVE_LOADING) {
+    // V3 progressive loading status listeners
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
       const handleLevel0Complete = (data: any) => {
-        Logger.debug(`📊 App: scene:level0Complete event received (${data.nodes?.length || 0} nodes)`);
-        setTemporaryStatus(`Level 0 loaded: ${data.nodes?.length || 0} nodes`, 2000);
+        setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
       };
-
-      const handleSceneComplete = (data: any) => {
-        Logger.debug(`📊 App: scene:complete event received (${data.totalNodes} total nodes)`);
-      };
-
       client.on('scene:level0Complete', handleLevel0Complete);
-      client.on('scene:complete', handleSceneComplete);
-
-      Logger.debug('✅ App: Progressive loading event listeners registered');
     }
 
 /*
@@ -479,7 +477,7 @@ function AppContent() {
                   <SceneOutliner
                     key={sceneRefreshTrigger}
                     selectedNode={selectedNode}
-                    onNodeSelect={setSelectedNode}
+                    onNodeSelect={handleNodeSelect}
                     onSceneTreeChange={handleSceneTreeChange}
                     onSyncStateChange={handleSyncStateChange}
                   />
@@ -575,7 +573,7 @@ function AppContent() {
               <div className="panel-content">
                 <ErrorBoundary>
                   <div className="node-inspector-layout">
-                    <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={setSelectedNode} />
+                    <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={handleNodeSelect} />
                     <div className="node-inspector-main">
                       <NodeInspector node={selectedNode} />
                     </div>
@@ -626,7 +624,7 @@ function AppContent() {
                       <LazyNodeGraphEditor
                         sceneTree={sceneTree}
                         selectedNode={selectedNode}
-                        onNodeSelect={setSelectedNode}
+                        onNodeSelect={handleNodeSelect}
                         gridVisible={gridVisible}
                         setGridVisible={setGridVisible}
                         snapToGrid={snapToGrid}

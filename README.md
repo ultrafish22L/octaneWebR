@@ -173,21 +173,22 @@ octaneWebR uses a modular service architecture that wraps Octane's gRPC API:
 ```
 services/
 ├── octane/
-│   ├── ApiService.ts          - Core gRPC API wrapper with objectPtr handling
-│   ├── BaseService.ts         - Shared event emitter and error handling
-│   ├── CameraService.ts       - Camera position/target/up vector controls
-│   ├── ConnectionService.ts   - WebSocket lifecycle + reconnection logic
-│   ├── DeviceService.ts       - GPU statistics and device info
-│   ├── MaterialDatabaseService.ts - LocalDB (offline) + LiveDB (online marketplace)
-│   ├── NodeService.ts         - Node CRUD, pin connections, group/ungroup
-│   ├── RenderService.ts       - Render pipeline, film settings, render region
-│   ├── RenderExportService.ts - Image export and render output
-│   ├── SceneService.ts        - Scene tree building (recursive + incremental)
-│   ├── ViewportService.ts     - Viewport state and picker tools
-│   ├── index.ts               - Service exports
-│   └── types.ts               - Shared TypeScript interfaces
-├── CommandHistory.ts          - Undo/redo command pattern implementation
-└── OctaneClient.ts            - Main API facade (single entry point)
+│   ├── ApiService.ts               - Core gRPC API wrapper with objectPtr handling
+│   ├── BaseService.ts              - Shared event emitter and error handling
+│   ├── CameraService.ts            - Camera position/target/up vector controls
+│   ├── ConnectionService.ts        - WebSocket lifecycle + reconnection logic
+│   ├── DeviceService.ts            - GPU statistics and device info
+│   ├── MaterialDatabaseService.ts  - LocalDB (offline) + LiveDB (online marketplace)
+│   ├── NodeService.ts              - Node CRUD, pin connections, group/ungroup
+│   ├── ProgressiveSceneServiceV3.ts - Two-pass progressive scene loading
+│   ├── RenderService.ts            - Render pipeline, film settings, render region
+│   ├── RenderExportService.ts      - Image export and render output
+│   ├── SceneService.ts             - Scene tree building (recursive + incremental)
+│   ├── ViewportService.ts          - Viewport state and picker tools
+│   ├── index.ts                    - Service exports
+│   └── types.ts                    - Shared TypeScript interfaces
+├── CommandHistory.ts               - Undo/redo command pattern implementation
+└── OctaneClient.ts                 - Main API facade (single entry point)
 ```
 
 **Service Architecture**:
@@ -305,7 +306,7 @@ octaneWebR/
 ├── README.md                         # This file
 ├── QUICKSTART.md                     # Setup guide
 ├── DEVELOPMENT.md                    # Development guide & architecture
-└── QUICK_START_API_VERSION.md        # API version switching guide
+└── CHANGELOG.md                      # Version history
 ```
 
 ---
@@ -442,8 +443,6 @@ curl http://localhost:57341/api/health | python -m json.tool
 - **[README.md](./README.md)** - This file (project overview and features)
 - **[QUICKSTART.md](./QUICKSTART.md)** - First-time setup guide
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide and architecture
-- **[MODERNIZATION_GUIDE.md](./MODERNIZATION_GUIDE.md)** - Future modernization opportunities
-- **[AGENTS.md](./AGENTS.md)** - Repository memory for AI assistants
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history
 
 ### External Resources
@@ -467,83 +466,17 @@ curl http://localhost:57341/api/health | python -m json.tool
 
 ---
 
-## 📅 Feature Timeline
+## 📅 Recent Development
 
-### 2025-02-03
-
-- **React 18 Modernization Complete (Phases P1-P2C)**
-  - **P1: Error Boundaries + Code Splitting**
-    - Production-grade error handling with fallback UI
-    - Lazy loading for NodeGraph and MaterialDatabase
-    - Bundle size reduced: 587KB → ~150-200KB initial load
-  - **P2A: Suspense Boundaries**
-    - Skeleton loader library (tree, parameters, viewport, materials)
-    - LoadingBoundary with type-aware fallbacks
-    - DelayedFallback prevents loading flashes
-    - Accessibility support (prefers-reduced-motion)
-  - **P2B: React Query**
-    - Modern data fetching with @tanstack/react-query
-    - Automatic caching, background refetching, request deduplication
-    - MaterialDatabase migrated (100+ lines removed)
-    - React Query DevTools integration
-  - **P2C: Performance Optimization**
-    - React.memo for high-frequency components (ParameterControl, MaterialCard, VirtualTreeRow)
-    - Custom equality functions for deep comparison
-    - useCallback stabilization (6+ callbacks)
-    - useMemo for expensive computations (hasGroupMap, context values)
-    - Eliminated cascading re-renders in NodeInspector (100+ parameters)
-
-### 2025-02-01
-
-- **CSS Theme Refactor**
-  - Removed `octane-` prefix from all CSS variables (753 occurrences)
-  - Cleaner naming: `--bg-primary` vs `--octane-bg-primary`
-  - CSS bundle size reduced 5.26 KB (104.44 KB → 99.18 kB)
-  - Zero naming conflicts with utility variables
-
-- **React Flow Container Fix**
-  - Fixed "React Flow parent container needs width/height" error
-  - Added explicit dimensions to ReactFlow component
-
-- **UI Polish**
-  - Simplified node pin tooltips to show name only (removed type/description clutter)
-  - Added descriptive tooltips to node inspector parameter items
-  - Fixed browser context menu appearing over custom context menus
-
-- **CSS Optimization**
-  - Removed 6 unused CSS variables
-  - Removed 5 dead CSS selectors with broken variable references
-  - Fixed 10+ duplicate CSS definitions
-  - Replaced all hardcoded colors with CSS variables
-
-### 2025-01-31
-
-- **API Version Compatibility**
-  - Centralized configuration for Alpha 5/Beta 2 API versions
-  - Single source of truth: `api-version.config.js`
-  - Vite `define` feature injects build-time constants
-  - Guaranteed sync between client and server
-
-- **ES Module Conversion**
-  - Fixed `module is not defined` browser error
-  - Converted CommonJS to ES modules
-  - All code passes strict TypeScript compilation
-
-- **Documentation**
-  - Added `QUICK_START_API_VERSION.md`
-  - Added `API_VERSION_SWITCHING.md`
-  - Updated `AGENTS.md` with development status
-
-### Earlier Development
-
+- **Progressive Scene Loading (V3)** - Two-pass progressive loading with per-pin emission
+- **Viewport Canvas Optimization** - RAF-based rendering, input throttling, progressive flush
+- **React 18 Modernization** - Error boundaries, code splitting, Suspense, React Query, React.memo
+- **API Version Compatibility** - Centralized Alpha 5/Beta 2 configuration
 - **ReactFlow Migration** - Replaced custom 956-line SVG node graph with ReactFlow v12
-- **Node Type Dropdown** - Inspector allows replacing nodes with compatible types
-- **Connection Cutter** - Ctrl+Drag to cut multiple connections
 - **Material Database** - LiveDB and LocalDB integration
 - **Command History** - Full undo/redo with 50-action branching history
-- **Render Viewport** - Live streaming via Octane callback API
-- **gRPC Integration** - Embedded Vite proxy, no separate server needed
-- **Theme System** - Pure CSS custom properties (134 variables)
+
+See **[CHANGELOG.md](./CHANGELOG.md)** for full version history.
 
 ---
 
@@ -555,6 +488,6 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2025-02-03  
-**Version**: 1.0.0  
-**Status**: Production-ready (React 18 Modernization Complete)
+**Last Updated**: 2025-02-11
+**Version**: 1.1.0-dev
+**Status**: Active Development (Progressive Scene Loading)

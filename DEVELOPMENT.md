@@ -84,6 +84,7 @@ export abstract class BaseService {
 - `ApiService` - Core gRPC wrapper with objectPtr handling, service-to-ObjectType mapping
 - `ConnectionService` - WebSocket lifecycle, auto-reconnect (5s delay), browser timing fixes
 - `SceneService` - Recursive scene tree building (NodeGraphs → items, Nodes → pins)
+- `ProgressiveSceneServiceV3` - Two-pass progressive scene loading with per-pin emission
 - `NodeService` - Node CRUD, pin connections, group/ungroup, collapsed node cleanup
 - `CameraService` - Camera position/target/up vectors, original state capture
 - `ViewportService` - Viewport state, picker tools
@@ -114,6 +115,15 @@ client.on('node:created', ({ node }) => {
 - `node:selected` - Node selected in UI
 - `node:created`, `node:deleted`, `node:updated` - Node operations
 - `render:update` - New render frame received
+
+**Progressive Loading Events** (V3):
+- `scene:buildStart` - Scene load begins
+- `scene:nodeAdded` - Level-1 node added
+- `scene:level0Complete` - All level-1 nodes loaded
+- `scene:pinAdded` - Single child added to parent (per-pin progressive)
+- `scene:childrenLoaded` - All direct children loaded for a parent
+- `scene:structureComplete` - Pass 1 complete (level-1 + level-2 structure)
+- `scene:buildComplete` / `scene:complete` - Both passes complete
 
 ---
 

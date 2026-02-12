@@ -1,32 +1,30 @@
 /**
  * useSceneTree - Scene tree loading and event handling
- * Manages scene tree state, loading, and incremental updates
- * 
- * Supports multiple loading modes:
- * - Traditional: Load entire scene, then render
- * - Progressive V1: Render nodes as they load (level 0 → pins → connections → deep nodes)
- * - Progressive V2: DEPRECATED - breaks tree structure
- * - Progressive V3: Correct tree structure with progressive events (recommended)
- * 
- * Updated: 2025-02-03 - Added progressive loading support
- * Updated: 2025-02-11 - Added V2 and V3 progressive loading support
+ * Manages scene tree state, loading, and incremental updates.
+ *
+ * Loading modes:
+ * - Traditional: Load entire scene synchronously, then render
+ * - Progressive V3: Two-pass loading with per-pin emission (recommended)
+ *
+ * Pin update strategy (V3):
+ * - scene:pinAdded only propagates via onSceneTreeChange (NodeGraph, NodeInspector)
+ * - The outliner tree state is NOT re-set on every pin; instead, only
+ *   scene:childrenLoaded triggers a structural-sharing clone that React can detect.
+ *   This prevents the outliner from re-rendering collapsed subtrees on every pin.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
 import { FEATURES } from '../../../config/features';
-import { LoadPhase, V2ProgressEvent, V2DetailsLoadedEvent } from '../../../services/octane/types';
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
   onSyncStateChange?: (syncing: boolean) => void;
   onNodeSelect?: (node: SceneNode | null) => void;
   initializeExpansion: (tree: SceneNode[]) => void;
-  onExpandNodes?: (handles: number[]) => void;
-  onVisibleRangeChange?: (handles: number[]) => void; // V2: Report visible handles
 }
 
 export function useSceneTree({
@@ -34,16 +32,10 @@ export function useSceneTree({
   onSyncStateChange,
   onNodeSelect,
   initializeExpansion,
-  onExpandNodes,
-  onVisibleRangeChange,
 }: UseSceneTreeProps) {
   const { client, connected } = useOctane();
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadPhase, setLoadPhase] = useState<LoadPhase>(LoadPhase.IDLE);
-  
-  // Track visible handles for V2
-  const visibleHandlesRef = useRef<number[]>([]);
 
   // Load scene tree from Octane
   const loadSceneTree = useCallback(async () => {
@@ -58,54 +50,54 @@ export function useSceneTree({
     try {
       const tree = await client.buildSceneTree();
 
-      // V2 Progressive: Tree is already populated via events, don't overwrite
-      // V1 Progressive: Also uses events for incremental updates
-      // Traditional: Set tree from result
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
-        // Traditional synchronous loading - set tree from result
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) {
+        // Traditional synchronous loading — set tree from result
         setSceneTree(tree);
         onSceneTreeChange?.(tree);
         initializeExpansion(tree);
-      }
-      // For progressive loading (V1/V2), tree was already updated via events
-      // Just ensure expansion is initialized
-      if ((FEATURES.PROGRESSIVE_LOADING || FEATURES.PROGRESSIVE_LOADING_V2 || FEATURES.PROGRESSIVE_LOADING_V3) && tree.length > 0) {
+      } else if (tree.length > 0) {
+        // V3 progressive — tree was already populated via events.
+        // Just ensure expansion map is initialized with final tree.
         initializeExpansion(tree);
       }
 
       Logger.debug(`✅ Loaded ${tree.length} top-level items`);
 
-      // Auto-select render target node after scene is loaded
-      const findRenderTarget = (nodes: SceneNode[]): SceneNode | null => {
-        for (const node of nodes) {
-          if (node.type === 'PT_RENDERTARGET') {
-            return node;
-          }
-          if (node.children) {
-            const found = findRenderTarget(node.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const renderTarget = findRenderTarget(tree);
-      if (renderTarget && onNodeSelect) {
-        onNodeSelect(renderTarget);
-
-        // Set this as the active render target in the render engine
-        if (renderTarget.handle && renderTarget.handle !== -1) {
-          try {
-            const success = await client.setRenderTargetNode(renderTarget.handle);
-            if (success) {
-              Logger.debug(
-                `🎯 Render target activated: "${renderTarget.name}" (handle: ${renderTarget.handle})`
-              );
-            } else {
-              Logger.warn(`⚠️ Failed to activate render target: "${renderTarget.name}"`);
+      // Auto-select render target node after scene is loaded.
+      // For V3 progressive loading, this already happened in handleProgressiveNodeAdded
+      // as soon as the RT node arrived. Only run for traditional loading.
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) {
+        const findRenderTarget = (nodes: SceneNode[]): SceneNode | null => {
+          for (const node of nodes) {
+            if (node.type === 'PT_RENDERTARGET') {
+              return node;
             }
-          } catch (error) {
-            Logger.error('❌ Error setting render target:', error);
+            if (node.children) {
+              const found = findRenderTarget(node.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const renderTarget = findRenderTarget(tree);
+        if (renderTarget && onNodeSelect) {
+          onNodeSelect(renderTarget);
+
+          // Set this as the active render target in the render engine
+          if (renderTarget.handle && renderTarget.handle !== -1) {
+            try {
+              const success = await client.setRenderTargetNode(renderTarget.handle);
+              if (success) {
+                Logger.debug(
+                  `🎯 Render target activated: "${renderTarget.name}" (handle: ${renderTarget.handle})`
+                );
+              } else {
+                Logger.warn(`⚠️ Failed to activate render target: "${renderTarget.name}"`);
+              }
+            } catch (error) {
+              Logger.error('❌ Error setting render target:', error);
+            }
           }
         }
       }
@@ -133,195 +125,192 @@ export function useSceneTree({
     if (!client) return;
 
     // =================================================================
-    // PROGRESSIVE LOADING EVENTS (Sprint 1)
+    // PROGRESSIVE LOADING V3 EVENTS (Two-pass with per-pin emission)
     // =================================================================
-    
+
     /**
-     * Progressive: Individual node added during initial load
-     * Only handles level 0 nodes during initial load
+     * V3: Individual level-0 node added during initial load.
+     * Uses flushSync so top-level nodes appear immediately.
+     * If the node is a PT_RENDERTARGET, select it immediately and activate
+     * it in the render engine so the NodeInspector populates right away.
      */
+    let hasSelectedRenderTarget = false;
     const handleProgressiveNodeAdded = ({ node, level }: any) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
-      
-      Logger.debug(`🚀 Progressive: Node added at level ${level}: "${node.name}" (handle: ${node.handle})`);
-      
-      // Level 0 nodes: Add to root of tree
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
       if (level === 0) {
-        // 🎯 CRITICAL: Use flushSync to force immediate DOM update for level 0 nodes
-        // This ensures top-level nodes appear immediately, not batched with children
         flushSync(() => {
           setSceneTree(prev => {
-            // Check if node already exists (avoid duplicates)
-            const exists = prev.some(n => n.handle === node.handle);
-            if (exists) {
-              Logger.debug('⚠️ Progressive: Node already exists, skipping');
-              return prev;
-            }
-            
+            if (prev.some(n => n.handle === node.handle)) return prev;
             const updated = [...prev, node];
             setTimeout(() => onSceneTreeChange?.(updated), 0);
             return updated;
           });
         });
+
+        // Select the first RenderTarget as soon as it arrives
+        if (!hasSelectedRenderTarget && node.type === 'PT_RENDERTARGET') {
+          hasSelectedRenderTarget = true;
+          onNodeSelect?.(node);
+
+          // Activate in render engine (fire-and-forget)
+          if (node.handle && node.handle !== -1 && client) {
+            client.setRenderTargetNode(node.handle).then(success => {
+              if (success) {
+                Logger.debug(`🎯 RenderTarget auto-selected: "${node.name}" (handle: ${node.handle})`);
+              }
+            }).catch(err => {
+              Logger.error('❌ Error activating render target:', err);
+            });
+          }
+        }
       }
-      // Nested nodes: Will be handled by childrenLoaded event
     };
 
     /**
-     * Progressive: Level 0 complete - replace tree with complete level 0 nodes
-     * This ensures consistent state after all level 0 nodes are loaded
+     * V3: Level 0 complete — replace tree with complete level-0 nodes.
+     * Initialize expansion immediately (not in setTimeout) so SceneRoot +
+     * PT_RENDERTARGET are expanded before the next render.
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
-      
-      Logger.info(`✅ Progressive: Level 0 complete (${nodes.length} nodes)`);
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
       setSceneTree(nodes);
+      if (nodes.length > 0) initializeExpansion(nodes);
       setTimeout(() => onSceneTreeChange?.(nodes), 0);
-      
-      // Initialize expansion AFTER setting tree
-      setTimeout(() => {
-        if (nodes.length > 0) {
-          initializeExpansion(nodes);
-        }
-      }, 0);
     };
 
     /**
-     * Progressive: Children loaded for a parent node
-     * Updates the tree to add children to their parent
+     * V3: Per-pin progressive update.
+     * Service has already pushed the child to parent.children (mutated in place).
+     *
+     * We do NOT propagate pin-level updates to App.tsx. Doing so would:
+     * 1. Cause the Outliner to re-render (flashing) if we call setSceneTree
+     * 2. Cause the NodeGraph MiniMap to flash via sceneTree prop changes
+     *
+     * Instead, the data flow for pin updates is:
+     * - scene:childrenLoaded → structural-sharing clone → Outliner + App.tsx update
+     * - scene:structureComplete / scene:complete → NodeGraph full rebuild
+     * - NodeInspector updates via handleChildrenLoadedV3 propagation
+     *
+     * This handler is a no-op — the service mutates in place, and we batch
+     * the visual update to scene:childrenLoaded.
      */
-    const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) return;
-      
-      Logger.info(`📥 UI: Received scene:childrenLoaded for "${parent.name}" (handle: ${parent.handle}): ${children.length} children`);
-      Logger.info(`   Children names: ${children.map(c => c.name).join(', ')}`);
-      
+    const handlePinAdded = () => {
+      // No-op: pin updates are batched into scene:childrenLoaded
+    };
+
+    /**
+     * Structural sharing helper: clone only the path from root to the target node.
+     * React sees new references along the path → re-renders only affected subtrees.
+     */
+    const clonePathToHandle = (nodes: SceneNode[], targetHandle: number): SceneNode[] => {
+      return nodes.map(node => {
+        if (node.handle === targetHandle) {
+          return { ...node, children: node.children ? [...node.children] : [] };
+        }
+        if (node.children && node.children.length > 0) {
+          const cloned = clonePathToHandle(node.children, targetHandle);
+          if (cloned !== node.children) {
+            return { ...node, children: cloned };
+          }
+        }
+        return node;
+      });
+    };
+
+    /**
+     * V3: All direct children loaded for a parent.
+     * Children are already attached to parent.children by the service (mutated in place).
+     * We create new node references along the path from root to the changed parent
+     * so React detects the change and the Outliner re-renders affected subtrees.
+     *
+     * We do NOT call onSceneTreeChange here — that would propagate to App.tsx →
+     * NodeGraph prop change → MiniMap re-render on every single parent's children.
+     * The NodeGraph has its own event listeners and only needs updates at milestones
+     * (structureComplete, complete). NodeInspector gets refreshed at those milestones too.
+     */
+    const handleChildrenLoadedV3 = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
+      Logger.debug(`📥 V3: Children loaded for "${parent.name}": ${children.length} children`);
+
       setSceneTree(prev => {
-        Logger.info(`   Current tree size: ${prev.length} root nodes`);
-        Logger.info(`   Root handles: ${prev.map(n => `${n.handle}:${n.name}`).join(', ')}`);
-        
-        // Recursively find and update parent node with children
-        const updateNodeWithChildren = (nodes: SceneNode[], depth = 0): SceneNode[] => {
-          return nodes.map(node => {
-            if (node.handle === parent.handle) {
-              // Found the parent - add children
-              Logger.info(`✅ UI: Found parent at depth ${depth}: "${node.name}" (${node.handle}), adding ${children.length} children`);
-              return { ...node, children };
-            }
-            if (node.children && node.children.length > 0) {
-              // Recursively check children
-              return { ...node, children: updateNodeWithChildren(node.children, depth + 1) };
-            }
-            return node;
-          });
-        };
-        
-        const updated = updateNodeWithChildren(prev);
-        Logger.info(`🔄 UI: Tree updated, new tree size: ${updated.length}, triggering onSceneTreeChange`);
-        
-        // Log first node's children count
-        if (updated.length > 0) {
-          Logger.info(`   First node "${updated[0].name}" now has ${updated[0].children?.length || 0} children`);
-        }
-        
-        // 🎯 CRITICAL: Auto-expand parent and children so they're visible
-        const childHandles = children
-          .map(c => c.handle)
-          .filter((h): h is number => typeof h === 'number' && h !== 0);
-        const handlesToExpand = [
-          ...(parent.handle ? [parent.handle] : []),
-          ...childHandles
-        ];
-        
-        if (onExpandNodes && handlesToExpand.length > 0) {
-          Logger.info(`🔓 UI: Auto-expanding ${handlesToExpand.length} nodes: ${handlesToExpand.join(', ')}`);
-          onExpandNodes(handlesToExpand);
-        }
-        
-        setTimeout(() => onSceneTreeChange?.(updated), 0);
+        return parent.handle
+          ? clonePathToHandle(prev, parent.handle)
+          : [...prev];
+      });
+    };
+
+    /**
+     * V3: Node updated with attrInfo (or other metadata).
+     * The service mutated the node in place. We batch these updates and
+     * propagate a single shallow copy at most every 300ms so the Outliner
+     * picks up any visual changes (e.g. attrInfo-based rendering).
+     *
+     * We do NOT call onSceneTreeChange here — NodeGraph/MiniMap don't need
+     * per-node attrInfo updates. They get refreshed at structureComplete/complete.
+     */
+    let nodeUpdatedTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handleNodeUpdated = ({ node: _node }: { node: SceneNode }) => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+
+      // Batch: coalesce rapid attrInfo updates into one Outliner refresh
+      if (nodeUpdatedTimeout === null) {
+        nodeUpdatedTimeout = setTimeout(() => {
+          nodeUpdatedTimeout = null;
+          setSceneTree(prev => [...prev]); // shallow copy for Outliner only
+        }, 300);
+      }
+    };
+
+    /**
+     * V3: Pass 1 structure complete — rebuild NodeGraph with edges.
+     */
+    const handleStructureComplete = () => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+      Logger.debug('✅ V3: Structure complete (Pass 1 done)');
+
+      setSceneTree(prev => {
+        const updated = [...prev];
+        onSceneTreeChange?.(updated);
         return updated;
       });
     };
 
-    // Register progressive V1 event listeners (also used by V3)
-    if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
-      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V1 event listeners');
-      client.on('scene:nodeAdded', handleProgressiveNodeAdded);
-      client.on('scene:level0Complete', handleLevel0Complete);
-      client.on('scene:childrenLoaded', handleChildrenLoaded);
-      Logger.debug('✅ useSceneTree: Progressive V1 event listeners registered');
-    }
-    
-    // Register progressive V3 event listeners (same events as V1, but V3 produces correct tree)
+    /**
+     * V3: Scene complete — final re-render to ensure consistency.
+     * Create a shallow copy so that the Outliner picks up any remaining
+     * children that were mutated in place during Pass 2.
+     */
+    const handleSceneComplete = () => {
+      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
+      Logger.info('✅ V3: Scene load complete');
+
+      // Flush any pending nodeUpdated batch
+      if (nodeUpdatedTimeout !== null) {
+        clearTimeout(nodeUpdatedTimeout);
+        nodeUpdatedTimeout = null;
+      }
+
+      setSceneTree(prev => {
+        const updated = [...prev];
+        onSceneTreeChange?.(updated);
+        return updated;
+      });
+    };
+
+    // Register V3 event listeners
     if (FEATURES.PROGRESSIVE_LOADING_V3) {
       Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V3 event listeners');
       client.on('scene:nodeAdded', handleProgressiveNodeAdded);
       client.on('scene:level0Complete', handleLevel0Complete);
-      client.on('scene:childrenLoaded', handleChildrenLoaded);
+      client.on('scene:pinAdded', handlePinAdded);
+      client.on('scene:childrenLoaded', handleChildrenLoadedV3);
+      client.on('scene:nodeUpdated', handleNodeUpdated);
+      client.on('scene:structureComplete', handleStructureComplete);
+      client.on('scene:complete', handleSceneComplete);
       Logger.debug('✅ useSceneTree: Progressive V3 event listeners registered');
-    }
-
-    // =================================================================
-    // PROGRESSIVE LOADING V2 EVENTS (Visibility-aware)
-    // =================================================================
-    
-    /**
-     * V2: Progress updates with phase tracking
-     */
-    const handleV2Progress = (event: V2ProgressEvent) => {
-      setLoadPhase(event.phase);
-      Logger.debug(`📊 V2 Progress: ${event.phase} ${event.overallProgress.toFixed(0)}% - ${event.message}`);
-    };
-    
-    /**
-     * V2: Details loaded for a specific node
-     */
-    const handleV2DetailsLoaded = ({ handle, node, phase }: V2DetailsLoadedEvent) => {
-      // Update the node in the tree with full details
-      setSceneTree(prev => {
-        const updateNode = (nodes: SceneNode[]): SceneNode[] => {
-          return nodes.map(n => {
-            if (n.handle === handle) {
-              // Merge loaded details while preserving children
-              return { ...n, ...node, children: n.children || node.children };
-            }
-            if (n.children?.length) {
-              return { ...n, children: updateNode(n.children) };
-            }
-            return n;
-          });
-        };
-        
-        const updated = updateNode(prev);
-        
-        // Notify parent of tree change
-        if (phase === LoadPhase.VISIBLE_FIRST) {
-          // For visible nodes, update immediately
-          setTimeout(() => onSceneTreeChange?.(updated), 0);
-        }
-        
-        return updated;
-      });
-    };
-    
-    /**
-     * V2: Scene complete - final update
-     */
-    const handleV2Complete = ({ totalNodes, elapsedMs }: { totalNodes: number; elapsedMs: number }) => {
-      Logger.info(`✅ V2 Complete: ${totalNodes} nodes loaded in ${elapsedMs}ms`);
-      setLoadPhase(LoadPhase.COMPLETE);
-    };
-    
-    // Register V2 event listeners
-    if (FEATURES.PROGRESSIVE_LOADING_V2) {
-      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V2 event listeners');
-      client.on('scene:nodeAdded', handleProgressiveNodeAdded); // Reuse V1 handler for skeleton nodes
-      client.on('scene:level0Complete', handleLevel0Complete);  // Reuse V1 handler
-      client.on('scene:childrenLoaded', handleChildrenLoaded);  // Reuse V1 handler
-      client.on('scene:v2:progress', handleV2Progress);
-      client.on('scene:v2:detailsLoaded', handleV2DetailsLoaded);
-      client.on('scene:v2:complete', handleV2Complete);
-      Logger.debug('✅ useSceneTree: Progressive V2 event listeners registered');
     }
 
     // =================================================================
@@ -433,54 +422,28 @@ export function useSceneTree({
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
 
     return () => {
-      // Remove progressive V1 event listeners (if they were registered)
-      if (FEATURES.PROGRESSIVE_LOADING && !FEATURES.PROGRESSIVE_LOADING_V2 && !FEATURES.PROGRESSIVE_LOADING_V3) {
-        Logger.debug('🔇 useSceneTree: Removing progressive V1 event listeners');
-        client.off('scene:nodeAdded', handleProgressiveNodeAdded);
-        client.off('scene:level0Complete', handleLevel0Complete);
-        client.off('scene:childrenLoaded', handleChildrenLoaded);
-      }
-      
-      // Remove progressive V3 event listeners
+      // Remove V3 progressive event listeners
       if (FEATURES.PROGRESSIVE_LOADING_V3) {
-        Logger.debug('🔇 useSceneTree: Removing progressive V3 event listeners');
         client.off('scene:nodeAdded', handleProgressiveNodeAdded);
         client.off('scene:level0Complete', handleLevel0Complete);
-        client.off('scene:childrenLoaded', handleChildrenLoaded);
+        client.off('scene:pinAdded', handlePinAdded);
+        client.off('scene:childrenLoaded', handleChildrenLoadedV3);
+        client.off('scene:nodeUpdated', handleNodeUpdated);
+        client.off('scene:structureComplete', handleStructureComplete);
+        client.off('scene:complete', handleSceneComplete);
+        if (nodeUpdatedTimeout !== null) clearTimeout(nodeUpdatedTimeout);
       }
-      
-      // Remove progressive V2 event listeners
-      if (FEATURES.PROGRESSIVE_LOADING_V2) {
-        Logger.debug('🔇 useSceneTree: Removing progressive V2 event listeners');
-        client.off('scene:nodeAdded', handleProgressiveNodeAdded);
-        client.off('scene:level0Complete', handleLevel0Complete);
-        client.off('scene:childrenLoaded', handleChildrenLoaded);
-        client.off('scene:v2:progress', handleV2Progress);
-        client.off('scene:v2:detailsLoaded', handleV2DetailsLoaded);
-        client.off('scene:v2:complete', handleV2Complete);
-      }
-      
+
       // Remove traditional event listeners
       client.off('nodeAdded', handleNodeAdded);
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
     };
-  }, [client, onSceneTreeChange, initializeExpansion]);
-
-  // V2: Notify service of visible handles
-  const updateVisibleHandles = useCallback((handles: number[]) => {
-    if (FEATURES.PROGRESSIVE_LOADING_V2 && client) {
-      visibleHandlesRef.current = handles;
-      client.setVisibleHandles(handles);
-      onVisibleRangeChange?.(handles);
-    }
-  }, [client, onVisibleRangeChange]);
+  }, [client, onSceneTreeChange, onNodeSelect, initializeExpansion]);
 
   return {
     sceneTree,
     loading,
-    loadPhase,
-    updateVisibleHandles,
     loadSceneTree,
   };
 }

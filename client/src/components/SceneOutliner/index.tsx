@@ -43,62 +43,48 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   // Context menu actions
   const contextMenu = useContextMenuActions({ onNodeSelect });
 
-  // Stable no-op callback for initializeExpansion (prevents useEffect re-runs)
-  const handleInitializeExpansion = useCallback(() => {
-    // No-op, auto-initialization happens in useTreeExpansion now
-  }, []);
-
-  // 🎯 Use ref to break circular dependency between useSceneTree and useTreeExpansion
-  const expandNodesRef = React.useRef<((handles: number[]) => void) | null>(null);
-  
-  // Stable callback that uses ref (so useSceneTree can call it without depending on expandNodes)
-  const handleExpandNodes = useCallback((handles: number[]) => {
-    if (expandNodesRef.current) {
-      expandNodesRef.current(handles);
-    }
+  // Bridge ref: allows useSceneTree to call initializeExpansion from useTreeExpansion.
+  // This resolves the circular dependency: useSceneTree needs initializeExpansion,
+  // and useTreeExpansion needs sceneTree from useSceneTree.
+  const initializeExpansionRef = React.useRef<(tree: SceneNode[]) => void>(() => {});
+  const handleInitializeExpansion = useCallback((tree: SceneNode[]) => {
+    initializeExpansionRef.current(tree);
   }, []);
 
   // Scene tree management
-  const { sceneTree, loading, loadPhase: _loadPhase, updateVisibleHandles, loadSceneTree } = useSceneTree({
+  const { sceneTree, loading, loadSceneTree } = useSceneTree({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
     initializeExpansion: handleInitializeExpansion,
-    onExpandNodes: handleExpandNodes, // Stable callback that uses ref
   });
 
   // Tree expansion management (auto-initializes when sceneTree loads)
-  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll, expandNodes } = useTreeExpansion({
+  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll, initializeExpansion } = useTreeExpansion({
     sceneTree,
     selectedNode,
     onNodeSelect,
     onNodeContextMenu: contextMenu.handleNodeContextMenu,
   });
+
+  // Connect the bridge ref to the real initializeExpansion
+  initializeExpansionRef.current = initializeExpansion;
   
-  // V2: Track visible rows for priority loading
-  // react-window v2 uses onRowsRendered with startIndex/stopIndex
-  const handleRowsRendered = useCallback(
-    (visibleRows: { startIndex: number; stopIndex: number }) => {
-      const visibleHandles = flattenedNodes
-        .slice(visibleRows.startIndex, visibleRows.stopIndex + 1)
-        .map(n => n.node.handle) // FlattenedNode has .node.handle
-        .filter((h): h is number => typeof h === 'number' && h !== 0);
-      
-      updateVisibleHandles(visibleHandles);
-    },
-    [flattenedNodes, updateVisibleHandles]
-  );
-  
-  // Update ref when expandNodes changes
+  // Force List re-render when flattenedNodes actually change in content.
+  // We track by length + first/last uniqueKey to avoid spurious invalidations
+  // from reference-only changes (e.g. shallow copies during progressive loading).
+  const prevFlatSnapshotRef = React.useRef('');
   React.useEffect(() => {
-    expandNodesRef.current = expandNodes;
-  }, [expandNodes]);
-  
-  // 🎯 Force List re-render when flattenedNodes change
-  // This ensures virtual scrolling cache is invalidated
-  React.useEffect(() => {
-    setListKey(prev => prev + 1);
-  }, [flattenedNodes.length]);
+    // Build a lightweight snapshot: length + first key + last key
+    const len = flattenedNodes.length;
+    const snapshot = len === 0
+      ? '0'
+      : `${len}|${flattenedNodes[0].uniqueKey}|${flattenedNodes[len - 1].uniqueKey}`;
+    if (snapshot !== prevFlatSnapshotRef.current) {
+      prevFlatSnapshotRef.current = snapshot;
+      setListKey(prev => prev + 1);
+    }
+  }, [flattenedNodes]);
 
   // LocalDB management
   const localDB = useLocalDB({ activeTab });
@@ -211,7 +197,6 @@ export const SceneOutliner = React.memo(function SceneOutliner({
                 rowHeight={20}
                 rowComponent={VirtualTreeRow}
                 rowProps={rowProps}
-                onRowsRendered={handleRowsRendered}
               />
             </div>
           ) : loading ? (

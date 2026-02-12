@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Progressive Scene Loading V3 (2025-02-11)
+
+- **Two-Pass Progressive Loading**: New `ProgressiveSceneServiceV3` with per-pin emission
+  - Pass 1 (Structural): Loads level-1 nodes + immediate children, yields to browser after each pin
+  - Pass 2 (Deep/Background): BFS queue loads remaining children with reduced yield frequency
+  - `scene:pinAdded` event enables per-pin UI updates
+  - `promoteNode()` API for user-interaction-driven priority loading
+  - Correct tree structure with node deduplication via `scene.map`
+  - AbortController support for cancellation on scene refresh
+  - Files: `client/src/services/octane/ProgressiveSceneServiceV3.ts`
+
 ### Performance - Viewport Canvas Optimization (2025-02-03)
 
 **Phase 1: Quick Wins** (Commit: `5433c88`)
@@ -101,20 +112,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Drag operations → No performance impact (silent=true)
 - ✅ Clean event-driven architecture
 
-**Documentation**: See `CAMERA_SYNC_FIX.md` for full details.
-
-**Documentation**:
-- **Viewport Optimizations**:
-  - `VIEWPORT_CANVAS_OPTIMIZATION.md`: 400+ line technical analysis
-  - `VIEWPORT_OPTIMIZATION_SUMMARY.md`: Implementation roadmap
-  - `VIEWPORT_OPTIMIZATION_COMPLETE.md`: Phase 1+2 summary and results
-  - `VIEWPORT_PHASE3_PLAN.md`: Phase 3 planning (input-side throttling)
-  - `VIEWPORT_PHASE3_COMPLETE.md`: Phase 3 results (800+ lines)
-  - `VIEWPORT_PHASE4_PROGRESSIVE_RENDER_FLUSH.md`: **Phase 4 progressive flush (THIS FILE)**
-- **Bug Fixes**:
-  - `CAMERA_SYNC_FIX.md`: Camera state synchronization fix
-  - `REACTFLOW_WARNING_FIX.md`: React Flow layout fix details
-
 **Technical Details**:
 - RAF fires at display refresh rate (typically 60 Hz)
 - If Octane sends 100 FPS, 40 frames automatically coalesced
@@ -185,12 +182,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Connection: "Connected to Octane" (3s) / "Disconnected from Octane" (persistent)
   - Event listeners integrated in AppContent useEffect hooks
   - Files: `client/src/App.tsx`
-
-- **Documentation**: Complete feature documentation
-  - Usage examples and API reference
-  - Status message catalog with durations
-  - Future enhancement suggestions
-  - Files: `STATUS_MESSAGE_FEATURE.md`
 
 **Benefits:**
 - ✅ **User Feedback**: Real-time visual feedback for all major operations
@@ -341,8 +332,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files: `client/src/App.tsx`
 
 - **Documentation**: Updated modernization tracking
-  - Marked P1 features as complete in MODERNIZATION_GUIDE.md
-  - Next phase: P2 (Suspense Boundaries + React Query, 2-3 days)
   - Commit: 02585d6
 
 ### Fixed - Regression Fixes (2025-02-01)
@@ -679,7 +668,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `README.md` - Project overview and features
 - `QUICKSTART.md` - Setup guide
 - `DEVELOPMENT.md` - Architecture and patterns
-- `AGENTS.md` - AI assistant memory and workflows
 - `CHANGELOG.md` - Version history (this file)
 
 ---
@@ -817,6 +805,6 @@ None yet (version 1.0.0 is first stable release).
 
 ---
 
-**Maintained by**: OTOY Development Team  
-**Last Updated**: 2025-01-29  
+**Maintained by**: OTOY Development Team
+**Last Updated**: 2025-02-11
 **Status**: Active Development

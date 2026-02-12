@@ -17,8 +17,6 @@ import {
   NodeService,
   MaterialDatabaseService,
   RenderExportService,
-  ProgressiveSceneService,
-  ProgressiveSceneServiceV2,
   ProgressiveSceneServiceV3,
   RenderState,
   SceneNode,
@@ -62,9 +60,7 @@ export class OctaneClient extends EventEmitter {
   private materialDatabaseService: MaterialDatabaseService;
   private renderExportService: RenderExportService;
   
-  // Optimization services (Sprint 1+)
-  private progressiveSceneService: ProgressiveSceneService;
-  private progressiveSceneServiceV2: ProgressiveSceneServiceV2;
+  // Progressive loading service
   private progressiveSceneServiceV3: ProgressiveSceneServiceV3;
 
   constructor(serverUrl?: string) {
@@ -84,9 +80,6 @@ export class OctaneClient extends EventEmitter {
     this.materialDatabaseService = new MaterialDatabaseService(this, this.serverUrl, this.apiService, this.sceneService);
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
     
-    // Initialize optimization services (Sprint 1+)
-    this.progressiveSceneService = new ProgressiveSceneService(this, this.serverUrl, this.apiService);
-    this.progressiveSceneServiceV2 = new ProgressiveSceneServiceV2(this, this.serverUrl, this.apiService);
     this.progressiveSceneServiceV3 = new ProgressiveSceneServiceV3(this, this.serverUrl, this.apiService);
   }
 
@@ -144,58 +137,38 @@ export class OctaneClient extends EventEmitter {
   // ==================== Scene Methods ====================
   
   /**
-   * Build scene tree with optional progressive loading
-   * Priority: V3 > V1 > Traditional sequential
-   * Note: V2 is deprecated (breaks tree structure)
+   * Build scene tree — uses progressive V3 if enabled, otherwise traditional sync.
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Incremental update (add single node) - always use traditional service
     if (newNodeHandle !== undefined) {
       return this.sceneService.buildSceneTree(newNodeHandle);
     }
-    
-    // V3: Progressive loading with correct tree structure (recommended)
+
     if (FEATURES.PROGRESSIVE_LOADING_V3) {
-      Logger.info('🚀 Using progressive scene loading V3 (correct tree structure)');
       return this.progressiveSceneServiceV3.buildSceneProgressive();
     }
-    
-    // V2: DEPRECATED - breaks tree structure, do not use
-    if (FEATURES.PROGRESSIVE_LOADING_V2) {
-      Logger.warn('⚠️ V2 progressive loading is deprecated - use V3 instead');
-      return this.progressiveSceneServiceV2.buildSceneProgressive();
-    }
-    
-    // V1: Original progressive loading (deprecated but kept for comparison)
-    if (FEATURES.PROGRESSIVE_LOADING) {
-      Logger.info('🚀 Using progressive scene loading V1');
-      return this.progressiveSceneService.buildSceneProgressive();
-    }
-    
-    // Fallback to traditional sequential loading
-    Logger.debug('📦 Using traditional scene loading (synchronous)');
+
     return this.sceneService.buildSceneTree();
   }
   
   /**
-   * Abort current scene loading operation
-   * Works with both V1 and V2 progressive loading
+   * Abort current scene loading operation (V3 progressive).
    */
   abortSceneLoad(): void {
-    if (FEATURES.PROGRESSIVE_LOADING_V2) {
-      this.progressiveSceneServiceV2.abort();
-    } else if (FEATURES.PROGRESSIVE_LOADING) {
-      this.progressiveSceneService.abort();
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      this.progressiveSceneServiceV3.abort();
     }
   }
-  
+
   /**
-   * Update visible handles for V2 progressive loading
-   * Called by UI when visible items change (scroll)
+   * Promote a node to the front of the deep-load queue (V3).
+   * Call when the user expands a node in the Outliner or selects it in the Inspector
+   * and its children haven't been loaded yet (Pass 2 pending).
    */
-  setVisibleHandles(handles: number[]): void {
-    if (FEATURES.PROGRESSIVE_LOADING_V2) {
-      this.progressiveSceneServiceV2.setVisibleHandles(handles);
+  promoteNode(handle: number): void {
+    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      this.progressiveSceneServiceV3.promoteNode(handle);
     }
   }
   
@@ -203,10 +176,6 @@ export class OctaneClient extends EventEmitter {
    * Load attrInfo on-demand for lazy loading
    */
   async loadAttrInfo(handle: number): Promise<any> {
-    if (FEATURES.PROGRESSIVE_LOADING_V2 || FEATURES.LAZY_ATTR_INFO) {
-      return this.progressiveSceneServiceV2.loadAttrInfo(handle);
-    }
-    // Return from existing node if available
     const node = this.sceneService.getNodeByHandle(handle);
     return node?.attrInfo || null;
   }
@@ -228,19 +197,12 @@ export class OctaneClient extends EventEmitter {
   }
 
   /**
-   * Get current scene
-   * Returns scene from the service that was used for loading
+   * Get current scene from the active loading service.
    */
   getScene(): Scene {
-    // V2 takes priority
-    if (FEATURES.PROGRESSIVE_LOADING_V2 && this.progressiveSceneServiceV2.getScene().tree.length > 0) {
-      return this.progressiveSceneServiceV2.getScene();
+    if (FEATURES.PROGRESSIVE_LOADING_V3 && this.progressiveSceneServiceV3.getScene().tree.length > 0) {
+      return this.progressiveSceneServiceV3.getScene();
     }
-    // V1 fallback
-    if (FEATURES.PROGRESSIVE_LOADING && this.progressiveSceneService.getScene().tree.length > 0) {
-      return this.progressiveSceneService.getScene();
-    }
-    // Traditional service
     return this.sceneService.getScene();
   }
 

@@ -34,6 +34,7 @@ import { SearchDialog } from './SearchDialog';
 import { EditCommands } from '../../commands/EditCommands';
 import { Logger } from '../../utils/Logger';
 import { getPinColor } from '../../utils/PinColorUtils';
+import { FEATURES } from '../../config/features';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
 import { useConnectionCutter } from './hooks/useConnectionCutter';
@@ -81,6 +82,11 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   // Track whether initial fitView has been called (should only happen once after initial scene sync)
   const hasInitialFitView = useRef(false);
   const hasProvidedCallback = useRef(false);
+  // V3: Track whether progressive loading is in progress (skip sceneTree effect)
+  const progressiveLoadingRef = useRef(false);
+  // Ref to always have latest sceneTree for event handlers (avoids stale closure)
+  const sceneTreeRef = useRef(sceneTree);
+  sceneTreeRef.current = sceneTree;
 
   // Provide fitView callback to parent on mount (only once)
   useEffect(() => {
@@ -312,8 +318,14 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   ); // Add handleNodeContextMenu dependency
 
   /**
-   * Load scene graph when sceneTree changes
-   * Optimization: Skip full rebuild if incremental add/delete handlers are active
+   * Load scene graph when sceneTree changes.
+   *
+   * During progressive V3 loading, skip length-based incremental checks — the tree
+   * grows via mutations and shallow copies, not via nodeAdded/nodeDeleted events.
+   * Instead, event-driven rebuilds happen on scene:structureComplete and scene:complete.
+   *
+   * For traditional/post-load operations, use length-based skip to avoid full rebuilds
+   * when nodeAdded/nodeDeleted event handlers are managing incremental updates.
    */
   useEffect(() => {
     Logger.debug('📊 NodeGraphEditor: sceneTree changed, length =', sceneTree?.length || 0);
@@ -325,33 +337,23 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       return;
     }
 
-    // Check if we're handling incremental operations
-    // - nodeAdded: currentNodes.length < sceneTree.length
-    // - nodeDeleted: currentNodes.length > sceneTree.length
-    // If so, skip full rebuild - the event handlers will update incrementally
+    // During V3 progressive loading, skip this effect — we rebuild on explicit events
+    if (FEATURES.PROGRESSIVE_LOADING_V3 && progressiveLoadingRef.current) {
+      Logger.debug('📊 NodeGraphEditor: V3 progressive loading active, skipping sceneTree effect');
+      return;
+    }
+
     setNodes(currentNodes => {
-      Logger.debug(
-        `📊 NodeGraphEditor: currentNodes=${currentNodes.length}, sceneTree=${sceneTree.length}`
-      );
-
-      // If current graph has fewer nodes, nodeAdded is handling it
+      // Skip if nodeAdded/nodeDeleted event handlers are managing incremental updates
       if (currentNodes.length < sceneTree.length && currentNodes.length > 0) {
-        Logger.debug('📊 NodeGraphEditor: Skipping full rebuild - nodeAdded handler active');
-        return currentNodes; // Don't rebuild
+        return currentNodes;
       }
-
-      // If current graph has more nodes, nodeDeleted is handling it
       if (currentNodes.length > sceneTree.length && currentNodes.length > 0) {
-        Logger.debug('📊 NodeGraphEditor: Skipping full rebuild - nodeDeleted handler active');
-        return currentNodes; // Don't rebuild
+        return currentNodes;
       }
 
-      // Full rebuild needed (initial load, sync issues, or other changes)
       Logger.debug('📊 NodeGraphEditor: Full graph rebuild triggered');
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
-      Logger.debug(
-        `📊 NodeGraphEditor: Rebuilt graph with ${graphNodes.length} nodes, ${graphEdges.length} edges`
-      );
       setEdges(graphEdges);
       return graphNodes;
     });
@@ -453,6 +455,119 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       client.off('nodeDeleted', handleNodeDeleted);
     };
   }, [client, connected, setNodes, setEdges]);
+
+  /**
+   * V3 Progressive: Listen for build lifecycle events.
+   *
+   * Level-0 nodes appear in the graph immediately as they arrive (no edges yet).
+   * At structureComplete, do a full rebuild with edges.
+   * At complete, do a final rebuild to pick up any Pass 2 changes.
+   *
+   * Uses sceneTreeRef (not sceneTree) so event handlers always read the latest
+   * tree without re-registering on every sceneTree change.
+   */
+  useEffect(() => {
+    if (!FEATURES.PROGRESSIVE_LOADING_V3 || !client) return;
+
+    // Track node count for positioning newly added nodes
+    let nodeIndexCounter = 0;
+    const nodeSpacing = 250;
+    const yCenter = 300;
+
+    const handleBuildStart = () => {
+      progressiveLoadingRef.current = true;
+      hasInitialFitView.current = false;
+      nodeIndexCounter = 0;
+      // Clear previous graph
+      setNodes([]);
+      setEdges([]);
+    };
+
+    /**
+     * Level-0 node added — add to graph immediately (no edges yet).
+     * This makes nodes appear as they stream in, before Pass 1 finishes.
+     */
+    const handleNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
+      if (level !== 0) return;
+      if (!node.handle && !node.pinInfo) return;
+
+      const handleStr = String(node.handle || 0);
+      const idx = nodeIndexCounter++;
+
+      // Extract input pins (may be empty at this point, will be rebuilt at structureComplete)
+      const inputs = node.children || [];
+      const inputHandles = inputs.map((input: any, inputIndex: number) => ({
+        id: `input-${inputIndex}`,
+        label: input.staticLabel || input.name,
+        pinInfo: input.pinInfo,
+        handle: input.handle,
+        isAtTopLevel: false, // Can't resolve until all nodes are known
+        connectedNodeName: null,
+      }));
+
+      const output = {
+        id: 'output-0',
+        label: node.name,
+        pinInfo: node.pinInfo,
+      };
+
+      const nodePosition = node.position
+        ? { x: node.position.x, y: node.position.y }
+        : { x: 100 + idx * nodeSpacing, y: yCenter + idx * 20 };
+
+      const newReactFlowNode: Node<OctaneNodeData> = {
+        id: handleStr,
+        type: 'octane',
+        position: nodePosition,
+        data: {
+          sceneNode: node,
+          inputs: inputHandles,
+          output,
+          onContextMenu: handleNodeContextMenu,
+        },
+      };
+
+      setNodes(prev => {
+        // Deduplicate
+        if (prev.some(n => n.id === handleStr)) return prev;
+        return [...prev, newReactFlowNode];
+      });
+    };
+
+    /**
+     * Structure complete (Pass 1 done) — full rebuild with edges.
+     * By now all level-0 nodes and their immediate children/pins are loaded.
+     */
+    const handleStructureComplete = () => {
+      Logger.debug('📊 NodeGraphEditor: V3 structureComplete — rebuilding graph with edges');
+      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
+      setNodes(graphNodes);
+      setEdges(graphEdges);
+    };
+
+    /**
+     * Scene complete — final rebuild to pick up any Pass 2 deep-load changes.
+     */
+    const handleComplete = () => {
+      Logger.debug('📊 NodeGraphEditor: V3 complete — final graph rebuild');
+      progressiveLoadingRef.current = false;
+      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
+      setNodes(graphNodes);
+      setEdges(graphEdges);
+    };
+
+    client.on('scene:buildStart', handleBuildStart);
+    client.on('scene:nodeAdded', handleNodeAdded);
+    client.on('scene:structureComplete', handleStructureComplete);
+    client.on('scene:complete', handleComplete);
+
+    return () => {
+      client.off('scene:buildStart', handleBuildStart);
+      client.off('scene:nodeAdded', handleNodeAdded);
+      client.off('scene:structureComplete', handleStructureComplete);
+      client.off('scene:complete', handleComplete);
+    };
+  }, [client, convertSceneToGraph, setNodes, setEdges, handleNodeContextMenu]);
 
   /**
    * Synchronize node selection when selectedNode changes externally (e.g., from SceneOutliner)
