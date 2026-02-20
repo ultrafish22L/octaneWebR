@@ -1195,9 +1195,9 @@
     }
 }
 
-/* Accessibility */
+/* Accessibility - scoped to node graph only to avoid killing global animations */
 @media (prefers-reduced-motion: reduce) {
-    * {
+    .node-graph-reactflow * {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;

@@ -12,7 +12,6 @@ import {
   collapseAll,
 } from '../../../utils/TreeFlattener';
 import { SceneNode } from '../../../services/OctaneClient';
-import { useOctane } from '../../../hooks/useOctane';
 import { FEATURES } from '../../../config/features';
 import { VirtualTreeRowProps } from '../VirtualTreeRow';
 
@@ -29,18 +28,27 @@ export function useTreeExpansion({
   onNodeSelect,
   onNodeContextMenu,
 }: UseTreeExpansionProps) {
-  const { client } = useOctane();
-  const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(new Map());
+  // For progressive loading, pre-seed the expansion map with the Scene root
+  // expanded so level-1 nodes are visible as soon as they arrive via
+  // scene:nodeAdded events. The full expansion (including PT_RENDERTARGET)
+  // is initialized later by handleLevel0Complete → initializeExpansion().
+  const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(() => {
+    if (FEATURES.PROGRESSIVE_LOADING_P) {
+      const map = new Map<string, boolean>();
+      map.set('-1', true); // Scene root (synthetic handle)
+      return map;
+    }
+    return new Map();
+  });
 
   // Auto-initialize expansion when sceneTree first loads (traditional loading only).
-  // For progressive loading (P or V3), expansion is initialized explicitly via
-  // initializeExpansion() called from handleLevel0Complete, which has the full
-  // set of level-0 nodes including PT_RENDERTARGET. The auto-init useEffect
-  // must NOT run for progressive modes because it fires too early (on the first
-  // node added), before the RenderTarget has arrived in the tree.
+  // For progressive loading P, the Scene root is already expanded via initial state
+  // above, and full expansion is set explicitly via initializeExpansion() called from
+  // handleLevel0Complete, which has the full set of level-0 nodes including
+  // PT_RENDERTARGET.
   const hasInitializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) return;
+    if (FEATURES.PROGRESSIVE_LOADING_P) return;
     if (sceneTree.length === 0 || hasInitializedRef.current) return;
 
     hasInitializedRef.current = true;
@@ -51,20 +59,9 @@ export function useTreeExpansion({
   }, [sceneTree]);
 
   // Toggle node expansion.
-  // When expanding, promote the node in the V3 deep-load queue so its children
-  // load sooner if they haven't been fetched yet (Pass 2).
   const handleToggleExpansion = useCallback((nodeKey: string) => {
-    setExpansionMap(prevMap => {
-      const wasExpanded = prevMap.get(nodeKey) || false;
-      if (!wasExpanded && FEATURES.PROGRESSIVE_LOADING_V3 && client) {
-        const handle = Number(nodeKey);
-        if (!isNaN(handle) && handle > 0) {
-          client.promoteNode(handle);
-        }
-      }
-      return toggleExpansion(prevMap, nodeKey);
-    });
-  }, [client]);
+    setExpansionMap(prevMap => toggleExpansion(prevMap, nodeKey));
+  }, []);
 
   // Expand all nodes
   const handleExpandAll = useCallback(() => {

@@ -82,7 +82,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   // Track whether initial fitView has been called (should only happen once after initial scene sync)
   const hasInitialFitView = useRef(false);
   const hasProvidedCallback = useRef(false);
-  // V3: Track whether progressive loading is in progress (skip sceneTree effect)
+  // Track whether progressive loading is in progress (skip sceneTree effect)
   const progressiveLoadingRef = useRef(false);
   // Ref to always have latest sceneTree for event handlers (avoids stale closure)
   const sceneTreeRef = useRef(sceneTree);
@@ -191,43 +191,40 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     (tree: SceneNode[]) => {
       const graphNodes: Node<OctaneNodeData>[] = [];
       const graphEdges: Edge[] = [];
+
+      // Build handle→node map first (O(n)) so pin lookups are O(1) instead of O(n)
       const nodeMap = new Map<string, SceneNode>();
+      for (const item of tree) {
+        if (item.handle || item.pinInfo) {
+          nodeMap.set(String(item.handle || 0), item);
+        }
+      }
 
       // Only process TOP-LEVEL nodes (matching octaneWeb behavior)
       const nodeSpacing = 250;
       const yCenter = 300;
 
       tree.forEach((item, index) => {
-        // Include nodes with handle=0 (NO_ITEM/empty pins) if they have pinInfo
         if (!item.handle && !item.pinInfo) {
           return;
         }
 
         const handleStr = String(item.handle || 0);
-        nodeMap.set(handleStr, item);
 
         // Extract input pins from item.children
         const inputs = item.children || [];
 
         const inputHandles = inputs.map((input: any, inputIndex: number) => {
-          // Check if connected node is at top level (level 1) in scene tree
-          // Top-level nodes are visible in NGE, nested nodes are collapsed
-          const isConnectedNodeAtTopLevel =
-            input.handle && tree.some((topNode: SceneNode) => topNode.handle === input.handle);
-
-          // Find connected node name if handle exists
-          const connectedNode = input.handle
-            ? tree.find((n: SceneNode) => n.handle === input.handle)
-            : null;
-          const connectedNodeName = connectedNode ? connectedNode.name || connectedNode.type : null;
+          // O(1) lookup instead of O(n) tree.some()/tree.find()
+          const connectedNode = input.handle ? nodeMap.get(String(input.handle)) || null : null;
 
           return {
             id: `input-${inputIndex}`,
             label: input.staticLabel || input.name,
             pinInfo: input.pinInfo,
-            handle: input.handle, // Connected node handle
-            isAtTopLevel: isConnectedNodeAtTopLevel, // For collapsed detection
-            connectedNodeName, // Connected node name for tooltip
+            handle: input.handle,
+            isAtTopLevel: !!connectedNode,
+            connectedNodeName: connectedNode ? connectedNode.name || connectedNode.type : null,
           };
         });
 
@@ -243,7 +240,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           ? { x: item.position.x, y: item.position.y }
           : { x: 100 + index * nodeSpacing, y: yCenter + index * 20 };
 
-        // Position nodes using Octane's stored position or fallback to calculated spacing
         const node: Node<OctaneNodeData> = {
           id: handleStr,
           type: 'octane',
@@ -320,7 +316,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   /**
    * Load scene graph when sceneTree changes.
    *
-   * During progressive V3 loading, skip length-based incremental checks — the tree
+   * During progressive loading, skip length-based incremental checks — the tree
    * grows via mutations and shallow copies, not via nodeAdded/nodeDeleted events.
    * Instead, event-driven rebuilds happen on scene:structureComplete and scene:complete.
    *
@@ -337,8 +333,8 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       return;
     }
 
-    // During progressive loading (P or V3), skip this effect — we rebuild on explicit events
-    if ((FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) && progressiveLoadingRef.current) {
+    // During progressive loading, skip this effect — we rebuild on explicit events
+    if (FEATURES.PROGRESSIVE_LOADING_P && progressiveLoadingRef.current) {
       Logger.debug('📊 NodeGraphEditor: Progressive loading active, skipping sceneTree effect');
       return;
     }
@@ -378,30 +374,30 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       const inputs = event.node.children || [];
 
       const inputHandles = inputs.map((input: any, inputIndex: number) => {
-        const isConnectedNodeAtTopLevel =
-          input.handle && sceneTree.some((topNode: SceneNode) => topNode.handle === input.handle);
-        const connectedNode = input.handle
-          ? sceneTree.find((n: SceneNode) => n.handle === input.handle)
-          : null;
-        const connectedNodeName = connectedNode ? connectedNode.name || connectedNode.type : null;
+        // O(1) lookup via scene.map instead of O(n) tree scan
+        const connectedNode = input.handle ? client.lookupItem(input.handle) : null;
 
         return {
           id: `input-${inputIndex}`,
           label: input.staticLabel || input.name,
           pinInfo: input.pinInfo,
           handle: input.handle,
-          isAtTopLevel: isConnectedNodeAtTopLevel,
-          connectedNodeName,
+          isAtTopLevel: !!connectedNode,
+          connectedNodeName: connectedNode ? connectedNode.name || connectedNode.type : null,
         };
       });
 
       const newReactFlowNode: Node<OctaneNodeData> = {
         id: handleStr,
         type: 'octane',
-        position: { x: nodeIndex * nodeSpacing, y: yCenter },
+        position: event.node.position
+          ? { x: event.node.position.x, y: event.node.position.y }
+          : { x: nodeIndex * nodeSpacing, y: yCenter },
         data: {
           sceneNode: event.node,
           inputs: inputHandles,
+          output: { id: 'output-0', label: event.node.name, pinInfo: event.node.pinInfo },
+          onContextMenu: handleNodeContextMenu,
         },
         selected: false,
       };
@@ -417,7 +413,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     return () => {
       client.off('nodeAdded', handleNodeAdded);
     };
-  }, [client, connected, sceneTree, setNodes]);
+  }, [client, connected, setNodes, handleNodeContextMenu]);
 
   /**
    * Handle incremental node deletions (no full graph rebuild)
@@ -457,85 +453,67 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   }, [client, connected, setNodes, setEdges]);
 
   /**
-   * V3 Progressive: Listen for build lifecycle events.
+   * Progressive loading: Listen for build lifecycle events.
    *
    * Level-0 nodes appear in the graph immediately as they arrive (no edges yet).
    * At structureComplete, do a full rebuild with edges.
-   * At complete, do a final rebuild to pick up any Pass 2 changes.
+   * At complete, do a final rebuild to pick up any remaining changes.
    *
    * Uses sceneTreeRef (not sceneTree) so event handlers always read the latest
    * tree without re-registering on every sceneTree change.
    */
   useEffect(() => {
-    if (!(FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) || !client) return;
-
-    // Track node count for positioning newly added nodes
-    let nodeIndexCounter = 0;
-    const nodeSpacing = 250;
-    const yCenter = 300;
+    if (!FEATURES.PROGRESSIVE_LOADING_P || !client) return;
 
     const handleBuildStart = () => {
       progressiveLoadingRef.current = true;
       hasInitialFitView.current = false;
-      nodeIndexCounter = 0;
       // Clear previous graph
       setNodes([]);
       setEdges([]);
     };
 
     /**
-     * Level-0 node added — add to graph immediately (no edges yet).
-     * This makes nodes appear as they stream in, before Pass 1 finishes.
+     * Level-0 node added during progressive load.
+     * Add it to the graph immediately (no edges yet — those come at structureComplete).
      */
-    const handleNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
-      if (level !== 0) return;
-      if (!node.handle && !node.pinInfo) return;
-
+    const handleProgressiveNodeAdded = ({ node }: { node: SceneNode; level: number }) => {
       const handleStr = String(node.handle || 0);
-      const idx = nodeIndexCounter++;
-
-      // Extract input pins (may be empty at this point, will be rebuilt at structureComplete)
       const inputs = node.children || [];
+
       const inputHandles = inputs.map((input: any, inputIndex: number) => ({
         id: `input-${inputIndex}`,
         label: input.staticLabel || input.name,
         pinInfo: input.pinInfo,
         handle: input.handle,
-        isAtTopLevel: false, // Can't resolve until all nodes are known
+        isAtTopLevel: false,
         connectedNodeName: null,
       }));
-
-      const output = {
-        id: 'output-0',
-        label: node.name,
-        pinInfo: node.pinInfo,
-      };
-
-      const nodePosition = node.position
-        ? { x: node.position.x, y: node.position.y }
-        : { x: 100 + idx * nodeSpacing, y: yCenter + idx * 20 };
 
       const newReactFlowNode: Node<OctaneNodeData> = {
         id: handleStr,
         type: 'octane',
-        position: nodePosition,
+        position: node.position
+          ? { x: node.position.x, y: node.position.y }
+          : { x: 100, y: 300 },
         data: {
           sceneNode: node,
           inputs: inputHandles,
-          output,
+          output: { id: 'output-0', label: node.name, pinInfo: node.pinInfo },
           onContextMenu: handleNodeContextMenu,
         },
+        selected: false,
       };
 
-      setNodes(prev => {
-        // Deduplicate
-        if (prev.some(n => n.id === handleStr)) return prev;
-        return [...prev, newReactFlowNode];
+      setNodes(nds => {
+        // Avoid duplicates
+        if (nds.some(n => n.id === handleStr)) return nds;
+        return [...nds, newReactFlowNode];
       });
     };
 
     /**
-     * Structure complete (Pass 1 done) — full rebuild with edges.
+     * Structure complete — full rebuild with edges.
      * By now all level-0 nodes and their immediate children/pins are loaded.
      */
     const handleStructureComplete = () => {
@@ -557,13 +535,13 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     };
 
     client.on('scene:buildStart', handleBuildStart);
-    client.on('scene:nodeAdded', handleNodeAdded);
+    client.on('scene:nodeAdded', handleProgressiveNodeAdded);
     client.on('scene:structureComplete', handleStructureComplete);
     client.on('scene:complete', handleComplete);
 
     return () => {
       client.off('scene:buildStart', handleBuildStart);
-      client.off('scene:nodeAdded', handleNodeAdded);
+      client.off('scene:nodeAdded', handleProgressiveNodeAdded);
       client.off('scene:structureComplete', handleStructureComplete);
       client.off('scene:complete', handleComplete);
     };

@@ -17,7 +17,6 @@ import {
   NodeService,
   MaterialDatabaseService,
   RenderExportService,
-  ProgressiveSceneServiceV3,
   SceneServiceP,
   RenderState,
   SceneNode,
@@ -60,9 +59,8 @@ export class OctaneClient extends EventEmitter {
   private nodeService: NodeService;
   private materialDatabaseService: MaterialDatabaseService;
   private renderExportService: RenderExportService;
-  
-  // Progressive loading services
-  private progressiveSceneServiceV3: ProgressiveSceneServiceV3;
+
+  // Progressive loading service
   private sceneServiceP: SceneServiceP;
 
   constructor(serverUrl?: string) {
@@ -81,8 +79,7 @@ export class OctaneClient extends EventEmitter {
     this.nodeService = new NodeService(this, this.serverUrl, this.apiService, this.sceneService);
     this.materialDatabaseService = new MaterialDatabaseService(this, this.serverUrl, this.apiService, this.sceneService);
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
-    
-    this.progressiveSceneServiceV3 = new ProgressiveSceneServiceV3(this, this.serverUrl, this.apiService);
+
     this.sceneServiceP = new SceneServiceP(this, this.serverUrl, this.apiService);
   }
 
@@ -140,7 +137,7 @@ export class OctaneClient extends EventEmitter {
   // ==================== Scene Methods ====================
   
   /**
-   * Build scene tree — priority: P > V3 > traditional.
+   * Build scene tree — progressive P or traditional.
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Incremental update (add single node) - always use traditional service
@@ -152,31 +149,15 @@ export class OctaneClient extends EventEmitter {
       return this.sceneServiceP.buildSceneTree();
     }
 
-    if (FEATURES.PROGRESSIVE_LOADING_V3) {
-      return this.progressiveSceneServiceV3.buildSceneProgressive();
-    }
-
     return this.sceneService.buildSceneTree();
   }
-  
+
   /**
    * Abort current scene loading operation.
    */
   abortSceneLoad(): void {
     if (FEATURES.PROGRESSIVE_LOADING_P) {
       this.sceneServiceP.abort();
-    } else if (FEATURES.PROGRESSIVE_LOADING_V3) {
-      this.progressiveSceneServiceV3.abort();
-    }
-  }
-
-  /**
-   * Promote a node to the front of the deep-load queue (V3 only).
-   * SceneServiceP loads everything in one pass, so no queue to promote in.
-   */
-  promoteNode(handle: number): void {
-    if (FEATURES.PROGRESSIVE_LOADING_V3) {
-      this.progressiveSceneServiceV3.promoteNode(handle);
     }
   }
   
@@ -210,9 +191,6 @@ export class OctaneClient extends EventEmitter {
   getScene(): Scene {
     if (FEATURES.PROGRESSIVE_LOADING_P && this.sceneServiceP.getScene().tree.length > 0) {
       return this.sceneServiceP.getScene();
-    }
-    if (FEATURES.PROGRESSIVE_LOADING_V3 && this.progressiveSceneServiceV3.getScene().tree.length > 0) {
-      return this.progressiveSceneServiceV3.getScene();
     }
     return this.sceneService.getScene();
   }

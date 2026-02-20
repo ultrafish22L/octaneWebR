@@ -26,6 +26,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
 import { MenuBar } from './components/MenuBar';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { SyncIndicator } from './components/SyncIndicator';
 import {
   CallbackRenderViewport,
   CallbackRenderViewportHandle,
@@ -57,7 +58,7 @@ function AppContent() {
   const [selectedNode, setSelectedNode] = useState<SceneNode | null>(null);
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [sceneRefreshTrigger, setSceneRefreshTrigger] = useState(0);
-  const [_isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [showWorldCoord, setShowWorldCoord] = useState(true); // Display world coordinate axis
   const [viewportLocked, setViewportLocked] = useState(false); // Lock viewport controls
   const [pickingMode, setPickingMode] = useState<
@@ -95,38 +96,23 @@ function AppContent() {
   const handleSceneTreeChange = (tree: SceneNode[]) => {
     setSceneTree(tree);
 
-    // Update selected node reference if it exists in the new tree.
-    // Only call setSelectedNode if the found node is a different reference
-    // (structural sharing means unchanged nodes keep the same reference).
-    // This prevents redundant NodeInspector re-renders during progressive loading.
+    // Update selected node reference from the new tree (not scene.map, which holds
+    // the original mutated-in-place reference and won't differ from selectedNode).
+    // The tree passed here has cloned references via structural sharing, so we find
+    // the matching node in the top-level array to pick up the new reference.
     if (selectedNode && selectedNode.handle) {
-      const findNodeInTree = (nodes: SceneNode[], handle: number): SceneNode | null => {
-        for (const node of nodes) {
-          if (node.handle === handle) return node;
-          if (node.children && node.children.length > 0) {
-            const found = findNodeInTree(node.children, handle);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-
-      const updatedNode = findNodeInTree(tree, selectedNode.handle);
+      const updatedNode = tree.find(n => n.handle === selectedNode.handle) || null;
       if (updatedNode && updatedNode !== selectedNode) {
         setSelectedNode(updatedNode);
       }
     }
   };
 
-  // Node selection handler — also promotes node in V3 deep-load queue
-  // so its children are prioritized if not yet loaded (Pass 2).
+  // Node selection handler.
   // Wrapped in useCallback so downstream useEffects don't re-register on every render.
   const handleNodeSelect = useCallback((node: SceneNode | null) => {
     setSelectedNode(node);
-    if (node?.handle && FEATURES.PROGRESSIVE_LOADING_V3 && client) {
-      client.promoteNode(node.handle);
-    }
-  }, [client]);
+  }, []);
 
   // Scene sync state handler
   const handleSyncStateChange = (syncing: boolean) => {
@@ -404,8 +390,8 @@ function AppContent() {
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
 
-    // Progressive loading status listeners (P and V3)
-    if (FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) {
+    // Progressive loading status listener
+    if (FEATURES.PROGRESSIVE_LOADING_P) {
       const handleLevel0Complete = (data: any) => {
         setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
       };
@@ -436,8 +422,9 @@ function AppContent() {
           onResetLayout={handleResetLayout}
         />
 
-        {/* Connection Status & Controls */}
+        {/* Sync Indicator & Connection Status */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <SyncIndicator syncing={isSyncing} />
           <ConnectionStatus />
         </div>
       </header>

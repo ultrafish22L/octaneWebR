@@ -120,7 +120,7 @@ export class SceneService extends BaseService {
       this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
       
-      Logger.info(`✅ Scene tree built in ${elapsedTime}s:`);
+      Logger.info(`✅ Sequential Scene tree built in ${elapsedTime}s:`);
       Logger.info(`   - ${this.scene.tree.length} top-level items`);
       Logger.info(`   - ${this.scene.map.size} total nodes`);
 
@@ -469,7 +469,7 @@ export class SceneService extends BaseService {
           // We need to get the value from the field indicated by response.value
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
-          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
+//          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
 
           const responseHasIndices = await this.apiService.callApi(
             'ApiItem',

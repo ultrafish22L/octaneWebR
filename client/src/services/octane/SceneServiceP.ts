@@ -36,8 +36,6 @@ export class SceneServiceP extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
   private abortController: AbortController | null = null;
-  private nodesLoaded = 0;
-  private totalNodes = 0;
 
   constructor(emitter: any, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -56,7 +54,7 @@ export class SceneServiceP extends BaseService {
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Abort any previous build
     if (this.abortController) {
-      Logger.debug('SceneServiceP: Cancelling previous build');
+      Logger.debug('🚫 Cancelling previous scene tree build');
       this.abortController.abort();
     }
     this.abortController = new AbortController();
@@ -64,34 +62,37 @@ export class SceneServiceP extends BaseService {
 
     // Incremental: single node update (same as SceneService)
     if (newNodeHandle !== undefined) {
-      Logger.debug('SceneServiceP: Building new node metadata:', newNodeHandle);
+      Logger.debug('➕ Building new node metadata:', newNodeHandle);
       try {
         const tempArray: SceneNode[] = [];
         const newNode = await this.addSceneItem(tempArray, { handle: newNodeHandle }, null, 1);
         if (newNode) {
+          Logger.debug(`🔄 Building children for new node: ${newNode.name}`);
           await this.addItemChildren(newNode);
+          Logger.debug('✅ Node metadata built:', newNode.name);
+        } else {
+          Logger.error('❌ Failed to create new scene node');
         }
         return this.scene.tree;
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        Logger.error('SceneServiceP: Failed to build new node:', message);
+        Logger.error('❌ Failed to build new node metadata:', message);
         throw error;
       }
     }
 
     // Full rebuild
-    Logger.info('SceneServiceP: Building scene tree...');
+    Logger.info('🌳 Building scene tree...');
     this.emit('scene:buildStart');
 
     this.scene = { tree: [], map: new Map(), connections: new Map() };
-    this.nodesLoaded = 0;
-    this.totalNodes = 0;
 
     const startTime = performance.now();
 
     try {
       this.checkAborted(signal);
-      this.emit('scene:buildProgress', { step: 'Getting root node graph...' });
+      this.emit('scene:buildProgress', { step: 'Building scene tree' });
+      Logger.debug('🔍 Step 1: Getting root node graph...');
 
       // Step 1: Get root
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
@@ -99,11 +100,14 @@ export class SceneServiceP extends BaseService {
         throw new Error('Failed to get root node graph');
       }
       const rootHandle = rootResponse.result.handle;
+      Logger.debug('📍 Root handle:', rootHandle);
 
       this.checkAborted(signal);
 
+      Logger.debug('🔍 Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
       const rootIsGraph = isGraphResponse?.result || false;
+      Logger.debug('📍 Is graph:', rootIsGraph);
 
       this.checkAborted(signal);
 
@@ -111,67 +115,22 @@ export class SceneServiceP extends BaseService {
         throw new Error('Root handle is not a graph');
       }
 
-      // Step 2: Load level-1 nodes (owned items) one by one with UI emission
-      const ownedResponse = await this.apiService.callApi('ApiNodeGraph', 'getOwnedItems', rootHandle);
-      if (!ownedResponse?.list?.handle) {
-        throw new Error('Failed ApiNodeGraph/getOwnedItems');
-      }
-      const ownedItemsHandle = ownedResponse.list.handle;
+      // Step 3: Load entire tree using same single-pass approach as SceneService.
+      // UI events (scene:nodeAdded, scene:childrenLoaded) are emitted via setTimeout
+      // so they never block the loading loop — React processes them between API calls.
+      Logger.debug('🔍 Step 3: Building tree...');
+      this.scene.tree = await this.syncSceneSequential(rootHandle, null, rootIsGraph, 0);
 
-      const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
-      const size = sizeResponse?.result || 0;
-      this.totalNodes = size;
-
-      Logger.debug(`SceneServiceP: Found ${size} level-1 owned items`);
-
-      // Load each level-1 node and emit immediately for UI
-      for (let i = 0; i < size; i++) {
-        this.checkAborted(signal);
-
-        const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
-        if (!itemResponse?.result?.handle) continue;
-
-        const node = await this.addSceneItem(this.scene.tree, itemResponse.result, null, 1);
-        if (!node) continue;
-
-        this.nodesLoaded++;
-        this.emit('scene:buildProgress', { step: `Loading: ${this.nodesLoaded}/${this.totalNodes}`, progress: (this.nodesLoaded / this.totalNodes) * 100 });
-
-        // Emit so Outliner shows this node immediately
-        this.emit('scene:nodeAdded', { node, level: 0 });
-
-        // Yield to browser so the UI can paint the new node
-        await this.yieldToBrowser();
-      }
-
-      // All level-1 nodes loaded — signal for expansion initialization
-      this.emit('scene:level0Complete', { nodes: this.scene.tree });
-      Logger.debug(`SceneServiceP: Level-1 complete: ${this.scene.tree.length} nodes`);
-
-      // Step 3: Load children for each level-1 node sequentially
-      // After each node's children are fully loaded, emit a single clean update
-      for (const item of this.scene.tree) {
-        this.checkAborted(signal);
-
-        this.emit('scene:buildProgress', { step: `Building: ${item.name}` });
-        await this.addItemChildren(item);
-
-        // Children fully loaded — signal single clean update for this subtree
-        if (item.children && item.children.length > 0) {
-          this.emit('scene:childrenLoaded', { parent: item, children: item.children });
-        }
-
-        // Yield so UI paints the expanded subtree before moving on
-        await this.yieldToBrowser();
-      }
+      Logger.debug(`✅ Finished building tree`);
 
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
 
-      Logger.info(`SceneServiceP: Tree built in ${elapsedTime}s:`);
-      Logger.info(`  - ${this.scene.tree.length} top-level items`);
-      Logger.info(`  - ${this.scene.map.size} total nodes`);
+      Logger.info(`✅ Progressive Scene tree built in ${elapsedTime}s:`);
+      Logger.info(`   - ${this.scene.tree.length} top-level items`);
+      Logger.info(`   - ${this.scene.map.size} total nodes`);
 
       // Signal structure complete (NodeGraph rebuilds edges here)
+      Logger.debug('🔍 Step 5: Emitting completion events...');
       this.emit('scene:structureComplete', {
         nodeCount: this.scene.map.size,
         topLevelCount: this.scene.tree.length,
@@ -188,15 +147,19 @@ export class SceneServiceP extends BaseService {
 
       // Legacy compat for traditional event listeners
       this.emit('sceneTreeUpdated', this.scene);
+      Logger.info('✅ SceneTreeUpdated event emitted');
 
       return this.scene.tree;
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('abort') || message.includes('cancelled')) {
-        Logger.debug('SceneServiceP: Build cancelled');
+        Logger.debug('🚫 Scene tree build cancelled');
       } else {
-        Logger.error('SceneServiceP: Build failed:', message);
+        Logger.error('❌ Failed to build scene tree:', message);
+        if (error instanceof Error && error.stack) {
+          Logger.error('❌ Error stack:', error.stack);
+        }
       }
       throw error;
     }
@@ -235,6 +198,8 @@ export class SceneServiceP extends BaseService {
         const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
         outType = outTypeResponse?.result || '';
 
+        Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
+
         const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
         isGraph = isGraphResponse?.result || false;
 
@@ -247,9 +212,10 @@ export class SceneServiceP extends BaseService {
                 x: posResponse.result.x || 0,
                 y: posResponse.result.y || 0
               };
+              Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
             }
-          } catch {
-            // Position not available
+          } catch (posError: any) {
+            Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, posError.message);
           }
         }
 
@@ -261,8 +227,10 @@ export class SceneServiceP extends BaseService {
           nodeInfo = infoResponse?.result || null;
         }
       } catch (error: any) {
-        Logger.error('SceneServiceP: addSceneItem failed:', error.message);
+        Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
       }
+    } else {
+      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
     }
 
     const displayName = pinInfo?.staticLabel || itemName;
@@ -289,6 +257,7 @@ export class SceneServiceP extends BaseService {
     if (item != null && item.handle != 0) {
       const handleNum = Number(item.handle);
       this.scene.map.set(handleNum, entry);
+      Logger.debug(`  📄 Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`);
 
       if (level > 1) {
         await this.addItemChildren(entry);
@@ -316,6 +285,9 @@ export class SceneServiceP extends BaseService {
       );
       if (attrInfoResponse?.result && attrInfoResponse.result.type !== 'AT_UNKNOWN') {
         item.attrInfo = attrInfoResponse.result;
+        Logger.debugV(` ${item.name} ${JSON.stringify(attrInfoResponse.result)}`);
+      } else {
+        this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
       }
 
       // Load filePath
@@ -331,6 +303,7 @@ export class SceneServiceP extends BaseService {
         if (response) {
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
+//          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
 
           // Load vertsPerPoly
           const responseHasIndices = await this.apiService.callApi(
@@ -345,12 +318,21 @@ export class SceneServiceP extends BaseService {
             if (indicesResponse) {
               const valField = Object.keys(indicesResponse)[1];
               item.vertsPerPoly = Object(indicesResponse)[Object(indicesResponse)[valField]] as number[];
+              Logger.info(`vertsPerPoly for ${item.name}: ${valField} ${item.vertsPerPoly.length}`);
+              Logger.info(`vertsPerPoly ${JSON.stringify(Object(indicesResponse))} ${item.vertsPerPoly}`);
             }
+          }
+        }
+        if (!item.attrInfo) {
+          if (item.filePath) {
+            this.emit('scene:buildProgress', { step: `adding node ${item.name}: ${item.filePath}` });
+          } else {
+            this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
           }
         }
       }
     } catch (error: any) {
-      Logger.error('SceneServiceP: addItemChildren failed:', error.message);
+      Logger.error('❌ addItemChildren failed:', error.message);
     }
   }
 
@@ -387,25 +369,44 @@ export class SceneServiceP extends BaseService {
         const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
         const size = sizeResponse?.result || 0;
 
+        Logger.debug(`📦 Level ${level}: Found ${size} owned items`);
+
         for (let i = 0; i < size; i++) {
           const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
           if (itemResponse?.result?.handle) {
-            await this.addSceneItem(sceneItems, itemResponse.result, null, level);
+            const node = await this.addSceneItem(sceneItems, itemResponse.result, null, level);
+
+            // Emit level-1 node to UI without blocking the loading loop
+            if (level === 1 && node) {
+              this.emitAsync('scene:nodeAdded', { node, level: 0 });
+            }
           }
         }
 
-        // Build deep children only at level 1 (direct children of level-1 nodes)
+        // Build deep children for top-level items (same as SceneService)
         if (level === 1) {
+          // All level-1 nodes created — notify UI for expansion init
+          this.emitAsync('scene:level0Complete', { nodes: sceneItems });
+          Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items`);
+
           for (const item of sceneItems) {
             await this.addItemChildren(item);
-            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // Notify UI that this subtree is complete (non-blocking)
+            if (item.children && item.children.length > 0) {
+              this.emitAsync('scene:childrenLoaded', { parent: item, children: item.children });
+            }
           }
+          Logger.debug(`✅ Finished building children for all level 1 items`);
         }
       } else if (itemHandle != 0) {
         // Pin-based traversal
+        Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle}`);
         try {
           const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', itemHandle);
           const pinCount = pinCountResponse?.result || 0;
+
+          Logger.debug(`  Found ${pinCount} pins`);
 
           for (let i = 0; i < pinCount; i++) {
             try {
@@ -433,15 +434,15 @@ export class SceneServiceP extends BaseService {
                 }
               }
             } catch (pinError: any) {
-              Logger.warn(`SceneServiceP: Failed to load pin ${i}:`, pinError.message);
+              Logger.warn(`  ⚠️ Failed to load pin ${i}:`, pinError.message);
             }
           }
         } catch (pinCountError: any) {
-          Logger.error('SceneServiceP: Failed to get pin count:', pinCountError.message);
+          Logger.error(`  ❌ Failed to get pin count:`, pinCountError.message);
         }
       }
     } catch (error: any) {
-      Logger.error('SceneServiceP: syncSceneSequential failed:', error.message);
+      Logger.error('❌ syncSceneSequential failed:', error.message);
     }
 
     return sceneItems;
@@ -460,10 +461,13 @@ export class SceneServiceP extends BaseService {
     }
   }
 
-  private yieldToBrowser(): Promise<void> {
-    return new Promise(resolve => {
-      requestAnimationFrame(() => resolve());
-    });
+  /**
+   * Emit an event asynchronously via setTimeout so it never blocks the loading loop.
+   * React will process the state updates in a future macrotask while the loader
+   * continues making API calls uninterrupted.
+   */
+  private emitAsync(event: string, data?: any): void {
+    setTimeout(() => this.emit(event, data), 0);
   }
 
   abort(): void {

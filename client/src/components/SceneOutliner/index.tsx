@@ -70,19 +70,30 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   // Connect the bridge ref to the real initializeExpansion
   initializeExpansionRef.current = initializeExpansion;
   
-  // Force List re-render when flattenedNodes actually change in content.
-  // We track by length + first/last uniqueKey to avoid spurious invalidations
-  // from reference-only changes (e.g. shallow copies during progressive loading).
-  const prevFlatSnapshotRef = React.useRef('');
+  // Force List re-render when flattenedNodes structurally change.
+  // During progressive loading, nodes are appended one-by-one — we must NOT
+  // bump listKey for each append or the entire List remounts causing flashes.
+  // Only bump on structural changes: expand/collapse (first key changes),
+  // deletion (length decreases), or full rebuild (first key changes).
+  // Appends (length increases, same first key) are handled by react-window
+  // via the changing rowCount + rowProps without needing a remount.
+  const prevFlatSnapshotRef = React.useRef({ len: 0, firstKey: '', lastKey: '' });
   React.useEffect(() => {
-    // Build a lightweight snapshot: length + first key + last key
     const len = flattenedNodes.length;
-    const snapshot = len === 0
-      ? '0'
-      : `${len}|${flattenedNodes[0].uniqueKey}|${flattenedNodes[len - 1].uniqueKey}`;
-    if (snapshot !== prevFlatSnapshotRef.current) {
-      prevFlatSnapshotRef.current = snapshot;
-      setListKey(prev => prev + 1);
+    const firstKey = len > 0 ? flattenedNodes[0].uniqueKey : '';
+    const lastKey = len > 0 ? flattenedNodes[len - 1].uniqueKey : '';
+    const prev = prevFlatSnapshotRef.current;
+
+    // Structural change: first key changed, length decreased, or went from empty to non-empty
+    const isStructuralChange =
+      firstKey !== prev.firstKey ||
+      len < prev.len ||
+      (prev.len === 0 && len > 0);
+
+    prevFlatSnapshotRef.current = { len, firstKey, lastKey };
+
+    if (isStructuralChange) {
+      setListKey(k => k + 1);
     }
   }, [flattenedNodes]);
 
