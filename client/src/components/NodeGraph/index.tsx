@@ -337,9 +337,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       return;
     }
 
-    // During V3 progressive loading, skip this effect — we rebuild on explicit events
-    if (FEATURES.PROGRESSIVE_LOADING_V3 && progressiveLoadingRef.current) {
-      Logger.debug('📊 NodeGraphEditor: V3 progressive loading active, skipping sceneTree effect');
+    // During progressive loading (P or V3), skip this effect — we rebuild on explicit events
+    if ((FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) && progressiveLoadingRef.current) {
+      Logger.debug('📊 NodeGraphEditor: Progressive loading active, skipping sceneTree effect');
       return;
     }
 
@@ -467,7 +467,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
    * tree without re-registering on every sceneTree change.
    */
   useEffect(() => {
-    if (!FEATURES.PROGRESSIVE_LOADING_V3 || !client) return;
+    if (!(FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) || !client) return;
 
     // Track node count for positioning newly added nodes
     let nodeIndexCounter = 0;
@@ -539,17 +539,17 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
      * By now all level-0 nodes and their immediate children/pins are loaded.
      */
     const handleStructureComplete = () => {
-      Logger.debug('📊 NodeGraphEditor: V3 structureComplete — rebuilding graph with edges');
+      Logger.debug('📊 NodeGraphEditor: structureComplete — rebuilding graph with edges');
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
       setNodes(graphNodes);
       setEdges(graphEdges);
     };
 
     /**
-     * Scene complete — final rebuild to pick up any Pass 2 deep-load changes.
+     * Scene complete — final rebuild to pick up any remaining changes.
      */
     const handleComplete = () => {
-      Logger.debug('📊 NodeGraphEditor: V3 complete — final graph rebuild');
+      Logger.debug('📊 NodeGraphEditor: complete — final graph rebuild');
       progressiveLoadingRef.current = false;
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
       setNodes(graphNodes);

@@ -33,14 +33,14 @@ export function useTreeExpansion({
   const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(new Map());
 
   // Auto-initialize expansion when sceneTree first loads (traditional loading only).
-  // For V3 progressive loading, expansion is initialized explicitly via
+  // For progressive loading (P or V3), expansion is initialized explicitly via
   // initializeExpansion() called from handleLevel0Complete, which has the full
   // set of level-0 nodes including PT_RENDERTARGET. The auto-init useEffect
-  // must NOT run for V3 because it fires too early (on the first node added),
-  // before the RenderTarget has arrived in the tree.
+  // must NOT run for progressive modes because it fires too early (on the first
+  // node added), before the RenderTarget has arrived in the tree.
   const hasInitializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (FEATURES.PROGRESSIVE_LOADING_V3) return; // V3 uses explicit initializeExpansion
+    if (FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) return;
     if (sceneTree.length === 0 || hasInitializedRef.current) return;
 
     hasInitializedRef.current = true;

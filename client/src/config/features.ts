@@ -10,9 +10,18 @@ export const FEATURES = {
    * Progressive Scene Loading V3 (two-pass with per-pin emission)
    * Pass 1: Load level-1 nodes + immediate children, emit per pin
    * Pass 2: BFS deep-load queue for remaining children
+   * Status: Superseded by PROGRESSIVE_LOADING_P
+   */
+  PROGRESSIVE_LOADING_V3: import.meta.env.VITE_PROGRESSIVE_LOADING_V3 === 'true' || false,
+
+  /**
+   * Progressive Scene Loading P (single-pass with clean UI updates)
+   * Uses the same simple sequential loading as SceneService but emits
+   * clean incremental UI events at natural breakpoints (per level-1 node,
+   * per completed subtree). No per-pin events, no two-pass, no flashing.
    * Status: Active
    */
-  PROGRESSIVE_LOADING_V3: import.meta.env.VITE_PROGRESSIVE_LOADING_V3 === 'true' || true,
+  PROGRESSIVE_LOADING_P: import.meta.env.VITE_PROGRESSIVE_LOADING_P === 'true' || true,
 
   /**
    * Lazy attrInfo Loading

@@ -4,9 +4,17 @@
  *
  * Loading modes:
  * - Traditional: Load entire scene synchronously, then render
- * - Progressive V3: Two-pass loading with per-pin emission (recommended)
+ * - Progressive P: Single-pass loading with clean UI events at natural breakpoints
+ * - Progressive V3: Two-pass loading with per-pin emission (legacy)
  *
- * Pin update strategy (V3):
+ * Progressive P strategy:
+ * - scene:nodeAdded fires once per level-1 node → Outliner shows immediately
+ * - scene:childrenLoaded fires once per level-1 node (children fully loaded)
+ *   → structural-sharing clone so Outliner expands subtree cleanly
+ * - scene:structureComplete / scene:complete → final propagation to App/NodeGraph
+ * - NO per-pin events, NO batching, NO deep-load queue
+ *
+ * Pin update strategy (V3 legacy):
  * - scene:pinAdded only propagates via onSceneTreeChange (NodeGraph, NodeInspector)
  * - The outliner tree state is NOT re-set on every pin; instead, only
  *   scene:childrenLoaded triggers a structural-sharing clone that React can detect.
@@ -19,6 +27,9 @@ import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
 import { FEATURES } from '../../../config/features';
+
+/** True when either progressive mode is active */
+const PROGRESSIVE_ACTIVE = FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3;
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
@@ -50,13 +61,13 @@ export function useSceneTree({
     try {
       const tree = await client.buildSceneTree();
 
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) {
+      if (!PROGRESSIVE_ACTIVE) {
         // Traditional synchronous loading — set tree from result
         setSceneTree(tree);
         onSceneTreeChange?.(tree);
         initializeExpansion(tree);
       } else if (tree.length > 0) {
-        // V3 progressive — tree was already populated via events.
+        // Progressive (P or V3) — tree was already populated via events.
         // Just ensure expansion map is initialized with final tree.
         initializeExpansion(tree);
       }
@@ -64,9 +75,9 @@ export function useSceneTree({
       Logger.debug(`✅ Loaded ${tree.length} top-level items`);
 
       // Auto-select render target node after scene is loaded.
-      // For V3 progressive loading, this already happened in handleProgressiveNodeAdded
+      // For progressive loading, this already happened in handleProgressiveNodeAdded
       // as soon as the RT node arrived. Only run for traditional loading.
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) {
+      if (!PROGRESSIVE_ACTIVE) {
         const findRenderTarget = (nodes: SceneNode[]): SceneNode | null => {
           for (const node of nodes) {
             if (node.type === 'PT_RENDERTARGET') {
@@ -125,19 +136,20 @@ export function useSceneTree({
     if (!client) return;
 
     // =================================================================
-    // PROGRESSIVE LOADING V3 EVENTS (Two-pass with per-pin emission)
+    // PROGRESSIVE LOADING EVENTS (shared by P and V3)
+    // Both services emit the same event names. Handlers are identical
+    // except V3 also needs scene:pinAdded (no-op) and scene:nodeUpdated
+    // (batched). P doesn't emit those so the handlers are never called.
     // =================================================================
 
     /**
-     * V3: Individual level-0 node added during initial load.
-     * Uses flushSync so top-level nodes appear immediately.
-     * If the node is a PT_RENDERTARGET, select it immediately and activate
-     * it in the render engine so the NodeInspector populates right away.
+     * Level-0 node added during load.
+     * Uses flushSync so top-level nodes appear in the Outliner immediately.
+     * If the node is a PT_RENDERTARGET, select it and activate it in the
+     * render engine so the viewport + NodeInspector populate right away.
      */
     let hasSelectedRenderTarget = false;
     const handleProgressiveNodeAdded = ({ node, level }: any) => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-
       if (level === 0) {
         flushSync(() => {
           setSceneTree(prev => {
@@ -168,41 +180,19 @@ export function useSceneTree({
     };
 
     /**
-     * V3: Level 0 complete — replace tree with complete level-0 nodes.
-     * Initialize expansion immediately (not in setTimeout) so SceneRoot +
-     * PT_RENDERTARGET are expanded before the next render.
+     * Level 0 complete — all level-1 nodes created.
+     * Initialize expansion so SceneRoot + PT_RENDERTARGET are expanded.
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-
       setSceneTree(nodes);
       if (nodes.length > 0) initializeExpansion(nodes);
       setTimeout(() => onSceneTreeChange?.(nodes), 0);
     };
 
     /**
-     * V3: Per-pin progressive update.
-     * Service has already pushed the child to parent.children (mutated in place).
-     *
-     * We do NOT propagate pin-level updates to App.tsx. Doing so would:
-     * 1. Cause the Outliner to re-render (flashing) if we call setSceneTree
-     * 2. Cause the NodeGraph MiniMap to flash via sceneTree prop changes
-     *
-     * Instead, the data flow for pin updates is:
-     * - scene:childrenLoaded → structural-sharing clone → Outliner + App.tsx update
-     * - scene:structureComplete / scene:complete → NodeGraph full rebuild
-     * - NodeInspector updates via handleChildrenLoadedV3 propagation
-     *
-     * This handler is a no-op — the service mutates in place, and we batch
-     * the visual update to scene:childrenLoaded.
-     */
-    const handlePinAdded = () => {
-      // No-op: pin updates are batched into scene:childrenLoaded
-    };
-
-    /**
      * Structural sharing helper: clone only the path from root to the target node.
      * React sees new references along the path → re-renders only affected subtrees.
+     * All sibling nodes keep their original references (no re-render).
      */
     const clonePathToHandle = (nodes: SceneNode[], targetHandle: number): SceneNode[] => {
       return nodes.map(node => {
@@ -220,42 +210,60 @@ export function useSceneTree({
     };
 
     /**
-     * V3: All direct children loaded for a parent.
-     * Children are already attached to parent.children by the service (mutated in place).
-     * We create new node references along the path from root to the changed parent
-     * so React detects the change and the Outliner re-renders affected subtrees.
+     * All direct children loaded for a parent node.
+     * Children are already attached to parent.children by the service.
+     * We create new node references along the path so React detects the change
+     * and the Outliner re-renders only the affected subtree.
      *
-     * We do NOT call onSceneTreeChange here — that would propagate to App.tsx →
-     * NodeGraph prop change → MiniMap re-render on every single parent's children.
-     * The NodeGraph has its own event listeners and only needs updates at milestones
-     * (structureComplete, complete). NodeInspector gets refreshed at those milestones too.
+     * For SceneServiceP: this fires once per level-1 node after ALL its children
+     * (recursive) are fully loaded. Clean, single update — no flashing.
+     *
+     * For V3: this fires per-parent after immediate children are done.
+     * We do NOT call onSceneTreeChange here for V3 — NodeGraph only needs
+     * updates at milestones (structureComplete, complete).
      */
-    const handleChildrenLoadedV3 = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-
-      Logger.debug(`📥 V3: Children loaded for "${parent.name}": ${children.length} children`);
+    const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
+      Logger.debug(`📥 Children loaded for "${parent.name}": ${children.length} children`);
 
       setSceneTree(prev => {
-        return parent.handle
+        const updated = parent.handle
           ? clonePathToHandle(prev, parent.handle)
           : [...prev];
+
+        // For SceneServiceP: the children are FULLY loaded (recursive), so it's
+        // safe to propagate to App now. The render target's pins will show in the
+        // NodeInspector as soon as its children are loaded — no waiting for
+        // structureComplete.
+        if (FEATURES.PROGRESSIVE_LOADING_P) {
+          setTimeout(() => onSceneTreeChange?.(updated), 0);
+        }
+
+        return updated;
       });
+
+      // Re-select the render target so NodeInspector refreshes with the
+      // newly-loaded children/pins. This gives immediate feedback as
+      // the selected RT's data becomes available.
+      if (FEATURES.PROGRESSIVE_LOADING_P && hasSelectedRenderTarget && parent.type === 'PT_RENDERTARGET') {
+        onNodeSelect?.(parent);
+      }
     };
 
     /**
-     * V3: Node updated with attrInfo (or other metadata).
-     * The service mutated the node in place. We batch these updates and
-     * propagate a single shallow copy at most every 300ms so the Outliner
-     * picks up any visual changes (e.g. attrInfo-based rendering).
-     *
-     * We do NOT call onSceneTreeChange here — NodeGraph/MiniMap don't need
-     * per-node attrInfo updates. They get refreshed at structureComplete/complete.
+     * V3 only: Per-pin progressive update (no-op).
+     * SceneServiceP doesn't emit this event.
+     */
+    const handlePinAdded = () => {
+      // No-op: pin updates are batched into scene:childrenLoaded
+    };
+
+    /**
+     * V3 only: Node updated with attrInfo.
+     * Batches rapid updates into one Outliner refresh per 300ms.
+     * SceneServiceP loads attrInfo during the recursive pass so this isn't needed.
      */
     let nodeUpdatedTimeout: ReturnType<typeof setTimeout> | null = null;
     const handleNodeUpdated = ({ node: _node }: { node: SceneNode }) => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-
-      // Batch: coalesce rapid attrInfo updates into one Outliner refresh
       if (nodeUpdatedTimeout === null) {
         nodeUpdatedTimeout = setTimeout(() => {
           nodeUpdatedTimeout = null;
@@ -265,11 +273,11 @@ export function useSceneTree({
     };
 
     /**
-     * V3: Pass 1 structure complete — rebuild NodeGraph with edges.
+     * Structure complete — entire tree built (P) or Pass 1 done (V3).
+     * Propagate to App → NodeGraph rebuilds edges.
      */
     const handleStructureComplete = () => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-      Logger.debug('✅ V3: Structure complete (Pass 1 done)');
+      Logger.debug('✅ Structure complete');
 
       setSceneTree(prev => {
         const updated = [...prev];
@@ -279,15 +287,12 @@ export function useSceneTree({
     };
 
     /**
-     * V3: Scene complete — final re-render to ensure consistency.
-     * Create a shallow copy so that the Outliner picks up any remaining
-     * children that were mutated in place during Pass 2.
+     * Scene complete — final signal. Ensure consistency.
      */
     const handleSceneComplete = () => {
-      if (!FEATURES.PROGRESSIVE_LOADING_V3) return;
-      Logger.info('✅ V3: Scene load complete');
+      Logger.info('✅ Scene load complete');
 
-      // Flush any pending nodeUpdated batch
+      // Flush any pending V3 nodeUpdated batch
       if (nodeUpdatedTimeout !== null) {
         clearTimeout(nodeUpdatedTimeout);
         nodeUpdatedTimeout = null;
@@ -300,17 +305,23 @@ export function useSceneTree({
       });
     };
 
-    // Register V3 event listeners
-    if (FEATURES.PROGRESSIVE_LOADING_V3) {
-      Logger.debug('🚀 useSceneTree: Registering PROGRESSIVE V3 event listeners');
+    // Register progressive event listeners (both P and V3 use same event names)
+    if (PROGRESSIVE_ACTIVE) {
+      const mode = FEATURES.PROGRESSIVE_LOADING_P ? 'P' : 'V3';
+      Logger.debug(`🚀 useSceneTree: Registering PROGRESSIVE ${mode} event listeners`);
       client.on('scene:nodeAdded', handleProgressiveNodeAdded);
       client.on('scene:level0Complete', handleLevel0Complete);
-      client.on('scene:pinAdded', handlePinAdded);
-      client.on('scene:childrenLoaded', handleChildrenLoadedV3);
-      client.on('scene:nodeUpdated', handleNodeUpdated);
+      client.on('scene:childrenLoaded', handleChildrenLoaded);
       client.on('scene:structureComplete', handleStructureComplete);
       client.on('scene:complete', handleSceneComplete);
-      Logger.debug('✅ useSceneTree: Progressive V3 event listeners registered');
+
+      // V3-only events (harmless to register for P — they just won't fire)
+      if (FEATURES.PROGRESSIVE_LOADING_V3) {
+        client.on('scene:pinAdded', handlePinAdded);
+        client.on('scene:nodeUpdated', handleNodeUpdated);
+      }
+
+      Logger.debug(`✅ useSceneTree: Progressive ${mode} event listeners registered`);
     }
 
     // =================================================================
@@ -422,16 +433,19 @@ export function useSceneTree({
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
 
     return () => {
-      // Remove V3 progressive event listeners
-      if (FEATURES.PROGRESSIVE_LOADING_V3) {
+      // Remove progressive event listeners
+      if (PROGRESSIVE_ACTIVE) {
         client.off('scene:nodeAdded', handleProgressiveNodeAdded);
         client.off('scene:level0Complete', handleLevel0Complete);
-        client.off('scene:pinAdded', handlePinAdded);
-        client.off('scene:childrenLoaded', handleChildrenLoadedV3);
-        client.off('scene:nodeUpdated', handleNodeUpdated);
+        client.off('scene:childrenLoaded', handleChildrenLoaded);
         client.off('scene:structureComplete', handleStructureComplete);
         client.off('scene:complete', handleSceneComplete);
-        if (nodeUpdatedTimeout !== null) clearTimeout(nodeUpdatedTimeout);
+
+        if (FEATURES.PROGRESSIVE_LOADING_V3) {
+          client.off('scene:pinAdded', handlePinAdded);
+          client.off('scene:nodeUpdated', handleNodeUpdated);
+          if (nodeUpdatedTimeout !== null) clearTimeout(nodeUpdatedTimeout);
+        }
       }
 
       // Remove traditional event listeners

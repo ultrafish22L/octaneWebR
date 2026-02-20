@@ -16,5 +16,6 @@ export { NodeService } from './NodeService';
 export { MaterialDatabaseService } from './MaterialDatabaseService';
 export { RenderExportService } from './RenderExportService';
 
-// Progressive loading service
+// Progressive loading services
 export { ProgressiveSceneServiceV3 } from './ProgressiveSceneServiceV3';
+export { SceneServiceP } from './SceneServiceP';

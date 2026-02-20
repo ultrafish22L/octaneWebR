@@ -404,8 +404,8 @@ function AppContent() {
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
 
-    // V3 progressive loading status listeners
-    if (FEATURES.PROGRESSIVE_LOADING_V3) {
+    // Progressive loading status listeners (P and V3)
+    if (FEATURES.PROGRESSIVE_LOADING_P || FEATURES.PROGRESSIVE_LOADING_V3) {
       const handleLevel0Complete = (data: any) => {
         setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
       };
