@@ -354,7 +354,7 @@
   padding: 2px 2px 2px 2px;
   width: 26px;
   min-width: 26px;
-  height:100%;
+  height: 100%;
 }
 
 /* Main Node Inspector Content (Right Side) */
@@ -829,7 +829,7 @@
   gap: var(--spacing-none);
   width: 100%;
   overflow: hidden; /* Ensure color fills entire space */
-  text-overflow: ellipsis;    
+  text-overflow: ellipsis;
 }
 
 .node-inspector .node-parameter-controls .parameter-dropdown {
@@ -1190,22 +1190,21 @@
   font-style: italic;
 }
 
-/* Geometry Toolbar - Embedded toolbar for mesh/geometry nodes */
-.geometry-toolbar {
-  padding: 4px 8px;
+/* File Node Toolbar - Embedded toolbar for file loaded nodes */
+.filenode-toolbar {
+  padding: 2px 2px;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   font-size: var(--font-size-xs);
 }
 
-.geometry-toolbar-buttons {
+.filenode-toolbar-buttons {
   display: flex;
   gap: 2px;
-  margin-bottom: 4px;
   padding: 2px 0;
 }
 
-.geometry-toolbar-btn {
+.filenode-toolbar-btn {
   background-color: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -1219,26 +1218,26 @@
   transition: background-color 0.2s;
 }
 
-.geometry-toolbar-btn:hover:not(:disabled) {
+.filenode-toolbar-btn:hover:not(:disabled) {
   background-color: var(--bg-hover);
   border-color: var(--accent-blue);
 }
 
-.geometry-toolbar-btn:active:not(:disabled) {
+.filenode-toolbar-btn:active:not(:disabled) {
   background-color: var(--bg-active);
 }
 
-.geometry-toolbar-btn:disabled {
+.filenode-toolbar-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.geometry-toolbar-btn img {
+.filenode-toolbar-btn img {
   display: block;
   opacity: 0.9;
 }
 
-.geometry-toolbar-btn:hover:not(:disabled) img {
+.filenode-toolbar-btn:hover:not(:disabled) img {
   opacity: 1;
 }
 

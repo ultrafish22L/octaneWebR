@@ -16,6 +16,33 @@ interface NodeInspectorControlsProps {
   onCollapseAll?: () => void;
 }
 
+function findNodeByType(nodes: SceneNode[], targetType: string): SceneNode | null {
+  for (const node of nodes) {
+    if (node.type === targetType || node.outType === targetType || node.name === targetType) {
+      return node;
+    }
+    if (node.children && node.children.length > 0) {
+      const found = findNodeByType(node.children, targetType);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findNodeByName(nodes: SceneNode[], namePattern: string): SceneNode | null {
+  const pattern = namePattern.toLowerCase();
+  for (const node of nodes) {
+    if (node.name?.toLowerCase().includes(pattern)) {
+      return node;
+    }
+    if (node.children && node.children.length > 0) {
+      const found = findNodeByName(node.children, pattern);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export function NodeInspectorControls({
   sceneTree,
   onNodeSelect,
@@ -23,44 +50,6 @@ export function NodeInspectorControls({
   onCollapseAll,
 }: NodeInspectorControlsProps) {
   const [activeButton, setActiveButton] = useState<string | null>(null);
-
-  /**
-   * Find node by type in scene tree (recursive search)
-   */
-  const findNodeByType = useCallback((nodes: SceneNode[], targetType: string): SceneNode | null => {
-    for (const node of nodes) {
-      // Match by type or name
-      if (node.type === targetType || node.outType === targetType || node.name === targetType) {
-        return node;
-      }
-      // Recursively search children
-      if (node.children && node.children.length > 0) {
-        const found = findNodeByType(node.children, targetType);
-        if (found) return found;
-      }
-    }
-    return null;
-  }, []);
-
-  /**
-   * Find node by name pattern (case-insensitive)
-   */
-  const findNodeByName = useCallback(
-    (nodes: SceneNode[], namePattern: string): SceneNode | null => {
-      const pattern = namePattern.toLowerCase();
-      for (const node of nodes) {
-        if (node.name?.toLowerCase().includes(pattern)) {
-          return node;
-        }
-        if (node.children && node.children.length > 0) {
-          const found = findNodeByName(node.children, pattern);
-          if (found) return found;
-        }
-      }
-      return null;
-    },
-    []
-  );
 
   /**
    * Jump to specific node type
@@ -130,7 +119,7 @@ export function NodeInspectorControls({
         Logger.warn(`⚠️ Could not find ${nodeType} node in scene tree`);
       }
     },
-    [sceneTree, onNodeSelect, findNodeByType, findNodeByName]
+    [sceneTree, onNodeSelect]
   );
 
   const handleExpandAll = useCallback(() => {

@@ -23,7 +23,7 @@ import { EditCommands } from '../../commands/EditCommands';
 import { getPinTypeInfo } from '../../constants/PinTypes';
 import { useParameterValue } from './hooks/useParameterValue';
 import { ParameterControl } from './ParameterControl';
-import { GeometryToolbar } from './GeometryToolbar';
+import { FileNodeToolbar } from './FileNodeToolbar';
 
 interface NodeInspectorProps {
   node: SceneNode | null;
@@ -159,7 +159,7 @@ function NodeParameter({
 
   // Render as parameter node (end node with attrInfo)
   if (!node.children || node.children.length === 0) {
-//    if (node.attrInfo) {
+    //    if (node.attrInfo) {
     return (
       <div className={indentClass} style={{ display: 'block' }}>
         <div className="node-box-parameter" data-node-handle={node.handle} data-node-id={nodeId}>
@@ -185,7 +185,9 @@ function NodeParameter({
             >
               <div className="node-label-text">
                 {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
-                <span className="node-title" title={buildTooltip()}>{name}:</span>
+                <span className="node-title" title={buildTooltip()}>
+                  {name}:
+                </span>
               </div>
               <ParameterControl
                 node={node}
@@ -216,12 +218,8 @@ function NodeParameter({
     );
   }
 
-  // Check if this is a geometry node that should show the geometry toolbar
-  const isGeometryNode = currentNodeType.startsWith('NT_GEO_MESH') || 
-                         currentNodeType.startsWith('NT_GEO_OBJECT') ||
-                         currentNodeType.startsWith('NT_GEO_PLANE') ||
-                         currentNodeType.startsWith('NT_GEO_SCATTER') ||
-                         currentNodeType === 'NT_GEO_MESH';
+  // Show file toolbar for any node that carries a file path (geometry, textures, etc.)
+  const hasFilePath = !!node.filePath;
 
   // Render as node group (non-parameter nodes)
   return (
@@ -288,10 +286,10 @@ function NodeParameter({
           </div>
         </div>
       </div>
-      
-      {/* Geometry Toolbar - Show for mesh/geometry nodes */}
-      {isGeometryNode && <GeometryToolbar node={node} />}
-      
+
+      {/* File Node Toolbar - Show for any node with a file path */}
+      {hasFilePath && <FileNodeToolbar node={node} />}
+
       {hasChildren && (
         <div
           className="node-toggle-content"

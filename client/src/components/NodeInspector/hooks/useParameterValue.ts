@@ -19,6 +19,8 @@ import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { Logger } from '../../../utils/Logger';
 import { requestQueue } from '../../../utils/RequestQueue';
 
+export type ParameterRawValue = boolean | string | number | number[];
+
 export interface ParameterValue {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
@@ -27,8 +29,7 @@ export interface ParameterValue {
 
 export interface UseParameterValueReturn {
   paramValue: ParameterValue | null;
-
-  handleValueChange: (newValue: any) => Promise<void>;
+  handleValueChange: (newValue: ParameterRawValue) => Promise<void>;
 }
 
 /**
@@ -61,7 +62,7 @@ export function useParameterValue(
         const responseHas = await requestQueue.enqueue(() =>
           client.callApi(
             'ApiItem',
-            'hasAttr', 
+            'hasAttr',
             node.handle, // Pass handle as string
             {
               id: AttributeId.A_VALUE,
@@ -69,7 +70,7 @@ export function useParameterValue(
           )
         );
         if (responseHas && responseHas.result == false) {
-          Logger.warn("hasAttr", '{responseHas}');
+          Logger.warn('hasAttr', '{responseHas}');
           return;
         }
         // Queue the API call to prevent connection pool exhaustion
@@ -101,10 +102,10 @@ export function useParameterValue(
             type: expectedType,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Log Alpha 5 errors for debugging, silently ignore Beta 2 errors
         Logger.error(
-          `❌ getValueByAttrID error for ${node.name}: ${error.message || error}`
+          `❌ getValueByAttrID error for ${node.name}: ${error instanceof Error ? error.message : error}`
         );
       }
     };
@@ -114,7 +115,7 @@ export function useParameterValue(
 
   // Handle parameter value change (memoized with useCallback)
   const handleValueChange = useCallback(
-    async (newValue: any) => {
+    async (newValue: ParameterRawValue) => {
       if (!node.handle || !node.attrInfo) return;
 
       try {
@@ -123,7 +124,7 @@ export function useParameterValue(
         // Determine the correct value field name based on type
         // CRITICAL: Must match exact field names used by octaneWeb and Octane API
         let valueField: string;
-        let formattedValue: any;
+        let formattedValue: ParameterRawValue;
 
         switch (expectedType) {
           case AttrType.AT_BOOL:
@@ -200,8 +201,11 @@ export function useParameterValue(
 
         // Trigger render update to see changes
         await client.callApi('ApiChangeManager', 'update', {});
-      } catch (error: any) {
-        Logger.error(`❌ Failed to update ${node.name}:`, error.message || error);
+      } catch (error: unknown) {
+        Logger.error(
+          `❌ Failed to update ${node.name}:`,
+          error instanceof Error ? error.message : error
+        );
       }
     },
     [node.handle, node.attrInfo, node.name, client]
