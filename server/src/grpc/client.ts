@@ -4,6 +4,11 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getProtoDir } = require('../../../api-version.config.js') as {
+  getProtoDir: () => string;
+};
+
 export interface GrpcCallOptions {
   timeout?: number;
   metadata?: grpc.Metadata;
@@ -45,7 +50,7 @@ export class OctaneGrpcClient extends EventEmitter {
   }
 
   async initialize(): Promise<void> {
-    const PROTO_PATH = path.resolve(__dirname, '../../proto');
+    const PROTO_PATH = path.resolve(__dirname, '../../' + getProtoDir());
 
     // Load common proto files that are needed for most services
     const coreProtoFiles = [
@@ -92,25 +97,34 @@ export class OctaneGrpcClient extends EventEmitter {
   }
 
   private loadServiceProto(serviceName: string): any {
-    const PROTO_PATH = path.resolve(__dirname, '../../proto');
+    const PROTO_PATH = path.resolve(__dirname, '../../' + getProtoDir());
 
     // Map service names to their proto files (based on octaneWeb/octaneProxy mapping)
     const serviceToProtoMap: Record<string, string> = {
+      // Core node system
+      ApiProjectManager: 'apiprojectmanager.proto',
       ApiItemService: 'apinodesystem_3.proto',
       ApiItem: 'apinodesystem_3.proto',
+      ApiItemGetter: 'apinodesystem_3.proto',
+      ApiItemGetterService: 'apinodesystem.proto',
+      ApiItemSetter: 'apinodesystem_3.proto',
+      ApiItemSetterService: 'apinodesystem.proto',
       ApiNodeGraphService: 'apinodesystem_6.proto',
       ApiNodeGraph: 'apinodesystem_6.proto',
       ApiItemArrayService: 'apinodesystem_1.proto',
       ApiItemArray: 'apinodesystem_1.proto',
-      ApiItemGetterService: 'apinodesystem.proto',
-      ApiItemSetterService: 'apinodesystem.proto',
       ApiNodeService: 'apinodesystem_7.proto',
       ApiNode: 'apinodesystem_7.proto',
       ApiNodeArray: 'apinodesystem_5.proto',
+      ApiNodePinInfoEx: 'apinodepininfohelper.proto',
+      // Render
       ApiRenderEngine: 'apirender.proto',
       ApiRenderEngineService: 'apirender.proto',
+      // Info
       ApiInfo: 'apiinfo.proto',
       ApiInfoService: 'apiinfo.proto',
+      // Scene
+      ApiSceneOutliner: 'apisceneoutliner.proto',
       // LiveDB — all three services live in the same proto file
       ApiDBMaterialManager: 'apidbmaterialmanager.proto',
       ApiDBMaterialManager_DBCategoryArray: 'apidbmaterialmanager.proto',
@@ -119,13 +133,16 @@ export class OctaneGrpcClient extends EventEmitter {
       ApiLocalDB: 'apilocaldb.proto',
       ApiLocalDB_Category: 'apilocaldb.proto',
       ApiLocalDB_Package: 'apilocaldb.proto',
+      // Callbacks
+      StreamCallbackService: 'callback.proto',
+      CallbackHandler: 'callback.proto',
     };
 
     const protoFileName = serviceToProtoMap[serviceName] || serviceName.toLowerCase() + '.proto';
     const protoFilePath = path.join(PROTO_PATH, protoFileName);
 
     if (!fs.existsSync(protoFilePath)) {
-      console.log(`⚠️ Proto file not found: ${protoFileName}`);
+      console.warn(`⚠️ Proto file not found: ${protoFileName}`);
       return null;
     }
 

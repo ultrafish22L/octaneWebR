@@ -83,6 +83,16 @@ export default [
     },
   },
 
+  // CommonJS config files
+  {
+    files: ['api-version.config.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   // Prettier config (must be last)
   prettier,
 ];

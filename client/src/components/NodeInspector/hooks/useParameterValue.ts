@@ -5,7 +5,7 @@
  * Extracted from NodeParameter component for better code organization.
  *
  * Features:
- * - Fetches parameter values using getByAttrID/getValueByAttrID
+ * - Fetches parameter values using getValueByAttrID
  * - Updates parameter values using setValueByAttrID
  * - Handles API version differences (Alpha 5 vs Beta 2)
  * - Request queuing to prevent connection pool exhaustion

@@ -492,14 +492,14 @@ export class SceneService extends BaseService {
       if (responseHas && responseHas.result == true) {
         const response = await this.apiService.callApi(
           'ApiItem',
-          'getByAttrID', // Use correct method name for API version
+          'getValueByAttrID', // Use correct method name for API version
           item.handle, // Pass handle as string
           {
             attribute_id: AttributeId.A_FILENAME,
             expected_type: AttrType.AT_STRING,
           }
         );
-        //    [OCTANE-SERVER] ✅ ApiItem.getByAttrID → {"string_value":"assets\\teapot.obj","value":"string_value"}
+        //    [OCTANE-SERVER] ✅ ApiItem.getValueByAttrID → {"string_value":"assets\\teapot.obj","value":"string_value"}
         if (response) {
           // Extract the actual value from the response
           // API returns format like: {float_value: 2, value: "float_value"}
@@ -519,7 +519,7 @@ export class SceneService extends BaseService {
           if (responseHasIndices && responseHasIndices.result == true) {
             const response = await this.apiService.callApi(
               'ApiItem',
-              'getByAttrID', // Use correct method name for API version
+              'getValueByAttrID',
               item.handle, // Pass handle as string
               {
                 attribute_id: AttributeId.A_POLY_OBJECT_INDICES,

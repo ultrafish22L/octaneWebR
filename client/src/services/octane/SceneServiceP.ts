@@ -306,7 +306,7 @@ export class SceneServiceP extends BaseService {
         id: AttributeId.A_FILENAME,
       });
       if (responseHas?.result === true) {
-        const response = await this.apiService.callApi('ApiItem', 'getByAttrID', item.handle, {
+        const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', item.handle, {
           attribute_id: AttributeId.A_FILENAME,
           expected_type: AttrType.AT_STRING,
         });
@@ -325,7 +325,7 @@ export class SceneServiceP extends BaseService {
           if (responseHasIndices?.result === true) {
             const indicesResponse = await this.apiService.callApi(
               'ApiItem',
-              'getByAttrID',
+              'getValueByAttrID',
               item.handle,
               { attribute_id: AttributeId.A_POLY_OBJECT_INDICES, expected_type: AttrType.AT_INT }
             );

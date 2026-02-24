@@ -217,23 +217,24 @@ export class MaterialDatabaseService extends BaseService {
 
   async getLiveDBCategories(): Promise<MaterialCategory[]> {
     try {
-      Logger.debug('📂 Fetching LiveDB categories...');
+      Logger.info('📂 Fetching LiveDB categories...');
       const response = await this.apiService.callApi(
         'ApiDBMaterialManager',
         'getCategories',
         null,
         {}
       );
+      Logger.debug('📂 Fetching LiveDB categories...');
 
       const listHandle = extractHandle(response?.list);
       if (response?.result && listHandle !== undefined) {
-        const arrayHandle = listHandle;
+        Logger.info(' LiveDB categories returned', listHandle);
 
         // getCategory returns ALL categories at once (no index parameter)
         const catResponse = await this.apiService.callApi(
           'ApiDBMaterialManager_DBCategoryArray',
           'getCategory',
-          arrayHandle,
+          listHandle,
           {}
         );
         const catResult = catResponse?.result as
@@ -273,7 +274,7 @@ export class MaterialDatabaseService extends BaseService {
 
         // getMaterial returns ALL materials at once (no index parameter)
         const matResponse = await this.apiService.callApi(
-          'ApiDBMaterialManager_DBMaterialArray',
+          'ApiDBMaterialManager_DBMaterialArrayService',
           'getMaterial',
           arrayHandle,
           {}
