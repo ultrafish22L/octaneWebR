@@ -16,7 +16,15 @@ import { formatColorValue } from '../../utils/ColorUtils';
  * 2. Fall back to local color mapping by pin type (from C++ source in PinTypes.ts)
  * 3. Fall back to default light pink if neither is available
  */
-function getPinColor(pinInfo: any): string {
+interface PinInfoData {
+  pinColor?: number | string | null;
+  type?: string;
+  staticLabel?: string;
+  staticName?: string;
+  [key: string]: unknown;
+}
+
+function getPinColor(pinInfo: PinInfoData | null | undefined): string {
   // Check for direct pin color from Octane (handles 0 as valid black color)
   if (pinInfo?.pinColor !== undefined && pinInfo?.pinColor !== null) {
     return formatColorValue(pinInfo.pinColor);
@@ -27,7 +35,7 @@ function getPinColor(pinInfo: any): string {
     try {
       const pinIconInfo = getPinIconInfo(pinInfo.type);
       return pinIconInfo.color;
-    } catch (e) {
+    } catch {
       // Type not found in mapping, continue to default
     }
   }
@@ -43,9 +51,9 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return { h: 0, s: 0, l: 0 };
 
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
+  const r = parseInt(result[1], 16) / 255;
+  const g = parseInt(result[2], 16) / 255;
+  const b = parseInt(result[3], 16) / 255;
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
@@ -115,7 +123,7 @@ function hslToHex(h: number, s: number, l: number): string {
  * Currently unused but kept for future use
  */
 // @ts-ignore - Kept for future use
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 function _desaturateColor(hex: string, amount: number = 0.5): string {
   const hsl = hexToHsl(hex);
   return hslToHex(hsl.h, hsl.s * amount, hsl.l);
@@ -134,16 +142,17 @@ export interface OctaneNodeData extends Record<string, unknown> {
   inputs?: Array<{
     id: string;
     label?: string;
-    pinInfo?: any;
+    pinInfo?: PinInfoData;
     handle?: number;
-    nodeInfo?: any;
+    nodeInfo?: Record<string, unknown>;
     name?: string;
     connectedNodeName?: string | null;
+    isAtTopLevel?: boolean | number | false;
   }>;
   output?: {
     id: string;
     label?: string;
-    pinInfo?: any;
+    pinInfo?: PinInfoData;
   };
   onContextMenu?: (event: React.MouseEvent, nodeId: string) => void;
 }
@@ -238,7 +247,7 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
       )}
 
       {/* Input handles on top */}
-      {inputs.map((input: any, index: number) => {
+      {inputs.map((input, index: number) => {
         // Get socket color with proper fallback (Octane → local mapping → default)
         const rawSocketColor = getPinColor(input.pinInfo);
         const socketColor = saturateColor(rawSocketColor); // Fully saturated for vibrant pins

@@ -168,74 +168,79 @@ export function NodeContextMenu({
       }}
     >
       {/* Render */}
-      <div className="context-menu-item disabled" onClick={handleRenderClick}>
+      <button type="button" className="context-menu-item disabled" onClick={handleRenderClick}>
         Render
-      </div>
+      </button>
 
       {/* Save... */}
-      <div className="context-menu-item disabled" onClick={handleSaveClick}>
+      <button type="button" className="context-menu-item disabled" onClick={handleSaveClick}>
         Save...
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Cut */}
-      <div className="context-menu-item" onClick={handleCutClick}>
+      <button type="button" className="context-menu-item" onClick={handleCutClick}>
         Cut
-      </div>
+      </button>
 
       {/* Copy */}
-      <div className="context-menu-item" onClick={handleCopyClick}>
+      <button type="button" className="context-menu-item" onClick={handleCopyClick}>
         Copy
-      </div>
+      </button>
 
       {/* Paste */}
-      <div className="context-menu-item" onClick={handlePasteClick}>
+      <button type="button" className="context-menu-item" onClick={handlePasteClick}>
         Paste
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Delete */}
-      <div className="context-menu-item" onClick={handleDeleteClick}>
+      <button type="button" className="context-menu-item" onClick={handleDeleteClick}>
         Delete
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Collapse items */}
-      <div className="context-menu-item" onClick={handleCollapseClick}>
+      <button type="button" className="context-menu-item" onClick={handleCollapseClick}>
         Collapse items
-      </div>
+      </button>
 
       {/* Expand items */}
-      <div className="context-menu-item" onClick={handleExpandClick}>
+      <button type="button" className="context-menu-item" onClick={handleExpandClick}>
         Expand items
-      </div>
+      </button>
 
       {/* Group Items */}
-      <div
+      <button
+        type="button"
         className={`context-menu-item ${selectedNodeCount < 2 ? 'disabled' : ''}`}
         onClick={handleGroupClick}
       >
         Group Items
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Show in Outliner */}
-      <div className="context-menu-item" onClick={handleShowInOutlinerClick}>
+      <button type="button" className="context-menu-item" onClick={handleShowInOutlinerClick}>
         Show in Outliner
-      </div>
+      </button>
 
       {/* Show in Lua API browser */}
-      <div className="context-menu-item disabled" onClick={handleShowInLuaBrowserClick}>
+      <button
+        type="button"
+        className="context-menu-item disabled"
+        onClick={handleShowInLuaBrowserClick}
+      >
         Show in Lua API browser
-      </div>
+      </button>
     </div>,
     document.body
   );

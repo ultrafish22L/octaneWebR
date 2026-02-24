@@ -114,8 +114,8 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
 
       // Position submenu to the right of the category item (matching octaneWeb lines 294-313)
       const categoryRect = e.currentTarget.getBoundingClientRect();
-      let submenuLeft = categoryRect.right + 2;
-      let submenuTop = categoryRect.top;
+      const submenuLeft = categoryRect.right + 2;
+      const submenuTop = categoryRect.top;
 
       setSubmenuPosition({ top: submenuTop, left: submenuLeft });
     },
@@ -227,12 +227,16 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
         >
           All items
         </div>
-        <div className="context-menu-item" onClick={() => Logger.debug('Find type')}>
+        <button
+          type="button"
+          className="context-menu-item"
+          onClick={() => Logger.debug('Find type')}
+        >
           Find type...
-        </div>
-        <div className="context-menu-item" onClick={() => Logger.debug('Import')}>
+        </button>
+        <button type="button" className="context-menu-item" onClick={() => Logger.debug('Import')}>
           Import...
-        </div>
+        </button>
         <div className="context-menu-item disabled">Paste</div>
       </div>
 
@@ -270,8 +274,9 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
               }}
             >
               {Object.entries(nodeTypes).map(([nodeType, info]) => (
-                <div
+                <button
                   key={nodeType}
+                  type="button"
                   className="context-menu-item"
                   onClick={() => handleNodeTypeClick(nodeType)}
                   title={nodeType}
@@ -293,7 +298,7 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
                     style={{ backgroundColor: info.color, display: 'none' }}
                   />
                   {info.name}
-                </div>
+                </button>
               ))}
             </div>
           );

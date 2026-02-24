@@ -22,11 +22,10 @@ export interface ConnectionCutterState {
 }
 
 export interface ConnectionCutterHandlers {
-  // eslint-disable-next-line no-unused-vars
   handlePaneMouseDown: (event: React.MouseEvent) => void;
-  // eslint-disable-next-line no-unused-vars
+
   handlePaneMouseMove: (event: React.MouseEvent) => void;
-  // eslint-disable-next-line no-unused-vars
+
   handlePaneMouseUp: (event: React.MouseEvent) => Promise<void>;
 }
 

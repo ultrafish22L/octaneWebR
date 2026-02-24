@@ -126,14 +126,18 @@ export function isFeatureSupported(featureName: string): boolean {
  * @param params - The request parameters (Beta 2 format)
  * @returns The parameters transformed for the current API version
  */
-export function transformRequestParams(_serviceName: string, methodName: string, params: any): any {
+export function transformRequestParams(
+  _serviceName: string,
+  methodName: string,
+  params: Record<string, unknown>
+): Record<string, unknown> {
   if (!USE_ALPHA5_API) {
     // Using Beta 2, no transformation needed
     return params;
   }
 
   // Using Alpha 5, apply transformations
-  const transformed: any = { ...params };
+  const transformed: Record<string, unknown> = { ...params };
 
   // -------------------------------------------------------------------------
   // getPinValueByPinID / setPinValueByPinID transformations

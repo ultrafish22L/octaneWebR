@@ -101,7 +101,7 @@ export function useSceneTree({
           }
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Failed to load scene tree:', error);
     } finally {
       setLoading(false);
@@ -138,7 +138,7 @@ export function useSceneTree({
      * render engine so the viewport + NodeInspector populate right away.
      */
     let hasSelectedRenderTarget = false;
-    const handleProgressiveNodeAdded = ({ node, level }: any) => {
+    const handleProgressiveNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
       if (level === 0) {
         setSceneTree(prev => {
           const updated = [...prev, node];
@@ -154,13 +154,18 @@ export function useSceneTree({
 
           // Activate in render engine (fire-and-forget)
           if (node.handle && node.handle !== -1 && client) {
-            client.setRenderTargetNode(node.handle).then(success => {
-              if (success) {
-                Logger.debug(`🎯 RenderTarget auto-selected: "${node.name}" (handle: ${node.handle})`);
-              }
-            }).catch(err => {
-              Logger.error('❌ Error activating render target:', err);
-            });
+            client
+              .setRenderTargetNode(node.handle)
+              .then(success => {
+                if (success) {
+                  Logger.debug(
+                    `🎯 RenderTarget auto-selected: "${node.name}" (handle: ${node.handle})`
+                  );
+                }
+              })
+              .catch(err => {
+                Logger.error('❌ Error activating render target:', err);
+              });
           }
         }
       }
@@ -206,13 +211,17 @@ export function useSceneTree({
      * Only propagates to App for PT_RENDERTARGET (so NodeInspector updates).
      * The full propagation happens at structureComplete/complete.
      */
-    const handleChildrenLoaded = ({ parent, children }: { parent: SceneNode; children: SceneNode[] }) => {
+    const handleChildrenLoaded = ({
+      parent,
+      children,
+    }: {
+      parent: SceneNode;
+      children: SceneNode[];
+    }) => {
       Logger.debug(`📥 Children loaded for "${parent.name}": ${children.length} children`);
 
       setSceneTree(prev => {
-        const updated = parent.handle
-          ? clonePathToHandle(prev, parent.handle)
-          : [...prev];
+        const updated = parent.handle ? clonePathToHandle(prev, parent.handle) : [...prev];
 
         // Propagate to App/NodeGraph so all panels update with new children
         setTimeout(() => onSceneTreeChange?.(updated), 0);
@@ -361,7 +370,7 @@ export function useSceneTree({
       });
     };
 
-    const handleSceneTreeUpdated = (scene: any) => {
+    const handleSceneTreeUpdated = (scene: { tree?: SceneNode[] }) => {
       Logger.debug('🌲 SceneOutliner: Full scene tree update');
       const tree = scene.tree || [];
       setSceneTree(tree);

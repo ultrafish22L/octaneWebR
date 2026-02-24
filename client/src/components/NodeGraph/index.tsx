@@ -11,6 +11,7 @@ import {
   ReactFlow,
   Node,
   Edge,
+  NodeChange,
   Background,
   BackgroundVariant,
   MiniMap,
@@ -42,15 +43,15 @@ import { useConnectionCutter } from './hooks/useConnectionCutter';
 interface NodeGraphEditorProps {
   sceneTree: SceneNode[];
   selectedNode?: SceneNode | null;
-  // eslint-disable-next-line no-unused-vars
+
   onNodeSelect?: (node: SceneNode | null) => void;
   gridVisible: boolean;
-  // eslint-disable-next-line no-unused-vars
+
   setGridVisible: (visible: boolean) => void;
   snapToGrid: boolean;
-  // eslint-disable-next-line no-unused-vars
+
   setSnapToGrid: (snap: boolean) => void;
-  // eslint-disable-next-line no-unused-vars
+
   onRecenterViewReady?: (callback: () => void) => void; // Pass fitView callback to parent
 }
 
@@ -68,10 +69,10 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   selectedNode,
   onNodeSelect,
   gridVisible,
-  // eslint-disable-next-line no-unused-vars
+
   setGridVisible: _setGridVisible,
   snapToGrid,
-  // eslint-disable-next-line no-unused-vars
+
   setSnapToGrid: _setSnapToGrid,
   onRecenterViewReady,
 }: NodeGraphEditorProps) {
@@ -86,7 +87,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   const progressiveLoadingRef = useRef(false);
   // Ref to always have latest sceneTree for event handlers (avoids stale closure)
   const sceneTreeRef = useRef(sceneTree);
-  sceneTreeRef.current = sceneTree;
+  useEffect(() => {
+    sceneTreeRef.current = sceneTree;
+  }, [sceneTree]);
 
   // Provide fitView callback to parent on mount (only once)
   useEffect(() => {
@@ -103,7 +106,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
   // Custom onNodesChange handler that saves position changes to Octane
   const onNodesChange = useCallback(
-    (changes: any[]) => {
+    (changes: NodeChange<Node<OctaneNodeData>>[]) => {
       // First apply changes to the local state
       onNodesChangeBase(changes);
 
@@ -117,7 +120,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
           if (client && connected && nodeHandle) {
             Logger.debug(`💾 Saving node position: handle=${nodeHandle}, x=${x}, y=${y}`);
-            client.setNodePosition(nodeHandle, x, y).catch((error: any) => {
+            client.setNodePosition(nodeHandle, x, y).catch(error => {
               Logger.error('Failed to save node position:', error);
             });
           }
@@ -214,7 +217,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         // Extract input pins from item.children
         const inputs = item.children || [];
 
-        const inputHandles = inputs.map((input: any, inputIndex: number) => {
+        const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
           // O(1) lookup instead of O(n) tree.some()/tree.find()
           const connectedNode = input.handle ? nodeMap.get(String(input.handle)) || null : null;
 
@@ -265,7 +268,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         const targetHandle = String(node.handle || 0);
 
         // Check each child (input pin) for connections
-        node.children.forEach((childNode: any, inputIndex: number) => {
+        node.children.forEach((childNode: SceneNode, inputIndex: number) => {
           // Include connections even if handle=0, as long as pinInfo exists (empty pins with data)
           if (childNode.handle !== undefined || childNode.pinInfo) {
             const sourceHandle = String(childNode.handle || 0);
@@ -365,7 +368,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       Logger.debug('📊 NodeGraphEditor: Adding node incrementally:', event.node.name);
 
       // Convert just the new node to a ReactFlow node
-      const nodeIndex = sceneTree.length - 1; // New node position
+      const nodeIndex = sceneTreeRef.current.length - 1; // New node position
       const nodeSpacing = 250;
       const yCenter = 300;
       const handleStr = String(event.node.handle || 0);
@@ -373,7 +376,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       // Extract input pins from item.children
       const inputs = event.node.children || [];
 
-      const inputHandles = inputs.map((input: any, inputIndex: number) => {
+      const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
         // O(1) lookup via scene.map instead of O(n) tree scan
         const connectedNode = input.handle ? client.lookupItem(input.handle) : null;
 
@@ -481,7 +484,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       const handleStr = String(node.handle || 0);
       const inputs = node.children || [];
 
-      const inputHandles = inputs.map((input: any, inputIndex: number) => ({
+      const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => ({
         id: `input-${inputIndex}`,
         label: input.staticLabel || input.name,
         pinInfo: input.pinInfo,
@@ -493,9 +496,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       const newReactFlowNode: Node<OctaneNodeData> = {
         id: handleStr,
         type: 'octane',
-        position: node.position
-          ? { x: node.position.x, y: node.position.y }
-          : { x: 100, y: 300 },
+        position: node.position ? { x: node.position.x, y: node.position.y } : { x: 100, y: 300 },
         data: {
           sceneNode: node,
           inputs: inputHandles,

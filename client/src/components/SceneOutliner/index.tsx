@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { List } from 'react-window';
+import { List, ListImperativeAPI } from 'react-window';
 import { useOctane } from '../../hooks/useOctane';
 import { SceneNode } from '../../services/OctaneClient';
 import { SceneOutlinerContextMenu } from './SceneOutlinerContextMenu';
@@ -35,9 +35,9 @@ export const SceneOutliner = React.memo(function SceneOutliner({
 }: SceneOutlinerProps) {
   const { connected } = useOctane();
   const [activeTab, setActiveTab] = useState<TabType>('scene');
-  
+
   // List ref for forcing re-renders
-  const listRef = React.useRef<any>(null);
+  const listRef = React.useRef<ListImperativeAPI>(null);
   const [listKey, setListKey] = React.useState(0);
 
   // Context menu actions
@@ -60,16 +60,19 @@ export const SceneOutliner = React.memo(function SceneOutliner({
   });
 
   // Tree expansion management (auto-initializes when sceneTree loads)
-  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll, initializeExpansion } = useTreeExpansion({
-    sceneTree,
-    selectedNode,
-    onNodeSelect,
-    onNodeContextMenu: contextMenu.handleNodeContextMenu,
-  });
+  const { flattenedNodes, rowProps, handleExpandAll, handleCollapseAll, initializeExpansion } =
+    useTreeExpansion({
+      sceneTree,
+      selectedNode,
+      onNodeSelect,
+      onNodeContextMenu: contextMenu.handleNodeContextMenu,
+    });
 
-  // Connect the bridge ref to the real initializeExpansion
-  initializeExpansionRef.current = initializeExpansion;
-  
+  // Keep the bridge ref in sync with the latest initializeExpansion (useEffect avoids render-time mutation)
+  React.useEffect(() => {
+    initializeExpansionRef.current = initializeExpansion;
+  }, [initializeExpansion]);
+
   // Force List re-render when flattenedNodes structurally change.
   // During progressive loading, nodes are appended one-by-one — we must NOT
   // bump listKey for each append or the entire List remounts causing flashes.
@@ -86,9 +89,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
 
     // Structural change: first key changed, length decreased, or went from empty to non-empty
     const isStructuralChange =
-      firstKey !== prev.firstKey ||
-      len < prev.len ||
-      (prev.len === 0 && len > 0);
+      firstKey !== prev.firstKey || len < prev.len || (prev.len === 0 && len > 0);
 
     prevFlatSnapshotRef.current = { len, firstKey, lastKey };
 

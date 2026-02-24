@@ -62,14 +62,17 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
   return (
     <div
       className="modal-overlay"
+      role="presentation"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="batch-rendering-title"
-      tabIndex={-1}
     >
-      <div className="batch-rendering-dialog">
+      <div
+        className="batch-rendering-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-rendering-title"
+        tabIndex={-1}
+      >
         <div className="modal-header">
           <h2 id="batch-rendering-title">Batch Rendering</h2>
           <button
@@ -86,8 +89,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
           <div className="form-section">
             <h3>Render Targets</h3>
             <div className="form-field">
-              <label>Select render targets to batch:</label>
+              <label htmlFor="batch-render-target-select">Select render targets to batch:</label>
               <select
+                id="batch-render-target-select"
                 multiple
                 size={4}
                 className="render-target-select"
@@ -110,8 +114,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
             <h3>Output Settings</h3>
             <div className="form-row">
               <div className="form-field">
-                <label>Format:</label>
+                <label htmlFor="batch-format-select">Format:</label>
                 <select
+                  id="batch-format-select"
                   value={selectedFormat}
                   onChange={e => setSelectedFormat(e.target.value)}
                   name="select-1"
@@ -126,8 +131,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                 </select>
               </div>
               <div className="form-field">
-                <label>Color Space:</label>
+                <label htmlFor="batch-color-space-select">Color Space:</label>
                 <select
+                  id="batch-color-space-select"
                   value={colorSpace}
                   onChange={e => setColorSpace(e.target.value)}
                   name="select-2"
@@ -147,8 +153,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
             <h3>Frame Range</h3>
             <div className="form-row">
               <div className="form-field">
-                <label>Frame Rate:</label>
+                <label htmlFor="batch-frame-rate">Frame Rate:</label>
                 <input
+                  id="batch-frame-rate"
                   type="number"
                   min="1"
                   max="120"
@@ -159,8 +166,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                 />
               </div>
               <div className="form-field">
-                <label>Start Frame:</label>
+                <label htmlFor="batch-start-frame">Start Frame:</label>
                 <input
+                  id="batch-start-frame"
                   type="number"
                   min="0"
                   value={startFrame}
@@ -170,8 +178,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                 />
               </div>
               <div className="form-field">
-                <label>End Frame:</label>
+                <label htmlFor="batch-end-frame">End Frame:</label>
                 <input
+                  id="batch-end-frame"
                   type="number"
                   min="0"
                   value={endFrame}
@@ -183,8 +192,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
             </div>
             <div className="form-row">
               <div className="form-field">
-                <label>Sub Frame:</label>
+                <label htmlFor="batch-sub-frame">Sub Frame:</label>
                 <input
+                  id="batch-sub-frame"
                   type="number"
                   min="1"
                   value={subFrame}
@@ -194,8 +204,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                 />
               </div>
               <div className="form-field">
-                <label>File Numbering Start:</label>
+                <label htmlFor="batch-file-numbering">File Numbering Start:</label>
                 <input
+                  id="batch-file-numbering"
                   type="number"
                   min="0"
                   value={fileNumbering}
@@ -240,8 +251,9 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
           <div className="form-section">
             <h3>Output Files</h3>
             <div className="form-field">
-              <label>Filename Template:</label>
+              <label htmlFor="batch-filename-template">Filename Template:</label>
               <input
+                id="batch-filename-template"
                 type="text"
                 value={filenameTemplate}
                 onChange={e => setFilenameTemplate(e.target.value)}
@@ -254,9 +266,10 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
               </p>
             </div>
             <div className="form-field">
-              <label>Output Folder:</label>
+              <label htmlFor="batch-output-folder">Output Folder:</label>
               <div className="folder-select">
                 <input
+                  id="batch-output-folder"
                   type="text"
                   value={outputFolder}
                   onChange={e => setOutputFolder(e.target.value)}

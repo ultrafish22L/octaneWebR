@@ -39,12 +39,47 @@ interface Point {
   y: number;
 }
 
+interface PickVector3 {
+  x?: number;
+  y?: number;
+  z?: number;
+  [index: number]: number | undefined;
+}
+
+interface PickNode {
+  handle?: number;
+  [key: string]: unknown;
+}
+
+interface PickResult {
+  position?: PickVector3;
+  depth?: number;
+  node?: PickNode;
+  materialPinIx?: number;
+  materialPinIndex?: number;
+  primitiveType?: unknown;
+  [key: string]: unknown;
+}
+
+interface ApiResponse {
+  result?: {
+    handle?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface OctaneClient {
-  pick: (x: number, y: number) => Promise<any[]>;
-  pickWhitePoint: (x: number, y: number) => Promise<any>;
+  pick: (x: number, y: number) => Promise<PickResult[]>;
+  pickWhitePoint: (x: number, y: number) => Promise<Record<string, unknown> | null>;
   setRenderRegion: (active: boolean, min: Point, max: Point, featherWidth: number) => Promise<void>;
-  callApi: (service: string, method: string, handle: number, params: any) => Promise<any>;
-  emit: (event: string, data: any) => void;
+  callApi: (
+    service: string,
+    method: string,
+    handle: number,
+    params: Record<string, unknown>
+  ) => Promise<ApiResponse>;
+  emit: (event: string, data: unknown) => void;
 }
 
 interface UseMouseInteractionParams {
@@ -282,8 +317,11 @@ export function useMouseInteraction({
           await triggerOctaneUpdate();
 
           Logger.debug(' Render region applied to Octane');
-        } catch (error: any) {
-          Logger.error('Failed to set render region:', error.message);
+        } catch (error) {
+          Logger.error(
+            'Failed to set render region:',
+            error instanceof Error ? error.message : String(error)
+          );
         }
 
         // Clear region selection (visual overlay will be removed)
@@ -393,8 +431,11 @@ export function useMouseInteraction({
                   } else {
                     Logger.debug(' No material connected to this geometry');
                   }
-                } catch (err: any) {
-                  Logger.error('Failed to get material node:', err.message);
+                } catch (err) {
+                  Logger.error(
+                    'Failed to get material node:',
+                    err instanceof Error ? err.message : String(err)
+                  );
                 }
               }
             } else {
@@ -430,8 +471,11 @@ export function useMouseInteraction({
               Logger.debug(' Object pick: No intersection found');
             }
           }
-        } catch (error: any) {
-          Logger.error(`Picking failed (${pickingMode}):`, error.message);
+        } catch (error) {
+          Logger.error(
+            `Picking failed (${pickingMode}):`,
+            error instanceof Error ? error.message : String(error)
+          );
         }
         return;
       }

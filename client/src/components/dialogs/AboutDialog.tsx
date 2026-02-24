@@ -27,14 +27,17 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   return (
     <div
       className="modal-overlay"
+      role="presentation"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="about-title"
-      tabIndex={-1}
     >
-      <div className="about-dialog">
+      <div
+        className="about-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="about-title"
+        tabIndex={-1}
+      >
         <div className="modal-header">
           <h2 id="about-title">About OctaneRender</h2>
           <button className="modal-close-button" onClick={onClose} aria-label="Close about dialog">

@@ -1,8 +1,13 @@
 /**
  * Simple EventEmitter for TypeScript
+ *
+ * EventHandler uses Function to allow typed callbacks at call sites
+ * (e.g. `client.on('event', (data: SomeType) => ...)`).
+ * The Function type accepts any callable without using `any` and is
+ * intentional for a generic event-emitter pattern.
  */
 
-type EventHandler = (...args: any[]) => void;
+type EventHandler = Function;
 
 export class EventEmitter {
   private events: Map<string, EventHandler[]> = new Map();
@@ -24,10 +29,10 @@ export class EventEmitter {
     }
   }
 
-  emit(event: string, ...args: any[]): void {
+  emit(event: string, ...args: unknown[]): void {
     const handlers = this.events.get(event);
     if (handlers) {
-      handlers.forEach(handler => handler(...args));
+      handlers.forEach(handler => (handler as (...a: unknown[]) => void)(...args));
     }
   }
 

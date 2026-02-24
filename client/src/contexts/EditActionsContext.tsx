@@ -117,6 +117,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
   return <EditActionsContext.Provider value={contextValue}>{children}</EditActionsContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useEditActions() {
   const context = useContext(EditActionsContext);
   if (!context) {

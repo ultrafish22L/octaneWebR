@@ -28,18 +28,18 @@ interface UseNodeOperationsParams {
   setNodes: React.Dispatch<React.SetStateAction<Node<OctaneNodeData>[]>>;
   edges: Edge[];
   sceneTree: SceneNode[];
-  // eslint-disable-next-line no-unused-vars
+
   onNodeSelect?: (node: SceneNode | null) => void;
   editActions: EditActionsContextType;
 }
 
 export interface NodeOperationsHandlers {
   // Context menu handlers
-  // eslint-disable-next-line no-unused-vars
+
   handlePaneContextMenu: (event: React.MouseEvent | MouseEvent) => void;
-  // eslint-disable-next-line no-unused-vars
+
   handleNodeContextMenu: (event: React.MouseEvent, nodeId: string) => void;
-  // eslint-disable-next-line no-unused-vars
+
   handleSelectNodeType: (nodeType: string) => Promise<void>;
   handleCloseContextMenu: () => void;
 
@@ -61,7 +61,7 @@ export interface NodeOperationsHandlers {
   handleSaveAsMacro: () => void;
 
   // Search handler
-  // eslint-disable-next-line no-unused-vars
+
   handleSearchSelectNodes: (nodeIds: string[]) => void;
 
   // State
@@ -70,7 +70,7 @@ export interface NodeOperationsHandlers {
   contextMenuType: 'node' | 'add';
   contextMenuNodeId: string | null;
   searchDialogVisible: boolean;
-  // eslint-disable-next-line no-unused-vars
+
   setSearchDialogVisible: (visible: boolean) => void;
 }
 

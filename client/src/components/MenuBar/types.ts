@@ -11,7 +11,7 @@ export interface MenuItem {
   enabled?: boolean;
   checked?: boolean; // For toggle menu items (e.g., panel visibility)
   submenu?: MenuItem[];
-  data?: any;
+  data?: string;
 }
 
 export interface MenuDefinition {
@@ -78,5 +78,5 @@ export type MenuAction =
   | 'help.eula';
 
 export interface MenuActionHandler {
-  (action: MenuAction, data?: any): void | Promise<void>;
+  (action: MenuAction, data?: string): void | Promise<void>;
 }

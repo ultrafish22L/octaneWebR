@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 /**
  * useLocalDB - LocalDB management
  * Handles loading and management of local material database

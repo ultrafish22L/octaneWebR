@@ -197,8 +197,8 @@ function AppContent() {
   const handleSetBackgroundImage = () => {
     Logger.debug('🖼️  Set Background Image - TODO: Implement file picker');
     // TODO: Implement file picker and set background image
-    alert(
-      'Set Background Image: Feature coming soon!\n\nThis will allow you to set a background image visible through alpha channel.'
+    Logger.warn(
+      'Set Background Image: Feature coming soon! This will allow you to set a background image visible through alpha channel.'
     );
   };
 
@@ -265,10 +265,10 @@ function AppContent() {
   useEffect(() => {
     // Auto-connect on mount
     Logger.debug('🚀 OctaneWebR starting...');
-    
+
     // Log enabled feature flags
     logFeatureFlags();
-    
+
     connect()
       .then(success => {
         if (success) {
@@ -312,15 +312,15 @@ function AppContent() {
       });
     };
 
-    const handleRenderFailure = (data: any) => {
+    const handleRenderFailure = (data: unknown) => {
       Logger.error('❌ Render failure detected:', data);
       // TODO: Show user-facing error notification
-      alert(
+      Logger.error(
         'Render Failed: Octane encountered an error during rendering. Check console for details.'
       );
     };
 
-    const handleProjectManagerChanged = (data: any) => {
+    const handleProjectManagerChanged = (data: unknown) => {
       Logger.debug('📁 Project manager changed:', data);
       // Refresh scene tree when project changes
       setSceneRefreshTrigger(prev => prev + 1);
@@ -360,7 +360,11 @@ function AppContent() {
       setStatusMessage(`Building scene: ${message}${progressText}`);
     };
 
-    const handleBuildComplete = (data: { nodeCount: number; topLevelCount: number; elapsedTime: string }) => {
+    const handleBuildComplete = (data: {
+      nodeCount: number;
+      topLevelCount: number;
+      elapsedTime: string;
+    }) => {
       setTemporaryStatus(
         `Scene loaded: ${data.nodeCount} nodes (${data.topLevelCount} top-level) in ${data.elapsedTime}s`,
         5000
@@ -392,13 +396,13 @@ function AppContent() {
 
     // Progressive loading status listener
     if (FEATURES.PROGRESSIVE_LOADING_P) {
-      const handleLevel0Complete = (data: any) => {
+      const handleLevel0Complete = (data: { nodes?: SceneNode[] }) => {
         setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
       };
       client.on('scene:level0Complete', handleLevel0Complete);
     }
 
-/*
+    /*
     return () => {
       client.off('scene:buildStart', handleBuildStart);
       client.off('scene:buildProgress', handleBuildProgress);
@@ -407,7 +411,7 @@ function AppContent() {
       client.off('nodeDeleted', handleNodeDeletedStatus);
       client.off('connection:changed', handleConnectionChanged);
     };
- */   
+ */
   }, [client, setStatusMessage, setTemporaryStatus]);
 
   return (

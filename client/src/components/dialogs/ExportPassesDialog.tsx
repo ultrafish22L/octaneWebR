@@ -64,9 +64,9 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
       } else {
         setErrorMessage('Failed to export passes. Check console for details.');
       }
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Error exporting passes:', error);
-      setErrorMessage(error.message || 'Unknown error occurred');
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setExporting(false);
     }
@@ -75,8 +75,19 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog export-passes-dialog" onClick={e => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="modal-dialog export-passes-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Export Render Passes"
+      >
         <div className="modal-header">
           <h2>Export Render Passes</h2>
           <button className="modal-close-btn" onClick={onClose}>

@@ -4,8 +4,9 @@
  */
 
 import { Logger } from '../../utils/Logger';
+import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
-import { ApiService } from './ApiService';
+import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { RenderState, RenderRegion } from './types';
 import { PinId, PinTypeId } from '../../constants/OctaneTypes';
 
@@ -13,7 +14,7 @@ export class RenderService extends BaseService {
   private apiService: ApiService;
   private renderState: RenderState;
 
-  constructor(emitter: any, serverUrl: string, apiService: ApiService) {
+  constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
     this.apiService = apiService;
     this.renderState = {
@@ -21,7 +22,7 @@ export class RenderService extends BaseService {
       progress: 0,
       samples: 0,
       renderTime: 0,
-      resolution: { width: 1920, height: 1080 }
+      resolution: { width: 1920, height: 1080 },
     };
   }
 
@@ -52,7 +53,7 @@ export class RenderService extends BaseService {
 
   async getClayMode(): Promise<number> {
     const response = await this.apiService.callApi('ApiRenderEngine', 'clayMode', {});
-    return response?.result ?? 0;
+    return asNumber(response?.result, 0);
   }
 
   async setClayMode(mode: number): Promise<void> {
@@ -61,19 +62,27 @@ export class RenderService extends BaseService {
 
   async getSubSampleMode(): Promise<number> {
     const response = await this.apiService.callApi('ApiRenderEngine', 'getSubSampleMode', {});
-    return response?.result ?? 1;
+    return asNumber(response?.result, 1);
   }
 
   async setSubSampleMode(mode: number): Promise<void> {
     await this.apiService.callApi('ApiRenderEngine', 'setSubSampleMode', null, { mode });
   }
 
-  async getRenderStatistics(): Promise<any> {
+  async getRenderStatistics(): Promise<Record<string, unknown> | null> {
     try {
-      const response = await this.apiService.callApi('ApiRenderEngine', 'getRenderStatistics', 0, {});
-      return response?.statistics || null;
-    } catch (error: any) {
-      Logger.error('❌ Failed to get render statistics:', error.message);
+      const response = await this.apiService.callApi(
+        'ApiRenderEngine',
+        'getRenderStatistics',
+        0,
+        {}
+      );
+      return (asObject(response?.statistics) as Record<string, unknown> | null) ?? null;
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to get render statistics:',
+        error instanceof Error ? error.message : String(error)
+      );
       return null;
     }
   }
@@ -81,19 +90,28 @@ export class RenderService extends BaseService {
   async getRenderRegion(): Promise<RenderRegion> {
     try {
       const response = await this.apiService.callApi('ApiRenderEngine', 'getRenderRegion', {});
+      const regionMinObj = asObject(response?.regionMin);
+      const regionMaxObj = asObject(response?.regionMax);
       return {
-        active: response?.active ?? false,
-        regionMin: response?.regionMin ?? { x: 0, y: 0 },
-        regionMax: response?.regionMax ?? { x: 1920, y: 1080 },
-        featherWidth: response?.featherWidth ?? 0
+        active: asBool(response?.active, false),
+        regionMin: regionMinObj
+          ? { x: asNumber(regionMinObj.x, 0), y: asNumber(regionMinObj.y, 0) }
+          : { x: 0, y: 0 },
+        regionMax: regionMaxObj
+          ? { x: asNumber(regionMaxObj.x, 1920), y: asNumber(regionMaxObj.y, 1080) }
+          : { x: 1920, y: 1080 },
+        featherWidth: asNumber(response?.featherWidth, 0),
       };
-    } catch (error: any) {
-      Logger.error('❌ Failed to get render region:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to get render region:',
+        error instanceof Error ? error.message : String(error)
+      );
       return {
         active: false,
         regionMin: { x: 0, y: 0 },
         regionMax: { x: 1920, y: 1080 },
-        featherWidth: 0
+        featherWidth: 0,
       };
     }
   }
@@ -109,11 +127,18 @@ export class RenderService extends BaseService {
         active,
         regionMin,
         regionMax,
-        featherWidth
+        featherWidth,
       });
-      Logger.debug(`✅ Render region ${active ? 'enabled' : 'disabled'}:`, { regionMin, regionMax, featherWidth });
-    } catch (error: any) {
-      Logger.error('❌ Failed to set render region:', error.message);
+      Logger.debug(`✅ Render region ${active ? 'enabled' : 'disabled'}:`, {
+        regionMin,
+        regionMax,
+        featherWidth,
+      });
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to set render region:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
@@ -127,22 +152,30 @@ export class RenderService extends BaseService {
     try {
       // Convert null to empty object for gRPC
       const targetNode = nodeHandle ? { handle: nodeHandle } : {};
-      
-      const response = await this.apiService.callApi('ApiRenderEngine', 'setRenderTargetNode', null, {
-        targetNode
-      });
-      
-      const success = response?.result ?? false;
-      
+
+      const response = await this.apiService.callApi(
+        'ApiRenderEngine',
+        'setRenderTargetNode',
+        null,
+        {
+          targetNode,
+        }
+      );
+
+      const success = asBool(response?.result, false);
+
       if (success) {
         Logger.debug(`✅ Render target set to node handle: ${nodeHandle || 'null'}`);
       } else {
         Logger.warn(`⚠️ Failed to set render target (invalid node or wrong type)`);
       }
-      
+
       return success;
-    } catch (error: any) {
-      Logger.error('❌ Failed to set render target node:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to set render target node:',
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }
@@ -154,26 +187,29 @@ export class RenderService extends BaseService {
   async getRenderTargetNode(): Promise<number | null> {
     try {
       const response = await this.apiService.callApi('ApiRenderEngine', 'getRenderTargetNode', {});
-      const handle = response?.result?.handle;
-      
-      // API returns "0" string/number for no render target
-      if (!handle || handle === "0" || handle === 0) {
+      const handle = getHandle(response?.result);
+
+      // API returns 0 for no render target
+      if (!handle || handle === 0) {
         return null;
       }
-      
+
       return handle;
-    } catch (error: any) {
-      Logger.error('❌ Failed to get render target node:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to get render target node:',
+        error instanceof Error ? error.message : String(error)
+      );
       return null;
     }
   }
 
   /**
    * Gets the Film Settings node connected to the render target
-   * 
+   *
    * Octane's render pipeline structure:
    * RenderEngine → RenderTarget → FilmSettings (pin 15 = P_FILM_SETTINGS)
-   * 
+   *
    * Film Settings controls resolution, AOVs, and output options.
    * Returns null if no render target exists or no Film Settings connected.
    */
@@ -184,22 +220,30 @@ export class RenderService extends BaseService {
         Logger.warn('⚠️ No render target found');
         return null;
       }
-      
-      const filmSettingsResponse = await this.apiService.callApi('ApiNode', 'connectedNode', renderTargetHandle, { 
-        pinId: PinId.P_FILM_SETTINGS,
-        enterWrapperNode: true
-      });
-      const handle = filmSettingsResponse?.result?.handle;
-      
-      // API returns "0" string/number for disconnected pins
-      if (!handle || handle === "0" || handle === 0) {
+
+      const filmSettingsResponse = await this.apiService.callApi(
+        'ApiNode',
+        'connectedNode',
+        renderTargetHandle,
+        {
+          pinId: PinId.P_FILM_SETTINGS,
+          enterWrapperNode: true,
+        }
+      );
+      const handle = getHandle(filmSettingsResponse?.result);
+
+      // API returns 0 for disconnected pins
+      if (!handle || handle === 0) {
         Logger.warn('⚠️ No Film Settings node connected to render target');
         return null;
       }
-      
+
       return handle;
-    } catch (error: any) {
-      Logger.error('❌ Failed to get Film Settings node:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to get Film Settings node:',
+        error instanceof Error ? error.message : String(error)
+      );
       return null;
     }
   }
@@ -212,13 +256,21 @@ export class RenderService extends BaseService {
       }
 
       // Get boolean value directly using PinId (from OctaneTypes.PinId)
-      const valueResponse = await this.apiService.callApi('ApiNode', 'getPinValueByPinID', filmSettingsHandle, { 
-        pin_id: PinId.P_LOCK_RENDER_AOVS,
-        expected_type: PinTypeId.PIN_ID_BOOL
-      });
-      return valueResponse?.bool_value ?? false;
-    } catch (error: any) {
-      Logger.error('❌ Failed to get viewport resolution lock:', error.message);
+      const valueResponse = await this.apiService.callApi(
+        'ApiNode',
+        'getPinValueByPinID',
+        filmSettingsHandle,
+        {
+          pin_id: PinId.P_LOCK_RENDER_AOVS,
+          expected_type: PinTypeId.PIN_ID_BOOL,
+        }
+      );
+      return asBool(valueResponse?.bool_value, false);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to get viewport resolution lock:',
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }
@@ -232,11 +284,14 @@ export class RenderService extends BaseService {
 
       // Set boolean value directly using PinId (from OctaneTypes.PinId)
       await this.apiService.callApi('ApiNode', 'setPinValueByPinID', filmSettingsHandle, {
-        pin_id: PinId.P_LOCK_RENDER_AOVS,  // 2672
-        bool_value: locked
+        pin_id: PinId.P_LOCK_RENDER_AOVS, // 2672
+        bool_value: locked,
       });
-    } catch (error: any) {
-      Logger.error('❌ Failed to set viewport resolution lock:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Failed to set viewport resolution lock:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }

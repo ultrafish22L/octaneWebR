@@ -4,13 +4,14 @@
  */
 
 import { Logger } from '../../utils/Logger';
+import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
-import { ApiService } from './ApiService';
+import { ApiService, asBool, asObject, asString } from './ApiService';
 
 export class RenderExportService extends BaseService {
   private apiService: ApiService;
 
-  constructor(emitter: any, serverUrl: string, apiService: ApiService) {
+  constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
     this.apiService = apiService;
   }
@@ -22,14 +23,14 @@ export class RenderExportService extends BaseService {
   ): Promise<boolean> {
     try {
       const formatMap: Record<string, number> = {
-        'PNG': 0,
-        'JPG': 1,
-        'EXR': 2,
-        'TIFF': 3
+        PNG: 0,
+        JPG: 1,
+        EXR: 2,
+        TIFF: 3,
       };
-      
+
       const imageSaveFormat = formatMap[format];
-      
+
       const response = await this.apiService.callApi('ApiRenderEngine', 'saveImage1', null, {
         renderPassId,
         fullPath: filePath,
@@ -38,20 +39,23 @@ export class RenderExportService extends BaseService {
         premultipliedAlphaType: 0, // PREMULTIPLIED_ALPHA_TYPE_STRAIGHT = 0
         exrCompressionType: 4, // EXR_COMPRESSION_TYPE_ZIP = 4
         exrCompressionLevel: 4.5,
-        asynchronous: false
+        asynchronous: false,
       });
-      
-      const success = response?.result ?? false;
-      
+
+      const success = asBool(response?.result, false);
+
       if (success) {
         Logger.debug(`✅ Render saved successfully: ${filePath}`);
       } else {
         Logger.error(`❌ Failed to save render: ${filePath}`);
       }
-      
+
       return success;
-    } catch (error: any) {
-      Logger.error('❌ Error saving render:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Error saving render:',
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }
@@ -59,26 +63,32 @@ export class RenderExportService extends BaseService {
   async grabRenderForClipboard(): Promise<string | null> {
     try {
       const response = await this.apiService.callApi('ApiRenderEngine', 'grabRenderResult', {});
-      
-      if (!response?.result || !response.renderImages?.data?.length) {
+
+      const renderImagesObj = asObject(response?.renderImages);
+      const dataArr = renderImagesObj?.data;
+      if (!response?.result || !Array.isArray(dataArr) || dataArr.length === 0) {
         Logger.error('❌ No render images available');
         return null;
       }
-      
-      const renderImage = response.renderImages.data[0];
-      
-      if (!renderImage?.buffer?.data) {
+
+      const renderImage = asObject(dataArr[0]);
+      const bufferObj = asObject(renderImage?.buffer);
+
+      if (!bufferObj?.data) {
         Logger.error('❌ No image buffer data');
         return null;
       }
-      
-      const base64Data = renderImage.buffer.data;
-      
+
+      const base64Data = asString(bufferObj.data, '');
+
       await this.apiService.callApi('ApiRenderEngine', 'releaseRenderResult', {});
-      
+
       return base64Data;
-    } catch (error: any) {
-      Logger.error('❌ Error grabbing render for clipboard:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Error grabbing render for clipboard:',
+        error instanceof Error ? error.message : String(error)
+      );
       return null;
     }
   }
@@ -90,14 +100,14 @@ export class RenderExportService extends BaseService {
   ): Promise<boolean> {
     try {
       const formatMap: Record<string, number> = {
-        'PNG': 0,
-        'JPG': 1,
-        'EXR': 2,
-        'TIFF': 3
+        PNG: 0,
+        JPG: 1,
+        EXR: 2,
+        TIFF: 3,
       };
-      
+
       const imageSaveFormat = formatMap[format];
-      
+
       const response = await this.apiService.callApi('ApiRenderEngine', 'saveRenderPasses1', null, {
         outputDirectory,
         filenamePrefix,
@@ -106,20 +116,23 @@ export class RenderExportService extends BaseService {
         premultipliedAlphaType: 0, // PREMULTIPLIED_ALPHA_TYPE_STRAIGHT = 0
         exrCompressionType: 4, // EXR_COMPRESSION_TYPE_ZIP = 4
         exrCompressionLevel: 4.5,
-        asynchronous: false
+        asynchronous: false,
       });
-      
-      const success = response?.result ?? false;
-      
+
+      const success = asBool(response?.result, false);
+
       if (success) {
         Logger.debug(`✅ Render passes exported successfully to: ${outputDirectory}`);
       } else {
         Logger.error(`❌ Failed to export render passes to: ${outputDirectory}`);
       }
-      
+
       return success;
-    } catch (error: any) {
-      Logger.error('❌ Error exporting render passes:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ Error exporting render passes:',
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }

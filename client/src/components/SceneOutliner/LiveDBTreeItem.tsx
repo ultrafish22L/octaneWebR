@@ -27,7 +27,7 @@ export function LiveDBTreeItem({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleToggle(e as any);
+      handleToggle(e as unknown as React.MouseEvent);
     }
   };
 

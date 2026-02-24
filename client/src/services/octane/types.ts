@@ -15,52 +15,91 @@ export interface RenderState {
 
 /**
  * Graph information for a node (from API)
- * Note: Using 'any' for index signature to maintain compatibility with dynamic API data
  */
 export interface GraphInfo {
   id?: number;
   type?: string;
   position?: { x: number; y: number };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
  * Node-specific information (from API)
- * Note: Using 'any' for index signature to maintain compatibility with dynamic API data
  */
 export interface NodeInfo {
   handle?: number;
   name?: string;
   type?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  nodeTypeName?: string;
+  nodeColor?: number;
+  defaultName?: string;
+  description?: string;
+  [key: string]: unknown;
 }
 
 /**
  * Pin information for node connections (from API)
- * Note: Using 'any' for index signature to maintain compatibility with dynamic API data
  */
+export interface DimInfo {
+  sliderStep?: number;
+  min?: number;
+  max?: number;
+  [key: string]: unknown;
+}
+
+export interface FloatInfo {
+  useSliders?: boolean;
+  dimCount?: number;
+  isColor?: boolean;
+  dimInfos?: DimInfo[];
+  [key: string]: unknown;
+}
+
+export interface IntInfo {
+  useSliders?: boolean;
+  dimCount?: number;
+  dimInfos?: DimInfo[];
+  [key: string]: unknown;
+}
+
+export interface EnumInfo {
+  values?: { id?: number; name?: string; value?: number; label?: string; [key: string]: unknown }[];
+  [key: string]: unknown;
+}
+
 export interface PinInfo {
   id?: number;
   name?: string;
-  type?: string;
+  type?: string; // Pin type string e.g. 'PT_GEOMETRY'
   connected?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  pinColor?: number | string | null;
+  staticLabel?: string;
+  staticName?: string;
+  description?: string;
+  groupName?: string | null;
+  pinId?: number;
+  pinOwner?: { handle?: number; [key: string]: unknown };
+  floatInfo?: FloatInfo;
+  intInfo?: IntInfo;
+  enumInfo?: EnumInfo;
+  [key: string]: unknown;
 }
 
 /**
  * Attribute information for a node (from API)
- * Note: Using 'any' for index signature to maintain compatibility with dynamic API data
  */
 export interface AttrInfo {
   id?: number;
   name?: string;
-  value?: any;
+  value?: unknown;
   type?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  description?: string;
+  useSliders?: boolean;
+  dimCount?: number;
+  dimInfos?: unknown[];
+  isColor?: boolean;
+  values?: unknown[];
+  [key: string]: unknown;
 }
 
 /**
@@ -70,20 +109,18 @@ export interface NodeConnection {
   from: number;
   to: number;
   pin?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
  * Scene node in the hierarchy tree
- * Note: Using 'any' for index signature to maintain compatibility with dynamic API data
  */
 export interface SceneNode {
-  handle?: number;  // Optional: will be undefined for unconnected pins
+  handle?: number; // Optional: will be undefined for unconnected pins
   name: string;
-  type: string;  // String type like 'PT_GEOMETRY' from API
-  typeEnum?: number;  // Legacy numeric enum (deprecated)
-  outType?: string | number;  // Raw API value (octaneWeb uses outType)
+  type: string; // String type like 'PT_GEOMETRY' from API
+  typeEnum?: number; // Legacy numeric enum (deprecated)
+  outType?: string | number; // Raw API value (octaneWeb uses outType)
   visible?: boolean;
   level?: number;
   children?: SceneNode[];
@@ -92,8 +129,14 @@ export interface SceneNode {
   pinInfo?: PinInfo;
   attrInfo?: AttrInfo;
   icon?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  position?: { x: number; y: number };
+  staticLabel?: string;
+  staticName?: string;
+  isAtTopLevel?: boolean;
+  filePath?: string;
+  polygonCount?: number;
+  vertsPerPoly?: number[];
+  [key: string]: unknown;
 }
 
 /**
@@ -173,8 +216,5 @@ export interface CameraState {
   target: { x: number; y: number; z: number };
   up?: { x: number; y: number; z: number };
   fov?: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
-
-

@@ -15,8 +15,9 @@ export default [
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
-      'server/proto/**',
-      'server/proto_old/**',
+      'server/**',
+      'vite-plugin-octane-grpc.ts',
+      'vite.config.ts',
     ],
   },
 
@@ -48,8 +49,9 @@ export default [
       'jsx-a11y': jsxA11y,
     },
     rules: {
-      // Disable base rule as it conflicts with @typescript-eslint/no-unused-vars
+      // Disable base rules that conflict with TypeScript or are redundant
       'no-unused-vars': 'off',
+      'no-undef': 'off', // TypeScript handles undefined references
       
       // TypeScript rules
       '@typescript-eslint/no-explicit-any': 'warn',

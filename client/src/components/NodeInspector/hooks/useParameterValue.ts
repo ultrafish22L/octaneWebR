@@ -19,7 +19,12 @@ import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { Logger } from '../../../utils/Logger';
 import { requestQueue } from '../../../utils/RequestQueue';
 
-export type ParameterRawValue = boolean | string | number | number[];
+export type ParameterRawValue =
+  | boolean
+  | string
+  | number
+  | number[]
+  | { x: number; y?: number; z?: number; w?: number };
 
 export interface ParameterValue {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,8 +97,9 @@ export function useParameterValue(
           // Extract the actual value from the response
           // API returns format like: {float_value: 2, value: "float_value"}
           // We need to get the value from the field indicated by response.value
-          const valueField = response.value || Object.keys(response)[0];
-          const actualValue = response[valueField];
+          const responseMap = response as Record<string, unknown>;
+          const valueField = (responseMap.value as string) || Object.keys(responseMap)[0];
+          const actualValue = responseMap[valueField];
 
           Logger.debugV(`✅ ApiItem:getValueByAttrID for ${node.name}: ${actualValue}`);
 

@@ -399,11 +399,15 @@ function ParameterControlComponent({
               onChange={e => onValueChange(parseInt(e.target.value))}
               name="octane-dropdown-18"
             >
-              {enumOptions.map((option: { value: number; label: string }, idx: number) => (
-                <option key={idx} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              {enumOptions.map((option, idx: number) => {
+                const optValue = option.value ?? option.id ?? idx;
+                const optLabel = option.label ?? option.name ?? String(optValue);
+                return (
+                  <option key={idx} value={optValue}>
+                    {optLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
         );

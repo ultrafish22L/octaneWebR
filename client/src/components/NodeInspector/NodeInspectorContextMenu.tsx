@@ -90,69 +90,106 @@ export function NodeInspectorContextMenu({
       }}
     >
       {/* Save... */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onSave)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onSave)}
+      >
         Save...
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Cut */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onCut)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onCut)}
+      >
         Cut
-      </div>
+      </button>
 
       {/* Copy */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onCopy)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onCopy)}
+      >
         Copy
-      </div>
+      </button>
 
       {/* Paste (disabled for now) */}
-      <div
+      <button
+        type="button"
         className="context-menu-item disabled"
         onClick={() => handleMenuItemClick(onPaste, true)}
       >
         Paste
-      </div>
+      </button>
 
       {/* Fill empty node pins */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onFillEmptyPins)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onFillEmptyPins)}
+      >
         Fill empty node pins
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Delete */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onDelete)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onDelete)}
+      >
         Delete
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Expand */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onExpand)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onExpand)}
+      >
         Expand
-      </div>
+      </button>
 
       {/* Separator */}
       <div className="context-menu-separator" />
 
       {/* Show in Outliner */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onShowInOutliner)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onShowInOutliner)}
+      >
         Show in Outliner
-      </div>
+      </button>
 
       {/* Show in Graph Editor */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onShowInGraphEditor)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onShowInGraphEditor)}
+      >
         Show in Graph Editor
-      </div>
+      </button>
 
       {/* Show in Lua API browser */}
-      <div className="context-menu-item" onClick={() => handleMenuItemClick(onShowInLuaBrowser)}>
+      <button
+        type="button"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onShowInLuaBrowser)}
+      >
         Show in Lua API browser
-      </div>
+      </button>
     </div>,
     document.body
   );

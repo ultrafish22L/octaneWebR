@@ -15,6 +15,7 @@ import { FlattenedNode } from '../../utils/TreeFlattener';
 /**
  * Get icon path for a scene node
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const getNodeIcon = (node: SceneNode): string => {
   // Special case: Scene root
   if (node.type === 'SceneRoot' || node.name === 'Scene') {

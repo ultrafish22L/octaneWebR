@@ -23,7 +23,7 @@ interface UseGraphSyncProps {
   setNodes: React.Dispatch<React.SetStateAction<Node<OctaneNodeData>[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   nodes: Node<OctaneNodeData>[];
-  fitView: (options?: any) => void;
+  fitView: (options?: Record<string, unknown>) => void;
   handleNodeContextMenu: (event: React.MouseEvent, nodeId: string) => void;
 }
 
@@ -68,7 +68,7 @@ export function useGraphSync({
         // Extract input pins from item.children
         const inputs = item.children || [];
 
-        const inputHandles = inputs.map((input: any, inputIndex: number) => {
+        const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
           // Check if connected node is at top level (level 1) in scene tree
           // Top-level nodes are visible in NGE, nested nodes are collapsed
           const isConnectedNodeAtTopLevel =
@@ -129,7 +129,7 @@ export function useGraphSync({
         const targetHandle = String(node.handle || 0);
 
         // Check each child (input pin) for connections
-        node.children.forEach((childNode: any, inputIndex: number) => {
+        node.children.forEach((childNode: SceneNode, inputIndex: number) => {
           // Include connections even if handle=0, as long as pinInfo exists (empty pins with data)
           if (childNode.handle !== undefined || childNode.pinInfo) {
             const sourceHandle = String(childNode.handle || 0);
@@ -180,7 +180,7 @@ export function useGraphSync({
   /**
    * Load scene graph when sceneTree changes
    * Optimization: Skip full rebuild if incremental add/delete handlers are active
-   * 
+   *
    * NOTE: Progressive loading can add children to existing nodes without changing
    * the root tree length. We need to rebuild when this happens to show new connections.
    */
@@ -223,7 +223,7 @@ export function useGraphSync({
       // Extract input pins from item.children
       const inputs = event.node.children || [];
 
-      const inputHandles = inputs.map((input: any, inputIndex: number) => {
+      const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
         const isConnectedNodeAtTopLevel =
           input.handle && sceneTree.some((topNode: SceneNode) => topNode.handle === input.handle);
         const connectedNode = input.handle

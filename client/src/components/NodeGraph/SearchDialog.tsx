@@ -12,7 +12,7 @@
  * - Case-insensitive search
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Node } from '@xyflow/react';
 import { OctaneNodeData } from './OctaneNode';
@@ -32,7 +32,6 @@ interface SearchResult {
 
 export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when dialog opens
@@ -59,12 +58,9 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
     };
   }, [visible, onClose]);
 
-  // Search nodes and pins
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setResults([]);
-      return;
-    }
+  // Compute search results — derived directly from searchTerm + nodes (no setState needed)
+  const results = useMemo<SearchResult[]>(() => {
+    if (!searchTerm.trim()) return [];
 
     const term = searchTerm.toLowerCase();
     const matches: SearchResult[] = [];
@@ -74,35 +70,30 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
       const nodeName = data.sceneNode.name?.toLowerCase() || '';
       const nodeTypeName = data.sceneNode.nodeInfo?.nodeTypeName?.toLowerCase() || '';
 
-      // Search in node name (highest priority)
       if (nodeName.includes(term)) {
         matches.push({ node, matchType: 'nodeName' });
         return;
       }
-
-      // Search in node type name
       if (nodeTypeName.includes(term)) {
         matches.push({ node, matchType: 'nodeType' });
         return;
       }
 
       // Search in pin names (dynamic pins)
-      const inputs = data.sceneNode.children || [];
+      const inputs: { name?: string }[] = data.sceneNode.children || [];
       const matchedPins: string[] = [];
-
-      inputs.forEach((pin: any) => {
+      inputs.forEach(pin => {
         const pinName = pin.name?.toLowerCase() || '';
         if (pinName.includes(term)) {
-          matchedPins.push(pin.name);
+          matchedPins.push(pin.name || '');
         }
       });
-
       if (matchedPins.length > 0) {
         matches.push({ node, matchType: 'pinName', matchedPins });
       }
     });
 
-    setResults(matches);
+    return matches;
   }, [searchTerm, nodes]);
 
   // Select all matching nodes
@@ -124,6 +115,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
   return createPortal(
     <div
       className="search-dialog-backdrop"
+      role="presentation"
       onClick={handleBackdropClick}
       style={{
         position: 'fixed',
@@ -238,14 +230,21 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               }
 
               return (
-                <div
+                <button
                   key={node.id}
+                  type="button"
                   style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
                     padding: '8px 12px',
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
                     borderBottom: '1px solid #333',
-                    cursor: 'pointer',
                     color: '#ddd',
                     fontSize: '13px',
+                    background: 'none',
                   }}
                   onClick={() => {
                     onSelectNodes([node.id]);
@@ -267,7 +266,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                   <div style={{ fontSize: '10px', color: '#ffc107', fontStyle: 'italic' }}>
                     {matchContext}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

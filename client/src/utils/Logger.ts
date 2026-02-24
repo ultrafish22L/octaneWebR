@@ -5,6 +5,7 @@
  * DEBUG_MODE controls server-side file logging to /tmp/octaneWebR_client.log
  * Set to true to enable, false to disable
  */
+/* eslint-disable no-console */
 
 // Debug mode flag - when true, sends logs to /api/log endpoint for file logging
 const DEBUG_MODE = true;
@@ -210,7 +211,7 @@ class LoggerInstance {
       this.addToBuffer('debug', ...args);
     }
   }
-  
+
   /**
    * Debug level logging (development only)
    */

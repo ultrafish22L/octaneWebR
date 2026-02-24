@@ -6,10 +6,80 @@
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
 import { BaseService } from './BaseService';
 import { Logger } from '../../utils/Logger';
-import {
-  getCompatibleMethodName,
-  transformRequestParams,
-} from '../../config/apiVersionConfig';
+import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
+
+/**
+ * Loosely typed API response value. A recursive union that covers all JSON
+ * value types, allowing chained property access without using `any`.
+ * Service methods use `as` casts to extract typed values.
+ */
+export type GrpcValue = string | number | boolean | null | GrpcObject | GrpcArray;
+export interface GrpcObject {
+  [key: string]: GrpcValue;
+}
+export interface GrpcArray extends Array<GrpcValue> {}
+
+/**
+ * The top-level response from callApi is always an object (GrpcObject).
+ */
+export type ApiCallResult = GrpcObject;
+
+/**
+ * Safely cast a GrpcValue to GrpcObject (for nested property access).
+ * Returns undefined if the value is not an object.
+ */
+export function asObject(value: GrpcValue | undefined): GrpcObject | undefined {
+  if (value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)) {
+    return value as GrpcObject;
+  }
+  return undefined;
+}
+
+/**
+ * Safely cast a GrpcValue to number.
+ */
+export function asNumber(value: GrpcValue | undefined, fallback = 0): number {
+  if (typeof value === 'number') return value;
+  return fallback;
+}
+
+/**
+ * Safely cast a GrpcValue to string.
+ */
+export function asString(value: GrpcValue | undefined, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  return fallback;
+}
+
+/**
+ * Safely cast a GrpcValue to boolean.
+ * Accepts boolean, truthy numbers, and "true"/"1" strings (protobuf JSON variants).
+ */
+export function asBool(value: GrpcValue | undefined, fallback = false): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') return value === 'true' || value === '1';
+  return fallback;
+}
+
+/**
+ * Get a handle number from a result object.
+ * Accepts both number and string handles (protobuf JSON serializes uint64 as strings).
+ */
+export function getHandle(result: GrpcValue | undefined): number | undefined {
+  const obj = asObject(result);
+  if (obj) {
+    const h = obj.handle;
+    if (typeof h === 'number') return h;
+    if (typeof h === 'string') {
+      const n = Number(h);
+      return isNaN(n) ? undefined : n;
+    }
+  }
+  // Also accept a direct number (some APIs return the handle itself as result)
+  if (typeof result === 'number') return result;
+  return undefined;
+}
 
 /**
  * Request body structure for API calls
@@ -20,8 +90,7 @@ interface ApiRequestBody {
     type: number;
   };
   handle?: string | number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -37,18 +106,18 @@ export class ApiService extends BaseService {
    * @returns Promise resolving to the API response data
    * @note Returns 'any' type as API responses have dynamic structure from gRPC
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   async callApi(
     service: string,
     method: string,
     handle?: string | number | Record<string, unknown> | null,
     params: Record<string, unknown> = {}
-  ): Promise<any> {
+  ): Promise<ApiCallResult> {
     // Apply API version compatibility: translate method name if needed
     const compatibleMethod = getCompatibleMethodName(service, method);
 
     if (method !== compatibleMethod) {
-//      Logger.debugV(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
+      //      Logger.debugV(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
     }
 
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
@@ -106,7 +175,7 @@ export class ApiService extends BaseService {
         throw new Error(error.error || `API call failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as ApiCallResult;
       Logger.debugV(`${service}.${method} success`);
       return data;
     } catch (error) {

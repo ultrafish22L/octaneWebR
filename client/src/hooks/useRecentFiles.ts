@@ -54,7 +54,7 @@ export function useRecentFiles() {
    * Add a file to recent files list
    */
   const addRecentFile = useCallback((path: string, name?: string) => {
-    const fileName = name || path.split(/[\\\/]/).pop() || path;
+    const fileName = name || path.split(/[/\\]/).pop() || path;
     const newFile: RecentFile = {
       path,
       name: fileName,

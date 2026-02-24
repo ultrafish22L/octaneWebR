@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 /**
  * Save Package Dialog Component
  * Dialog for configuring ORBX package export settings
@@ -103,8 +104,19 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog save-package-dialog" onClick={e => e.stopPropagation()}>
+    <div
+      className="dialog-overlay"
+      role="presentation"
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="dialog save-package-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Save as Package"
+      >
         <div className="dialog-header">
           <h2>💾 Save as Package (ORBX)</h2>
           <button className="dialog-close" onClick={onClose} disabled={isProcessing}>

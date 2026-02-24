@@ -258,9 +258,9 @@ export function useImageBufferProcessor({
         // image replaces the previous pending image
         scheduleRender(imageData);
         Logger.debugV('✅ [VIEWPORT] Render scheduled via RAF');
-      } catch (error: any) {
+      } catch (error) {
         Logger.error('❌ [VIEWPORT] Error scheduling render:', error);
-        Logger.error('❌ [VIEWPORT] Stack:', error.stack);
+        Logger.error('❌ [VIEWPORT] Stack:', error instanceof Error ? error.stack : undefined);
       }
     },
     [canvasRef, scheduleRender, isDragging]

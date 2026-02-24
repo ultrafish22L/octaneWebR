@@ -33,14 +33,17 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
   return (
     <div
       className="modal-overlay"
+      role="presentation"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="preferences-title"
-      tabIndex={-1}
     >
-      <div className="preferences-dialog">
+      <div
+        className="preferences-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="preferences-title"
+        tabIndex={-1}
+      >
         <div className="preferences-header">
           <h2 id="preferences-title">Preferences</h2>
           <button

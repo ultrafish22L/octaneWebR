@@ -199,6 +199,11 @@
   max-width: 160px;
 }
 
+.inspector-target-select.no-node-selected {
+  color: var(--text-muted, #666);
+  font-style: italic;
+}
+
 .inspector-dropdown-inline {
   display: inline-flex;
   align-items: center;

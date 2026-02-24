@@ -60,9 +60,9 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
       } else {
         setErrorMessage('Failed to save render. Check console for details.');
       }
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Error saving render:', error);
-      setErrorMessage(error.message || 'Unknown error occurred');
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setSaving(false);
     }
@@ -71,8 +71,19 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog save-render-dialog" onClick={e => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="modal-dialog save-render-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Save Render"
+      >
         <div className="modal-header">
           <h2>Save Render</h2>
           <button className="modal-close-btn" onClick={onClose}>

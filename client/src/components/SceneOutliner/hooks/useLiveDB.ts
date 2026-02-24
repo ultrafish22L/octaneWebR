@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 /**
  * useLiveDB - LiveDB management
  * Handles loading and management of online material database
@@ -47,19 +48,23 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
         return;
       }
 
-      // Convert to LiveDBCategory format
-      const categories: LiveDBCategory[] = rawCategories.map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        parentID: cat.parentID,
-        typeID: cat.typeID,
-        expanded: false,
-        materials: [],
-        loaded: false,
-      }));
+      // Convert to LiveDBCategory format, showing only root-level categories (parentID === 0)
+      const categories: LiveDBCategory[] = rawCategories
+        .filter(cat => cat.parentID === 0)
+        .map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          parentID: cat.parentID,
+          typeID: cat.typeID,
+          expanded: false,
+          materials: [],
+          loaded: false,
+        }));
 
       setLiveDBCategories(categories);
-      Logger.debug(`✅ LiveDB loaded with ${categories.length} categories`);
+      Logger.debug(
+        `✅ LiveDB loaded with ${categories.length} root categories (${rawCategories.length} total)`
+      );
     } catch (error) {
       Logger.error('❌ Failed to load LiveDB:', error);
       setLiveDBCategories([]);

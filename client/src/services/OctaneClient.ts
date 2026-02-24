@@ -25,7 +25,8 @@ import {
   NodeDeletedEvent,
   RenderRegion,
   MaterialCategory,
-  Material
+  Material,
+  CameraState,
 } from './octane';
 import { FEATURES } from '../config/features';
 
@@ -38,7 +39,8 @@ export type {
   NodeDeletedEvent,
   RenderRegion,
   MaterialCategory,
-  Material
+  Material,
+  CameraState,
 };
 
 /**
@@ -47,7 +49,7 @@ export type {
  */
 export class OctaneClient extends EventEmitter {
   private serverUrl: string;
-  
+
   // Service modules
   private apiService: ApiService;
   private connectionService: ConnectionService;
@@ -67,7 +69,7 @@ export class OctaneClient extends EventEmitter {
     super();
     this.serverUrl = serverUrl || window.location.origin;
     Logger.debug('🎬 OctaneClient initialized:', this.serverUrl);
-    
+
     // Initialize services
     this.apiService = new ApiService(this, this.serverUrl);
     this.connectionService = new ConnectionService(this, this.serverUrl, this.apiService);
@@ -77,14 +79,19 @@ export class OctaneClient extends EventEmitter {
     this.viewportService = new ViewportService(this, this.serverUrl, this.apiService);
     this.sceneService = new SceneService(this, this.serverUrl, this.apiService);
     this.nodeService = new NodeService(this, this.serverUrl, this.apiService, this.sceneService);
-    this.materialDatabaseService = new MaterialDatabaseService(this, this.serverUrl, this.apiService, this.sceneService);
+    this.materialDatabaseService = new MaterialDatabaseService(
+      this,
+      this.serverUrl,
+      this.apiService,
+      this.sceneService
+    );
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
 
     this.sceneServiceP = new SceneServiceP(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
-  
+
   async connect(): Promise<boolean> {
     const result = await this.connectionService.connect();
     if (result) {
@@ -103,14 +110,19 @@ export class OctaneClient extends EventEmitter {
   }
 
   // ==================== API Methods ====================
-  
-  async callApi(service: string, method: string, handle?: any, params: any = {}): Promise<any> {
+
+  async callApi(
+    service: string,
+    method: string,
+    handle?: string | number | Record<string, unknown> | null,
+    params: Record<string, unknown> = {}
+  ): Promise<import('./octane/ApiService').ApiCallResult> {
     return this.apiService.callApi(service, method, handle, params);
   }
 
   // ==================== Camera Methods ====================
-  
-  async getCamera(): Promise<any> {
+
+  async getCamera(): Promise<CameraState> {
     return this.cameraService.getCamera();
   }
 
@@ -123,19 +135,31 @@ export class OctaneClient extends EventEmitter {
   }
 
   async setCameraPositionAndTarget(
-    posX: number, posY: number, posZ: number,
-    targetX: number, targetY: number, targetZ: number,
+    posX: number,
+    posY: number,
+    posZ: number,
+    targetX: number,
+    targetY: number,
+    targetZ: number,
     silent = false
   ): Promise<void> {
-    return this.cameraService.setCameraPositionAndTarget(posX, posY, posZ, targetX, targetY, targetZ, silent);
+    return this.cameraService.setCameraPositionAndTarget(
+      posX,
+      posY,
+      posZ,
+      targetX,
+      targetY,
+      targetZ,
+      silent
+    );
   }
-  
+
   async resetCamera(): Promise<void> {
     return this.cameraService.resetCamera();
   }
 
   // ==================== Scene Methods ====================
-  
+
   /**
    * Build scene tree — progressive P or traditional.
    */
@@ -160,11 +184,11 @@ export class OctaneClient extends EventEmitter {
       this.sceneServiceP.abort();
     }
   }
-  
+
   /**
    * Load attrInfo on-demand for lazy loading
    */
-  async loadAttrInfo(handle: number): Promise<any> {
+  async loadAttrInfo(handle: number): Promise<Record<string, unknown> | null> {
     const node = this.sceneService.getNodeByHandle(handle);
     return node?.attrInfo || null;
   }
@@ -196,7 +220,7 @@ export class OctaneClient extends EventEmitter {
   }
 
   // ==================== Render Control Methods ====================
-  
+
   async startRender(): Promise<void> {
     return this.renderService.startRender();
   }
@@ -229,7 +253,7 @@ export class OctaneClient extends EventEmitter {
     return this.renderService.setSubSampleMode(mode);
   }
 
-  async getRenderStatistics(): Promise<any> {
+  async getRenderStatistics(): Promise<Record<string, unknown> | null> {
     return this.renderService.getRenderStatistics();
   }
 
@@ -267,7 +291,7 @@ export class OctaneClient extends EventEmitter {
   }
 
   // ==================== Device Methods ====================
-  
+
   async getDeviceCount(): Promise<number> {
     return this.deviceService.getDeviceCount();
   }
@@ -328,8 +352,8 @@ export class OctaneClient extends EventEmitter {
   }
 
   // ==================== Viewport Methods ====================
-  
-  async pick(x: number, y: number): Promise<any[]> {
+
+  async pick(x: number, y: number): Promise<Record<string, unknown>[]> {
     return this.viewportService.pick(x, y);
   }
 
@@ -337,12 +361,12 @@ export class OctaneClient extends EventEmitter {
     return this.viewportService.pickWhitePoint(x, y);
   }
 
-  async pickSceneInfo(x: number, y: number): Promise<any> {
+  async pickSceneInfo(x: number, y: number): Promise<Record<string, unknown>> {
     return this.viewportService.pickSceneInfo(x, y);
   }
 
   // ==================== Node Methods ====================
-  
+
   async createNode(nodeType: string, nodeTypeId: number): Promise<number | null> {
     return this.nodeService.createNode(nodeType, nodeTypeId);
   }
@@ -391,6 +415,14 @@ export class OctaneClient extends EventEmitter {
     return this.nodeService.replaceNode(oldNodeHandle, newNodeType);
   }
 
+  async createNodeForPin(
+    parentHandle: number,
+    pinIdx: number,
+    nodeType: string
+  ): Promise<number | null> {
+    return this.nodeService.createNodeForPin(parentHandle, pinIdx, nodeType);
+  }
+
   async connectPinByIndex(
     targetNodeHandle: number,
     pinIdx: number,
@@ -400,11 +432,7 @@ export class OctaneClient extends EventEmitter {
     return this.nodeService.connectPinByIndex(targetNodeHandle, pinIdx, sourceNodeHandle, evaluate);
   }
 
-  async disconnectPin(
-    nodeHandle: number,
-    pinIdx: number,
-    evaluate: boolean = true
-  ): Promise<void> {
+  async disconnectPin(nodeHandle: number, pinIdx: number, evaluate: boolean = true): Promise<void> {
     return this.nodeService.disconnectPin(nodeHandle, pinIdx, evaluate);
   }
 
@@ -413,7 +441,7 @@ export class OctaneClient extends EventEmitter {
   }
 
   // ==================== Material Database Methods ====================
-  
+
   async getLocalDBRoot(): Promise<number | null> {
     return this.materialDatabaseService.getLocalDBRoot();
   }
@@ -458,16 +486,23 @@ export class OctaneClient extends EventEmitter {
     return this.materialDatabaseService.getLiveDBMaterials(categoryId);
   }
 
-  async getLiveDBMaterialPreview(materialId: number, requestedSize: number = 256, view: number = 0): Promise<string | null> {
+  async getLiveDBMaterialPreview(
+    materialId: number,
+    requestedSize: number = 256,
+    view: number = 0
+  ): Promise<string | null> {
     return this.materialDatabaseService.getLiveDBMaterialPreview(materialId, requestedSize, view);
   }
 
-  async downloadLiveDBMaterial(materialId: number, destinationGraphHandle?: number): Promise<number | null> {
+  async downloadLiveDBMaterial(
+    materialId: number,
+    destinationGraphHandle?: number
+  ): Promise<number | null> {
     return this.materialDatabaseService.downloadLiveDBMaterial(materialId, destinationGraphHandle);
   }
 
   // ==================== Render Export Methods ====================
-  
+
   async saveRender(
     filePath: string,
     format: 'PNG' | 'JPG' | 'EXR' | 'TIFF' = 'PNG',

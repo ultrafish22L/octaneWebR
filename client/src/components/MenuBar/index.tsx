@@ -40,7 +40,7 @@ function getMenuDefinitions(
     recentFiles.length > 0
       ? [
           ...recentFiles.map(path => ({
-            label: path.split(/[\\\/]/).pop() || path,
+            label: path.split(/[/\\]/).pop() || path,
             action: 'file.openRecent',
             data: path,
           })),
@@ -164,7 +164,7 @@ interface MenuBarProps {
 
 function MenuBar({
   onSceneRefresh,
-  onMaterialDatabaseOpen,
+  onMaterialDatabaseOpen: _onMaterialDatabaseOpen,
   panelVisibility,
   onTogglePanelVisibility,
   onResetLayout,
@@ -181,14 +181,14 @@ function MenuBar({
   const menuBarRef = useRef<HTMLDivElement>(null);
 
   const { openFileDialog } = useFileDialog();
-  const { recentFiles, addRecentFile, clearRecentFiles, getRecentFilePaths } = useRecentFiles();
+  const { addRecentFile, clearRecentFiles, getRecentFilePaths } = useRecentFiles();
   const { client, connected } = useOctane();
   const editActions = useEditActions();
 
   // Get menu definitions with current recent files and panel visibility
   const menuDefinitions = useMemo(() => {
     return getMenuDefinitions(getRecentFilePaths(), panelVisibility);
-  }, [recentFiles, getRecentFilePaths, panelVisibility]);
+  }, [getRecentFilePaths, panelVisibility]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -250,7 +250,7 @@ function MenuBar({
 
   // Menu action handlers
   const handleMenuAction = useCallback(
-    async (action: MenuAction, data?: any) => {
+    async (action: MenuAction, data?: string) => {
       Logger.debug('🎯 Menu action:', action, data);
       closeMenu();
 
@@ -583,6 +583,7 @@ function MenuBar({
     [
       client,
       connected,
+      editActions,
       openFileDialog,
       addRecentFile,
       clearRecentFiles,
@@ -590,7 +591,6 @@ function MenuBar({
       showNotification,
       closeMenu,
       onSceneRefresh,
-      onMaterialDatabaseOpen,
       onTogglePanelVisibility,
       onResetLayout,
     ]
@@ -714,15 +714,16 @@ function MenuBar({
   return (
     <nav ref={menuBarRef} className="main-menu">
       {menuItems.map(menuName => (
-        <div
+        <button
           key={menuName}
+          type="button"
           className={`menu-item ${activeMenu === menuName ? 'active' : ''}`}
           data-menu={menuName}
           onClick={e => handleMenuClick(menuName, e.currentTarget)}
           onMouseEnter={e => handleMenuMouseEnter(menuName, e.currentTarget)}
         >
           {menuName.charAt(0).toUpperCase() + menuName.slice(1)}
-        </div>
+        </button>
       ))}
 
       {/* Render active dropdown */}

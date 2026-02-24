@@ -26,8 +26,9 @@
  */
 
 import { Logger } from '../../utils/Logger';
+import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
-import { ApiService } from './ApiService';
+import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { Scene, SceneNode } from './types';
 import { getIconForType } from '../../constants/PinTypes';
 import { AttrType, AttributeId } from '../../constants/OctaneTypes';
@@ -37,13 +38,13 @@ export class SceneServiceP extends BaseService {
   private scene: Scene;
   private abortController: AbortController | null = null;
 
-  constructor(emitter: any, serverUrl: string, apiService: ApiService) {
+  constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
     this.apiService = apiService;
     this.scene = {
       tree: [],
       map: new Map(),
-      connections: new Map()
+      connections: new Map(),
     };
   }
 
@@ -96,17 +97,17 @@ export class SceneServiceP extends BaseService {
 
       // Step 1: Get root
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
-      if (!rootResponse?.result?.handle) {
+      const rootHandle = getHandle(rootResponse?.result);
+      if (!rootHandle) {
         throw new Error('Failed to get root node graph');
       }
-      const rootHandle = rootResponse.result.handle;
       Logger.debug('📍 Root handle:', rootHandle);
 
       this.checkAborted(signal);
 
       Logger.debug('🔍 Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
-      const rootIsGraph = isGraphResponse?.result || false;
+      const rootIsGraph = asBool(isGraphResponse?.result, false);
       Logger.debug('📍 Is graph:', rootIsGraph);
 
       this.checkAborted(signal);
@@ -134,13 +135,13 @@ export class SceneServiceP extends BaseService {
       this.emit('scene:structureComplete', {
         nodeCount: this.scene.map.size,
         topLevelCount: this.scene.tree.length,
-        elapsedTime
+        elapsedTime,
       });
 
       this.emit('scene:buildComplete', {
         nodeCount: this.scene.map.size,
         topLevelCount: this.scene.tree.length,
-        elapsedTime
+        elapsedTime,
       });
 
       this.emit('scene:complete', { scene: this.scene });
@@ -150,7 +151,6 @@ export class SceneServiceP extends BaseService {
       Logger.info('✅ SceneTreeUpdated event emitted');
 
       return this.scene.tree;
-
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('abort') || message.includes('cancelled')) {
@@ -169,22 +169,23 @@ export class SceneServiceP extends BaseService {
 
   private async addSceneItem(
     sceneItems: SceneNode[],
-    item: any,
-    pinInfo: any,
+    item: Record<string, unknown> | null,
+    pinInfo: Record<string, unknown> | null,
     level: number
   ): Promise<SceneNode | undefined> {
-    let itemName = item?.name || pinInfo?.staticLabel || 'Unnamed';
-    let outType = pinInfo?.outType || '';
-    let graphInfo = null;
-    let nodeInfo = null;
+    let itemName = String(item?.name || pinInfo?.staticLabel || 'Unnamed');
+    let outType: string | number = String(pinInfo?.outType || '');
+    let graphInfo: import('./types').GraphInfo | undefined;
+    let nodeInfo: import('./types').NodeInfo | undefined;
     let isGraph = false;
-    let position: { x: number; y: number } | null = null;
+    let position: { x: number; y: number } | undefined;
 
-    if (item != null && item.handle != 0) {
-      const handleNum = Number(item.handle);
+    const handleNum = item?.handle != null ? Number(item.handle) : 0;
+
+    if (item != null && handleNum !== 0) {
       const existing = this.scene.map.get(handleNum);
       if (existing && existing.handle) {
-        existing.pinInfo = pinInfo;
+        existing.pinInfo = pinInfo as import('./types').PinInfo | undefined;
         if (level > 1) {
           sceneItems.push(existing);
         }
@@ -192,54 +193,63 @@ export class SceneServiceP extends BaseService {
       }
 
       try {
-        const nameResponse = await this.apiService.callApi('ApiItem', 'name', item.handle);
-        itemName = nameResponse?.result || 'Unnamed';
+        const nameResponse = await this.apiService.callApi('ApiItem', 'name', handleNum);
+        itemName = String(nameResponse?.result ?? 'Unnamed');
 
-        const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', item.handle);
-        outType = outTypeResponse?.result || '';
+        const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', handleNum);
+        outType = String(outTypeResponse?.result ?? '');
 
-        Logger.debug(`  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`);
+        Logger.debug(
+          `  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
+        );
 
-        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', item.handle);
-        isGraph = isGraphResponse?.result || false;
+        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', handleNum);
+        isGraph = asBool(isGraphResponse?.result, false);
 
         // Position for level-1 nodes
         if (level === 1) {
           try {
-            const posResponse = await this.apiService.callApi('ApiItem', 'position', item.handle);
-            if (posResponse?.result) {
+            const posResponse = await this.apiService.callApi('ApiItem', 'position', handleNum);
+            const posObj = asObject(posResponse?.result);
+            if (posObj) {
               position = {
-                x: posResponse.result.x || 0,
-                y: posResponse.result.y || 0
+                x: asNumber(posObj.x, 0),
+                y: asNumber(posObj.y, 0),
               };
               Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
             }
-          } catch (posError: any) {
-            Logger.warn(`  ⚠️ Failed to get position for ${itemName}:`, posError.message);
+          } catch (posError) {
+            Logger.warn(
+              `  ⚠️ Failed to get position for ${itemName}:`,
+              posError instanceof Error ? posError.message : String(posError)
+            );
           }
         }
 
         if (isGraph) {
-          const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', item.handle);
-          graphInfo = infoResponse?.result || null;
+          const infoResponse = await this.apiService.callApi('ApiNodeGraph', 'info1', handleNum);
+          graphInfo = asObject(infoResponse?.result) as import('./types').GraphInfo | undefined;
         } else {
-          const infoResponse = await this.apiService.callApi('ApiNode', 'info', item.handle);
-          nodeInfo = infoResponse?.result || null;
+          const infoResponse = await this.apiService.callApi('ApiNode', 'info', handleNum);
+          nodeInfo = asObject(infoResponse?.result) as import('./types').NodeInfo | undefined;
         }
-      } catch (error: any) {
-        Logger.error('❌ addSceneItem failed to fetch item data:', error.message);
+      } catch (error) {
+        Logger.error(
+          '❌ addSceneItem failed to fetch item data:',
+          error instanceof Error ? error.message : String(error)
+        );
       }
     } else {
       Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
     }
 
-    const displayName = pinInfo?.staticLabel || itemName;
+    const displayName = String(pinInfo?.staticLabel || itemName);
     const icon = this.getNodeIcon(outType, displayName);
 
     const entry: SceneNode = {
       level,
       name: displayName,
-      handle: item?.handle,
+      handle: handleNum !== 0 ? handleNum : undefined,
       type: outType,
       typeEnum: typeof outType === 'number' ? outType : 0,
       outType: outType,
@@ -247,17 +257,18 @@ export class SceneServiceP extends BaseService {
       visible: true,
       graphInfo,
       nodeInfo,
-      pinInfo,
+      pinInfo: pinInfo as import('./types').PinInfo | undefined,
       children: [],
-      position
+      position,
     };
 
     sceneItems.push(entry);
 
-    if (item != null && item.handle != 0) {
-      const handleNum = Number(item.handle);
+    if (item != null && handleNum !== 0) {
       this.scene.map.set(handleNum, entry);
-      Logger.debug(`  📄 Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`);
+      Logger.debug(
+        `  📄 Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`
+      );
 
       if (level > 1) {
         await this.addItemChildren(entry);
@@ -279,60 +290,73 @@ export class SceneServiceP extends BaseService {
       item.children = children;
 
       // Load attrInfo
-      const attrInfoResponse = await this.apiService.callApi(
-        'ApiItem', 'attrInfo', item.handle,
-        { id: AttributeId.A_VALUE }
-      );
-      if (attrInfoResponse?.result && attrInfoResponse.result.type !== 'AT_UNKNOWN') {
-        item.attrInfo = attrInfoResponse.result;
-        Logger.debugV(` ${item.name} ${JSON.stringify(attrInfoResponse.result)}`);
+      const attrInfoResponse = await this.apiService.callApi('ApiItem', 'attrInfo', item.handle, {
+        id: AttributeId.A_VALUE,
+      });
+      const attrResultObj = asObject(attrInfoResponse?.result);
+      if (attrResultObj && String(attrResultObj.type) !== 'AT_UNKNOWN') {
+        item.attrInfo = attrResultObj as import('./types').AttrInfo;
+        Logger.debugV(` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {
         this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
       }
 
       // Load filePath
-      const responseHas = await this.apiService.callApi(
-        'ApiItem', 'hasAttr', item.handle,
-        { id: AttributeId.A_FILENAME }
-      );
+      const responseHas = await this.apiService.callApi('ApiItem', 'hasAttr', item.handle, {
+        id: AttributeId.A_FILENAME,
+      });
       if (responseHas?.result === true) {
-        const response = await this.apiService.callApi(
-          'ApiItem', 'getByAttrID', item.handle,
-          { attribute_id: AttributeId.A_FILENAME, expected_type: AttrType.AT_STRING }
-        );
+        const response = await this.apiService.callApi('ApiItem', 'getByAttrID', item.handle, {
+          attribute_id: AttributeId.A_FILENAME,
+          expected_type: AttrType.AT_STRING,
+        });
         if (response) {
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
-//          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
+          //          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
 
           // Load vertsPerPoly
           const responseHasIndices = await this.apiService.callApi(
-            'ApiItem', 'hasAttr', item.handle,
+            'ApiItem',
+            'hasAttr',
+            item.handle,
             { id: AttributeId.A_POLY_OBJECT_INDICES }
           );
           if (responseHasIndices?.result === true) {
             const indicesResponse = await this.apiService.callApi(
-              'ApiItem', 'getByAttrID', item.handle,
+              'ApiItem',
+              'getByAttrID',
+              item.handle,
               { attribute_id: AttributeId.A_POLY_OBJECT_INDICES, expected_type: AttrType.AT_INT }
             );
             if (indicesResponse) {
               const valField = Object.keys(indicesResponse)[1];
-              item.vertsPerPoly = Object(indicesResponse)[Object(indicesResponse)[valField]] as number[];
-              Logger.info(`vertsPerPoly for ${item.name}: ${valField} ${item.vertsPerPoly.length}`);
-              Logger.info(`vertsPerPoly ${JSON.stringify(Object(indicesResponse))} ${item.vertsPerPoly}`);
+              const vertsPerPoly = Object(indicesResponse)[
+                Object(indicesResponse)[valField]
+              ] as number[];
+              item.vertsPerPoly = vertsPerPoly;
+              Logger.info(`vertsPerPoly for ${item.name}: ${valField} ${vertsPerPoly.length}`);
+              Logger.info(
+                `vertsPerPoly ${JSON.stringify(Object(indicesResponse))} ${vertsPerPoly}`
+              );
             }
           }
         }
         if (!item.attrInfo) {
           if (item.filePath) {
-            this.emit('scene:buildProgress', { step: `adding node ${item.name}: ${item.filePath}` });
+            this.emit('scene:buildProgress', {
+              step: `adding node ${item.name}: ${item.filePath}`,
+            });
           } else {
             this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
           }
         }
       }
-    } catch (error: any) {
-      Logger.error('❌ addItemChildren failed:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ addItemChildren failed:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }
 
@@ -352,29 +376,49 @@ export class SceneServiceP extends BaseService {
     try {
       if (itemHandle === null) {
         const response = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
-        if (!response?.result?.handle) {
+        const resolvedHandle = getHandle(response?.result);
+        if (!resolvedHandle) {
           throw new Error('Failed ApiProjectManager/rootNodeGraph');
         }
-        itemHandle = response.result.handle;
+        itemHandle = resolvedHandle;
         const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', itemHandle);
-        isGraph = isGraphResponse?.result || false;
+        isGraph = asBool(isGraphResponse?.result, false);
       }
 
       if (isGraph) {
-        const ownedResponse = await this.apiService.callApi('ApiNodeGraph', 'getOwnedItems', itemHandle);
-        if (!ownedResponse?.list?.handle) {
+        const ownedResponse = await this.apiService.callApi(
+          'ApiNodeGraph',
+          'getOwnedItems',
+          itemHandle
+        );
+        const ownedItemsHandle = getHandle(ownedResponse?.list);
+        if (!ownedItemsHandle) {
           throw new Error('Failed ApiNodeGraph/getOwnedItems');
         }
-        const ownedItemsHandle = ownedResponse.list.handle;
-        const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', ownedItemsHandle);
-        const size = sizeResponse?.result || 0;
+        const sizeResponse = await this.apiService.callApi(
+          'ApiItemArray',
+          'size',
+          ownedItemsHandle
+        );
+        const size = asNumber(sizeResponse?.result, 0);
 
         Logger.debug(`📦 Level ${level}: Found ${size} owned items`);
 
         for (let i = 0; i < size; i++) {
-          const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', ownedItemsHandle, { index: i });
-          if (itemResponse?.result?.handle) {
-            const node = await this.addSceneItem(sceneItems, itemResponse.result, null, level);
+          const itemResponse = await this.apiService.callApi(
+            'ApiItemArray',
+            'get',
+            ownedItemsHandle,
+            { index: i }
+          );
+          const itemResultHandle = getHandle(itemResponse?.result);
+          if (itemResultHandle) {
+            const node = await this.addSceneItem(
+              sceneItems,
+              asObject(itemResponse.result) as Record<string, unknown>,
+              null,
+              level
+            );
 
             // Emit level-1 node to UI without blocking the loading loop
             if (level === 1 && node) {
@@ -404,45 +448,63 @@ export class SceneServiceP extends BaseService {
         Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle}`);
         try {
           const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', itemHandle);
-          const pinCount = pinCountResponse?.result || 0;
+          const pinCount = asNumber(pinCountResponse?.result, 0);
 
           Logger.debug(`  Found ${pinCount} pins`);
 
           for (let i = 0; i < pinCount; i++) {
             try {
               const connectedResponse = await this.apiService.callApi(
-                'ApiNode', 'connectedNodeIx', itemHandle,
+                'ApiNode',
+                'connectedNodeIx',
+                itemHandle,
                 { pinIx: i, enterWrapperNode: true }
               );
-              const connectedNode = connectedResponse?.result || null;
+              const connectedNode =
+                (asObject(connectedResponse?.result) as Record<string, unknown> | null) ?? null;
 
               const pinInfoHandleResponse = await this.apiService.callApi(
-                'ApiNode', 'pinInfoIx', itemHandle,
+                'ApiNode',
+                'pinInfoIx',
+                itemHandle,
                 { index: i }
               );
 
-              if (pinInfoHandleResponse?.result?.handle) {
+              const pinInfoHandle = getHandle(pinInfoHandleResponse?.result);
+              if (pinInfoHandle) {
                 const pinInfoResponse = await this.apiService.callApi(
-                  'ApiNodePinInfoEx', 'getApiNodePinInfo',
-                  pinInfoHandleResponse.result.handle
+                  'ApiNodePinInfoEx',
+                  'getApiNodePinInfo',
+                  pinInfoHandle
                 );
 
-                const pinInfo = pinInfoResponse?.nodePinInfo || null;
+                const pinInfo =
+                  (asObject(pinInfoResponse?.nodePinInfo) as Record<string, unknown> | null) ??
+                  null;
                 if (pinInfo) {
                   pinInfo.ix = i;
                   await this.addSceneItem(sceneItems, connectedNode, pinInfo, level);
                 }
               }
-            } catch (pinError: any) {
-              Logger.warn(`  ⚠️ Failed to load pin ${i}:`, pinError.message);
+            } catch (pinError) {
+              Logger.warn(
+                `  ⚠️ Failed to load pin ${i}:`,
+                pinError instanceof Error ? pinError.message : String(pinError)
+              );
             }
           }
-        } catch (pinCountError: any) {
-          Logger.error(`  ❌ Failed to get pin count:`, pinCountError.message);
+        } catch (pinCountError) {
+          Logger.error(
+            `  ❌ Failed to get pin count:`,
+            pinCountError instanceof Error ? pinCountError.message : String(pinCountError)
+          );
         }
       }
-    } catch (error: any) {
-      Logger.error('❌ syncSceneSequential failed:', error.message);
+    } catch (error) {
+      Logger.error(
+        '❌ syncSceneSequential failed:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
 
     return sceneItems;
@@ -466,7 +528,7 @@ export class SceneServiceP extends BaseService {
    * React will process the state updates in a future macrotask while the loader
    * continues making API calls uninterrupted.
    */
-  private emitAsync(event: string, data?: any): void {
+  private emitAsync(event: string, data?: unknown): void {
     setTimeout(() => this.emit(event, data), 0);
   }
 

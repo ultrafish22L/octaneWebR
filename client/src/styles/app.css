@@ -676,6 +676,10 @@ body.drag-over * {
   color: var(--text-primary);
   border-radius: var(--border-radius);
   transition: background-color 0.15s ease;
+  border: none;
+  background: none;
+  font-family: inherit;
+  line-height: inherit;
 }
 
 .menu-item:hover {

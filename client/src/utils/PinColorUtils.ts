@@ -15,7 +15,13 @@ import { getPinTypeInfo } from '../constants/PinTypes';
  * @param pinInfo - Pin information object from Octane
  * @returns Hex color string (e.g., '#ffc107')
  */
-export function getPinColor(pinInfo: any): string {
+interface PinColorInfo {
+  pinColor?: number | string | null;
+  type?: string;
+  [key: string]: unknown;
+}
+
+export function getPinColor(pinInfo: PinColorInfo | null | undefined): string {
   // Check for direct pin color from Octane (handles 0 as valid black color)
   if (pinInfo?.pinColor !== undefined && pinInfo?.pinColor !== null) {
     return formatColorValue(pinInfo.pinColor);
@@ -29,7 +35,7 @@ export function getPinColor(pinInfo: any): string {
       if (info) {
         return info.color;
       }
-    } catch (e) {
+    } catch {
       // Type not found in mapping, continue to default
       // Final fallback to amber
       return '#ffc107';

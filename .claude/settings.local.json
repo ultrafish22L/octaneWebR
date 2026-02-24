@@ -7,7 +7,10 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(timeout:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(npm run lint)",
+      "Read(//tmp/**)",
+      "Bash(npm run lint:fix:*)"
     ]
   }
 }

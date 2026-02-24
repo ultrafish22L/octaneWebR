@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 /**
  * Unified Edit Commands
  *
@@ -311,7 +312,7 @@ export class EditCommands {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Group failed:', error);
       alert(`Group Failed\n\n${error}`);
       return false;
@@ -372,7 +373,7 @@ export class EditCommands {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Ungroup failed:', error);
       alert(`Ungroup Failed\n\n${error}`);
       return false;
@@ -418,7 +419,7 @@ export class EditCommands {
       }
 
       return successCount > 0;
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Collapse failed:', error);
       return false;
     }
@@ -463,7 +464,7 @@ export class EditCommands {
       }
 
       return successCount > 0;
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('❌ Expand failed:', error);
       return false;
     }

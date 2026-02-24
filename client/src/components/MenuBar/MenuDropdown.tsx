@@ -9,7 +9,7 @@ import { MenuItem, MenuAction } from './types';
 interface MenuDropdownProps {
   items: MenuItem[];
   anchorElement: HTMLElement;
-  onItemClick: (action: MenuAction, data?: any) => void | Promise<void>;
+  onItemClick: (action: MenuAction, data?: string) => void | Promise<void>;
   onClose: () => void;
   isSubmenu?: boolean;
 }
@@ -117,12 +117,14 @@ export function MenuDropdown({
     const isActive = activeSubmenu === item.action;
 
     return (
-      <div
+      <button
         key={item.action || `item-${index}`}
+        type="button"
         className={`context-menu-item ${isDisabled ? 'disabled' : ''} ${hasSubmenu ? 'has-submenu' : ''} ${isActive ? 'active' : ''}`}
         onClick={() => !isDisabled && handleItemClick(item)}
-        onMouseEnter={e => handleItemMouseEnter(item, e.currentTarget)}
+        onMouseEnter={e => handleItemMouseEnter(item, e.currentTarget as HTMLElement)}
         onMouseLeave={handleItemMouseLeave}
+        disabled={isDisabled}
       >
         {item.checked !== undefined && (
           <span className="context-menu-check">{item.checked ? '✓' : ' '}</span>
@@ -131,7 +133,7 @@ export function MenuDropdown({
         <span className="context-menu-label">{item.label}</span>
         {item.shortcut && <span className="context-menu-shortcut">{item.shortcut}</span>}
         {hasSubmenu && <span className="context-menu-arrow">▶</span>}
-      </div>
+      </button>
     );
   };
 

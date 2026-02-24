@@ -13,6 +13,7 @@
 
 import { useCallback, useRef, MutableRefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
+import type { CameraState as OctaneCameraState } from '../../../services/OctaneClient';
 
 interface CameraState {
   radius: number;
@@ -23,7 +24,7 @@ interface CameraState {
 }
 
 interface OctaneClient {
-  getCamera: () => Promise<any>;
+  getCamera: () => Promise<OctaneCameraState>;
   setCameraPositionAndTarget: (
     posX: number,
     posY: number,
@@ -88,8 +89,11 @@ export function useCameraSync({
       cameraRef.current.phi = Math.asin(dy / cameraRef.current.radius);
 
       Logger.debug('Camera initialized:', cameraRef.current);
-    } catch (error: any) {
-      Logger.warn('Failed to initialize camera from Octane:', error.message);
+    } catch (error) {
+      Logger.warn(
+        'Failed to initialize camera from Octane:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }, [client, cameraRef]);
 
@@ -114,12 +118,23 @@ export function useCameraSync({
 
       // Set both camera position and target in one efficient call
       // silent=true prevents event emission (this is viewport updating Octane, not external update)
-      await client.setCameraPositionAndTarget(posX, posY, posZ, center[0], center[1], center[2], true);
+      await client.setCameraPositionAndTarget(
+        posX,
+        posY,
+        posZ,
+        center[0],
+        center[1],
+        center[2],
+        true
+      );
 
       // Trigger render update
       await triggerOctaneUpdate();
-    } catch (error: any) {
-      Logger.error('Failed to update camera:', error.message);
+    } catch (error) {
+      Logger.error(
+        'Failed to update camera:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   }, [connected, client, cameraRef, triggerOctaneUpdate]);
 

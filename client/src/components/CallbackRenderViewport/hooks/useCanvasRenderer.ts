@@ -62,26 +62,29 @@ export function useCanvasRenderer({
   /**
    * Decode buffer data (base64 string or Buffer object)
    */
-  const decodeBuffer = useCallback((bufferData: any): Uint8Array => {
-    // Check if it's a Node.js Buffer serialized as JSON {type: "Buffer", data: [bytes]}
-    if (
-      typeof bufferData === 'object' &&
-      bufferData.type === 'Buffer' &&
-      Array.isArray(bufferData.data)
-    ) {
-      return new Uint8Array(bufferData.data);
-    } else if (typeof bufferData === 'string') {
-      // It's a base64 string
-      const binaryString = atob(bufferData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+  const decodeBuffer = useCallback(
+    (bufferData: { type: string; data: number[] } | string): Uint8Array => {
+      // Check if it's a Node.js Buffer serialized as JSON {type: "Buffer", data: [bytes]}
+      if (
+        typeof bufferData === 'object' &&
+        bufferData.type === 'Buffer' &&
+        Array.isArray(bufferData.data)
+      ) {
+        return new Uint8Array(bufferData.data);
+      } else if (typeof bufferData === 'string') {
+        // It's a base64 string
+        const binaryString = atob(bufferData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+      } else {
+        throw new Error('Unknown buffer format');
       }
-      return bytes;
-    } else {
-      throw new Error('Unknown buffer format');
-    }
-  }, []);
+    },
+    []
+  );
 
   /**
    * Render single frame to canvas (called by RAF)
@@ -144,7 +147,7 @@ export function useCanvasRenderer({
       }
 
       Logger.debugV('[RAF] Frame rendered successfully');
-    } catch (error: any) {
+    } catch (error) {
       Logger.error('[RAF] Error rendering frame:', error);
     } finally {
       // Clear pending image
@@ -155,7 +158,7 @@ export function useCanvasRenderer({
 
   /**
    * Schedule render with RAF (frame coalescing)
-   * 
+   *
    * This is the key optimization:
    * - Stores latest image (overwrites previous if RAF hasn't fired yet)
    * - Schedules RAF if not already scheduled
@@ -179,13 +182,13 @@ export function useCanvasRenderer({
 
   /**
    * Flush pending frame (called when camera changes or API updates)
-   * 
+   *
    * This is CRITICAL for progressive rendering:
    * - Octane sends 1000s of images for a single render (progressive refinement)
    * - When camera moves, we need to DISCARD old images from previous position
    * - Without flush: viewport shows stale images = lag/choppiness
    * - With flush: viewport immediately shows latest position = smooth!
-   * 
+   *
    * Phase 4 Optimization: Clear stale progressive render images
    */
   const flushPendingFrame = useCallback(() => {

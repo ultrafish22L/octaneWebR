@@ -1,18 +1,18 @@
 /**
  * Cache Manager
- * 
+ *
  * Multi-tier intelligent caching system for Octane API calls:
  * - L1: Memory cache (instant, loses on page refresh)
  * - L2: Session storage (persists across page refresh, loses on tab close)
  * - L3: API call (network)
- * 
+ *
  * Features:
  * - Configurable TTL per cache key pattern
  * - Smart invalidation (pattern-based)
  * - LRU eviction when quota exceeded
  * - Cache hit/miss statistics
  * - Automatic expiration
- * 
+ *
  * Sprint 2: Intelligent Caching - 50-70% API call reduction
  * Created: 2025-02-03
  */
@@ -27,16 +27,16 @@ interface CacheEntry<T> {
   timestamp: number;
   ttl: number;
   hits: number;
-  size: number;  // Approximate size in bytes
+  size: number; // Approximate size in bytes
 }
 
 /**
  * Cache configuration for different data types
  */
 interface CacheConfig {
-  ttl: number;          // Time to live (ms)
+  ttl: number; // Time to live (ms)
   priority: 'critical' | 'high' | 'medium' | 'low';
-  maxSize?: number;     // Max entries for this pattern
+  maxSize?: number; // Max entries for this pattern
 }
 
 /**
@@ -55,32 +55,32 @@ interface CacheStats {
  * Default cache configurations by key pattern
  */
 const DEFAULT_CACHE_CONFIGS: Record<string, CacheConfig> = {
-  'node:*:info': { ttl: 60000, priority: 'high' },           // 1 minute - node metadata
-  'node:*:params': { ttl: 30000, priority: 'medium' },       // 30 seconds - parameters
-  'node:*:pins': { ttl: 30000, priority: 'medium' },         // 30 seconds - pin info
-  'scene:tree': { ttl: 120000, priority: 'critical' },       // 2 minutes - scene tree
-  'scene:*:children': { ttl: 60000, priority: 'high' },      // 1 minute - node children
-  'material:*': { ttl: 300000, priority: 'low' },            // 5 minutes - material data
-  'render:stats': { ttl: 1000, priority: 'low' },            // 1 second - render stats
-  '*': { ttl: 30000, priority: 'low' }                       // 30 seconds - default
+  'node:*:info': { ttl: 60000, priority: 'high' }, // 1 minute - node metadata
+  'node:*:params': { ttl: 30000, priority: 'medium' }, // 30 seconds - parameters
+  'node:*:pins': { ttl: 30000, priority: 'medium' }, // 30 seconds - pin info
+  'scene:tree': { ttl: 120000, priority: 'critical' }, // 2 minutes - scene tree
+  'scene:*:children': { ttl: 60000, priority: 'high' }, // 1 minute - node children
+  'material:*': { ttl: 300000, priority: 'low' }, // 5 minutes - material data
+  'render:stats': { ttl: 1000, priority: 'low' }, // 1 second - render stats
+  '*': { ttl: 30000, priority: 'low' }, // 30 seconds - default
 };
 
 /**
  * Multi-tier cache manager
  */
 export class CacheManager {
-  private memoryCache: Map<string, CacheEntry<any>> = new Map();
+  private memoryCache: Map<string, CacheEntry<unknown>> = new Map();
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
     hitRate: 0,
     size: 0,
     memoryUsage: 0,
-    evictions: 0
+    evictions: 0,
   };
   private maxMemoryCacheSize = 1000; // Max entries in memory
   private maxSessionStorageSize = 5 * 1024 * 1024; // 5MB limit for session storage
-  
+
   constructor() {
     Logger.debug('💾 CacheManager initialized');
     this.startCleanupTimer();
@@ -115,12 +115,12 @@ export class CacheManager {
     this.stats.misses++;
     this.updateHitRate();
     Logger.debug(`❌ Cache MISS: ${key}`);
-    
+
     const data = await fetcher();
-    
+
     // Store in both caches
     this.set(key, data, customTtl);
-    
+
     return data;
   }
 
@@ -141,7 +141,7 @@ export class CacheManager {
    */
   invalidate(pattern: string): void {
     const regex = this.patternToRegex(pattern);
-    
+
     // Invalidate memory cache
     let memoryCleaned = 0;
     for (const [key] of this.memoryCache) {
@@ -150,7 +150,7 @@ export class CacheManager {
         memoryCleaned++;
       }
     }
-    
+
     // Invalidate session storage
     let sessionCleaned = 0;
     for (let i = 0; i < sessionStorage.length; i++) {
@@ -160,9 +160,11 @@ export class CacheManager {
         sessionCleaned++;
       }
     }
-    
+
     this.updateStats();
-    Logger.debug(`💾 Cache invalidated: ${pattern} (${memoryCleaned} memory + ${sessionCleaned} session)`);
+    Logger.debug(
+      `💾 Cache invalidated: ${pattern} (${memoryCleaned} memory + ${sessionCleaned} session)`
+    );
   }
 
   /**
@@ -170,7 +172,7 @@ export class CacheManager {
    */
   clear(): void {
     this.memoryCache.clear();
-    
+
     // Clear session storage cache entries
     const keysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
@@ -180,16 +182,16 @@ export class CacheManager {
       }
     }
     keysToRemove.forEach(key => sessionStorage.removeItem(key));
-    
+
     this.stats = {
       hits: 0,
       misses: 0,
       hitRate: 0,
       size: 0,
       memoryUsage: 0,
-      evictions: 0
+      evictions: 0,
     };
-    
+
     Logger.debug('💾 Cache cleared completely');
   }
 
@@ -233,7 +235,7 @@ export class CacheManager {
 
     // Update hit count
     entry.hits++;
-    
+
     return entry.data as T;
   }
 
@@ -243,7 +245,7 @@ export class CacheManager {
   private setInMemory<T>(key: string, data: T, customTtl?: number): void {
     const config = this.getConfig(key);
     const ttl = customTtl ?? config.ttl;
-    
+
     // Evict if memory cache is full
     if (this.memoryCache.size >= this.maxMemoryCacheSize) {
       this.evictLRU();
@@ -254,7 +256,7 @@ export class CacheManager {
       timestamp: Date.now(),
       ttl,
       hits: 0,
-      size: this.estimateSize(data)
+      size: this.estimateSize(data),
     };
 
     this.memoryCache.set(key, entry);
@@ -300,7 +302,7 @@ export class CacheManager {
         timestamp: Date.now(),
         ttl,
         hits: 0,
-        size: this.estimateSize(data)
+        size: this.estimateSize(data),
       };
 
       const storageKey = `octane:cache:${key}`;
@@ -313,9 +315,9 @@ export class CacheManager {
       }
 
       sessionStorage.setItem(storageKey, serialized);
-    } catch (error: any) {
+    } catch (error) {
       // Quota exceeded - evict old entries
-      if (error.name === 'QuotaExceededError') {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
         Logger.warn('💾 Session storage quota exceeded, evicting old entries');
         this.evictOldSessionEntries();
         // Try again after eviction
@@ -325,7 +327,7 @@ export class CacheManager {
             timestamp: Date.now(),
             ttl: customTtl ?? this.getConfig(key).ttl,
             hits: 0,
-            size: this.estimateSize(data)
+            size: this.estimateSize(data),
           };
           sessionStorage.setItem(`octane:cache:${key}`, JSON.stringify(entry));
         } catch (retryError) {
@@ -377,7 +379,7 @@ export class CacheManager {
             const entry = JSON.parse(item);
             entries.push({ key, timestamp: entry.timestamp });
           }
-        } catch (error) {
+        } catch {
           // Invalid entry, remove it
           sessionStorage.removeItem(key);
         }
@@ -438,7 +440,7 @@ export class CacheManager {
         return config;
       }
     }
-    
+
     // Default config
     return DEFAULT_CACHE_CONFIGS['*'];
   }
@@ -450,14 +452,14 @@ export class CacheManager {
   private patternToRegex(pattern: string): RegExp {
     const escaped = pattern
       .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
-      .replace(/\*/g, '.*');                  // Replace * with .*
+      .replace(/\*/g, '.*'); // Replace * with .*
     return new RegExp(`^${escaped}$`);
   }
 
   /**
    * Estimate size of data in bytes
    */
-  private estimateSize(data: any): number {
+  private estimateSize(data: unknown): number {
     try {
       return JSON.stringify(data).length * 2; // Rough estimate (2 bytes per char)
     } catch {
@@ -470,8 +472,10 @@ export class CacheManager {
    */
   private updateStats(): void {
     this.stats.size = this.memoryCache.size;
-    this.stats.memoryUsage = Array.from(this.memoryCache.values())
-      .reduce((sum, entry) => sum + entry.size, 0);
+    this.stats.memoryUsage = Array.from(this.memoryCache.values()).reduce(
+      (sum, entry) => sum + entry.size,
+      0
+    );
   }
 
   /**

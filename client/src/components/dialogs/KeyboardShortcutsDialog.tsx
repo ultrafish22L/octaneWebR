@@ -59,8 +59,19 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog keyboard-shortcuts-dialog" onClick={e => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      role="presentation"
+      onClick={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="modal-dialog keyboard-shortcuts-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Keyboard Shortcuts"
+      >
         <header className="modal-header">
           <h2>⌨️ Keyboard Shortcuts</h2>
           <button className="close-button" onClick={onClose} aria-label="Close dialog">

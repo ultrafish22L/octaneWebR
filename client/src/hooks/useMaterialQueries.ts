@@ -55,8 +55,9 @@ export function useMaterialCategories(dbType: DBType, enabled = true) {
       });
 
       if (response?.categories) {
-        Logger.debug(`✅ Fetched ${response.categories.length} ${dbType} categories`);
-        return response.categories;
+        const categories = response.categories as unknown as MaterialCategory[];
+        Logger.debug(`✅ Fetched ${categories.length} ${dbType} categories`);
+        return categories;
       }
 
       Logger.warn(`⚠️ No categories returned from ${dbType} API`);
@@ -109,8 +110,9 @@ export function useMaterialsForCategory(categoryId: number | null, dbType: DBTyp
       });
 
       if (response?.materials) {
-        Logger.debug(`✅ Fetched ${response.materials.length} materials`);
-        return response.materials;
+        const materials = response.materials as unknown as Material[];
+        Logger.debug(`✅ Fetched ${materials.length} materials`);
+        return materials;
       }
 
       Logger.warn('⚠️ No materials returned from API');
@@ -175,7 +177,7 @@ export function useDownloadMaterial() {
       queryClient.invalidateQueries({ queryKey: queryKeys.scene.all });
     },
 
-    onError: (error: any, variables) => {
+    onError: (error: unknown, variables) => {
       Logger.error(`❌ Failed to download material ${variables.materialName}:`, error);
     },
   });

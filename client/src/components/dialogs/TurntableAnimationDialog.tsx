@@ -6,7 +6,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface TurntableAnimationDialogProps {
   isOpen: boolean;
@@ -22,12 +22,6 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
   const [outputPath, setOutputPath] = useState('');
   const [startFileNumbering, setStartFileNumbering] = useState(1);
   const [skipExisting, setSkipExisting] = useState(false);
-
-  // Synchronize frames with duration and framerate
-  useEffect(() => {
-    const calculatedFrames = Math.round(duration * frameRate);
-    setFrames(calculatedFrames);
-  }, [duration, frameRate]);
 
   if (!isOpen) return null;
 
@@ -65,14 +59,17 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
   return (
     <div
       className="modal-overlay"
+      role="presentation"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="turntable-animation-title"
-      tabIndex={-1}
     >
-      <div className="turntable-animation-dialog">
+      <div
+        className="turntable-animation-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="turntable-animation-title"
+        tabIndex={-1}
+      >
         <div className="modal-header">
           <h2 id="turntable-animation-title">Turntable Animation</h2>
           <button
@@ -95,26 +92,36 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
             <h3>Animation Settings</h3>
             <div className="form-row">
               <div className="form-field">
-                <label>Duration:</label>
+                <label htmlFor="turntable-duration">Duration:</label>
                 <input
+                  id="turntable-duration"
                   type="number"
                   min="0.1"
                   step="0.1"
                   value={duration}
-                  onChange={e => setDuration(parseFloat(e.target.value))}
+                  onChange={e => {
+                    const d = parseFloat(e.target.value);
+                    setDuration(d);
+                    setFrames(Math.round(d * frameRate));
+                  }}
                   autoComplete="off"
                   name="number-0"
                 />
                 <span className="field-unit">sec</span>
               </div>
               <div className="form-field">
-                <label>Framerate:</label>
+                <label htmlFor="turntable-framerate">Framerate:</label>
                 <input
+                  id="turntable-framerate"
                   type="number"
                   min="1"
                   max="120"
                   value={frameRate}
-                  onChange={e => setFrameRate(parseInt(e.target.value))}
+                  onChange={e => {
+                    const fps = parseInt(e.target.value);
+                    setFrameRate(fps);
+                    setFrames(Math.round(duration * fps));
+                  }}
                   autoComplete="off"
                   name="number-1"
                 />
@@ -122,8 +129,9 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
               </div>
             </div>
             <div className="form-field">
-              <label>Frames:</label>
+              <label htmlFor="turntable-frames">Frames:</label>
               <input
+                id="turntable-frames"
                 type="number"
                 min="1"
                 value={frames}
@@ -145,8 +153,9 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
           <div className="form-section">
             <h3>Motion Blur</h3>
             <div className="form-field">
-              <label>Shutter Speed:</label>
+              <label htmlFor="turntable-shutter-speed">Shutter Speed:</label>
               <input
+                id="turntable-shutter-speed"
                 type="number"
                 min="0"
                 step="1"
@@ -167,8 +176,9 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
           <div className="form-section">
             <h3>Render Quality</h3>
             <div className="form-field">
-              <label>Samples/px:</label>
+              <label htmlFor="turntable-samples-px">Samples/px:</label>
               <input
+                id="turntable-samples-px"
                 type="number"
                 min="1"
                 max="100000"
@@ -185,9 +195,10 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
           <div className="form-section">
             <h3>Output Settings</h3>
             <div className="form-field">
-              <label>Output:</label>
+              <label htmlFor="turntable-output-path">Output:</label>
               <div className="folder-select">
                 <input
+                  id="turntable-output-path"
                   type="text"
                   value={outputPath}
                   onChange={e => setOutputPath(e.target.value)}
@@ -203,8 +214,9 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
             </div>
             <div className="form-row">
               <div className="form-field">
-                <label>Start File Numbering:</label>
+                <label htmlFor="turntable-start-file-numbering">Start File Numbering:</label>
                 <input
+                  id="turntable-start-file-numbering"
                   type="number"
                   min="0"
                   value={startFileNumbering}

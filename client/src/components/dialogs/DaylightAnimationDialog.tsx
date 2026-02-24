@@ -6,7 +6,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface DaylightAnimationDialogProps {
   isOpen: boolean;
@@ -23,12 +23,6 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
   const [outputPath, setOutputPath] = useState('');
   const [startFileNumbering, setStartFileNumbering] = useState(1);
   const [skipExisting, setSkipExisting] = useState(false);
-
-  // Synchronize frames with duration and framerate
-  useEffect(() => {
-    const calculatedFrames = Math.round(duration * frameRate);
-    setFrames(calculatedFrames);
-  }, [duration, frameRate]);
 
   if (!isOpen) return null;
 
@@ -67,14 +61,17 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
   return (
     <div
       className="modal-overlay"
+      role="presentation"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="daylight-animation-title"
-      tabIndex={-1}
     >
-      <div className="daylight-animation-dialog">
+      <div
+        className="daylight-animation-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="daylight-animation-title"
+        tabIndex={-1}
+      >
         <div className="modal-header">
           <h2 id="daylight-animation-title">Daylight Animation</h2>
           <button
@@ -97,8 +94,9 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
             <h3>Time Range</h3>
             <div className="form-row">
               <div className="form-field">
-                <label>Start Hour:</label>
+                <label htmlFor="daylight-start-hour">Start Hour:</label>
                 <input
+                  id="daylight-start-hour"
                   type="number"
                   min="0"
                   max="23"
@@ -111,8 +109,9 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
                 <span className="field-unit">h</span>
               </div>
               <div className="form-field">
-                <label>End Hour:</label>
+                <label htmlFor="daylight-end-hour">End Hour:</label>
                 <input
+                  id="daylight-end-hour"
                   type="number"
                   min="0"
                   max="23"
@@ -135,26 +134,36 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
             <h3>Animation Settings</h3>
             <div className="form-row">
               <div className="form-field">
-                <label>Duration:</label>
+                <label htmlFor="daylight-duration">Duration:</label>
                 <input
+                  id="daylight-duration"
                   type="number"
                   min="0.1"
                   step="0.1"
                   value={duration}
-                  onChange={e => setDuration(parseFloat(e.target.value))}
+                  onChange={e => {
+                    const d = parseFloat(e.target.value);
+                    setDuration(d);
+                    setFrames(Math.round(d * frameRate));
+                  }}
                   autoComplete="off"
                   name="number-2"
                 />
                 <span className="field-unit">sec</span>
               </div>
               <div className="form-field">
-                <label>Framerate:</label>
+                <label htmlFor="daylight-framerate">Framerate:</label>
                 <input
+                  id="daylight-framerate"
                   type="number"
                   min="1"
                   max="120"
                   value={frameRate}
-                  onChange={e => setFrameRate(parseInt(e.target.value))}
+                  onChange={e => {
+                    const fps = parseInt(e.target.value);
+                    setFrameRate(fps);
+                    setFrames(Math.round(duration * fps));
+                  }}
                   autoComplete="off"
                   name="number-3"
                 />
@@ -162,8 +171,9 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
               </div>
             </div>
             <div className="form-field">
-              <label>Frames:</label>
+              <label htmlFor="daylight-frames">Frames:</label>
               <input
+                id="daylight-frames"
                 type="number"
                 min="1"
                 value={frames}
@@ -186,8 +196,9 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
           <div className="form-section">
             <h3>Render Quality</h3>
             <div className="form-field">
-              <label>Samples/px:</label>
+              <label htmlFor="daylight-samples-px">Samples/px:</label>
               <input
+                id="daylight-samples-px"
                 type="number"
                 min="1"
                 max="100000"
@@ -204,9 +215,10 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
           <div className="form-section">
             <h3>Output Settings</h3>
             <div className="form-field">
-              <label>Output:</label>
+              <label htmlFor="daylight-output-path">Output:</label>
               <div className="folder-select">
                 <input
+                  id="daylight-output-path"
                   type="text"
                   value={outputPath}
                   onChange={e => setOutputPath(e.target.value)}
@@ -222,8 +234,9 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
             </div>
             <div className="form-row">
               <div className="form-field">
-                <label>Start File Numbering:</label>
+                <label htmlFor="daylight-start-file-numbering">Start File Numbering:</label>
                 <input
+                  id="daylight-start-file-numbering"
                   type="number"
                   min="0"
                   value={startFileNumbering}

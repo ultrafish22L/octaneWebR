@@ -129,8 +129,11 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
         }
 
         setDevices(deviceStats);
-      } catch (error: any) {
-        Logger.error('❌ Failed to fetch GPU statistics:', error.message);
+      } catch (error) {
+        Logger.error(
+          '❌ Failed to fetch GPU statistics:',
+          error instanceof Error ? error.message : String(error)
+        );
       } finally {
         setLoading(false);
       }
@@ -156,7 +159,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
   return (
     <>
       {/* Backdrop */}
-      <div className="gpu-statistics-backdrop" onClick={onClose} />
+      <div className="gpu-statistics-backdrop" role="presentation" onClick={onClose} />
 
       {/* Dialog */}
       <div

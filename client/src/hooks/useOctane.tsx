@@ -84,6 +84,7 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
   return <OctaneContext.Provider value={value}>{children}</OctaneContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOctane() {
   const context = useContext(OctaneContext);
   if (!context) {

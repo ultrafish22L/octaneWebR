@@ -88,7 +88,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
             Logger.debug(`✅ Download complete: ${materialName}`);
             // TODO: Show success notification
           },
-          onError: (error: any) => {
+          onError: (error: unknown) => {
             Logger.error(`❌ Download failed: ${materialName}`, error);
             // Error is already logged by the mutation hook
           },

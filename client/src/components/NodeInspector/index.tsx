@@ -100,10 +100,13 @@ function NodeParameter({
     }
   }
   // Determine if we should show dropdown (non-end nodes with a valid pin type)
-  // Show dropdown for any non-end node (nodes with children, not value attributes)
   const pinType = typeStr.startsWith('PT_') ? typeStr : null;
   const compatibleNodeTypes = pinType ? getCompatibleNodeTypes(pinType) : [];
-  const showDropdown = !isEndNode && compatibleNodeTypes.length > 0;
+
+  // Empty pin: handle === 0/undefined with a known PT_ type — no connected node yet
+  const isEmptyPin = !node.handle && pinType !== null && compatibleNodeTypes.length > 0;
+
+  const showDropdown = (!isEndNode || isEmptyPin) && compatibleNodeTypes.length > 0;
 
   // Get current node type (for nodes, not pins)
   const currentNodeType = node.nodeInfo?.type || '';
@@ -111,19 +114,32 @@ function NodeParameter({
   // Handler for node type change
   const handleNodeTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newNodeType = event.target.value;
-    if (!node.handle || !newNodeType || newNodeType === currentNodeType) {
-      return;
-    }
+    if (!newNodeType || newNodeType === currentNodeType) return;
 
-    Logger.debug(`🔄 Replacing node ${node.handle} (${currentNodeType}) with ${newNodeType}`);
-
-    try {
-      // Call API to replace node
-      await client.replaceNode(node.handle, newNodeType);
-      Logger.debug(`✅ Node replaced successfully`);
-    } catch (error) {
-      Logger.error('❌ Failed to replace node:', error);
-      // Note: Consider implementing a proper toast/notification system
+    if (isEmptyPin) {
+      // Empty pin: create a new node and connect it
+      const parentHandle = node.pinInfo?.pinOwner?.handle;
+      const pinIdx = node.pinInfo?.pinId;
+      if (!parentHandle || pinIdx === undefined) {
+        Logger.error('❌ Could not find parent or pin index for empty pin');
+        return;
+      }
+      Logger.debug(`➕ Creating ${newNodeType} for empty pin`);
+      try {
+        await client.createNodeForPin(parentHandle, pinIdx, newNodeType);
+        Logger.debug(`✅ Node created and connected`);
+      } catch (error) {
+        Logger.error('❌ Failed to create node for empty pin:', error);
+      }
+    } else {
+      if (!node.handle) return;
+      Logger.debug(`🔄 Replacing node ${node.handle} (${currentNodeType}) with ${newNodeType}`);
+      try {
+        await client.replaceNode(node.handle, newNodeType);
+        Logger.debug(`✅ Node replaced successfully`);
+      } catch (error) {
+        Logger.error('❌ Failed to replace node:', error);
+      }
     }
   };
 
@@ -157,8 +173,8 @@ function NodeParameter({
     return description || name;
   };
 
-  // Render as parameter node (end node with attrInfo)
-  if (!node.children || node.children.length === 0) {
+  // Render as parameter node (end node) — but not empty pin slots, which need a dropdown
+  if ((!node.children || node.children.length === 0) && !isEmptyPin) {
     //    if (node.attrInfo) {
     return (
       <div className={indentClass} style={{ display: 'block' }}>
@@ -263,13 +279,18 @@ function NodeParameter({
                 role="presentation"
               >
                 <select
-                  className="inspector-target-select"
+                  className={`inspector-target-select${isEmptyPin ? ' no-node-selected' : ''}`}
                   name="inspector-target-select"
                   autoComplete="off"
                   value={currentNodeType}
                   onChange={handleNodeTypeChange}
                   onClick={e => e.stopPropagation()}
                 >
+                  {isEmptyPin && (
+                    <option value="" disabled>
+                      No Node
+                    </option>
+                  )}
                   {compatibleNodeTypes.map(nodeType => {
                     const nodeTypeInfo = getNodeTypeInfo(nodeType);
                     const displayName =

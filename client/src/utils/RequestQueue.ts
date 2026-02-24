@@ -1,22 +1,22 @@
 /**
  * Request Queue - Limits concurrent API calls to prevent browser connection pool exhaustion
- * 
+ *
  * Browser limits: ~6 concurrent connections per domain
  * Large scenes can trigger hundreds of simultaneous API calls, causing ERR_INSUFFICIENT_RESOURCES
- * 
+ *
  * This queue ensures we never exceed the safe concurrent limit
  */
 
 import { Logger } from './Logger';
 
-type QueuedRequest<T> = {
-  fn: () => Promise<T>;
-  resolve: (value: T) => void;
-  reject: (error: any) => void;
+type QueuedRequest = {
+  fn: () => Promise<unknown>;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
 };
 
 class RequestQueue {
-  private queue: QueuedRequest<any>[] = [];
+  private queue: QueuedRequest[] = [];
   private activeCount = 0;
   private readonly maxConcurrent: number;
 
@@ -31,8 +31,12 @@ class RequestQueue {
    * Returns a promise that resolves when the request completes
    */
   async enqueue<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ fn, resolve, reject });
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push({
+        fn: fn as () => Promise<unknown>,
+        resolve: resolve as (value: unknown) => void,
+        reject,
+      });
       this.processNext();
     });
   }
@@ -68,7 +72,7 @@ class RequestQueue {
     return {
       active: this.activeCount,
       queued: this.queue.length,
-      total: this.activeCount + this.queue.length
+      total: this.activeCount + this.queue.length,
     };
   }
 
