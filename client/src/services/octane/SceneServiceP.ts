@@ -174,7 +174,7 @@ export class SceneServiceP extends BaseService {
     level: number
   ): Promise<SceneNode | undefined> {
     let itemName = String(item?.name || pinInfo?.staticLabel || 'Unnamed');
-    let outType: string | number = String(pinInfo?.outType || '');
+    let outType: string | number = String(pinInfo?.outType || pinInfo?.type || '');
     let graphInfo: import('./types').GraphInfo | undefined;
     let nodeInfo: import('./types').NodeInfo | undefined;
     let isGraph = false;
@@ -483,6 +483,8 @@ export class SceneServiceP extends BaseService {
                   null;
                 if (pinInfo) {
                   pinInfo.ix = i;
+                  pinInfo.pinId = i;
+                  pinInfo.pinOwner = { handle: itemHandle };
                   await this.addSceneItem(sceneItems, connectedNode, pinInfo, level);
                 }
               }
