@@ -87,6 +87,7 @@ function AppContent() {
   const [gridVisible, setGridVisible] = useState(false); // Grid off by default
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [recenterViewCallback, setRecenterViewCallback] = useState<(() => void) | null>(null);
+  const [autoLayoutCallback, setAutoLayoutCallback] = useState<(() => void) | null>(null);
 
   const { panelSizes, handleSplitterMouseDown, containerRef, isDragging, resetPanelSizes } =
     useResizablePanels();
@@ -601,6 +602,7 @@ function AppContent() {
                   snapToGrid={snapToGrid}
                   setSnapToGrid={setSnapToGrid}
                   onRecenterView={recenterViewCallback || undefined}
+                  onAutoLayout={autoLayoutCallback || undefined}
                 />
                 <div className="node-graph-tabgraph">
                   {/* Node Graph Tabs */}
@@ -621,6 +623,7 @@ function AppContent() {
                         snapToGrid={snapToGrid}
                         setSnapToGrid={setSnapToGrid}
                         onRecenterViewReady={callback => setRecenterViewCallback(() => callback)}
+                        onAutoLayoutReady={callback => setAutoLayoutCallback(() => callback)}
                       />
                     </Suspense>
                   </ErrorBoundary>

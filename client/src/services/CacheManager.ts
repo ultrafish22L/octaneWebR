@@ -248,7 +248,7 @@ export class CacheManager {
 
     // Evict if memory cache is full
     if (this.memoryCache.size >= this.maxMemoryCacheSize) {
-      this.evictLRU();
+      this.evictLeastAccessed();
     }
 
     const entry: CacheEntry<T> = {
@@ -343,7 +343,7 @@ export class CacheManager {
    * Evict the least-accessed entry from the memory cache (LFU-style: fewest hits wins,
    * with insertion time as a tiebreaker for entries with the same hit count).
    */
-  private evictLRU(): void {
+  private evictLeastAccessed(): void {
     let lruKey: string | null = null;
     let lruHits = Infinity;
     let lruTimestamp = Infinity;

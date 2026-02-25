@@ -13,11 +13,6 @@ octaneWebR is a well-structured React application. The architecture is clean, th
 The main weaknesses are (in order of impact):
 
 1. **Code duplication** — `SceneService` and `SceneServiceP` share ~300 lines of identical logic with no shared base.
-2. **Dead code** — Several files contained commented-out blocks, a now-deleted unused hook (`useGraphSync.ts`), and a dead function (`_desaturateColor`).
-3. **Comment quality** — Some comments were stale, misleading (LRU vs LFU), or incomplete debug artifacts.
-4. **Minor correctness issues** — Loose equality (`== true`), a `Logger.info` call at request-per-call frequency, a duplicate `formatMap` object literal.
-
-All issues in categories 2–4 have been fixed in this review pass.
 
 ---
 

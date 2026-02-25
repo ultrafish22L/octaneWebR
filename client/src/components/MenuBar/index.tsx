@@ -104,9 +104,9 @@ function getMenuDefinitions(
         enabled: false,
       },
       { type: 'separator' },
-      { label: 'Batch rendering', action: 'script.batchRender', enabled: false },
-      { label: 'Daylight animation', action: 'script.daylightAnimation', enabled: false },
-      { label: 'Turntable animation', action: 'script.turntableAnimation', enabled: false },
+      { label: 'Batch rendering', action: 'script.batchRender' },
+      { label: 'Daylight animation', action: 'script.daylightAnimation' },
+      { label: 'Turntable animation', action: 'script.turntableAnimation' },
     ],
     module: [{ label: 'No modules installed', enabled: false }],
     cloud: [

@@ -115,12 +115,17 @@ export class ConnectionService extends BaseService {
         }
       };
 
-      this.ws.onerror = (error: Event) => {
-        Logger.error('WebSocket error:', error);
+      this.ws.onerror = () => {
+        // The WebSocket onerror event intentionally carries no error details (browser security).
+        // Useful diagnostics arrive in onclose via CloseEvent.code and .reason.
+        Logger.error(`WebSocket error (readyState: ${this.ws?.readyState})`);
       };
 
-      this.ws.onclose = () => {
-        Logger.debug('WebSocket disconnected');
+      this.ws.onclose = (event: CloseEvent) => {
+        const reason = event.reason ? ` reason="${event.reason}"` : '';
+        Logger.debug(
+          `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`
+        );
         // Attempt reconnection after configured delay
         setTimeout(() => {
           if (this.connected) {

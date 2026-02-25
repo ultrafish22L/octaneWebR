@@ -25,6 +25,8 @@ interface NodeGraphToolbarProps {
   snapToGrid: boolean;
   setSnapToGrid: (snap: boolean) => void;
   onRecenterView?: () => void; // Optional callback for recenter (from ReactFlow fitView)
+  /** Triggers the DAG auto-layout algorithm on the current graph. */
+  onAutoLayout?: () => void;
 }
 
 export function NodeGraphToolbar({
@@ -33,6 +35,7 @@ export function NodeGraphToolbar({
   snapToGrid,
   setSnapToGrid,
   onRecenterView,
+  onAutoLayout,
 }: NodeGraphToolbarProps) {
   // Toggle states for preview scenes (managed locally)
   const [renderTargetPreview, setRenderTargetPreview] = useState(false);
@@ -49,16 +52,18 @@ export function NodeGraphToolbar({
   }, [onRecenterView]);
 
   // 2. Re-arrange Graph with Sub-graph
+  // Note: the current graph shows only top-level nodes; sub-graph expansion is not
+  // yet implemented, so this runs the same layout as button 3.
   const handleRearrangeWithSubgraph = useCallback(() => {
     Logger.debug('🔄 Re-arrange Graph with Sub-graph');
-    // TODO: Auto-layout including sub-graphs
-  }, []);
+    onAutoLayout?.();
+  }, [onAutoLayout]);
 
   // 3. Re-arrange Graph
   const handleRearrangeGraph = useCallback(() => {
     Logger.debug('📐 Re-arrange Graph');
-    // TODO: Auto-layout algorithm
-  }, []);
+    onAutoLayout?.();
+  }, [onAutoLayout]);
 
   // 4. View/Hide Render Target Preview Scene
   const handleToggleRenderTargetPreview = useCallback(() => {

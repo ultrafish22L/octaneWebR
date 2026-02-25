@@ -72,12 +72,10 @@ function ParameterGroup({
 function NodeParameter({
   node,
   level,
-  onToggle,
   hasGroupMap,
 }: {
   node: SceneNode;
   level: number;
-  onToggle: (_: string) => void;
   hasGroupMap: Map<number, boolean>;
 }) {
   const { client } = useOctane();
@@ -145,7 +143,6 @@ function NodeParameter({
 
   const handleToggle = () => {
     setExpanded(!expanded);
-    onToggle(nodeId);
   };
 
   const handleToggleKeyDown = (e: React.KeyboardEvent) => {
@@ -224,7 +221,6 @@ function NodeParameter({
                 key={`${child.handle}-${childIdx}`}
                 node={child}
                 level={level + 1}
-                onToggle={onToggle}
                 hasGroupMap={hasGroupMap}
               />
             ))}
@@ -331,7 +327,6 @@ function NodeParameter({
                       key={`${child.handle}-${childIdx}`}
                       node={child}
                       level={level + 1}
-                      onToggle={onToggle}
                       hasGroupMap={hasGroupMap}
                     />
                   ))}
@@ -355,7 +350,6 @@ function NodeParameter({
                             key={`${child.handle}-${childIdx}`}
                             node={child}
                             level={level + 1}
-                            onToggle={onToggle}
                             hasGroupMap={hasGroupMap}
                           />
                         ))}
@@ -371,7 +365,6 @@ function NodeParameter({
                           key={`${child.handle}-${childIdx}`}
                           node={child}
                           level={level + 1}
-                          onToggle={onToggle}
                           hasGroupMap={hasGroupMap}
                         />
                       ))}
@@ -387,7 +380,6 @@ function NodeParameter({
                         key={`${child.handle}-${childIdx}`}
                         node={child}
                         level={level + 1}
-                        onToggle={onToggle}
                         hasGroupMap={hasGroupMap}
                       />
                     ))}
@@ -446,12 +438,6 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   // Context menu state
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-
-  // NOTE: Node expansion state is managed internally by NodeParameter component
-
-  const handleToggle = (_nodeId: string) => {
-    // Placeholder for future centralized expansion state management
-  };
 
   // Context menu handler
   const handleContextMenu = (event: React.MouseEvent) => {
@@ -552,7 +538,7 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
     <div className="node-inspector" onContextMenu={handleContextMenu}>
       {/* Content */}
       <div className="inspector-content">
-        <NodeParameter node={node} level={0} onToggle={handleToggle} hasGroupMap={hasGroupMap} />
+        <NodeParameter node={node} level={0} hasGroupMap={hasGroupMap} />
       </div>
 
       {/* Context Menu */}

@@ -35,6 +35,7 @@ import { SearchDialog } from './SearchDialog';
 import { EditCommands } from '../../commands/EditCommands';
 import { Logger } from '../../utils/Logger';
 import { getPinColor } from '../../utils/PinColorUtils';
+import { computeDAGLayout } from '../../utils/NodeLayoutUtils';
 import { FEATURES } from '../../config/features';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
@@ -53,6 +54,8 @@ interface NodeGraphEditorProps {
   setSnapToGrid: (snap: boolean) => void;
 
   onRecenterViewReady?: (callback: () => void) => void; // Pass fitView callback to parent
+  /** Called once on mount with the auto-layout function (layout + fitView + persist positions). */
+  onAutoLayoutReady?: (callback: () => void) => void;
 }
 
 // Define custom node types
@@ -75,6 +78,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
   setSnapToGrid: _setSnapToGrid,
   onRecenterViewReady,
+  onAutoLayoutReady,
 }: NodeGraphEditorProps) {
   const { client, connected } = useOctane();
   const { fitView } = useReactFlow();
@@ -83,6 +87,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   // Track whether initial fitView has been called (should only happen once after initial scene sync)
   const hasInitialFitView = useRef(false);
   const hasProvidedCallback = useRef(false);
+  const hasProvidedLayoutCallback = useRef(false);
   // Track whether progressive loading is in progress (skip sceneTree effect)
   const progressiveLoadingRef = useRef(false);
   // Ref to always have latest sceneTree for event handlers (avoids stale closure)
@@ -103,6 +108,67 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node<OctaneNodeData>>([]);
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState<Edge>([]);
+
+  // Refs so the auto-layout callback (passed once on mount) always sees fresh values
+  const nodesRef = useRef<Node<OctaneNodeData>[]>([]);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+  const edgesRef = useRef<Edge[]>([]);
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+  const clientRef = useRef(client);
+  useEffect(() => {
+    clientRef.current = client;
+  }, [client]);
+  const connectedRef = useRef(connected);
+  useEffect(() => {
+    connectedRef.current = connected;
+  }, [connected]);
+
+  // Provide auto-layout callback to parent on mount (only once).
+  // Uses refs internally so the closure never goes stale.
+  useEffect(() => {
+    if (onAutoLayoutReady && !hasProvidedLayoutCallback.current) {
+      hasProvidedLayoutCallback.current = true;
+      onAutoLayoutReady(() => {
+        const currentNodes = nodesRef.current;
+        const currentEdges = edgesRef.current;
+        if (currentNodes.length === 0) return;
+
+        const layoutInput = currentNodes.map(n => ({
+          id: n.id,
+          inputCount: (n.data as OctaneNodeData).inputs?.length ?? 0,
+        }));
+        const positions = computeDAGLayout(layoutInput, currentEdges);
+
+        setNodes(prev =>
+          prev.map(n => ({
+            ...n,
+            position: positions.get(n.id) ?? n.position,
+          }))
+        );
+
+        // Fit view after React has rendered the new positions
+        setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+
+        // Persist positions to Octane so they survive a scene reload
+        const cl = clientRef.current;
+        const conn = connectedRef.current;
+        if (cl && conn) {
+          for (const [nodeId, pos] of positions) {
+            const handle = Number(nodeId);
+            if (handle) {
+              cl.setNodePosition(handle, pos.x, pos.y).catch(err => {
+                Logger.error('Failed to save layout position:', err);
+              });
+            }
+          }
+        }
+      });
+    }
+  }, [onAutoLayoutReady, setNodes, fitView]);
 
   // Custom onNodesChange handler that saves position changes to Octane
   const onNodesChange = useCallback(
@@ -856,6 +922,7 @@ export const NodeGraphEditor = React.memo(function NodeGraphEditor({
   snapToGrid,
   setSnapToGrid,
   onRecenterViewReady,
+  onAutoLayoutReady,
 }: NodeGraphEditorProps) {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -869,6 +936,7 @@ export const NodeGraphEditor = React.memo(function NodeGraphEditor({
           snapToGrid={snapToGrid}
           setSnapToGrid={setSnapToGrid}
           onRecenterViewReady={onRecenterViewReady}
+          onAutoLayoutReady={onAutoLayoutReady}
         />
       </ReactFlowProvider>
     </div>
