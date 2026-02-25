@@ -58,20 +58,14 @@ export function useParameterValue(
         // Use it directly, no conversion needed
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-        const responseHas = await requestQueue.enqueue(() =>
-          client.callApi(
-            'ApiItem',
-            'hasAttr',
-            node.handle, // Pass handle as string
-            {
-              id: AttributeId.A_VALUE,
-            }
-          )
-        );
-        if (responseHas && responseHas.result == false) {
-          Logger.warn('hasAttr', '{responseHas}');
-          return;
-        }
+        // hasAttr check removed — getValueByAttrID returns an empty/error response when
+        // the attribute is absent, which the catch block handles. Removing the preliminary
+        // check halves the number of API round-trips per parameter.
+        // const responseHas = await requestQueue.enqueue(() =>
+        //   client.callApi('ApiItem', 'hasAttr', node.handle, { id: AttributeId.A_VALUE })
+        // );
+        // if (responseHas && responseHas.result == false) return;
+
         // Queue the API call to prevent connection pool exhaustion
         // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
         // This queues them with max 4 concurrent requests to stay within browser limits
