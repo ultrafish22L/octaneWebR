@@ -161,7 +161,7 @@ export class ApiService extends BaseService {
       Logger.debugV('Added params:', transformedParams);
     }
 
-    Logger.debugV('Request body:', JSON.stringify(body));
+    Logger.debug('Request body:', JSON.stringify(body));
 
     try {
       const response = await fetch(url, {

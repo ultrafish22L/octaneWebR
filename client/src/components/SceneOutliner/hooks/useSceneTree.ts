@@ -248,7 +248,10 @@ export function useSceneTree({
 
       setSceneTree(prev => {
         const updated = [...prev];
-        onSceneTreeChange?.(updated);
+        // Defer: calling onSceneTreeChange (AppContent setState) inside a setState
+        // updater triggers "Cannot update a component while rendering" — same pattern
+        // used by handleProgressiveNodeAdded and handleChildrenLoaded.
+        setTimeout(() => onSceneTreeChange?.(updated), 0);
         return updated;
       });
     };
@@ -261,7 +264,7 @@ export function useSceneTree({
 
       setSceneTree(prev => {
         const updated = [...prev];
-        onSceneTreeChange?.(updated);
+        setTimeout(() => onSceneTreeChange?.(updated), 0);
         return updated;
       });
     };

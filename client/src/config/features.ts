@@ -40,8 +40,8 @@ export function getEnabledFeatures(): string[] {
 export function logFeatureFlags(): void {
   const enabled = getEnabledFeatures();
   if (enabled.length > 0) {
-    console.warn('Feature Flags Enabled:', enabled.join(', '));
+    console.info('Feature Flags Enabled:', enabled.join(', '));
   } else {
-    console.warn('All optimization features disabled (using baseline implementation)');
+    console.info('All optimization features disabled (using baseline implementation)');
   }
 }

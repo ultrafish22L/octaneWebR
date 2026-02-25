@@ -141,6 +141,7 @@ export const AttributeId = {
   A_FILENAME: 34,
   A_VERTICES_PER_POLY: 189,
   A_POLY_OBJECT_INDICES: 116,
+  A_RELOAD: 124,
   // Add more as needed
 } as const;
 

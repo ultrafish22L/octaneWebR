@@ -68,12 +68,13 @@ export class ConnectionService extends BaseService {
     Logger.network('Connecting WebSocket:', wsUrl);
 
     try {
-      this.ws = new WebSocket(wsUrl);
+      // Capture the instance in a local variable so all handlers close over the same
+      // specific socket — not over `this.ws`, which can be overwritten if connect()
+      // is called again (e.g. React StrictMode double-invocation in development).
+      const ws = new WebSocket(wsUrl);
+      this.ws = ws;
 
-      this.ws.onopen = () => {
-        const ws = this.ws;
-        if (!ws) return;
-
+      ws.onopen = () => {
         Logger.success('WebSocket connected');
         Logger.debug(`WebSocket readyState on open: ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
 
@@ -83,16 +84,16 @@ export class ConnectionService extends BaseService {
          * Without this, early send() calls may fail silently or throw exceptions.
          */
         setTimeout(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'subscribe' }));
             Logger.debug('Sent subscribe message to WebSocket');
           } else {
-            Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws?.readyState})`);
+            Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws.readyState})`);
           }
         }, 50);
       };
 
-      this.ws.onmessage = (event: MessageEvent) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const message = JSON.parse(event.data as string);
 
@@ -115,13 +116,13 @@ export class ConnectionService extends BaseService {
         }
       };
 
-      this.ws.onerror = () => {
+      ws.onerror = () => {
         // The WebSocket onerror event intentionally carries no error details (browser security).
         // Useful diagnostics arrive in onclose via CloseEvent.code and .reason.
-        Logger.error(`WebSocket error (readyState: ${this.ws?.readyState})`);
+        Logger.error(`WebSocket error (readyState: ${ws.readyState})`);
       };
 
-      this.ws.onclose = (event: CloseEvent) => {
+      ws.onclose = (event: CloseEvent) => {
         const reason = event.reason ? ` reason="${event.reason}"` : '';
         Logger.debug(
           `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`

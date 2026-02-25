@@ -472,71 +472,15 @@ export class SceneService extends BaseService {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
         Logger.debugV(` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {
-        this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
-      }
-      const responseHas = await this.apiService.callApi(
-        'ApiItem',
-        'hasAttr',
-        item.handle, // Pass handle as string
-        {
-          id: AttributeId.A_FILENAME,
-        }
-      );
-      if (responseHas && responseHas.result === true) {
-        const response = await this.apiService.callApi(
-          'ApiItem',
-          'getValueByAttrID', // Use correct method name for API version
-          item.handle, // Pass handle as string
-          {
-            attribute_id: AttributeId.A_FILENAME,
-            expected_type: AttrType.AT_STRING,
-          }
-        );
-        //    [OCTANE-SERVER] ✅ ApiItem.getValueByAttrID → {"string_value":"assets\\teapot.obj","value":"string_value"}
+        const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', item.handle, {
+          attribute_id: AttributeId.A_FILENAME,
+          expected_type: AttrType.AT_STRING,
+        });
         if (response) {
-          // Extract the actual value from the response
-          // API returns format like: {float_value: 2, value: "float_value"}
-          // We need to get the value from the field indicated by response.value
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
-          //          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
-
-          const responseHasIndices = await this.apiService.callApi(
-            'ApiItem',
-            'hasAttr',
-            item.handle, // Pass handle as string
-            {
-              id: AttributeId.A_POLY_OBJECT_INDICES,
-            }
-          );
-          if (responseHasIndices && responseHasIndices.result == true) {
-            const response = await this.apiService.callApi(
-              'ApiItem',
-              'getValueByAttrID',
-              item.handle, // Pass handle as string
-              {
-                attribute_id: AttributeId.A_POLY_OBJECT_INDICES,
-                expected_type: AttrType.AT_INT,
-              }
-            );
-            if (response) {
-              const valueField = Object.keys(response)[1];
-              const vertsPerPoly = Object(response)[Object(response)[valueField]] as Array<number>;
-              item.vertsPerPoly = vertsPerPoly;
-              Logger.info(`vertsPerPoly for ${item.name}: ${valueField} ${vertsPerPoly.length}`);
-              Logger.info(`vertsPerPoly ${JSON.stringify(Object(response))} ${vertsPerPoly}`);
-            }
-          }
         }
-        if (!item.attrInfo) {
-          if (item.filePath) {
-            this.emit('scene:buildProgress', {
-              step: `adding node ${item.name}: ${item.filePath}`,
-            });
-          } else {
-            this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
-          }
-        }
+        this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
       }
     } catch (error) {
       Logger.error(

@@ -298,14 +298,7 @@ export class SceneServiceP extends BaseService {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
         Logger.debugV(` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {
-        this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
-      }
-
-      // Load filePath
-      const responseHas = await this.apiService.callApi('ApiItem', 'hasAttr', item.handle, {
-        id: AttributeId.A_FILENAME,
-      });
-      if (responseHas?.result === true) {
+        // Load filePath
         const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', item.handle, {
           attribute_id: AttributeId.A_FILENAME,
           expected_type: AttrType.AT_STRING,
@@ -313,44 +306,24 @@ export class SceneServiceP extends BaseService {
         if (response) {
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
-
-          // Load vertsPerPoly
-          const responseHasIndices = await this.apiService.callApi(
-            'ApiItem',
-            'hasAttr',
-            item.handle,
-            { id: AttributeId.A_POLY_OBJECT_INDICES }
-          );
-          if (responseHasIndices?.result === true) {
-            const indicesResponse = await this.apiService.callApi(
-              'ApiItem',
-              'getValueByAttrID',
-              item.handle,
-              { attribute_id: AttributeId.A_POLY_OBJECT_INDICES, expected_type: AttrType.AT_INT }
-            );
-            if (indicesResponse) {
-              const valField = Object.keys(indicesResponse)[1];
-              const vertsPerPoly = Object(indicesResponse)[
-                Object(indicesResponse)[valField]
-              ] as number[];
-              item.vertsPerPoly = vertsPerPoly;
-              Logger.info(`vertsPerPoly for ${item.name}: ${valField} ${vertsPerPoly.length}`);
-              Logger.info(
-                `vertsPerPoly ${JSON.stringify(Object(indicesResponse))} ${vertsPerPoly}`
-              );
-            }
-          }
         }
-        if (!item.attrInfo) {
-          if (item.filePath) {
-            this.emit('scene:buildProgress', {
-              step: `adding node ${item.name}: ${item.filePath}`,
-            });
-          } else {
-            this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
-          }
-        }
+        this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
       }
+      /*            
+      // log all attributes
+      const response = await this.apiService.callApi('ApiItem', 'attrCount', item.handle);
+      if (response) {
+        const attrCount = Object(response)[Object(response)[valueField]] as number;
+
+        for (let i: number = 0; i < 5; i++) {
+
+          const response = await this.apiService.callApi('ApiItem', 'attrInfoIx', item.handle, { index:i });
+          if (response) {
+            Logger.info("attrInfoIx", i, JSON.stringify(response, null, 2));
+          }
+        }  
+      }
+*/
     } catch (error) {
       Logger.error(
         '❌ addItemChildren failed:',
