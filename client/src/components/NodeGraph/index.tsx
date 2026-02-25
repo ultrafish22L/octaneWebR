@@ -61,8 +61,8 @@ const nodeTypes = {
 } as const satisfies NodeTypes;
 
 /**
- * Inner component with ReactFlow context access
- * Memoized for performance (1500+ line component)
+ * Inner component with ReactFlow context access.
+ * Needs ReactFlowProvider (from the outer NodeGraphEditor wrapper) to use useReactFlow().
  */
 const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   sceneTree,
@@ -140,7 +140,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
   /**
    * Node operations hook - handles copy/paste, context menus, search, keyboard shortcuts
-   * Extracted for better code organization (Phase 3/3 refactoring)
    */
   const {
     handlePaneContextMenu,
@@ -176,7 +175,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
 
   /**
    * Connection cutter hook - handles Ctrl+drag to cut multiple connections
-   * Extracted for better code organization (Phase 4/4 refactoring)
    */
   const {
     state: { isCuttingConnections, cutterPath },
@@ -622,12 +620,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   });
 
   /**
-   * OLD IMPLEMENTATION REMOVED - Now handled by useConnectionOperations hook
-   * Removed handlers: onConnectStart, onConnectEnd, onReconnect, onReconnectEnd,
-   * onConnect, isValidConnection, onEdgesChange, onEdgesDelete (560+ lines)
-   */
-
-  /**
    * Handle node deletion with optimized cascade
    * Called by ReactFlow when nodes are deleted (e.g., via Delete key)
    */
@@ -677,15 +669,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     Logger.debug('Edge clicked:', edge.id);
     // Edge selection is handled automatically by ReactFlow
   }, []);
-
-  /**
-   * OLD IMPLEMENTATION REMOVED - Now handled by useNodeOperations hook
-   * Removed handlers: handlePaneContextMenu, handleNodeContextMenu, handleSelectNodeType,
-   * handleCloseContextMenu, handleCopy, handlePaste, handleCut, handleDeleteSelected,
-   * handleCollapseItems, handleExpandItems, handleGroupItems, handleShowInOutliner,
-   * handleShowInLuaBrowser, handleRenderNode, handleSaveAsMacro, handleSearchSelectNodes,
-   * keyboard shortcuts useEffect, edit actions registration useEffect (~500 lines)
-   */
 
   // Not connected state
   if (!connected) {

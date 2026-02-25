@@ -73,8 +73,12 @@ export class NodeService extends BaseService {
     }
   }
 
+  /**
+   * Delete a node and clean up any collapsed children still held in scene.map.
+   * "Optimized" means we avoid a full scene reload by patching scene.map/tree directly.
+   */
   async deleteNodeOptimized(nodeHandle: number): Promise<boolean> {
-    Logger.debug('🗑️ Deleting node (optimized):', nodeHandle);
+    Logger.debug('🗑️ Deleting node:', nodeHandle);
 
     try {
       const scene = this.sceneService.getScene();
@@ -631,11 +635,11 @@ export class NodeService extends BaseService {
   }
 
   /**
-   * Get the numeric ID for a node type string
+   * Placeholder for getNodeTypeId — not currently used.
+   * The API accepts the node type string (e.g., "NT_MAT_DIFFUSE") directly;
+   * a numeric type ID is not required for the current createNode/replaceNode calls.
    */
   private async getNodeTypeId(_nodeType: string): Promise<number | null> {
-    // For now, we'll use 1 as a placeholder
-    // The API should handle the nodeType string directly
     return 1;
   }
 }

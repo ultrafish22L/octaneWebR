@@ -1,15 +1,9 @@
 /**
  * File Node Toolbar Component
  * Embedded toolbar for nodes that have a file path (mesh, texture, etc.)
- * showing file operations and relevant metadata
- *
- * Displays:
- * - Toolbar with load/reload/save icons
- * - File path of loaded file
- * - Polygon count information (for geometry nodes)
+ * showing file operations and the currently loaded file path.
  */
 
-import { useState } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { Logger } from '../../utils/Logger';
 
@@ -18,25 +12,15 @@ interface FileNodeToolbarProps {
 }
 
 export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
-  const [polygonCount] = useState<number | undefined>(undefined);
-
   // Toolbar button handlers
   const handleLoadFile = () => {
     Logger.debug('Load file clicked for node:', node.name);
-    // TODO: Open file dialog to load mesh
-    // This would call client.geometry.loadMesh() or similar
+    // TODO: Open file chooser (ApiFileChooser) and call the appropriate load API
   };
 
   const handleReloadMesh = () => {
     Logger.debug('Reload File clicked for node:', node.name);
-    // TODO: Reload mesh from current file path
-    // This would call client.geometry.reloadMesh() or similar
-  };
-
-  // Format polygon count with thousands separator
-  const formatPolygonCount = (count: number | undefined): string => {
-    if (count === undefined) return '';
-    return count.toLocaleString();
+    // TODO: Reload from node.filePath via the geometry reload API
   };
 
   return (
@@ -71,11 +55,6 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
         <div className="geometry-file-path" title={node.filePath || 'No file loaded'}>
           {node.filePath || 'No file'}
         </div>
-
-        {/* Polygon count info */}
-        {polygonCount !== undefined && (
-          <div className="geometry-polygon-count">{formatPolygonCount(polygonCount)} polygons</div>
-        )}
       </div>
     </div>
   );

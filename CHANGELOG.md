@@ -9,6 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - Beta 2 Proto Cleanup + ESLint Fix (2026-02-24)
+
+- **Beta 2 proto files deleted**: `server/proto/` directory cleaned up; deleted all old/unused `.proto` files that were staged for removal (apinodesystem, apirender, callback, common, etc.)
+- **ESLint config fix**: Added file-level `globals.node` override for `api-version.config.js` so `module` is defined in flat config without needing unsupported `/* eslint-env */` comments
+- **MaterialDatabaseService**: Corrected `getLiveDBCategories` and `getLiveDBMaterials` handle extraction to use integer `ObjectType` (via `getObjectTypeForService`); confirmed `INVALID_ARGUMENT` on `getCategory` is an Octane-side bug
+- **server/src/grpc/client.ts**: Updated service/proto mappings for current Beta 2 proto layout
+- **vite-plugin-octane-grpc.ts**: Refactored request handling for current proto layout
+
+### Added - Progressive Scene Loading (SceneServiceP) (2026-02-24)
+
+- **SceneServiceP**: New `client/src/services/octane/SceneServiceP.ts` — clean-room progressive loader replacing V1/V2/V3 attempts
+  - Single-service progressive loading with async/await pattern
+  - Integrates with SyncIndicator for loading feedback
+- **SyncIndicator**: New `client/src/components/SyncIndicator/index.tsx` — visual spinner/indicator shown during progressive scene builds
+- **Removed**: `ProgressiveSceneServiceV3.ts` deleted (replaced by SceneServiceP)
+- **Removed**: `features.ts` feature flags for progressive mode (V1/V2/V3 flags removed; SceneServiceP is always active)
+- **Fixed progressive UI bugs** (commit `77043b7`):
+  - `useSceneTree.ts`: Simplified — removed V1/V2/V3 conditional branches
+  - `NodeGraph/index.tsx`: Fixed progressive rebuild logic
+  - `useTreeExpansion.ts`: Fixed expansion map initialization racing progressive loads
+
+### Added - File Node Toolbar (2026-02-21)
+
+- **FileNodeToolbar**: `client/src/components/NodeInspector/FileNodeToolbar.tsx` replaces `GeometryToolbar.tsx`
+  - Handles file-bearing nodes (image textures, geometry, etc.) with load/reload/save/clear buttons
+  - Reads filename via `A_FILENAME` attribute, shows polygon count for geometry nodes
+  - `GeometryToolbar.tsx` deleted (functionality merged into FileNodeToolbar)
+- **useParameterValue**: Added filename/polygon-count fetching for file nodes
+
+### Fixed - Node Dropdown for Empty Pins (2026-02-21)
+
+- `SceneService.ts` / `SceneServiceP.ts`: Fixed node type dropdown rendering for nodes with no connected pins (edge case where `children` was empty)
+
+### Changed - Large Lint Cleanup Pass (2026-02-21)
+
+- Lint fixes across ~70 files (commit `cdb0cf0`): fixed jsx-a11y errors, setState-in-render, refs-during-render, no-unused-vars, react-hooks/exhaustive-deps
+- `ApiService.ts`: Cleaned up type assertions
+- `NodeService.ts`, `RenderService.ts`, `SceneService.ts`, `MaterialDatabaseService.ts`: Logger usage and type safety improvements
+- All dialog components: Fixed accessibility (labels, roles, aria-\* attributes)
+
 ### Added - Progressive Scene Loading V3 (2025-02-11)
 
 - **Two-Pass Progressive Loading**: New `ProgressiveSceneServiceV3` with per-pin emission
@@ -23,12 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Performance - Viewport Canvas Optimization (2025-02-03)
 
 **Phase 1: Quick Wins** (Commit: `5433c88`)
+
 - ✅ **Conditional Canvas Resize**: Only resize when dimensions change (50× reduction)
 - ✅ **Throttled Status Updates**: Limit to 2x/sec (96% reduction in re-renders)
 - ✅ **Memoized Canvas Style**: Stable object reference + GPU hints
 - ✅ **Fixed React Flow Warning**: Added explicit container dimensions
 
 **Phase 2: RAF-Based Rendering** (Commit: `ed28738`)
+
 - ✅ **New Hook: useCanvasRenderer.ts**: Industry-standard RAF rendering loop
   - Automatic frame coalescing (skips intermediate frames)
   - Synced to browser refresh rate (60 FPS)
@@ -39,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - displayImage now just validates and schedules RAF
 
 **Phase 3: Input-Side Throttling** (This commit)
+
 - ✅ **Drag State Tracking**: useMouseInteraction now returns `{ isDragging }`
   - Tracks camera orbit, pan, and 2D pan operations
   - Exposes drag state to parent component
@@ -51,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - isDragging flows from mouse hook to image processor
 
 **Phase 4: Progressive Render Flush** (This commit)
+
 - ✅ **Root Cause Identified**: Octane progressive renderer sends 1000s of images
   - Each render generates 100-1000 progressive refinement images
   - Images from OLD camera positions queue up in RAF
@@ -59,7 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `flushPendingFrame()` in useCanvasRenderer
   - Cancels pending RAF, clears `pendingImageRef`
   - Exposed through useImageBufferProcessor
-- ✅ **Automatic Flush Triggers**: 
+- ✅ **Automatic Flush Triggers**:
   - Camera drag start: `useEffect` on `isDragging=true`
   - Camera reset/presets: `camera:reset` event handler
   - Result: Only LATEST camera position images displayed
@@ -69,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No flush on parameter changes (same camera = valid progressive render)
 
 **Performance Impact (All Phases)**:
+
 - FPS during camera orbit: **40-50 FPS (choppy) → 30 FPS (smooth)** ✅
 - Images processed during drag: **100/sec → 30/sec** (70% reduction)
 - Frame time budget: **16.6ms (tight) → 33ms (relaxed)** (2× more time)
@@ -87,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Root Cause**: When camera was reset or moved via presets, Octane's camera updated but viewport's local `cameraRef` was not re-synced, causing next drag to start from old position (jump/snap behavior).
 
 **Solution**: Event-driven camera sync
+
 - ✅ **CameraService**: Emit `camera:reset` event on programmatic camera changes
   - `resetCamera()` emits event after updating Octane
   - `setCameraPositionAndTarget()` accepts `silent` param
@@ -101,18 +147,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents infinite event loop
 
 **Files Changed**:
+
 - `services/octane/CameraService.ts` - Emit events on camera updates
 - `services/OctaneClient.ts` - Add `silent` parameter passthrough
 - `components/CallbackRenderViewport/index.tsx` - Listen for camera:reset event
 - `components/CallbackRenderViewport/hooks/useCameraSync.ts` - Pass silent=true for drags
 
-**Result**: 
+**Result**:
+
 - ✅ Reset Camera → Next drag starts from reset position (no jump)
 - ✅ Camera Presets → Next drag starts from preset position (no jump)
 - ✅ Drag operations → No performance impact (silent=true)
 - ✅ Clean event-driven architecture
 
 **Technical Details**:
+
 - RAF fires at display refresh rate (typically 60 Hz)
 - If Octane sends 100 FPS, 40 frames automatically coalesced
 - Browser guarantees RAF before next paint
@@ -128,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Displays polygon count information
   - Files: `client/src/components/NodeInspector/GeometryToolbar.tsx`
 
-- **Node Inspector Integration**: Geometry toolbar appears for NT_GEO_* node types
+- **Node Inspector Integration**: Geometry toolbar appears for NT*GEO*\* node types
   - Detects geometry nodes (NT_GEO_MESH, NT_GEO_OBJECT, NT_GEO_PLANE, etc.)
   - Renders toolbar between node header and parameters
   - Matches Octane SE UI layout exactly
@@ -141,6 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files: `client/src/styles/node-inspector.css`
 
 **Visual Structure:**
+
 ```
 ┌─ Geometry Node Header ────────────────┐
 │ [Icon] Geometry: Mesh Name     [▼]    │
@@ -154,6 +204,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 
 **Benefits:**
+
 - ✅ **File Operations**: Quick access to load/reload/save mesh files
 - ✅ **Mesh Info**: Instant visibility of file path and polygon count
 - ✅ **Octane SE Clone**: Pixel-perfect match with Octane Standalone Edition
@@ -168,7 +219,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Temporary messages auto-clear after configurable duration (default 3s)
   - Added to provider hierarchy: `QueryClient → Octane → StatusMessage → EditActions`
   - Files: `client/src/contexts/StatusMessageContext.tsx`
-  
 - **Scene Build Progress**: Status bar shows scene tree building progress
   - Emits `scene:buildStart` when building begins
   - Emits `scene:buildProgress` at each major step (root graph, checking, building)
@@ -184,6 +234,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files: `client/src/App.tsx`
 
 **Benefits:**
+
 - ✅ **User Feedback**: Real-time visual feedback for all major operations
 - ✅ **Progress Visibility**: Scene building progress shown step-by-step
 - ✅ **Non-Intrusive**: Temporary messages auto-clear, no user action needed

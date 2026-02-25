@@ -184,16 +184,11 @@ export class SceneService extends BaseService {
   }
 
   /**
-   * Recursively builds scene tree by traversing node graphs and their pins
+   * Recursively builds scene tree by traversing node graphs and their pins.
    * @param itemHandle - Current item to process (null = start from root)
    * @param sceneItems - Accumulator array for nodes at this level
    * @param isGraph - Whether current item is a NodeGraph (contains owned items vs pins)
-   * @param level - Current recursion depth (limited to 5 to prevent infinite loops)
-   */
-  /**
-   * SEQUENTIAL scene loading - Original proven implementation
-   * Processes nodes one at a time in order
-   * Always works correctly, used as fallback when parallel is disabled
+   * @param level - Current recursion depth (capped at 5 to prevent infinite loops)
    */
   private async syncSceneSequential(
     itemHandle: number | null,
@@ -269,13 +264,11 @@ export class SceneService extends BaseService {
           Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items`);
           for (const item of sceneItems) {
             await this.addItemChildren(item);
+            // Small yield between items to keep the event loop responsive and
+            // avoid blocking the UI on scenes with many top-level nodes.
             await new Promise(resolve => setTimeout(resolve, 50));
           }
           Logger.debug(`✅ Finished building children for all level 1 items`);
-
-          // 🎯 PROGRESSIVE UPDATE: Emit after level 1 completes
-          //          Logger.debug(`📡 Sequential: Emitting progressive update after level ${level}`);
-          //
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
@@ -489,7 +482,7 @@ export class SceneService extends BaseService {
           id: AttributeId.A_FILENAME,
         }
       );
-      if (responseHas && responseHas.result == true) {
+      if (responseHas && responseHas.result === true) {
         const response = await this.apiService.callApi(
           'ApiItem',
           'getValueByAttrID', // Use correct method name for API version

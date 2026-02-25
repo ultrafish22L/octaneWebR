@@ -50,14 +50,8 @@ export function useParameterValue(
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
   useEffect(() => {
     const fetchValue = async () => {
-      // Verbose parameter logging (commented out to reduce log flooding)
-      // Log every node to understand the tree structure
-      // if (level < 3) {  // Only log first 3 levels to avoid spam
-      //   Logger.debug(`📋 NodeParameter: "${node.name}" - hasChildren:${hasChildren}, has attrInfo:${!!node.attrInfo}, isEndNode:${isEndNode}, handle:${node.handle}`);
-      // }
-
       if (!node.attrInfo || !node.handle || !isEndNode) {
-        return; // Skip without verbose logging
+        return;
       }
       try {
         // attrInfo.type is already a STRING like "AT_FLOAT3" from the API
@@ -127,8 +121,9 @@ export function useParameterValue(
       try {
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-        // Determine the correct value field name based on type
-        // CRITICAL: Must match exact field names used by octaneWeb and Octane API
+        // Determine the correct value field name for the setValueByAttrID request.
+        // These field names must exactly match the protobuf oneof field names in
+        // apiitem.proto — e.g., bool_value, float_value, float3_value, etc.
         let valueField: string;
         let formattedValue: ParameterRawValue;
 

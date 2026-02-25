@@ -161,7 +161,9 @@ export class OctaneClient extends EventEmitter {
   // ==================== Scene Methods ====================
 
   /**
-   * Build scene tree — progressive P or traditional.
+   * Build the scene tree. Routes to SceneServiceP (Progressive) when enabled,
+   * or SceneService (traditional) otherwise.
+   * When called with a handle, performs an incremental single-node update via SceneService.
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
     // Incremental update (add single node) - always use traditional service
@@ -211,6 +213,8 @@ export class OctaneClient extends EventEmitter {
 
   /**
    * Get current scene from the active loading service.
+   * Falls back to SceneService when SceneServiceP hasn't loaded anything yet
+   * (e.g., the first call before progressive loading completes).
    */
   getScene(): Scene {
     if (FEATURES.PROGRESSIVE_LOADING_P && this.sceneServiceP.getScene().tree.length > 0) {

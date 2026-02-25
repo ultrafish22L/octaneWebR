@@ -19,8 +19,8 @@ Before starting, ensure you have:
 
 octaneWebR communicates with Octane via the LiveLink gRPC API.
 
-1. Launch **Octane Render gRPC 2026.1 Alpha 5** - (https://filedrop.otoy.com/f/393752)
-2. Open the menu File/Preferences: 
+1. Launch **Octane Render gRPC 2026.1** (Alpha 5 or Beta 2) - (https://filedrop.otoy.com/f/393752)
+2. Open the menu File/Preferences:
 3. Set **GRPC API/Enable GRPC Server : true**
 4. Set **GRPC API/GRPC Server Address: 127.0.0.1:51022** and OK
 5. Restart Octane
@@ -39,6 +39,7 @@ npm install
 ```
 
 **What this does**:
+
 - Installs React, TypeScript, Vite
 - Installs ReactFlow for node graph editor
 - Installs gRPC-Web libraries
@@ -55,6 +56,7 @@ npm run dev
 ```
 
 **Expected output**:
+
 ```
 VITE v5.x.x  ready in XXX ms
 
@@ -63,6 +65,7 @@ VITE v5.x.x  ready in XXX ms
 ```
 
 **What's happening**:
+
 - Vite dev server starts on port `57341`
 - Embedded gRPC proxy connects to Octane at `localhost:51022`
 - Hot module replacement (HMR) enabled for instant updates
@@ -101,29 +104,35 @@ octaneWebR has a 5-panel layout:
 ```
 
 ### Scene Outliner (Left Panel)
+
 - **Scene Tab**: Hierarchical tree of all nodes in Octane scene
 - **LiveDB Tab**: Browse online materials from OTOY library
 - **LocalDB Tab**: Access locally saved materials
 
 **Try it**:
+
 - Click the expand/collapse arrows to navigate the scene tree
 - Click a node to select it (syncs with Node Graph)
 - Click the eye icon to toggle visibility
 
 ### Render Viewport (Top Center)
+
 - Live render output from Octane
 - Interactive camera controls
 
 **Try it**:
+
 - **Left-click + drag**: Orbit camera
 - **Right-click + drag**: Pan camera
 - **Scroll wheel**: Zoom camera
 - **Picker tools**: Click toolbar icons, then click in viewport
 
 ### Node Graph Editor (Bottom Center)
+
 - Visual node-based editing using ReactFlow
 
 **Try it**:
+
 - **Right-click** on empty canvas → Select a node type → Click to create
 - **Drag** from output pin (right side) to input pin (left side) to connect
 - **Click** a node to select it (syncs with Scene Outliner and Node Inspector)
@@ -131,9 +140,11 @@ octaneWebR has a 5-panel layout:
 - **Ctrl+F**: Open search dialog
 
 ### Node Inspector (Right Panel)
+
 - Edit parameters for the selected node
 
 **Try it**:
+
 - Select a node in the Node Graph or Scene Outliner
 - Edit parameter values in the Node Inspector
 - Changes sync to Octane in real-time
@@ -169,18 +180,18 @@ octaneWebR has a 5-panel layout:
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+N` | New scene |
-| `Ctrl+O` | Open scene |
-| `Ctrl+S` | Save scene |
-| `Ctrl+Shift+S` | Save As |
-| `Ctrl+C` | Copy selected node(s) |
-| `Ctrl+V` | Paste node(s) |
-| `Ctrl+F` | Search nodes |
-| `Delete` | Delete selected node(s) |
-| `F5` | Refresh scene |
-| `F11` | Toggle fullscreen |
+| Shortcut       | Action                  |
+| -------------- | ----------------------- |
+| `Ctrl+N`       | New scene               |
+| `Ctrl+O`       | Open scene              |
+| `Ctrl+S`       | Save scene              |
+| `Ctrl+Shift+S` | Save As                 |
+| `Ctrl+C`       | Copy selected node(s)   |
+| `Ctrl+V`       | Paste node(s)           |
+| `Ctrl+F`       | Search nodes            |
+| `Delete`       | Delete selected node(s) |
+| `F5`           | Refresh scene           |
+| `F11`          | Toggle fullscreen       |
 
 **macOS**: Replace `Ctrl` with `Cmd`
 
@@ -189,6 +200,7 @@ octaneWebR has a 5-panel layout:
 ## Menu System
 
 ### File Menu
+
 - **New** - Clear scene and start fresh
 - **Open** - Load a scene file
 - **Save** - Save current scene
@@ -197,25 +209,30 @@ octaneWebR has a 5-panel layout:
 - **Preferences** - Application settings
 
 ### Edit Menu
+
 - **Undo / Redo** - Undo or redo last action
 - **Cut / Copy / Paste** - Node clipboard operations
 - **Delete** - Delete selected nodes
 
 ### Script Menu
+
 - **Batch Rendering** - Render multiple frames/scenes
 - **Daylight Animation** - Animate sun position
 - **Turntable Animation** - Rotate camera around object
 
 ### View Menu
+
 - **Show/Hide Panels** - Toggle panel visibility
 - **Refresh Scene** (F5) - Reload scene tree from Octane
 
 ### Window Menu
+
 - **Material Database** - Open LiveDB/LocalDB browser
 - **Reset Layout** - Restore default panel sizes
 - **Fullscreen** (F11) - Toggle fullscreen mode
 
 ### Help Menu
+
 - **Documentation** - Open Octane SE Manual
 - **Keyboard Shortcuts** - Show shortcuts reference
 - **About** - Application info
@@ -227,19 +244,22 @@ octaneWebR has a 5-panel layout:
 ### ❌ "Cannot connect to Octane"
 
 **Possible causes**:
+
 1. Octane is not running
 2. LiveLink is not enabled
 3. Firewall blocking port `51022`
 
 **Solutions**:
+
 1. Launch Octane
 2. Enable LiveLink: **Help → LiveLink** in Octane menu
 3. Check firewall settings (allow port `51022`)
 4. Verify Octane is listening on `51022`:
+
    ```bash
    # Windows
    netstat -an | findstr 51022
-   
+
    # macOS/Linux
    lsof -i :51022
    ```
@@ -247,11 +267,13 @@ octaneWebR has a 5-panel layout:
 ### ❌ "npm install" fails
 
 **Common causes**:
+
 1. Node.js version too old
 2. Network issues
 3. Permissions errors
 
 **Solutions**:
+
 1. Update Node.js to 18+ ([Download](https://nodejs.org/))
 2. Check internet connection
 3. Try with sudo (Linux/macOS): `sudo npm install`
@@ -260,11 +282,13 @@ octaneWebR has a 5-panel layout:
 ### ❌ Browser shows blank page
 
 **Possible causes**:
+
 1. JavaScript error in console
 2. Dev server not running
 3. Wrong port
 
 **Solutions**:
+
 1. Open browser console (F12) and check for errors
 2. Ensure `npm run dev` is running
 3. Verify you're going to the correct URL: `http://localhost:57341`
@@ -273,10 +297,12 @@ octaneWebR has a 5-panel layout:
 ### ❌ Scene tree is empty
 
 **Possible causes**:
+
 1. No scene loaded in Octane
 2. Scene loaded but not synced
 
 **Solutions**:
+
 1. Load a scene in Octane
 2. Click **View → Refresh Scene** (or press F5)
 3. Check browser console for errors
@@ -284,10 +310,12 @@ octaneWebR has a 5-panel layout:
 ### ❌ Changes not syncing to Octane
 
 **Possible causes**:
+
 1. Octane scene is locked
 2. gRPC connection dropped
 
 **Solutions**:
+
 1. Check Octane for locked nodes/parameters
 2. Refresh the page (F5)
 3. Restart Octane
@@ -298,29 +326,38 @@ octaneWebR has a 5-panel layout:
 ## Development Tips
 
 ### Hot Reload
+
 Vite provides instant hot module replacement (HMR):
+
 - Edit any `.tsx` or `.ts` file
 - Save the file
 - Changes appear immediately in browser (no page refresh)
 
 ### Browser DevTools
+
 Use browser DevTools (F12) for debugging:
+
 - **Console**: View logs and errors
 - **Network**: Monitor gRPC API calls
 - **Performance**: Profile rendering performance
 - **React DevTools**: Inspect React component tree
 
 ### Type Checking
+
 Run TypeScript type checking without building:
+
 ```bash
 npx tsc --noEmit
 ```
 
 ### Production Build
+
 Build for production deployment:
+
 ```bash
 npm run build
 ```
+
 Output in `dist/client/` directory.
 
 ---
@@ -336,6 +373,7 @@ Now that you're up and running:
 5. **Read the Manual**: [Octane SE Manual](https://docs.otoy.com/standaloneSE/)
 
 For more details, see:
+
 - **[README.md](./README.md)** - Complete feature list and architecture overview
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development guide with code patterns
 

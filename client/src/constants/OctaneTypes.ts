@@ -99,6 +99,8 @@ export const ObjectType = {
   ApiCustomCurveEditorController_Listener: 90,
   ApiTileGridLoader: 91,
   ApiGaussianSplatCloudNode: 92,
+  // ApiNodePinInfoEx intentionally reuses value 44 (same as ApiNodePinInfo).
+  // It's an extended variant of the same underlying type; Octane treats both identically.
   ApiNodePinInfoEx: 44,
 } as const;
 

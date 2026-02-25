@@ -9,7 +9,7 @@
  * Features:
  * - Configurable TTL per cache key pattern
  * - Smart invalidation (pattern-based)
- * - LRU eviction when quota exceeded
+ * - LFU-style eviction when quota exceeded (least-hit entry removed first)
  * - Cache hit/miss statistics
  * - Automatic expiration
  *
@@ -340,14 +340,14 @@ export class CacheManager {
   }
 
   /**
-   * Evict least recently used entry from memory cache
+   * Evict the least-accessed entry from the memory cache (LFU-style: fewest hits wins,
+   * with insertion time as a tiebreaker for entries with the same hit count).
    */
   private evictLRU(): void {
     let lruKey: string | null = null;
     let lruHits = Infinity;
     let lruTimestamp = Infinity;
 
-    // Find entry with lowest hits (and oldest timestamp as tiebreaker)
     for (const [key, entry] of this.memoryCache) {
       if (entry.hits < lruHits || (entry.hits === lruHits && entry.timestamp < lruTimestamp)) {
         lruKey = key;
@@ -359,7 +359,7 @@ export class CacheManager {
     if (lruKey) {
       this.memoryCache.delete(lruKey);
       this.stats.evictions++;
-      Logger.debug(`💾 Evicted LRU entry: ${lruKey}`);
+      Logger.debug(`💾 Evicted least-accessed entry: ${lruKey}`);
     }
   }
 

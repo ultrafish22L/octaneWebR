@@ -11,6 +11,7 @@ This document provides detailed context for developers and AI assistants working
 **octaneWebR** is a React/TypeScript web application that provides a browser-based UI for Octane Render Studio. It communicates with Octane via the gRPC LiveLink API to provide real-time scene editing, parameter control, and live render output.
 
 ### Key Points
+
 - **No Mocking**: All features connect to real Octane via gRPC (no simulations)
 - **Type Safety**: Strict TypeScript throughout
 - **UI Clone**: Interface matches Octane SE Manual specifications
@@ -22,6 +23,7 @@ This document provides detailed context for developers and AI assistants working
 ## Architecture Overview
 
 ### Technology Stack
+
 ```
 Frontend:
 - React 18 (functional components, hooks)
@@ -42,6 +44,7 @@ Communication:
 ```
 
 ### Directory Structure
+
 ```
 octaneWebR/
 ├── client/src/
@@ -66,6 +69,7 @@ octaneWebR/
 ## Service Layer Architecture
 
 ### BaseService Pattern
+
 All services extend `BaseService` for consistent patterns:
 
 ```typescript
@@ -81,6 +85,7 @@ export abstract class BaseService {
 ```
 
 **Key Services**:
+
 - `ApiService` - Core gRPC wrapper with objectPtr handling, service-to-ObjectType mapping
 - `ConnectionService` - WebSocket lifecycle, auto-reconnect (5s delay), browser timing fixes
 - `SceneService` - Recursive scene tree building (NodeGraphs → items, Nodes → pins)
@@ -95,10 +100,13 @@ export abstract class BaseService {
 - `CommandHistory` - Undo/redo with branching behavior (50-action history)
 
 **Main Facade**:
+
 - `OctaneClient` - Aggregates all services, single entry point, event coordination
 
 ### Event-Driven Architecture
+
 Services emit events for UI synchronization:
+
 ```typescript
 // Service emits event
 this.emit('node:created', { node });
@@ -110,6 +118,7 @@ client.on('node:created', ({ node }) => {
 ```
 
 **Common Events**:
+
 - `connection:changed` - Connection state updated
 - `scene:loaded` - Scene tree loaded from Octane
 - `node:selected` - Node selected in UI
@@ -117,6 +126,7 @@ client.on('node:created', ({ node }) => {
 - `render:update` - New render frame received
 
 **Progressive Loading Events** (V3):
+
 - `scene:buildStart` - Scene load begins
 - `scene:nodeAdded` - Level-1 node added
 - `scene:level0Complete` - All level-1 nodes loaded
@@ -130,15 +140,16 @@ client.on('node:created', ({ node }) => {
 ## Component Architecture
 
 ### React Patterns
+
 ```typescript
 // Functional components with hooks
 const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
   // State
   const [state, setState] = useState<Type>(initialValue);
-  
+
   // Context
   const { client, connected } = useOctane();
-  
+
   // Effects
   useEffect(() => {
     // Setup
@@ -146,7 +157,7 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
       // Cleanup
     };
   }, [dependencies]);
-  
+
   // Render
   return <div>...</div>;
 };
@@ -155,12 +166,14 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
 ### Key Components
 
 #### **App.tsx**
+
 - Root component
 - Provides OctaneProvider context
 - Manages panel layout with resizable splitters
 - Coordinates communication between components
 
 #### **NodeGraphEditor.tsx** (~1500 lines)
+
 - ReactFlow-based node graph
 - Custom node rendering via `OctaneNode.tsx`
 - Context menus (node, canvas, edge)
@@ -168,17 +181,20 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
 - Search dialog (Ctrl+F)
 
 #### **SceneOutliner/index.tsx**
+
 - Recursive tree rendering
 - Expand/collapse state management
 - Icon mapping via `OctaneIconMapper`
 - Tabs: Scene, LiveDB, LocalDB
 
 #### **NodeInspector/index.tsx**
+
 - Parameter editor for selected node
 - Type-specific input components
 - Real-time sync to Octane via `client.node.setPinValue()`
 
 #### **CallbackRenderViewport/index.tsx**
+
 - Render output display (canvas-based)
 - Camera controls (orbit, pan, zoom)
 - Picker tools integration
@@ -189,7 +205,9 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 }) => {
 ## gRPC Integration
 
 ### Proto Files
+
 Located in `server/proto/` (Beta 2) and `server/proto_old/` (Alpha 5):
+
 ```
 apinodesystem_3.proto  - Node operations (create, delete, connect)
 scenetree.proto        - Scene tree queries
@@ -201,18 +219,21 @@ callback.proto         - Streaming callbacks
 ### API Version Configuration
 
 octaneWebR supports two Octane gRPC API versions with automatic compatibility:
+
 - **Alpha 5 (2026.1)**: Proto files in `server/proto_old/`
 - **Beta 2 (2026.1)**: Proto files in `server/proto/` (default)
 
 #### Quick Switch Guide
 
 **Edit ONE file**: `api-version.config.js` (line 22)
+
 ```javascript
-const USE_ALPHA5_API = true;   // Alpha 5 (2026.1)
-const USE_ALPHA5_API = false;  // Beta 2 (2026.1) - default
+const USE_ALPHA5_API = true; // Alpha 5 (2026.1)
+const USE_ALPHA5_API = false; // Beta 2 (2026.1) - default
 ```
 
 **Then rebuild and restart**:
+
 ```bash
 npm run build && npm run dev
 ```
@@ -229,10 +250,12 @@ api-version.config.js (ROOT - Single Source of Truth)
 ```
 
 **Build Time**:
+
 - Vite injects `__USE_ALPHA5_API__` constant into client bundle
 - Server uses CommonJS `require()` to load config directly
 
 **Runtime**:
+
 - **Server**: Loads correct proto directory based on config
 - **Client**: Transforms method names/parameters if needed (Alpha 5 mode)
 - **Guaranteed Sync**: Impossible to mismatch versions
@@ -240,6 +263,7 @@ api-version.config.js (ROOT - Single Source of Truth)
 #### What Happens When You Switch
 
 **When `USE_ALPHA5_API = true` (Alpha 5)**:
+
 - ✅ Server loads proto files from `server/proto_old/`
 - ✅ Client transforms Beta 2 method names → Alpha 5 method names
   - `getPinValueByPinID` → `getPinValue`
@@ -252,6 +276,7 @@ api-version.config.js (ROOT - Single Source of Truth)
   - `bool_value`, `int_value`, etc. → `value` (generic)
 
 **When `USE_ALPHA5_API = false` (Beta 2)**:
+
 - ✅ Server loads proto files from `server/proto/`
 - ✅ Client uses Beta 2 method names directly (no transformation)
 - ✅ Client uses Beta 2 parameters directly (no transformation)
@@ -278,21 +303,27 @@ api-version.config.js (ROOT - Single Source of Truth)
 After switching, check console logs to confirm:
 
 **Server Console (Terminal)**:
+
 ```
 [OCTANE-SERVER] API Version: Alpha 5 (2026.1)
 [OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto_old
 ```
+
 or
+
 ```
 [OCTANE-SERVER] API Version: Beta 2 (2026.1)
 [OCTANE-SERVER] Proto directory: /workspace/project/octaneWebR/server/proto
 ```
 
 **Client Console (Browser)**:
+
 ```
 [DEBUG] 🔄 API Compatibility: getPinValueByPinID → getPinValue (Alpha 5)
 ```
+
 or
+
 ```
 [DEBUG] 🔄 API Compatibility: Using Beta 2 (no transformation)
 ```
@@ -304,6 +335,7 @@ or
 **Cause**: Server loaded wrong proto files (doesn't have the method client is requesting)
 
 **Fix**:
+
 1. Verify you edited `api-version.config.js` (NOT individual config files)
 2. Clear build cache: `rm -rf dist node_modules/.vite`
 3. Rebuild: `npm run build`
@@ -317,12 +349,14 @@ or
 **Fix**: Same as above - ensure config is correct and rebuild
 
 **Files You Should NOT Edit Directly**:
+
 - ❌ `vite-plugin-octane-grpc.ts` - Now imports from centralized config
 - ❌ `client/src/config/apiVersionConfig.ts` - Now imports from centralized config
 
 These files **read** from `api-version.config.js`. Editing them has no effect.
 
 ### API Call Pattern
+
 ```typescript
 // In service class
 async myMethod(param: Type): Promise<ResultType> {
@@ -331,12 +365,12 @@ async myMethod(param: Type): Promise<ResultType> {
       param1: value1,
       param2: value2
     });
-    
+
     if (!response?.result) {
       Logger.error('❌ Method failed - no result');
       return null;
     }
-    
+
     Logger.debug('✅ Method succeeded:', response.result);
     return response.result;
   } catch (error: any) {
@@ -347,6 +381,7 @@ async myMethod(param: Type): Promise<ResultType> {
 ```
 
 **Logging Conventions**:
+
 - Use `Logger.*` instead of `console.*` (centralized, filterable)
 - High-frequency operations → `Logger.debug()` (network checks, polling)
 - Errors → `Logger.error()` with descriptive messages
@@ -356,6 +391,7 @@ async myMethod(param: Type): Promise<ResultType> {
 - API calls → `Logger.api(service, method, handle)` (optional, debug mode)
 
 **gRPC Conventions**:
+
 - Some services need objectPtr: `{ objectPtr: { handle: "123", type: ObjectType.NODE } }`
 - Others use handle directly: `{ handle: 123 }`
 - Check `OctaneTypes.ts` for service-to-ObjectType mapping
@@ -363,15 +399,17 @@ async myMethod(param: Type): Promise<ResultType> {
 - Always use `doCycleCheck: true` for pin connections (prevents crashes)
 
 ### Callback Streaming
+
 Real-time render updates use WebSocket:
+
 ```typescript
 // Server: callbackManager.ts
-callbackManager.on('callback:triggered', (data) => {
+callbackManager.on('callback:triggered', data => {
   wsServer.broadcast({ type: 'callback', data });
 });
 
 // Client: RenderService.ts
-this.socket.on('callback', (data) => {
+this.socket.on('callback', data => {
   this.emit('render:update', data);
 });
 ```
@@ -381,6 +419,7 @@ this.socket.on('callback', (data) => {
 ## Icon System
 
 ### Icon Mapping
+
 Icons are mapped in several files:
 
 ```
@@ -391,6 +430,7 @@ constants/ToolbarIconMapping.ts  - Toolbar button icons
 ```
 
 ### Icon Loader
+
 ```typescript
 // utils/IconLoader.tsx
 export const OctaneIcon: React.FC<{ type: string }> = ({ type }) => {
@@ -402,13 +442,15 @@ export const OctaneIcon: React.FC<{ type: string }> = ({ type }) => {
 **Icon Files**: PNG files in `client/public/icons/`
 
 ### OctaneIconMapper
+
 Utility class for icon and color mapping:
+
 ```typescript
 // utils/OctaneIconMapper.ts
 export class OctaneIconMapper {
   static getNodeIcon(type: string, name: string): string;
   static getPinGroupIcon(groupName: string): string;
-  static formatNodeColor(color: { r, g, b }): string;
+  static formatNodeColor(color: { r; g; b }): string;
   static formatColorValue(value: any): string;
 }
 ```
@@ -418,6 +460,7 @@ export class OctaneIconMapper {
 ## Styling and Theming
 
 ### CSS Architecture
+
 ```
 - CSS Modules for component isolation
 - CSS Variables for theming
@@ -426,37 +469,40 @@ export class OctaneIconMapper {
 ```
 
 ### Theme System
-Themes defined in `App.tsx`:
-```typescript
-const themes = {
-  dark: {
-    '--color-bg-primary': '#1e1e1e',
-    '--color-text-primary': '#ffffff',
-    // ... 50+ variables
-  },
-  light: {
-    '--color-bg-primary': '#ffffff',
-    '--color-text-primary': '#000000',
-    // ...
-  }
-};
+
+Themes are defined as CSS custom properties in `client/src/styles/octane-theme.css`:
+
+```css
+:root {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #222222;
+  --text-primary: #cccccc;
+  /* ... 134 total variables */
+}
 ```
 
-**Switching Themes**:
-```typescript
-const toggleTheme = () => {
-  const newTheme = theme === 'dark' ? 'light' : 'dark';
-  setTheme(newTheme);
-  applyTheme(newTheme);
-  localStorage.setItem('theme', newTheme);
-};
+**All component styles use CSS variables** — no hardcoded colors:
+
+```css
+/* component.css */
+.container {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
 ```
+
+**Style files**:
+
+- `octane-theme.css` — variable definitions only (no selectors)
+- `app.css`, `scene-outliner.css`, `viewport.css`, `node-graph.css`, `node-inspector.css` — component styles using `var(--*)`
 
 ---
 
 ## Development Conventions
 
 ### Code Style
+
 ```typescript
 // File naming: PascalCase for components, camelCase for utilities
 MyComponent.tsx
@@ -478,7 +524,7 @@ const MyComponent: React.FC<Props> = ({ prop1, prop2 = 0 }) => {
   const handleClick = () => {
     // Handler logic
   };
-  
+
   return <button onClick={handleClick}>{prop1}</button>;
 };
 
@@ -488,6 +534,7 @@ export { myUtility };
 ```
 
 ### Error Handling
+
 ```typescript
 // Service methods
 async myMethod() {
@@ -512,9 +559,12 @@ const handleAction = async () => {
 ```
 
 ### Type Safety
+
 ```typescript
 // Avoid 'any' - use specific types
-const myFunc = (param: string): number => { /* ... */ };
+const myFunc = (param: string): number => {
+  /* ... */
+};
 
 // Use type guards for unknown data
 function isNode(obj: unknown): obj is SceneNode {
@@ -532,29 +582,38 @@ const data = await client.fetchData(); // Type inferred from return type
 ### Adding a New Service Method
 
 1. **Check Proto File**
+
    ```bash
    grep -r "methodName" server/proto/
    ```
 
 2. **Add Method to Service**
+
    ```typescript
    // services/octane/MyService.ts
-   async myNewMethod(param: Type): Promise<ResultType> {
+   async myNewMethod(handle: number, param: Type): Promise<ResultType | null> {
      try {
-       const response = await fetch(`${this.serverUrl}/api/method`, {
-         method: 'POST',
-         body: JSON.stringify({ param })
-       });
-       const data = await response.json();
-       return data;
+       const response = await this.apiService.callApi(
+         'ApiServiceName',   // gRPC service name (no 'Service' suffix needed)
+         'methodName',       // Beta 2 method name (translated automatically for Alpha 5)
+         handle,             // object handle (or null for singleton services)
+         { param }           // extra request body fields
+       );
+       if (!response?.result) {
+         Logger.error('❌ myNewMethod failed - no result');
+         return null;
+       }
+       Logger.debug('✅ myNewMethod succeeded:', response.result);
+       return response.result as ResultType;
      } catch (error) {
-       console.error('[MyService] myNewMethod failed:', error);
-       throw error;
+       Logger.error('❌ myNewMethod error:', error);
+       return null;
      }
    }
    ```
 
 3. **Expose in OctaneClient**
+
    ```typescript
    // services/OctaneClient.ts
    public get myService() {
@@ -573,21 +632,23 @@ const data = await client.fetchData(); // Type inferred from return type
 ### Adding a New Component
 
 1. **Create Component File**
+
    ```bash
    mkdir -p client/src/components/MyComponent
    touch client/src/components/MyComponent/index.tsx
    ```
 
 2. **Implement Component**
+
    ```typescript
    // MyComponent/index.tsx
    import React from 'react';
    import { useOctane } from '../../hooks/useOctane';
    import styles from './MyComponent.module.css';
-   
+
    export const MyComponent: React.FC = () => {
      const { client, connected } = useOctane();
-     
+
      return (
        <div className={styles.container}>
          {/* Component content */}
@@ -597,6 +658,7 @@ const data = await client.fetchData(); // Type inferred from return type
    ```
 
 3. **Create Styles**
+
    ```css
    /* MyComponent.module.css */
    .container {
@@ -613,15 +675,17 @@ const data = await client.fetchData(); // Type inferred from return type
 ### Adding an Icon Mapping
 
 1. **Verify Icon Exists**
+
    ```bash
    ls client/public/icons/ | grep "ICON_NAME"
    ```
 
 2. **Add Mapping**
+
    ```typescript
    // constants/IconMapping.ts or utils/UIIconMapping.ts
    export const iconMap: Record<string, string> = {
-     'MY_ICON_KEY': '/icons/MY_ICON_FILE.png',
+     MY_ICON_KEY: '/icons/MY_ICON_FILE.png',
      // ...
    };
    ```
@@ -641,6 +705,7 @@ const data = await client.fetchData(); // Type inferred from return type
 This is the proven workflow for making changes and testing them. Follow this routine for all development work.
 
 #### 1. Stop Running Servers
+
 ```bash
 # Kill any processes on dev ports
 lsof -ti:57341,49019 2>/dev/null | xargs kill -9 2>/dev/null
@@ -648,6 +713,7 @@ echo "✅ Stopped all servers"
 ```
 
 #### 2. Build Client
+
 ```bash
 # Type check first (catches errors early)
 npx tsc --noEmit
@@ -662,6 +728,7 @@ ls -lh dist/client/assets/ | head -10
 ```
 
 **Expected Output**:
+
 ```
 dist/client/
 ├── assets/
@@ -672,6 +739,7 @@ dist/client/
 ```
 
 #### 3. Start Development Server
+
 ```bash
 # Start fresh dev server
 npm run dev &
@@ -685,6 +753,7 @@ curl -s http://localhost:57341/api/health | python3 -m json.tool
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "ok",
@@ -694,6 +763,7 @@ curl -s http://localhost:57341/api/health | python3 -m json.tool
 ```
 
 #### 4. Test in Browser
+
 ```bash
 # Check server logs (should show):
 # ✅ Vite dev server running at http://localhost:57341
@@ -703,6 +773,7 @@ curl -s http://localhost:57341/api/health | python3 -m json.tool
 ```
 
 **Browser Checklist**:
+
 1. Open `http://localhost:57341` in browser
 2. Check browser console for connection logs:
    - ✅ "Connected to Octane"
@@ -715,6 +786,7 @@ curl -s http://localhost:57341/api/health | python3 -m json.tool
    - Viewport: Camera controls, render output
 
 **Visual Verification**:
+
 - Take screenshot for documentation if needed
 - Check component rendering
 - Verify icons load correctly
@@ -723,6 +795,7 @@ curl -s http://localhost:57341/api/health | python3 -m json.tool
 #### 5. Test Feature-Specific Functionality
 
 Example for **Node Type Dropdown** feature:
+
 ```javascript
 // In browser console:
 1. Select a node in Node Graph
@@ -734,6 +807,7 @@ Example for **Node Type Dropdown** feature:
 ```
 
 #### 6. Review Logs
+
 ```bash
 # Check for errors in terminal
 # Look for:
@@ -744,6 +818,7 @@ Example for **Node Type Dropdown** feature:
 ```
 
 #### 7. Stop Servers (When Done Testing)
+
 ```bash
 # Clean shutdown
 kill $DEV_PID 2>/dev/null
@@ -797,6 +872,7 @@ echo "⏹️  To stop: kill $DEV_PID"
 Make executable: `chmod +x test-dev.sh`
 
 ### Manual Testing Checklist
+
 ```
 ✓ Start Octane with LiveLink enabled
 ✓ Start octaneWebR: npm run dev
@@ -813,6 +889,7 @@ Make executable: `chmod +x test-dev.sh`
 ### Debugging Tools
 
 #### Logger System
+
 octaneWebR uses a centralized logging system with multiple levels:
 
 ```typescript
@@ -842,12 +919,14 @@ Logger.api('ApiNode', 'create', nodeHandle);
 ```
 
 **Logger Distribution** (670+ calls):
+
 - 66% DEBUG - Development/high-frequency (scene building, position updates)
 - 24% ERROR - Failures and exceptions
 - 9% WARN - Non-critical issues
 - <1% INFO/SUCCESS/NETWORK/API - Special events
 
 **Console Filtering**:
+
 ```javascript
 // In browser console, filter by emoji prefix:
 // 🔍 - Debug
@@ -858,6 +937,7 @@ Logger.api('ApiNode', 'create', nodeHandle);
 ```
 
 #### Component Lifecycle Logging
+
 ```typescript
 useEffect(() => {
   Logger.debug('[ComponentName] Mounted');
@@ -892,26 +972,32 @@ client.on('*', (event, data) => {
 ## Build and Deployment
 
 ### Development Build
+
 ```bash
 npm run dev
 ```
-- Starts Vite dev server on port `58407`
+
+- Starts Vite dev server on port `57341`
 - Hot module replacement enabled
 - Source maps included
 
 ### Production Build
+
 ```bash
 npm run build
 ```
+
 - Output: `dist/client/`
 - Minified and optimized
 - Tree-shaking applied
 - Source maps excluded
 
 ### Type Checking
+
 ```bash
 npx tsc --noEmit
 ```
+
 - Checks TypeScript types without building
 - Fails on any type errors
 
@@ -919,18 +1005,18 @@ npx tsc --noEmit
 
 ## Key Files Reference
 
-| File | Purpose |
-|------|---------|
-| `client/src/App.tsx` | Root component, layout, panel management |
-| `client/src/services/OctaneClient.ts` | Main API facade |
-| `client/src/services/octane/SceneService.ts` | Scene operations |
-| `client/src/components/NodeGraph/NodeGraphEditor.tsx` | Node graph editor |
-| `client/src/components/NodeGraph/OctaneNode.tsx` | Custom ReactFlow node |
-| `client/src/components/NodeInspector/index.tsx` | Parameter editor |
-| `client/src/utils/OctaneIconMapper.ts` | Icon and color mapping |
-| `client/src/constants/NodeTypes.ts` | Node type definitions (755+) |
-| `vite-plugin-octane-grpc.ts` | Embedded gRPC proxy |
-| `server/src/services/callbackManager.ts` | Callback streaming manager |
+| File                                                  | Purpose                                  |
+| ----------------------------------------------------- | ---------------------------------------- |
+| `client/src/App.tsx`                                  | Root component, layout, panel management |
+| `client/src/services/OctaneClient.ts`                 | Main API facade                          |
+| `client/src/services/octane/SceneService.ts`          | Scene operations                         |
+| `client/src/components/NodeGraph/NodeGraphEditor.tsx` | Node graph editor                        |
+| `client/src/components/NodeGraph/OctaneNode.tsx`      | Custom ReactFlow node                    |
+| `client/src/components/NodeInspector/index.tsx`       | Parameter editor                         |
+| `client/src/utils/OctaneIconMapper.ts`                | Icon and color mapping                   |
+| `client/src/constants/NodeTypes.ts`                   | Node type definitions (755+)             |
+| `vite-plugin-octane-grpc.ts`                          | Embedded gRPC proxy                      |
+| `server/src/services/callbackManager.ts`              | Callback streaming manager               |
 
 ---
 
@@ -945,6 +1031,7 @@ npx tsc --noEmit
 ## Working with This Project
 
 ### When Making Changes
+
 1. **Check existing patterns** - Look at similar components/services
 2. **Follow conventions** - Use established naming, structure, style
 3. **Type everything** - No `any` types
@@ -952,6 +1039,7 @@ npx tsc --noEmit
 5. **Check console** - Ensure no errors or warnings
 
 ### When Adding Features
+
 1. **Verify in Manual** - Check [Octane SE Manual](https://docs.otoy.com/standaloneSE/)
 2. **Check proto files** - Ensure gRPC API exists
 3. **Follow service pattern** - Extend BaseService if needed
@@ -959,6 +1047,7 @@ npx tsc --noEmit
 5. **Document** - Add comments for complex logic
 
 ### When Debugging
+
 1. **Check browser console** - Look for errors/warnings
 2. **Check network tab** - Verify gRPC calls
 3. **Check Octane** - Ensure LiveLink enabled, scene loaded

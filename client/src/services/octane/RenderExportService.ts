@@ -8,6 +8,9 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
 import { ApiService, asBool, asObject, asString } from './ApiService';
 
+/** Maps format strings to Octane imageSaveFormat enum values */
+const FORMAT_MAP: Record<string, number> = { PNG: 0, JPG: 1, EXR: 2, TIFF: 3 };
+
 export class RenderExportService extends BaseService {
   private apiService: ApiService;
 
@@ -22,14 +25,7 @@ export class RenderExportService extends BaseService {
     renderPassId: number = 0
   ): Promise<boolean> {
     try {
-      const formatMap: Record<string, number> = {
-        PNG: 0,
-        JPG: 1,
-        EXR: 2,
-        TIFF: 3,
-      };
-
-      const imageSaveFormat = formatMap[format];
+      const imageSaveFormat = FORMAT_MAP[format];
 
       const response = await this.apiService.callApi('ApiRenderEngine', 'saveImage1', null, {
         renderPassId,
@@ -99,14 +95,7 @@ export class RenderExportService extends BaseService {
     format: 'PNG' | 'JPG' | 'EXR' | 'TIFF' = 'PNG'
   ): Promise<boolean> {
     try {
-      const formatMap: Record<string, number> = {
-        PNG: 0,
-        JPG: 1,
-        EXR: 2,
-        TIFF: 3,
-      };
-
-      const imageSaveFormat = formatMap[format];
+      const imageSaveFormat = FORMAT_MAP[format];
 
       const response = await this.apiService.callApi('ApiRenderEngine', 'saveRenderPasses1', null, {
         outputDirectory,

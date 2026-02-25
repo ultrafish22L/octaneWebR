@@ -119,17 +119,6 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
- * Desaturate a color (make it more muted)
- * Currently unused but kept for future use
- */
-// @ts-ignore - Kept for future use
-
-function _desaturateColor(hex: string, amount: number = 0.5): string {
-  const hsl = hexToHsl(hex);
-  return hslToHex(hsl.h, hsl.s * amount, hsl.l);
-}
-
-/**
  * Fully saturate a color (make it vibrant)
  */
 function saturateColor(hex: string): string {
@@ -174,7 +163,7 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
   const rawNodeColor = sceneNode.nodeInfo?.nodeColor
     ? formatColorValue(sceneNode.nodeInfo.nodeColor)
     : '#666';
-  const nodeColor = rawNodeColor; //desaturateColor(rawNodeColor, 0.4); // 40% saturation for muted look
+  const nodeColor = rawNodeColor;
 
   // Calculate dynamic width based on inputs
   const inputCount = inputs.length;

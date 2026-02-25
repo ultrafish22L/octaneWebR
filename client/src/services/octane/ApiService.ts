@@ -117,7 +117,7 @@ export class ApiService extends BaseService {
     const compatibleMethod = getCompatibleMethodName(service, method);
 
     if (method !== compatibleMethod) {
-      //      Logger.debugV(`🔄 API Compatibility: ${method} → ${compatibleMethod} (${getApiVersion()})`);
+      Logger.debugV(`🔄 API Compatibility: ${service}.${method} → ${compatibleMethod}`);
     }
 
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
@@ -161,7 +161,7 @@ export class ApiService extends BaseService {
       Logger.debugV('Added params:', transformedParams);
     }
 
-    Logger.debug('Request body:', JSON.stringify(body));
+    Logger.debugV('Request body:', JSON.stringify(body));
 
     try {
       const response = await fetch(url, {

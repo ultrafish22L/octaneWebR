@@ -7,7 +7,8 @@
  */
 /* eslint-disable no-console */
 
-// Debug mode flag - when true, sends logs to /api/log endpoint for file logging
+// Debug mode — when true, batches logs and flushes them to /api/log for server-side file logging.
+// Set to false for production builds to avoid unnecessary network traffic.
 const DEBUG_MODE = true;
 
 export enum LogLevel {

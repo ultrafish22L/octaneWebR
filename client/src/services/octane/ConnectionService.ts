@@ -33,21 +33,21 @@ export class ConnectionService extends BaseService {
   async connect(): Promise<boolean> {
     try {
       Logger.network('ConnectionService.connect() - Connecting to server:', this.serverUrl);
-      
+
       // Check server health
       const isHealthy = await this.apiService.checkServerHealth();
       if (!isHealthy) {
         throw new Error('Server unhealthy');
       }
-      
+
       // Setup WebSocket for callbacks
       this.connectWebSocket();
-      
+
       this.connected = true;
       Logger.debug('Setting connected = true, emitting connected event');
       this.emit('connected', undefined);
       Logger.success('Connected to OctaneWebR server');
-      
+
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -66,17 +66,17 @@ export class ConnectionService extends BaseService {
   private connectWebSocket(): void {
     const wsUrl = this.serverUrl.replace('http', 'ws') + '/api/callbacks';
     Logger.network('Connecting WebSocket:', wsUrl);
-    
+
     try {
       this.ws = new WebSocket(wsUrl);
-      
+
       this.ws.onopen = () => {
         const ws = this.ws;
         if (!ws) return;
-        
+
         Logger.success('WebSocket connected');
         Logger.debug(`WebSocket readyState on open: ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
-        
+
         /**
          * Race condition mitigation: Some browsers fire onopen before the WebSocket
          * is truly ready to send. A 50ms delay ensures the OPEN state is stable.
@@ -91,48 +91,34 @@ export class ConnectionService extends BaseService {
           }
         }, 50);
       };
-      
+
       this.ws.onmessage = (event: MessageEvent) => {
-        Logger.debug('🎯🎯🎯 [ConnectionService] WebSocket message received');
-        Logger.debug('📊 [ConnectionService] Raw event.data length:', event.data?.length);
-        
         try {
           const message = JSON.parse(event.data as string);
-          Logger.debug('📊 [ConnectionService] Parsed message type:', message.type);
-          Logger.debug('📊 [ConnectionService] Has data:', !!message.data);
-          
+
           if (message.type === 'newImage') {
-            Logger.debug('🖼️  [ConnectionService] newImage message received');
-            Logger.debug('📊 [ConnectionService] Image data:', {
-              hasRenderImages: !!message.data?.render_images,
-              hasData: !!message.data?.render_images?.data,
-              imageCount: message.data?.render_images?.data?.length || 0
-            });
-            Logger.debug('📤 [ConnectionService] Emitting OnNewImage event...');
             this.emit('OnNewImage', message.data);
-            Logger.debug('✅ [ConnectionService] OnNewImage event emitted');
           } else if (message.type === 'newStatistics') {
-            Logger.debug('📊 [ConnectionService] Received newStatistics callback');
             this.emit('OnNewStatistics', message.data);
           } else if (message.type === 'renderFailure') {
-            Logger.error('❌ [ConnectionService] Received renderFailure callback');
+            Logger.error('❌ WebSocket: renderFailure callback received');
             this.emit('OnRenderFailure', message.data);
           } else if (message.type === 'projectManagerChanged') {
-            Logger.info('📁 [ConnectionService] Received projectManagerChanged callback');
+            Logger.debug('WebSocket: projectManagerChanged callback received');
             this.emit('OnProjectManagerChanged', message.data);
           } else {
-            Logger.warn('⚠️  [ConnectionService] Unknown message type:', message.type);
+            Logger.warn('⚠️ WebSocket: Unknown message type:', message.type);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          Logger.error('❌ [ConnectionService] WebSocket message error:', errorMessage);
+          Logger.error('❌ WebSocket message parse error:', errorMessage);
         }
       };
-      
+
       this.ws.onerror = (error: Event) => {
         Logger.error('WebSocket error:', error);
       };
-      
+
       this.ws.onclose = () => {
         Logger.debug('WebSocket disconnected');
         // Attempt reconnection after configured delay
@@ -154,12 +140,12 @@ export class ConnectionService extends BaseService {
    */
   async disconnect(): Promise<void> {
     this.connected = false;
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.emit('disconnected', undefined);
     Logger.network('Disconnected from server');
   }

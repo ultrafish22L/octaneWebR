@@ -137,6 +137,9 @@ export function useSceneTree({
      * If the node is a PT_RENDERTARGET, select it and activate it in the
      * render engine so the viewport + NodeInspector populate right away.
      */
+    // Mutable flag captured in the event handler closure — NOT state, intentionally.
+    // React state updates are async; a flag ensures we select exactly one render target
+    // even if multiple PT_RENDERTARGET nodes arrive before the next render cycle.
     let hasSelectedRenderTarget = false;
     const handleProgressiveNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
       if (level === 0) {
@@ -289,19 +292,8 @@ export function useSceneTree({
     };
 
     const handleNodeDeleted = (event: NodeDeletedEvent) => {
-      Logger.debug(
-        '🌲 SceneOutliner: nodeDeleted event received, handle:',
-        event.handle,
-        'type:',
-        typeof event.handle
-      );
+      Logger.debug('🌲 nodeDeleted handle:', event.handle);
       setSceneTree(prev => {
-        Logger.debug('🌲 SceneOutliner: Current tree has', prev.length, 'root nodes');
-        Logger.debug(
-          '🌲 SceneOutliner: Root handles:',
-          prev.map(n => `${n.handle} (${typeof n.handle})`).join(', ')
-        );
-
         // Optimized delete with structural sharing
         // Only creates new objects in the path to the deleted node
         // Keeps all other nodes unchanged (same reference) for React optimization
@@ -312,7 +304,6 @@ export function useSceneTree({
           for (const node of nodes) {
             // If this is the node to delete, skip it
             if (node.handle === event.handle) {
-              Logger.debug(`🗑️ SceneOutliner: Filtering out node ${node.handle} "${node.name}"`);
               changed = true;
               continue;
             }
@@ -344,28 +335,11 @@ export function useSceneTree({
         const result = filterDeleted(prev);
 
         if (!result.changed) {
-          Logger.debug('⚠️ SceneOutliner: Node not found in tree, no changes made');
           return prev; // Return same reference if nothing changed
         }
 
-        Logger.debug(
-          '🌲 SceneOutliner: Updated tree has',
-          result.updated.length,
-          'root nodes (was',
-          prev.length,
-          ')'
-        );
-        Logger.debug('✅ SceneOutliner: Structural sharing preserved unaffected nodes');
-
         // Schedule parent callback after state update completes
-        setTimeout(() => {
-          Logger.debug(
-            '🌲 SceneOutliner: Calling onSceneTreeChange callback with',
-            result.updated.length,
-            'nodes'
-          );
-          onSceneTreeChange?.(result.updated);
-        }, 0);
+        setTimeout(() => onSceneTreeChange?.(result.updated), 0);
         return result.updated;
       });
     };

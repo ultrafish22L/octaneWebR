@@ -313,7 +313,6 @@ export class SceneServiceP extends BaseService {
         if (response) {
           const valueField = Object.keys(response)[1];
           item.filePath = Object(response)[Object(response)[valueField]] as string;
-          //          Logger.info(`FILE for ${item.name}: ${item.filePath}`);
 
           // Load vertsPerPoly
           const responseHasIndices = await this.apiService.callApi(

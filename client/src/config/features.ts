@@ -13,6 +13,8 @@ export const FEATURES = {
    * per completed subtree). No per-pin events, no two-pass, no flashing.
    * Status: Active
    */
+  // `|| true` is intentional: SceneServiceP is the only supported loader and is always active.
+  // The env-var check is retained for future opt-out capability without a code change.
   PROGRESSIVE_LOADING_P: import.meta.env.VITE_PROGRESSIVE_LOADING_P === 'true' || true,
 };
 

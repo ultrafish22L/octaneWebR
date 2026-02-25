@@ -468,11 +468,14 @@ curl http://localhost:57341/api/health | python -m json.tool
 
 ## 📅 Recent Development
 
+- **SceneServiceP** - New progressive scene loader (replaces V1/V2/V3 iterations), integrated with SyncIndicator
+- **SyncIndicator** - Visual spinner shown during scene builds
+- **File Node Toolbar** - FileNodeToolbar component for image/geometry nodes (load/reload/save/clear + filename display)
+- **Lint & Accessibility** - Large cleanup pass across ~70 files (jsx-a11y, react-hooks, type safety)
 - **Progressive Scene Loading (V3)** - Two-pass progressive loading with per-pin emission
 - **Viewport Canvas Optimization** - RAF-based rendering, input throttling, progressive flush
 - **React 18 Modernization** - Error boundaries, code splitting, Suspense, React Query, React.memo
 - **API Version Compatibility** - Centralized Alpha 5/Beta 2 configuration
-- **ReactFlow Migration** - Replaced custom 956-line SVG node graph with ReactFlow v12
 - **Material Database** - LiveDB and LocalDB integration
 - **Command History** - Full undo/redo with 50-action branching history
 
@@ -488,6 +491,6 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2025-02-11
+**Last Updated**: 2026-02-24
 **Version**: 1.1.0-dev
-**Status**: Active Development (Progressive Scene Loading)
+**Status**: Active Development (SceneServiceP + File Node Toolbar)
