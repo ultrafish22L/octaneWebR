@@ -126,6 +126,17 @@ function saturateColor(hex: string): string {
   return hslToHex(hsl.h, 100, hsl.l);
 }
 
+/**
+ * Darken and desaturate a node color to match Octane SE's muted, professional appearance.
+ * Reduces lightness to 65% and saturation to 70% of original values.
+ */
+function muteNodeColor(hex: string): string {
+  const hsl = hexToHsl(hex);
+  const newL = Math.min(hsl.l * 0.65, 40);
+  const newS = hsl.s * 0.7;
+  return hslToHex(hsl.h, newS, newL);
+}
+
 export interface OctaneNodeData extends Record<string, unknown> {
   sceneNode: SceneNode;
   inputs?: Array<{
@@ -159,11 +170,11 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
   const { data, selected, id } = props;
   const { sceneNode, inputs = [], output, onContextMenu } = data;
 
-  // Get node color from nodeInfo - desaturate for muted appearance
+  // Get node color from nodeInfo - darken and desaturate for Octane SE's muted look
   const rawNodeColor = sceneNode.nodeInfo?.nodeColor
     ? formatColorValue(sceneNode.nodeInfo.nodeColor)
     : '#666';
-  const nodeColor = rawNodeColor;
+  const nodeColor = muteNodeColor(rawNodeColor);
 
   // Calculate dynamic width based on inputs
   const inputCount = inputs.length;
@@ -192,8 +203,15 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
         minWidth: minWidth,
         height: 32,
         backgroundColor: nodeColor,
+        backgroundImage:
+          'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 40%, rgba(0,0,0,0.15) 100%)',
         border: selected ? '2px solid #ffc107' : '1px solid #555',
+        borderTop: selected ? '2px solid #ffc107' : '1px solid #666',
+        borderBottom: selected ? '2px solid #ffc107' : '1px solid #333',
         borderRadius: 8,
+        boxShadow: selected
+          ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 6px rgba(0,0,0,0.4)'
+          : 'inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 4px rgba(0,0,0,0.3)',
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
@@ -210,16 +228,18 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
             top: -1,
             bottom: -1,
             width: 26,
-            backgroundColor: '#555',
+            backgroundColor: '#3a3a3a',
+            backgroundImage:
+              'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
             borderRadius: '8px 0 0 8px',
-            borderTop: selected ? '2px solid #ffc107' : '1px solid #555',
-            borderBottom: selected ? '2px solid #ffc107' : '1px solid #555',
+            borderTop: selected ? '2px solid #ffc107' : '1px solid #666',
+            borderBottom: selected ? '2px solid #ffc107' : '1px solid #333',
             borderLeft: selected ? '2px solid #ffc107' : '1px solid #555',
-            borderRight: 'none',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.4)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 2px rgba(0,0,0,0.3)',
           }}
         >
           <img
@@ -296,6 +316,7 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
           textOverflow: 'ellipsis',
           userSelect: 'none',
           width: '100%',
+          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
         }}
       >
         {sceneNode.name || sceneNode.type}

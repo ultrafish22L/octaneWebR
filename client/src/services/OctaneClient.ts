@@ -18,6 +18,7 @@ import {
   RenderExportService,
   ItemService,
   ProjectService,
+  FileChooserService,
   RenderState,
   SceneNode,
   Scene,
@@ -65,6 +66,7 @@ export class OctaneClient extends EventEmitter {
   private renderExportService: RenderExportService;
   private itemService: ItemService;
   private projectService: ProjectService;
+  private fileChooserService: FileChooserService;
 
   constructor(serverUrl?: string) {
     super();
@@ -88,6 +90,7 @@ export class OctaneClient extends EventEmitter {
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
     this.itemService = new ItemService(this, this.serverUrl, this.apiService);
     this.projectService = new ProjectService(this, this.serverUrl, this.apiService);
+    this.fileChooserService = new FileChooserService(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
@@ -548,11 +551,22 @@ export class OctaneClient extends EventEmitter {
   }
 
   async exportRenderPasses(
-    outputDirectory: string,
-    filenamePrefix: string = 'render',
+    basePath: string,
     format: 'PNG' | 'JPG' | 'EXR' | 'TIFF' = 'PNG'
   ): Promise<boolean> {
-    return this.renderExportService.exportRenderPasses(outputDirectory, filenamePrefix, format);
+    return this.renderExportService.exportRenderPasses(basePath, format);
+  }
+
+  async downloadRender(filename?: string): Promise<boolean> {
+    return this.renderExportService.downloadRender(filename);
+  }
+
+  // ==================== File Chooser Methods ====================
+
+  async listDirectory(
+    dirPath: string
+  ): Promise<import('./octane/FileChooserService').DirectoryListing | null> {
+    return this.fileChooserService.listDirectory(dirPath);
   }
 }
 

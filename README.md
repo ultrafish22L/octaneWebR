@@ -485,7 +485,7 @@ See **[CHANGELOG.md](./CHANGELOG.md)** for full version history.
 
 ## 📄 License
 
-OTOY © 2025 - All rights reserved.
+OTOY © 2026 - All rights reserved.
 
 Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 

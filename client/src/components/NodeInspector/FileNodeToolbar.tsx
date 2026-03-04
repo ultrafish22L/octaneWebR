@@ -3,24 +3,45 @@
  * Embedded toolbar for nodes that have a file path (mesh, texture, etc.)
  * showing file operations and the currently loaded file path.
  */
-import type { SceneNode, OctaneClient } from '../../services/OctaneClient';
+import type { SceneNode } from '../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../constants/OctaneTypes';
 import { Logger } from '../../utils/Logger';
+import { useOctane } from '../../hooks/useOctane';
+import { useFileBrowser } from '../../hooks/useFileBrowser';
+import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
 
 interface FileNodeToolbarProps {
   node: SceneNode;
 }
 
-export function FileNodeToolbar({ node }: FileNodeToolbarProps, client: OctaneClient) {
-  // Toolbar button handlers
+export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
+  const { client } = useOctane();
+
+  const fileBrowser = useFileBrowser(async path => {
+    if (!path) return;
+    try {
+      await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
+        attribute_id: AttributeId.A_FILENAME,
+        expected_type: AttrType.AT_STRING,
+        string_value: path,
+        evaluate: true,
+      });
+      Logger.debug('File loaded for node:', node.name, path);
+    } catch (error) {
+      Logger.error('Failed to load file for node:', error);
+    }
+  });
+
   const handleLoadFile = () => {
     Logger.debug('Load file clicked for node:', node.name);
-    // TODO: Open file chooser (ApiFileChooser) and call the appropriate load API
+    fileBrowser.browse({
+      mode: 'open',
+      title: `Load file for ${node.name}`,
+    });
   };
 
   const handleReloadFile = () => {
     Logger.debug('Reload File clicked for node:', node.name);
-    // Call setValueByAttrID to force a reload in Octane
     client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
       attribute_id: AttributeId.A_VALUE,
       expected_type: AttrType.AT_BOOL,
@@ -62,6 +83,9 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps, client: OctaneCl
           {node.filePath || 'No file'}
         </div>
       </div>
+
+      {/* File browser dialog */}
+      {fileBrowser.dialogProps && <FileBrowserDialog {...fileBrowser.dialogProps} />}
     </div>
   );
 }

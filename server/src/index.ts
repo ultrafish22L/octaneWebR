@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import nodePath from 'path';
 import { getGrpcClient } from './grpc/client';
 import { transformObjectPtrParams } from './grpc/OctaneGrpcClientBase';
 import { setupCallbackStreaming } from './api/websocket';
@@ -43,10 +45,13 @@ const callbackManager = getCallbackManager(grpcClient);
 app.get('/api/health', async (req, res) => {
   try {
     const isHealthy = await grpcClient.checkHealth();
+    const addr = grpcClient.address;
+    const isLocal = /^(127\.0\.0\.1|localhost)(:\d+)?$/.test(addr);
     res.json({
       status: isHealthy ? 'ok' : 'unhealthy',
       octane: isHealthy ? 'connected' : 'disconnected',
       server: 'running',
+      isLocal,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -114,6 +119,54 @@ app.get('/api/device/info', async (req, res) => {
       error: error.message || 'Failed to retrieve device info',
       code: error.code || 'UNKNOWN',
     });
+  }
+});
+
+// File listing endpoint for remote file browser
+app.get('/api/files/list', (req, res) => {
+  const dirPath = (req.query.path as string) || '';
+  try {
+    if (!dirPath) {
+      const entries: { name: string; isDirectory: boolean; size: number; extension: string }[] = [];
+      if (process.platform === 'win32') {
+        for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+          const drive = `${letter}:\\`;
+          if (fs.existsSync(drive)) {
+            entries.push({ name: drive, isDirectory: true, size: 0, extension: '' });
+          }
+        }
+      } else {
+        entries.push({ name: '/', isDirectory: true, size: 0, extension: '' });
+      }
+      res.json({ path: '', parent: null, entries });
+    } else {
+      const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
+      const entries = dirents
+        .filter(d => !d.name.startsWith('.'))
+        .map(d => {
+          const isDir = d.isDirectory();
+          let size = 0;
+          if (!isDir) {
+            try {
+              size = fs.statSync(nodePath.join(dirPath, d.name)).size;
+            } catch {
+              /* ignore */
+            }
+          }
+          const ext = isDir ? '' : nodePath.extname(d.name).toLowerCase();
+          return { name: d.name, isDirectory: isDir, size, extension: ext };
+        })
+        .sort((a, b) => {
+          if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+      const parentDir = nodePath.dirname(dirPath);
+      // Drive roots (C:\) → parent is '' (root list); filesystem root → null
+      const parent = parentDir === dirPath ? (dirPath.length <= 3 ? '' : null) : parentDir;
+      res.json({ path: dirPath, parent, entries });
+    }
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Cannot read directory', path: dirPath });
   }
 });
 

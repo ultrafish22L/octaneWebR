@@ -5,7 +5,6 @@
 
 import { Logger } from '../../utils/Logger';
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useFileDialog } from '../../hooks/useFileDialog';
 import { useRecentFiles } from '../../hooks/useRecentFiles';
 import { useOctane } from '../../hooks/useOctane';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -20,6 +19,8 @@ import { AboutDialog } from '../dialogs/AboutDialog';
 import { SavePackageDialog } from '../dialogs/SavePackageDialog';
 import { MenuAction, MenuItem, MenuDefinition } from './types';
 import { commandHistory } from '../../services/CommandHistory';
+import { useFileBrowser } from '../../hooks/useFileBrowser';
+import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
 
 interface PanelVisibility {
   renderViewport: boolean;
@@ -176,7 +177,6 @@ function MenuBar({
   const [isSavePackageDialogOpen, setIsSavePackageDialogOpen] = useState(false);
   const menuBarRef = useRef<HTMLDivElement>(null);
 
-  const { openFileDialog } = useFileDialog();
   const { addRecentFile, clearRecentFiles, getRecentFilePaths } = useRecentFiles();
   const { client, connected } = useOctane();
   const editActions = useEditActions();
@@ -244,6 +244,40 @@ function MenuBar({
     [showNotification]
   );
 
+  // File browser hooks for Open and Save As
+  const openFileBrowser = useFileBrowser(async path => {
+    if (!path) return;
+    try {
+      const response = await client.callApi('ApiProjectManager', 'loadProject', {
+        projectPath: path,
+      });
+      if (response) {
+        addRecentFile(path);
+        showNotification(`Loaded: ${path}`, 'success');
+        onSceneRefresh?.();
+      }
+    } catch (error) {
+      Logger.error('Failed to open scene:', error);
+      showNotification(`Failed to open ${path}`, 'error');
+    }
+  });
+
+  const saveAsFileBrowser = useFileBrowser(async path => {
+    if (!path) return;
+    try {
+      const response = await client.callApi('ApiProjectManager', 'saveProjectAs', {
+        path,
+      });
+      if (response) {
+        addRecentFile(path);
+        showNotification(`Saved as: ${path}`, 'success');
+      }
+    } catch (error) {
+      Logger.error('Failed to save scene as:', error);
+      showNotification(`Failed to save as ${path}`, 'error');
+    }
+  });
+
   // Menu action handlers
   const handleMenuAction = useCallback(
     async (action: MenuAction, data?: string) => {
@@ -270,38 +304,15 @@ function MenuBar({
           break;
 
         case 'file.open':
-          {
-            const files = await openFileDialog({
-              accept: '.orbx',
-              multiple: false,
-            });
-            if (files && files.length > 0) {
-              const file = files[0];
-              Logger.debug('Opening scene file:', file.name);
-
-              if (!connected) {
-                showWarnNotConnected('open scene');
-                return;
-              }
-
-              try {
-                // TODO: Implement scene file loading via Octane API
-                // This requires reading the file and sending it to Octane
-                const response = await client.callApi('ApiProjectManager', 'loadProject', {
-                  path: file.name,
-                });
-
-                if (response) {
-                  addRecentFile(file.name);
-                  showNotification(`Loaded: ${file.name}`, 'success');
-                  onSceneRefresh?.();
-                }
-              } catch (error) {
-                Logger.error('Failed to open scene:', error);
-                showNotification(`Failed to open ${file.name}`, 'error');
-              }
-            }
+          if (!connected) {
+            showWarnNotConnected('open scene');
+            return;
           }
+          openFileBrowser.browse({
+            mode: 'open',
+            title: 'Open Scene',
+            filePatterns: '*.orbx;*.ocs',
+          });
           break;
 
         case 'file.openRecent':
@@ -313,7 +324,7 @@ function MenuBar({
             }
             try {
               const response = await client.callApi('ApiProjectManager', 'loadProject', {
-                path: data,
+                projectPath: data,
               });
               if (response) {
                 showNotification(`Loaded: ${data}`, 'success');
@@ -348,31 +359,16 @@ function MenuBar({
           break;
 
         case 'file.saveAs':
-          {
-            const files = await openFileDialog({
-              accept: '.orbx',
-              multiple: false,
-            });
-            if (files && files.length > 0) {
-              const filename = files[0].name;
-              if (!connected) {
-                showWarnNotConnected('save scene');
-                return;
-              }
-              try {
-                const response = await client.callApi('ApiProjectManager', 'saveProjectAs', {
-                  path: filename,
-                });
-                if (response) {
-                  addRecentFile(filename);
-                  showNotification(`Saved as: ${filename}`, 'success');
-                }
-              } catch (error) {
-                Logger.error('Failed to save scene as:', error);
-                showNotification(`Failed to save as ${filename}`, 'error');
-              }
-            }
+          if (!connected) {
+            showWarnNotConnected('save scene');
+            return;
           }
+          saveAsFileBrowser.browse({
+            mode: 'save',
+            title: 'Save Scene As',
+            filePatterns: '*.orbx;*.ocs',
+            defaultFilename: 'scene.orbx',
+          });
           break;
 
         case 'file.saveAsPackage':
@@ -580,12 +576,12 @@ function MenuBar({
       client,
       connected,
       editActions,
-      openFileDialog,
-      addRecentFile,
       clearRecentFiles,
       showWarnNotConnected,
       showNotification,
       closeMenu,
+      openFileBrowser,
+      saveAsFileBrowser,
       onSceneRefresh,
       onTogglePanelVisibility,
       onResetLayout,
@@ -744,6 +740,10 @@ function MenuBar({
         isOpen={isSavePackageDialogOpen}
         onClose={() => setIsSavePackageDialogOpen(false)}
       />
+
+      {/* File Browser Dialogs (for Open / Save As) */}
+      {openFileBrowser.dialogProps && <FileBrowserDialog {...openFileBrowser.dialogProps} />}
+      {saveAsFileBrowser.dialogProps && <FileBrowserDialog {...saveAsFileBrowser.dialogProps} />}
     </nav>
   );
 }

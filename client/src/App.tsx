@@ -35,8 +35,8 @@ import { SceneOutliner } from './components/SceneOutliner';
 import { NodeInspector } from './components/NodeInspector';
 import { NodeInspectorControls } from './components/NodeInspector/NodeInspectorControls';
 import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
-import { SaveRenderDialog } from './components/dialogs/SaveRenderDialog';
-import { ExportPassesDialog } from './components/dialogs/ExportPassesDialog';
+import { FileBrowserDialog } from './components/dialogs/FileBrowserDialog';
+import { useFileBrowser } from './hooks/useFileBrowser';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
 import './styles/error-boundary.css';
 
@@ -70,8 +70,7 @@ function AppContent() {
     | 'filmRegion'
   >('none');
   const [materialDatabaseVisible, setMaterialDatabaseVisible] = useState(false);
-  const [saveRenderDialogOpen, setSaveRenderDialogOpen] = useState(false);
-  const [exportPassesDialogOpen, setExportPassesDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'PNG' | 'JPG' | 'EXR' | 'TIFF'>('PNG');
 
   // Panel visibility state
   const [panelVisibility, setPanelVisibility] = useState({
@@ -90,6 +89,51 @@ function AppContent() {
   const { panelSizes, handleSplitterMouseDown, containerRef, isDragging, resetPanelSizes } =
     useResizablePanels();
   const viewportRef = useRef<CallbackRenderViewportHandle>(null);
+  const exportFormatRef = useRef(exportFormat);
+  useEffect(() => {
+    exportFormatRef.current = exportFormat;
+  }, [exportFormat]);
+  const renderPathRef = useRef<string>('');
+
+  // Save render file browser (shares path memory with export passes)
+  const { browse: browseSaveRender, dialogProps: saveRenderDialogProps } = useFileBrowser(
+    useCallback(
+      (path: string | null) => {
+        if (!path) return;
+        // Infer format from extension
+        const ext = path.split('.').pop()?.toLowerCase() || '';
+        const formatMap: Record<string, 'PNG' | 'JPG' | 'EXR' | 'TIFF'> = {
+          png: 'PNG',
+          jpg: 'JPG',
+          jpeg: 'JPG',
+          exr: 'EXR',
+          tiff: 'TIFF',
+          tif: 'TIFF',
+        };
+        const format = formatMap[ext] || 'PNG';
+        Logger.debug(`Saving render: ${path} (format: ${format})`);
+        client.saveRender(path, format, 0);
+      },
+      [client]
+    ),
+    renderPathRef
+  );
+
+  // Export passes file browser (shares path memory with save render)
+  const { browse: browseExportPasses, dialogProps: exportPassesDialogProps } = useFileBrowser(
+    useCallback(
+      (path: string | null) => {
+        if (!path) return;
+        // Strip extension to get base path — exportRenderPasses appends _passname.ext
+        const dotIdx = path.lastIndexOf('.');
+        const basePath = dotIdx > 0 ? path.slice(0, dotIdx) : path;
+        Logger.debug(`Exporting render passes: ${basePath} (format: ${exportFormatRef.current})`);
+        client.exportRenderPasses(basePath, exportFormatRef.current);
+      },
+      [client]
+    ),
+    renderPathRef
+  );
 
   // Scene tree change handler — stable identity (useCallback) to prevent listener churn
   // in useSceneTree's event registration useEffect.
@@ -146,14 +190,43 @@ function AppContent() {
     }
   };
 
-  // Save render to disk handler - opens dialog for format selection
+  // Save render to disk handler - opens file browser for save location
   const handleSaveRender = () => {
-    setSaveRenderDialogOpen(true);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    browseSaveRender({
+      mode: 'save',
+      title: 'Save Render',
+      filePatterns: '*.png;*.jpg;*.exr;*.tiff',
+      defaultFilename: `octane-render-${timestamp}.png`,
+    });
   };
 
-  // Export render passes handler - opens dialog
+  // Export render passes handler - opens file browser for save-style selection
   const handleExportPasses = () => {
-    setExportPassesDialogOpen(true);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    browseExportPasses({
+      mode: 'save',
+      title: 'Export Render Passes',
+      filePatterns: '*.png;*.jpg;*.exr;*.tiff',
+      defaultFilename: `render-passes-${timestamp}`,
+      extraContent: (
+        <div className="form-group" style={{ padding: '0 12px' }}>
+          <label htmlFor="export-format">Format:</label>
+          <select
+            id="export-format"
+            className="form-control"
+            value={exportFormat}
+            onChange={e => setExportFormat(e.target.value as 'PNG' | 'JPG' | 'EXR' | 'TIFF')}
+            name="export-format"
+          >
+            <option value="PNG">PNG</option>
+            <option value="JPG">JPG</option>
+            <option value="EXR">EXR</option>
+            <option value="TIFF">TIFF</option>
+          </select>
+        </div>
+      ),
+    });
   };
 
   // Viewport lock change handler
@@ -619,11 +692,7 @@ function AppContent() {
           <span className="status-item">{statusMessage}</span>
         </div>
         <div className="status-center"></div>
-        <div className="status-right">
-          <span className="status-item">
-            OctaneLive: <span id="octane-status">{connected ? 'connected' : 'disconnected'}</span>
-          </span>
-        </div>
+        <div className="status-right"></div>
       </footer>
 
       {/* Material Database Modal */}
@@ -636,21 +705,11 @@ function AppContent() {
         </Suspense>
       </ErrorBoundary>
 
-      {/* Save Render Dialog */}
-      <ErrorBoundary>
-        <SaveRenderDialog
-          isOpen={saveRenderDialogOpen}
-          onClose={() => setSaveRenderDialogOpen(false)}
-        />
-      </ErrorBoundary>
+      {/* Save Render File Browser */}
+      {saveRenderDialogProps && <FileBrowserDialog {...saveRenderDialogProps} />}
 
-      {/* Export Passes Dialog */}
-      <ErrorBoundary>
-        <ExportPassesDialog
-          isOpen={exportPassesDialogOpen}
-          onClose={() => setExportPassesDialogOpen(false)}
-        />
-      </ErrorBoundary>
+      {/* Export Passes File Browser */}
+      {exportPassesDialogProps && <FileBrowserDialog {...exportPassesDialogProps} />}
     </div>
   );
 }

@@ -100,6 +100,13 @@ interface ApiRequestBody {
  * API Service handles all gRPC communication with Octane server
  */
 export class ApiService extends BaseService {
+  /** Whether the Octane host is on the local machine (set by health check). */
+  private _isLocal = false;
+
+  get isLocal(): boolean {
+    return this._isLocal;
+  }
+
   /**
    * Make a gRPC API call to the Octane server
    * @param service - Service name (e.g., 'ApiItem', 'ApiScene')
@@ -114,7 +121,8 @@ export class ApiService extends BaseService {
     service: string,
     method: string,
     handle?: string | number | Record<string, unknown> | null,
-    params: Record<string, unknown> = {}
+    params: Record<string, unknown> = {},
+    timeoutMs?: number
   ): Promise<ApiCallResult> {
     // Apply API version compatibility: translate method name if needed
     const compatibleMethod = getCompatibleMethodName(service, method);
@@ -167,7 +175,7 @@ export class ApiService extends BaseService {
     Logger.debugV('Request body:', JSON.stringify(body));
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs ?? API_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
@@ -231,7 +239,8 @@ export class ApiService extends BaseService {
       }
 
       const healthData = await healthResponse.json();
-      Logger.debug('Server health check passed:', healthData);
+      this._isLocal = !!healthData.isLocal;
+      Logger.debug('Server health check passed:', healthData, 'isLocal:', this._isLocal);
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

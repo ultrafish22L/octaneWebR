@@ -80,7 +80,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
 
             <div className="about-credits">
               <p className="copyright">
-                © OTOY Inc. 2014-2025. All rights reserved.
+                © OTOY Inc. 2014-2026. All rights reserved.
                 <br />
                 <strong>OctaneRender®</strong> and <strong>OTOY®</strong> are registered trademarks
                 of OTOY Inc.

@@ -44,6 +44,8 @@ const SERVICE_TO_PROTO_MAP = {
   ApiLocalDB: 'apilocaldb.proto',
   ApiLocalDB_Category: 'apilocaldb.proto',
   ApiLocalDB_Package: 'apilocaldb.proto',
+  // File chooser
+  ApiFileChooser: 'apifilechooser.proto',
   // Callbacks
   StreamCallbackService: 'callback.proto',
   CallbackHandler: 'callback.proto',

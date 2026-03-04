@@ -73,19 +73,30 @@ export function useViewportActions({
     try {
       Logger.debug('Copying render to clipboard...');
 
-      const blob = await new Promise<Blob | null>(resolve => {
-        canvas.toBlob(resolve, 'image/png');
-      });
+      // Draw canvas into a temporary img inside a contenteditable div,
+      // select it, and use execCommand('copy'). This avoids the Clipboard API
+      // permission issues that block navigator.clipboard.write in Chrome.
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
 
-      if (!blob) {
-        throw new Error('Failed to convert canvas to blob');
-      }
+      const div = document.createElement('div');
+      div.contentEditable = 'true';
+      div.style.position = 'fixed';
+      div.style.left = '-9999px';
+      div.appendChild(img);
+      document.body.appendChild(div);
 
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'image/png': blob,
-        }),
-      ]);
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(div);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      document.execCommand('copy');
+
+      selection?.removeAllRanges();
+      document.body.removeChild(div);
 
       Logger.info('Render copied to clipboard');
     } catch (error) {
