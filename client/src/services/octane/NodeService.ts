@@ -27,17 +27,17 @@ export class NodeService extends BaseService {
   }
 
   async createNode(nodeType: string, nodeTypeId: number): Promise<number | null> {
-    Logger.debug('🔧 Creating node:', nodeType, 'ID:', nodeTypeId);
+    Logger.debug('Creating node:', nodeType, 'ID:', nodeTypeId);
 
     try {
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       if (!rootResponse?.result) {
-        Logger.error('❌ Failed to get root node graph');
+        Logger.error('Failed to get root node graph');
         return null;
       }
 
       const owner = rootResponse.result;
-      Logger.debug('📦 Root node graph:', owner);
+      Logger.debug('Root node graph:', owner);
 
       const createResponse = await this.apiService.callApi('ApiNode', 'create', null, {
         type: nodeTypeId,
@@ -47,28 +47,25 @@ export class NodeService extends BaseService {
 
       const createdNodeHandle = getHandle(createResponse?.result);
       if (!createdNodeHandle) {
-        Logger.error('❌ Failed to create node');
+        Logger.error('Failed to create node');
         return null;
       }
-      Logger.debug('✅ Node created with handle:', createdNodeHandle);
+      Logger.debug('Node created with handle:', createdNodeHandle);
 
-      Logger.debug('➕ Adding node to scene tree...');
+      Logger.debug('Adding node to scene tree...');
       await this.sceneService.buildSceneTree(createdNodeHandle);
 
       const newNode = this.sceneService.getNodeByHandle(createdNodeHandle);
       if (newNode) {
-        Logger.debug('✅ Node added incrementally - emitting nodeAdded event');
+        Logger.debug('Node added incrementally - emitting nodeAdded event');
         this.emit('nodeAdded', { node: newNode, handle: createdNodeHandle });
       } else {
-        Logger.error('❌ Failed to find newly created node in scene map');
+        Logger.error('Failed to find newly created node in scene map');
       }
 
       return createdNodeHandle;
     } catch (error) {
-      Logger.error(
-        '❌ Error creating node:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error creating node:', error instanceof Error ? error.message : String(error));
       return null;
     }
   }
@@ -78,33 +75,39 @@ export class NodeService extends BaseService {
    * "Optimized" means we avoid a full scene reload by patching scene.map/tree directly.
    */
   async deleteNodeOptimized(nodeHandle: number): Promise<boolean> {
-    Logger.debug('🗑️ Deleting node:', nodeHandle);
+    Logger.debug('Deleting node:', nodeHandle);
 
     try {
-      const scene = this.sceneService.getScene();
-      const node = scene.map.get(nodeHandle);
-
+      // Snapshot collapsed children BEFORE the async API call
+      const sceneBefore = this.sceneService.getScene();
+      const node = sceneBefore.map.get(nodeHandle);
       const collapsedChildren = this.findCollapsedChildren(node);
-      Logger.debug(`🔍 Found ${collapsedChildren.length} collapsed children to remove`);
+      Logger.debug(`Found ${collapsedChildren.length} collapsed children to remove`);
 
       await this.apiService.callApi('ApiItem', 'destroy', nodeHandle, {});
-      Logger.debug('✅ Node deleted from Octane');
+      Logger.debug('Node deleted from Octane');
 
-      scene.map.delete(nodeHandle);
-      collapsedChildren.forEach(h => scene.map.delete(h));
+      // Re-fetch scene AFTER async call to avoid operating on stale state
+      const scene = this.sceneService.getScene();
+
+      // Validate the node still exists before deleting (could have been removed
+      // by a concurrent operation like progressive loading or another delete)
+      if (scene.map.has(nodeHandle)) {
+        scene.map.delete(nodeHandle);
+      }
+      collapsedChildren.forEach(h => {
+        if (scene.map.has(h)) scene.map.delete(h);
+      });
 
       scene.tree = scene.tree.filter(n => n.handle !== nodeHandle);
 
-      Logger.debug('✅ Scene map and tree updated (optimized)');
+      Logger.debug('Scene map and tree updated (optimized)');
 
       this.emit('nodeDeleted', { handle: nodeHandle, collapsedChildren });
 
       return true;
     } catch (error) {
-      Logger.error(
-        '❌ Error deleting node:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error deleting node:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }
@@ -128,7 +131,7 @@ export class NodeService extends BaseService {
     evaluate: boolean = true
   ): Promise<void> {
     Logger.debug(
-      `🔌 Connecting pin: target=${targetNodeHandle}, pin=${pinIdx}, source=${sourceNodeHandle}`
+      `Connecting pin: target=${targetNodeHandle}, pin=${pinIdx}, source=${sourceNodeHandle}`
     );
 
     await this.apiService.callApi('ApiNode', 'connectToIx', targetNodeHandle, {
@@ -141,14 +144,14 @@ export class NodeService extends BaseService {
       doCycleCheck: true, // Prevents circular dependency crashes
     });
 
-    Logger.debug('✅ Pin connected in Octane');
+    Logger.debug('Pin connected in Octane');
   }
 
   /**
    * Disconnects a pin by connecting handle 0 (Octane's null node)
    */
   async disconnectPin(nodeHandle: number, pinIdx: number, evaluate: boolean = true): Promise<void> {
-    Logger.debug(`🔌 Disconnecting pin: node=${nodeHandle}, pin=${pinIdx}`);
+    Logger.debug(`Disconnecting pin: node=${nodeHandle}, pin=${pinIdx}`);
 
     await this.apiService.callApi('ApiNode', 'connectToIx', nodeHandle, {
       pinIdx,
@@ -160,7 +163,7 @@ export class NodeService extends BaseService {
       doCycleCheck: true,
     });
 
-    Logger.debug('✅ Pin disconnected in Octane');
+    Logger.debug('Pin disconnected in Octane');
   }
 
   /**
@@ -173,12 +176,12 @@ export class NodeService extends BaseService {
   async handlePinConnectionCleanup(oldSourceHandle: number | null): Promise<void> {
     if (!oldSourceHandle) return;
 
-    Logger.debug('🔍 Checking if old source node is collapsed:', oldSourceHandle);
+    Logger.debug('Checking if old source node is collapsed:', oldSourceHandle);
 
     const scene = this.sceneService.getScene();
 
     if (!this.isNodeExpanded(oldSourceHandle)) {
-      Logger.debug('🗑️ Removing orphaned collapsed node from map:', oldSourceHandle);
+      Logger.debug('Removing orphaned collapsed node from map:', oldSourceHandle);
 
       const oldSourceNode = scene.map.get(oldSourceHandle);
       const collapsedChildren = this.findCollapsedChildren(oldSourceNode);
@@ -186,9 +189,9 @@ export class NodeService extends BaseService {
       scene.map.delete(oldSourceHandle);
       collapsedChildren.forEach(h => scene.map.delete(h));
 
-      Logger.debug(`✅ Removed ${1 + collapsedChildren.length} collapsed nodes from map`);
+      Logger.debug(`Removed ${1 + collapsedChildren.length} collapsed nodes from map`);
     } else {
-      Logger.debug('✅ Old source is expanded, keeping in scene tree');
+      Logger.debug('Old source is expanded, keeping in scene tree');
     }
 
     this.emit('sceneUpdated', scene);
@@ -222,13 +225,13 @@ export class NodeService extends BaseService {
    * Copy a single node (creates a duplicate)
    */
   async copyNode(nodeHandle: number): Promise<number | null> {
-    Logger.debug('📋 Copying node:', nodeHandle);
+    Logger.debug('Copying node:', nodeHandle);
 
     try {
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       const graphHandle = getHandle(rootResponse?.result);
       if (!graphHandle) {
-        Logger.error('❌ Failed to get root node graph');
+        Logger.error('Failed to get root node graph');
         return null;
       }
 
@@ -243,25 +246,22 @@ export class NodeService extends BaseService {
 
       const copiedNodeHandle = getHandle(copyResponse?.result);
       if (!copiedNodeHandle) {
-        Logger.error('❌ Failed to copy node');
+        Logger.error('Failed to copy node');
         return null;
       }
-      Logger.debug('✅ Node copied with handle:', copiedNodeHandle);
+      Logger.debug('Node copied with handle:', copiedNodeHandle);
 
       await this.sceneService.buildSceneTree(copiedNodeHandle);
 
       const newNode = this.sceneService.getNodeByHandle(copiedNodeHandle);
       if (newNode) {
-        Logger.debug('✅ Copied node added - emitting nodeAdded event');
+        Logger.debug('Copied node added - emitting nodeAdded event');
         this.emit('nodeAdded', { node: newNode, handle: copiedNodeHandle });
       }
 
       return copiedNodeHandle;
     } catch (error) {
-      Logger.error(
-        '❌ Error copying node:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error copying node:', error instanceof Error ? error.message : String(error));
       return null;
     }
   }
@@ -269,52 +269,71 @@ export class NodeService extends BaseService {
   /**
    * Copy multiple nodes
    */
+  /**
+   * Get all owned item handles from a node graph
+   */
+  private async getOwnedItemHandles(graphHandle: number): Promise<number[]> {
+    const ownedResponse = await this.apiService.callApi(
+      'ApiNodeGraph',
+      'getOwnedItems',
+      graphHandle
+    );
+    const listHandle = getHandle(ownedResponse?.list);
+    if (!listHandle) return [];
+
+    const sizeResponse = await this.apiService.callApi('ApiItemArray', 'size', listHandle, {});
+    const size = asNumber(sizeResponse?.result, 0);
+    if (size <= 0 || size > 10000) return [];
+
+    const handles: number[] = [];
+    for (let i = 0; i < size; i++) {
+      const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', listHandle, {
+        index: i,
+      });
+      const h = getHandle(itemResponse?.result);
+      if (h) handles.push(h);
+    }
+    return handles;
+  }
+
   async copyNodes(nodeHandles: number[]): Promise<number[]> {
-    Logger.debug('📋 Copying multiple nodes:', nodeHandles);
+    Logger.debug('Copying multiple nodes:', nodeHandles);
 
     try {
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       const graphHandle = getHandle(rootResponse?.result);
       if (!graphHandle) {
-        Logger.error('❌ Failed to get root node graph');
+        Logger.error('Failed to get root node graph');
         return [];
       }
 
-      const sourceItems = nodeHandles.map(h => ({ handle: h }));
+      // Snapshot owned items BEFORE copy
+      const beforeHandles = new Set(await this.getOwnedItemHandles(graphHandle));
+      Logger.debug(`Before copy: ${beforeHandles.size} owned items`);
 
-      const copyResponse = await this.apiService.callApi('ApiNodeGraph', 'copyFrom2', graphHandle, {
-        sourceItems: sourceItems,
-        sourceItemsCount: sourceItems.length,
+      // Build ObjectRefArrayT: { data: [ObjectRef, ...] }
+      const itemRefs = nodeHandles.map(h => ({
+        handle: String(h),
+        type: ObjectType.ApiItem,
+      }));
+      const sourceItems = { data: itemRefs };
+
+      await this.apiService.callApi('ApiNodeGraph', 'copyFrom2', graphHandle, {
+        sourceItems,
+        sourceItemsCount: itemRefs.length,
         origItems: sourceItems,
-        origItemsCount: sourceItems.length,
+        origItemsCount: itemRefs.length,
       });
 
-      if (!copyResponse?.copiedItems) {
-        Logger.error('❌ Failed to copy nodes');
+      // Snapshot owned items AFTER copy — diff to find new handles
+      const afterHandles = await this.getOwnedItemHandles(graphHandle);
+      const copiedHandles = afterHandles.filter(h => !beforeHandles.has(h));
+      Logger.debug(`After copy: ${afterHandles.length} owned items, ${copiedHandles.length} new`);
+
+      if (copiedHandles.length === 0) {
+        Logger.error('copyFrom2 succeeded but no new owned items found');
         return [];
       }
-
-      Logger.debug('📋 Copy response:', copyResponse);
-
-      const copiedHandles: number[] = [];
-      const copiedItems = copyResponse.copiedItems;
-
-      if (Array.isArray(copiedItems)) {
-        for (const item of copiedItems) {
-          const h = getHandle(item);
-          if (h) copiedHandles.push(h);
-        }
-      } else {
-        const copiedItemsObj = asObject(copiedItems);
-        if (copiedItemsObj && Array.isArray(copiedItemsObj.items)) {
-          for (const item of copiedItemsObj.items) {
-            const h = getHandle(item);
-            if (h) copiedHandles.push(h);
-          }
-        }
-      }
-
-      Logger.debug('📋 Extracted copied handles:', copiedHandles);
 
       for (const handle of copiedHandles) {
         await this.sceneService.buildSceneTree(handle);
@@ -324,13 +343,10 @@ export class NodeService extends BaseService {
         }
       }
 
-      Logger.debug('✅ Copied nodes:', copiedHandles);
+      Logger.debug('Copied nodes:', copiedHandles);
       return copiedHandles;
     } catch (error) {
-      Logger.error(
-        '❌ Error copying nodes:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error copying nodes:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }
@@ -339,34 +355,39 @@ export class NodeService extends BaseService {
    * Group selected nodes into a group node
    */
   async groupNodes(nodeHandles: number[]): Promise<number | null> {
-    Logger.debug('📦 Grouping nodes:', nodeHandles);
+    Logger.debug('Grouping nodes:', nodeHandles);
 
     try {
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       const graphHandle = getHandle(rootResponse?.result);
       if (!graphHandle) {
-        Logger.error('❌ Failed to get root node graph');
+        Logger.error('Failed to get root node graph');
         return null;
       }
 
-      const items = nodeHandles.map(h => ({ handle: h }));
+      // Build ObjectRefArrayT: { data: [ObjectRef, ...] }
+      const itemRefs = nodeHandles.map(h => ({
+        handle: String(h),
+        type: ObjectType.ApiItem,
+      }));
+      const items = { data: itemRefs };
 
       const groupResponse = await this.apiService.callApi(
         'ApiNodeGraph',
         'groupItems',
         graphHandle,
         {
-          items: items,
-          itemsCount: items.length,
+          items,
+          itemsCount: itemRefs.length,
         }
       );
 
       const groupNodeHandle = getHandle(groupResponse?.result);
       if (!groupNodeHandle) {
-        Logger.error('❌ Failed to group nodes');
+        Logger.error('Failed to group nodes');
         return null;
       }
-      Logger.debug('✅ Group created with handle:', groupNodeHandle);
+      Logger.debug('Group created with handle:', groupNodeHandle);
 
       const scene = this.sceneService.getScene();
       nodeHandles.forEach(h => {
@@ -387,10 +408,7 @@ export class NodeService extends BaseService {
 
       return groupNodeHandle;
     } catch (error) {
-      Logger.error(
-        '❌ Error grouping nodes:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error grouping nodes:', error instanceof Error ? error.message : String(error));
       return null;
     }
   }
@@ -399,7 +417,7 @@ export class NodeService extends BaseService {
    * Ungroup a group node
    */
   async ungroupNode(groupNodeHandle: number): Promise<number[]> {
-    Logger.debug('📦 Ungrouping node:', groupNodeHandle);
+    Logger.debug('Ungrouping node:', groupNodeHandle);
 
     try {
       const ungroupResponse = await this.apiService.callApi(
@@ -410,11 +428,11 @@ export class NodeService extends BaseService {
       );
 
       if (!ungroupResponse?.ungroupedItems) {
-        Logger.error('❌ Failed to ungroup node');
+        Logger.error('Failed to ungroup node');
         return [];
       }
 
-      Logger.debug('📋 Ungroup response:', ungroupResponse);
+      Logger.debug('Ungroup response:', ungroupResponse);
 
       const ungroupedHandles: number[] = [];
       const ungroupedItems = ungroupResponse.ungroupedItems;
@@ -434,7 +452,7 @@ export class NodeService extends BaseService {
         }
       }
 
-      Logger.debug('📋 Extracted ungrouped handles:', ungroupedHandles);
+      Logger.debug('Extracted ungrouped handles:', ungroupedHandles);
 
       const scene = this.sceneService.getScene();
       scene.map.delete(groupNodeHandle);
@@ -449,11 +467,11 @@ export class NodeService extends BaseService {
         }
       }
 
-      Logger.debug('✅ Ungrouped into nodes:', ungroupedHandles);
+      Logger.debug('Ungrouped into nodes:', ungroupedHandles);
       return ungroupedHandles;
     } catch (error) {
       Logger.error(
-        '❌ Error ungrouping node:',
+        'Error ungrouping node:',
         error instanceof Error ? error.message : String(error)
       );
       return [];
@@ -461,20 +479,21 @@ export class NodeService extends BaseService {
   }
 
   /**
-   * Expand a node (show all children/pins)
+   * Expand all items owned by a node's pins back to top-level nodes.
+   *
+   * Calls ApiItem.expand on the given handle. This is the reverse of
+   * collapse — call it on the PARENT node (e.g. Render target) to pull
+   * collapsed children (e.g. teapot.obj) back out as standalone nodes.
    */
   async expandNode(nodeHandle: number): Promise<boolean> {
-    Logger.debug('📈 Expanding node:', nodeHandle);
+    Logger.debug('Expanding node:', nodeHandle);
 
     try {
       await this.apiService.callApi('ApiItem', 'expand', nodeHandle, {});
-      Logger.debug('✅ Node expanded:', nodeHandle);
+      Logger.debug('Node expanded:', nodeHandle);
       return true;
     } catch (error) {
-      Logger.error(
-        '❌ Error expanding node:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error expanding node:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }
@@ -483,16 +502,16 @@ export class NodeService extends BaseService {
    * Collapse a node (hide children/pins)
    */
   async collapseNode(nodeHandle: number): Promise<boolean> {
-    Logger.debug('📉 Collapsing node:', nodeHandle);
+    Logger.debug('Collapsing node:', nodeHandle);
 
     try {
       const response = await this.apiService.callApi('ApiItem', 'collapse', nodeHandle, {});
       const collapsed = asBool(response?.result, false);
-      Logger.debug('✅ Node collapse result:', collapsed);
+      Logger.debug('Node collapse result:', collapsed);
       return collapsed;
     } catch (error) {
       Logger.error(
-        '❌ Error collapsing node:',
+        'Error collapsing node:',
         error instanceof Error ? error.message : String(error)
       );
       return false;
@@ -515,7 +534,7 @@ export class NodeService extends BaseService {
       return null;
     } catch (error) {
       Logger.error(
-        '❌ Error getting node position:',
+        'Error getting node position:',
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -526,17 +545,17 @@ export class NodeService extends BaseService {
    * Set the position of a node in the graph
    */
   async setNodePosition(nodeHandle: number, x: number, y: number): Promise<boolean> {
-    Logger.debug(`📍 Setting node position: handle=${nodeHandle}, x=${x}, y=${y}`);
+    Logger.debug(`Setting node position: handle=${nodeHandle}, x=${x}, y=${y}`);
 
     try {
       await this.apiService.callApi('ApiItem', 'setPosition', nodeHandle, {
         newPos: { x, y },
       });
-      Logger.debug('✅ Node position updated');
+      Logger.debug('Node position updated');
       return true;
     } catch (error) {
       Logger.error(
-        '❌ Error setting node position:',
+        'Error setting node position:',
         error instanceof Error ? error.message : String(error)
       );
       return false;
@@ -548,14 +567,14 @@ export class NodeService extends BaseService {
    * This maintains the connection to the parent pin
    */
   async replaceNode(oldNodeHandle: number, newNodeType: string): Promise<number | null> {
-    Logger.debug(`🔄 Replacing node ${oldNodeHandle} with ${newNodeType}`);
+    Logger.debug(`Replacing node ${oldNodeHandle} with ${newNodeType}`);
 
     try {
       const scene = this.sceneService.getScene();
       const oldNode = scene.map.get(oldNodeHandle);
 
       if (!oldNode) {
-        Logger.error('❌ Old node not found in scene');
+        Logger.error('Old node not found in scene');
         return null;
       }
 
@@ -564,7 +583,7 @@ export class NodeService extends BaseService {
       const pinIdx = pinInfo?.pinId;
 
       if (!parentHandle || pinIdx === undefined) {
-        Logger.error('❌ Could not find parent or pin index for node');
+        Logger.error('Could not find parent or pin index for node');
         return null;
       }
 
@@ -572,29 +591,29 @@ export class NodeService extends BaseService {
 
       const nodeTypeId = await this.getNodeTypeId(newNodeType);
       if (!nodeTypeId) {
-        Logger.error('❌ Could not get node type ID for', newNodeType);
+        Logger.error('Could not get node type ID for', newNodeType);
         return null;
       }
 
       const newNodeHandle = await this.createNode(newNodeType, nodeTypeId);
       if (!newNodeHandle) {
-        Logger.error('❌ Failed to create new node');
+        Logger.error('Failed to create new node');
         return null;
       }
 
-      Logger.debug(`✅ Created new node: ${newNodeHandle}`);
+      Logger.debug(`Created new node: ${newNodeHandle}`);
 
       await this.connectPinByIndex(parentHandle, pinIdx, newNodeHandle, true);
-      Logger.debug(`✅ Connected new node to parent pin`);
+      Logger.debug(`Connected new node to parent pin`);
 
       await this.deleteNodeOptimized(oldNodeHandle);
-      Logger.debug(`✅ Deleted old node`);
+      Logger.debug(`Deleted old node`);
 
       await this.sceneService.buildSceneTree();
 
       return newNodeHandle;
     } catch (error) {
-      Logger.error('❌ Failed to replace node:', error);
+      Logger.error('Failed to replace node:', error);
       return null;
     }
   }
@@ -607,29 +626,29 @@ export class NodeService extends BaseService {
     pinIdx: number,
     nodeType: string
   ): Promise<number | null> {
-    Logger.debug(`➕ Creating ${nodeType} for pin ${pinIdx} on parent ${parentHandle}`);
+    Logger.debug(`Creating ${nodeType} for pin ${pinIdx} on parent ${parentHandle}`);
 
     try {
       const nodeTypeId = await this.getNodeTypeId(nodeType);
       if (!nodeTypeId) {
-        Logger.error('❌ Could not get node type ID for', nodeType);
+        Logger.error('Could not get node type ID for', nodeType);
         return null;
       }
 
       const newNodeHandle = await this.createNode(nodeType, nodeTypeId);
       if (!newNodeHandle) {
-        Logger.error('❌ Failed to create new node');
+        Logger.error('Failed to create new node');
         return null;
       }
 
       await this.connectPinByIndex(parentHandle, pinIdx, newNodeHandle, true);
-      Logger.debug(`✅ Created and connected ${nodeType} to pin`);
+      Logger.debug(`Created and connected ${nodeType} to pin`);
 
       await this.sceneService.buildSceneTree();
 
       return newNodeHandle;
     } catch (error) {
-      Logger.error('❌ Failed to create node for pin:', error);
+      Logger.error('Failed to create node for pin:', error);
       return null;
     }
   }

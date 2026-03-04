@@ -56,7 +56,7 @@ export function NodeInspectorControls({
    */
   const jumpToNode = useCallback(
     (buttonId: string, nodeType: string) => {
-      Logger.debug(`🎯 Jumping to ${nodeType} node`);
+      Logger.debug(`Jumping to ${nodeType} node`);
 
       // Update active button state
       setActiveButton(buttonId);
@@ -113,22 +113,22 @@ export function NodeInspectorControls({
       }
 
       if (targetNode) {
-        Logger.debug(`✅ Found ${nodeType} node:`, targetNode.name);
+        Logger.debug(`Found ${nodeType} node:`, targetNode.name);
         onNodeSelect(targetNode);
       } else {
-        Logger.warn(`⚠️ Could not find ${nodeType} node in scene tree`);
+        Logger.warn(`Could not find ${nodeType} node in scene tree`);
       }
     },
     [sceneTree, onNodeSelect]
   );
 
   const handleExpandAll = useCallback(() => {
-    Logger.debug('📂 Expanding all nodes');
+    Logger.debug('Expanding all nodes');
     if (onExpandAll) onExpandAll();
   }, [onExpandAll]);
 
   const handleCollapseAll = useCallback(() => {
-    Logger.debug('📁 Collapsing all nodes');
+    Logger.debug('Collapsing all nodes');
     if (onCollapseAll) onCollapseAll();
   }, [onCollapseAll]);
 

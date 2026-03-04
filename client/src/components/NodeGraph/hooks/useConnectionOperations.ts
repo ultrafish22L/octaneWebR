@@ -12,6 +12,7 @@ import {
 import { OnReconnectEnd } from '@xyflow/system';
 import { OctaneNodeData } from '../OctaneNode';
 import { Logger } from '../../../utils/Logger';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 import { getPinColor } from '../../../utils/PinColorUtils';
 import { OctaneClient } from '../../../services/OctaneClient';
 
@@ -48,6 +49,8 @@ export function useConnectionOperations({
   connectionLineColor,
   setConnectionLineColor,
 }: UseConnectionOperationsProps) {
+  const { setTemporaryStatus } = useStatusMessage();
+
   /**
    * Handle connection start - track source, set line color, enable multi-connect
    */
@@ -66,7 +69,7 @@ export function useConnectionOperations({
           isMultiConnectingRef.current = true;
           multiConnectSourcesRef.current = selectedNodes.map(n => n.id);
           Logger.debug(
-            `🔗 Multi-connect activated: ${selectedNodes.length} selected nodes will connect`
+            ` Multi-connect activated: ${selectedNodes.length} selected nodes will connect`
           );
         }
       } else {
@@ -93,7 +96,7 @@ export function useConnectionOperations({
         }
       }
 
-      Logger.debug('🎨 Setting connection line color:', handleColor);
+      Logger.debug('Setting connection line color:', handleColor);
       setConnectionLineColor(handleColor);
 
       // OCTANE BEHAVIOR: Keep original connections visible during drag
@@ -105,7 +108,7 @@ export function useConnectionOperations({
 
         if (existingEdge) {
           Logger.debug(
-            '📌 Input pin has existing connection:',
+            'Input pin has existing connection:',
             existingEdge.id,
             '(will replace on success)'
           );
@@ -115,7 +118,7 @@ export function useConnectionOperations({
         }
       } else {
         // Output pin - allow multiple connections, don't track for removal
-        Logger.debug('📤 Output pin - allowing multiple connections');
+        Logger.debug('Output pin - allowing multiple connections');
         connectingEdgeRef.current = null;
       }
     },
@@ -152,7 +155,7 @@ export function useConnectionOperations({
    */
   const onReconnect = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      Logger.debug('🔄 RECONNECT triggered:', oldEdge.id, '→', newConnection);
+      Logger.debug('RECONNECT triggered:', oldEdge.id, '→', newConnection);
 
       // Detect no-op reconnection: user dropped edge back on the same pin
       if (
@@ -161,7 +164,7 @@ export function useConnectionOperations({
         oldEdge.source === newConnection.source &&
         oldEdge.sourceHandle === newConnection.sourceHandle
       ) {
-        Logger.debug('⏭️ No-op reconnection detected - ignoring (same source and target)');
+        Logger.debug('No-op reconnection detected - ignoring (same source and target)');
         return;
       }
 
@@ -181,7 +184,7 @@ export function useConnectionOperations({
           const oldTargetHandle = parseInt(oldEdge.target);
           const oldPinIdx = oldEdge.targetHandle ? parseInt(oldEdge.targetHandle.split('-')[1]) : 0;
 
-          Logger.debug(`🔌 Disconnecting old: node=${oldTargetHandle}, pin=${oldPinIdx}`);
+          Logger.debug(`Disconnecting old: node=${oldTargetHandle}, pin=${oldPinIdx}`);
           await client.disconnectPin(oldTargetHandle, oldPinIdx);
 
           // Connect new connection
@@ -192,16 +195,17 @@ export function useConnectionOperations({
             : 0;
 
           Logger.debug(
-            `🔌 Connecting new: source=${newSourceHandle} → target=${newTargetHandle}, pin=${newPinIdx}`
+            ` Connecting new: source=${newSourceHandle} → target=${newTargetHandle}, pin=${newPinIdx}`
           );
           await client.connectPinByIndex(newTargetHandle, newPinIdx, newSourceHandle, true);
           Logger.debug('Octane edge reconnected');
         } catch (error) {
           Logger.error('Failed to sync edge reconnection with Octane:', error);
+          setTemporaryStatus('Failed to update connection', 3000);
         }
       })();
     },
-    [client, setEdges]
+    [client, setEdges, setTemporaryStatus]
   );
 
   /**
@@ -212,8 +216,13 @@ export function useConnectionOperations({
    * ReactFlow v12 Pattern: Use connectionState.isValid to detect success/failure
    */
   const onReconnectEnd: OnReconnectEnd = useCallback(
-    (_event: MouseEvent | TouchEvent, edge: Edge, _handleType: 'source' | 'target', connectionState: { isValid: boolean | null }) => {
-      Logger.debug('🔄 RECONNECT END:', edge.id, 'isValid:', connectionState.isValid);
+    (
+      _event: MouseEvent | TouchEvent,
+      edge: Edge,
+      _handleType: 'source' | 'target',
+      connectionState: { isValid: boolean | null }
+    ) => {
+      Logger.debug('RECONNECT END:', edge.id, 'isValid:', connectionState.isValid);
 
       // If reconnection succeeded (connectionState.isValid === true), onReconnect already handled it
       if (connectionState.isValid) {
@@ -237,7 +246,7 @@ export function useConnectionOperations({
           const targetHandle = parseInt(edge.target);
           const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
 
-          Logger.debug(`🔌 Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
+          Logger.debug(`Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
           await client.disconnectPin(targetHandle, pinIdx);
           Logger.debug('Pin disconnected in Octane');
 
@@ -246,10 +255,11 @@ export function useConnectionOperations({
           Logger.debug('Edge removed from UI');
         } catch (error) {
           Logger.error('Failed to disconnect edge:', error);
+          setTemporaryStatus('Failed to disconnect pin', 3000);
         }
       })();
     },
-    [client, setEdges]
+    [client, setEdges, setTemporaryStatus]
   );
 
   /**
@@ -277,7 +287,7 @@ export function useConnectionOperations({
         // Multi-connect: if active, connect ALL selected nodes to this target pin
         if (isMultiConnectingRef.current && multiConnectSourcesRef.current.length > 0) {
           Logger.debug(
-            `🔗 Multi-connect: connecting ${multiConnectSourcesRef.current.length} nodes to target`
+            ` Multi-connect: connecting ${multiConnectSourcesRef.current.length} nodes to target`
           );
 
           const targetHandle = parseInt(connection.target);
@@ -290,19 +300,19 @@ export function useConnectionOperations({
             const sourceHandle = parseInt(sourceNodeId);
 
             try {
-              Logger.debug(`🔗 Multi-connecting ${sourceNodeId} → ${connection.target}[${pinIdx}]`);
+              Logger.debug(`Multi-connecting ${sourceNodeId} → ${connection.target}[${pinIdx}]`);
 
               // For input pins, we can only connect one at a time
               // So we'll create separate target pins or skip if target already connected
               // For now, just connect the first one successfully
               await client.connectPinByIndex(targetHandle, pinIdx, sourceHandle, true);
-              Logger.debug(`✅ Multi-connect succeeded for ${sourceNodeId}`);
+              Logger.debug(`Multi-connect succeeded for ${sourceNodeId}`);
 
               // Only connect first one to avoid overwriting same input pin
               // In real Octane, this might create multiple target nodes or handle differently
               break;
             } catch (error) {
-              Logger.error(`❌ Failed to multi-connect ${sourceNodeId}:`, error);
+              Logger.error(`Failed to multi-connect ${sourceNodeId}:`, error);
             }
           }
 
@@ -325,7 +335,7 @@ export function useConnectionOperations({
           existingTargetEdge.source === connection.source &&
           existingTargetEdge.sourceHandle === connection.sourceHandle
         ) {
-          Logger.debug('⏭️ No-op connection detected - already connected to same source, ignoring');
+          Logger.debug('No-op connection detected - already connected to same source, ignoring');
           connectingEdgeRef.current = null;
           return;
         }
@@ -335,12 +345,12 @@ export function useConnectionOperations({
         const nodesToRemove: string[] = [];
 
         if (connectingEdgeRef.current) {
-          Logger.debug('🔄 Removing old source connection:', connectingEdgeRef.current.id);
+          Logger.debug('Removing old source connection:', connectingEdgeRef.current.id);
           edgesToRemove.push(connectingEdgeRef.current.id);
         }
 
         if (existingTargetEdge && existingTargetEdge.id !== connectingEdgeRef.current?.id) {
-          Logger.debug('🔄 Removing old target connection:', existingTargetEdge.id);
+          Logger.debug('Removing old target connection:', existingTargetEdge.id);
           edgesToRemove.push(existingTargetEdge.id);
 
           // COLLAPSED NODE CLEANUP: Check if old connection points to a collapsed (default value) node
@@ -378,7 +388,7 @@ export function useConnectionOperations({
           ? parseInt(connection.targetHandle.split('-')[1])
           : 0;
 
-        Logger.debug('📤 Calling ApiNode.connectToIx:', {
+        Logger.debug('Calling ApiNode.connectToIx:', {
           targetHandle,
           pinIdx,
           sourceHandle,
@@ -468,7 +478,7 @@ export function useConnectionOperations({
             const handleNum = parseInt(nodeId);
             const removedNode = client.lookupItem(handleNum);
             if (removedNode) {
-              Logger.debug('  🗑️ Removed from scene.map:', removedNode.name, handleNum);
+              Logger.debug('  Removed from scene.map:', removedNode.name, handleNum);
               client.removeFromScene(handleNum);
             }
           });
@@ -484,6 +494,7 @@ export function useConnectionOperations({
         Logger.debug('Connection complete!');
       } catch (error) {
         Logger.error('Failed to create connection:', error);
+        setTemporaryStatus('Failed to create connection', 3000);
 
         // If API call failed, don't add edge to state
         connectingEdgeRef.current = null;
@@ -497,6 +508,7 @@ export function useConnectionOperations({
       connectingEdgeRef,
       isMultiConnectingRef,
       multiConnectSourcesRef,
+      setTemporaryStatus,
     ]
   );
 
@@ -527,7 +539,7 @@ export function useConnectionOperations({
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       // DEBUG: Log edge changes
-      Logger.debug('📝 EDGE CHANGES:', changes);
+      Logger.debug('EDGE CHANGES:', changes);
       // Apply changes using the base handler from useEdgesState
       onEdgesChangeBase(changes);
     },
@@ -540,7 +552,7 @@ export function useConnectionOperations({
    * When backend sync is implemented, use connectToIx with handle=0 to disconnect pins
    */
   const onEdgesDelete = useCallback(async (deletedEdges: Edge[]) => {
-    Logger.debug(`✂️ Deleted ${deletedEdges.length} edge(s) from graph (visual only)`);
+    Logger.debug(`Deleted ${deletedEdges.length} edge(s) from graph (visual only)`);
     // TODO: When backend connection sync is implemented, add API calls here
     // For each edge: await client.callApi('ApiNode', 'connectToIx', targetHandle, {
     //   pinIdx,

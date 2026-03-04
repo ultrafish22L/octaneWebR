@@ -31,10 +31,7 @@ interface PanelVisibility {
 /**
  * Build menu definitions with current state
  */
-function getMenuDefinitions(
-  recentFiles: string[] = [],
-  _panelVisibility?: PanelVisibility
-): MenuDefinition {
+function getMenuDefinitions(recentFiles: string[] = []): MenuDefinition {
   // Build recent files submenu
   const recentFilesSubmenu: MenuItem[] =
     recentFiles.length > 0
@@ -165,7 +162,6 @@ interface MenuBarProps {
 function MenuBar({
   onSceneRefresh,
   onMaterialDatabaseOpen: _onMaterialDatabaseOpen,
-  panelVisibility,
   onTogglePanelVisibility,
   onResetLayout,
 }: MenuBarProps) {
@@ -187,8 +183,8 @@ function MenuBar({
 
   // Get menu definitions with current recent files and panel visibility
   const menuDefinitions = useMemo(() => {
-    return getMenuDefinitions(getRecentFilePaths(), panelVisibility);
-  }, [getRecentFilePaths, panelVisibility]);
+    return getMenuDefinitions(getRecentFilePaths());
+  }, [getRecentFilePaths]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -251,7 +247,7 @@ function MenuBar({
   // Menu action handlers
   const handleMenuAction = useCallback(
     async (action: MenuAction, data?: string) => {
-      Logger.debug('🎯 Menu action:', action, data);
+      Logger.debug('Menu action:', action, data);
       closeMenu();
 
       switch (action) {
@@ -381,7 +377,7 @@ function MenuBar({
 
         case 'file.saveAsPackage':
           setIsSavePackageDialogOpen(true);
-          Logger.debug('📦 Opening Save as Package dialog');
+          Logger.debug('Opening Save as Package dialog');
           break;
 
         case 'file.saveAsDefault':
@@ -399,7 +395,7 @@ function MenuBar({
               // Store the default scene path in localStorage for future reference
               localStorage.setItem('octaneWebR_defaultScene', defaultScenePath);
               showNotification('Current scene saved as default', 'success');
-              Logger.debug('✅ Default scene saved:', defaultScenePath);
+              Logger.debug('Default scene saved:', defaultScenePath);
             } else {
               showNotification('Failed to save default scene', 'error');
             }
@@ -411,7 +407,7 @@ function MenuBar({
 
         case 'file.preferences':
           setIsPreferencesDialogOpen(true);
-          Logger.debug('🔧 Opening Preferences dialog');
+          Logger.debug('Opening Preferences dialog');
           break;
 
         // Edit menu actions - delegated to active component via EditActionsContext
@@ -478,69 +474,69 @@ function MenuBar({
         // Script menu actions
         case 'script.rescanFolder':
           showNotification('Rescanning script folder...', 'info');
-          Logger.debug('📂 Rescan script folder');
+          Logger.debug('Rescan script folder');
           break;
 
         case 'script.runLast':
           showNotification('Run last script not yet implemented', 'info');
-          Logger.debug('▶️ Run last script again');
+          Logger.debug('Run last script again');
           break;
 
         case 'script.batchRender':
           setIsBatchRenderingDialogOpen(true);
-          Logger.debug('🎬 Opening Batch Rendering dialog');
+          Logger.debug('Opening Batch Rendering dialog');
           break;
 
         case 'script.daylightAnimation':
           setIsDaylightAnimationDialogOpen(true);
-          Logger.debug('☀️ Opening Daylight Animation dialog');
+          Logger.debug('Opening Daylight Animation dialog');
           break;
 
         case 'script.turntableAnimation':
           setIsTurntableAnimationDialogOpen(true);
-          Logger.debug('🔄 Opening Turntable Animation dialog');
+          Logger.debug('Opening Turntable Animation dialog');
           break;
 
         // Cloud/Render menu actions
         case 'render.uploadSnapshot':
           showNotification('Upload scene snapshot not yet implemented', 'info');
-          Logger.debug('☁️ Upload scene snapshot');
+          Logger.debug('Upload scene snapshot');
           break;
 
         case 'render.render':
           showNotification('Cloud render not yet implemented', 'info');
-          Logger.debug('☁️ Cloud render');
+          Logger.debug('Cloud render');
           break;
 
         case 'render.openRenderNetwork':
           showNotification('Open Render Network not yet implemented', 'info');
-          Logger.debug('🌐 Open Render Network');
+          Logger.debug('Open Render Network');
           break;
 
         case 'render.openRenderNetworkExternal':
           showNotification('Open Render Network (external) not yet implemented', 'info');
-          Logger.debug('🌐 Open Render Network (external)');
+          Logger.debug('Open Render Network (external)');
           break;
 
         // View menu actions
         case 'view.renderViewport':
           onTogglePanelVisibility?.('renderViewport');
-          Logger.debug('👁️ Toggled Render Viewport visibility');
+          Logger.debug('Toggled Render Viewport visibility');
           break;
 
         case 'view.nodeInspector':
           onTogglePanelVisibility?.('nodeInspector');
-          Logger.debug('👁️ Toggled Node Inspector visibility');
+          Logger.debug('Toggled Node Inspector visibility');
           break;
 
         case 'view.graphEditor':
           onTogglePanelVisibility?.('graphEditor');
-          Logger.debug('👁️ Toggled Graph Editor visibility');
+          Logger.debug('Toggled Graph Editor visibility');
           break;
 
         case 'view.sceneOutliner':
           onTogglePanelVisibility?.('sceneOutliner');
-          Logger.debug('👁️ Toggled Scene Outliner visibility');
+          Logger.debug('Toggled Scene Outliner visibility');
           break;
 
         // Window menu actions
@@ -557,22 +553,22 @@ function MenuBar({
         // Help menu actions
         case 'help.docs':
           window.open('https://docs.otoy.com/standaloneSE/CoverPage.html', '_blank');
-          Logger.debug('📖 Opening online manual');
+          Logger.debug('Opening online manual');
           break;
 
         case 'help.crashReports':
           showNotification('Crash reports management not yet implemented', 'info');
-          Logger.debug('📊 Crash reports management');
+          Logger.debug('Crash reports management');
           break;
 
         case 'help.about':
           setIsAboutDialogOpen(true);
-          Logger.debug('ℹ️ Opening About dialog');
+          Logger.debug('Opening About dialog');
           break;
 
         case 'help.eula':
           window.open('/eula.pdf', '_blank');
-          Logger.debug('📄 Opening EULA PDF');
+          Logger.debug('Opening EULA PDF');
           break;
 
         default:
@@ -630,35 +626,9 @@ function MenuBar({
         description: 'Open preferences',
         handler: () => handleMenuAction('file.preferences'),
       },
-      {
-        key: 'x',
-        ctrl: true,
-        description: 'Cut',
-        handler: () => handleMenuAction('edit.cut'),
-      },
-      {
-        key: 'c',
-        ctrl: true,
-        description: 'Copy',
-        handler: () => handleMenuAction('edit.copy'),
-      },
-      {
-        key: 'v',
-        ctrl: true,
-        description: 'Paste',
-        handler: () => handleMenuAction('edit.paste'),
-      },
-      {
-        key: 'Delete',
-        description: 'Delete',
-        handler: () => handleMenuAction('edit.delete'),
-      },
-      {
-        key: 'f',
-        ctrl: true,
-        description: 'Find',
-        handler: () => handleMenuAction('edit.find'),
-      },
+      // Edit shortcuts (Cut, Copy, Paste, Delete, Find) are handled by
+      // useNodeOperations.ts to avoid double-firing. MenuBar Edit menu
+      // items still work via click → editActions context.
       // Undo/Redo disabled - not yet integrated with Octane
       // {
       //   key: 'z',

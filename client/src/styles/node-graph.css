@@ -551,17 +551,17 @@
 
 /* ReactFlow background override - lighter gray like Octane SE */
 .node-graph-container .react-flow {
-  background: #454545;
+  background: var(--bg-secondary);
 }
 
 /* ReactFlow background pattern (grid) - lighter gray base */
 .node-graph-container .react-flow__background {
-  background: #454545;
+  background: var(--bg-secondary);
 }
 
 /* Grid lines - dark and visible like Octane SE */
 .node-graph-container .react-flow__background line {
-  stroke: #2a2a2a !important; /* Dark grid lines on lighter background */
+  stroke: var(--viewport-bg) !important; /* Dark grid lines on lighter background */
 }
 
 /* NodeGraphEditor takes full remaining space after toolbar */
@@ -585,17 +585,17 @@
 
 /* ReactFlow background override - lighter gray like Octane SE */
 .node-graph-tabgraph .react-flow {
-  background: #454545;
+  background: var(--bg-secondary);
 }
 
 /* ReactFlow background pattern (grid) - lighter gray base */
 .node-graph-tabgraph .react-flow__background {
-  background: #454545;
+  background: var(--bg-secondary);
 }
 
 /* Grid lines - dark and visible like Octane SE */
 .node-graph-tabgraph .react-flow__background line {
-  stroke: #2a2a2a !important; /* Dark grid lines on lighter background */
+  stroke: var(--viewport-bg) !important; /* Dark grid lines on lighter background */
 }
 
 /* NodeGraphEditor takes full remaining space after toolbar and tabs */
@@ -1414,7 +1414,7 @@
 
 .node-graph-tab {
   background: var(--bg-lighter);
-  border: 1px solid #000;
+  border: 1px solid var(--border-primary);
   border-bottom: none;
   color: var(--text-secondary);
   cursor: pointer;

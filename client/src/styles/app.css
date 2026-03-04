@@ -139,19 +139,13 @@ body {
 }
 
 .panel-splitter.horizontal {
-  width: 100%;
-  height: 4px;
-  cursor: row-resize;
-}
-
-.panel-splitter.vertical:hover {
-  pointer-events: auto;
-}
-
-.panel-splitter.horizontal {
   height: var(--splitter-size, 4px);
   width: 100%;
   cursor: row-resize;
+  pointer-events: auto;
+}
+
+.panel-splitter.vertical:hover {
   pointer-events: auto;
 }
 
@@ -201,7 +195,6 @@ body.resizing .panel-splitter {
 
 @media (max-width: 1400px) {
   .app-layout {
-    grid-template-columns: 180px 1fr 280px;
     grid-template-columns: 150px 1fr 200px;
     grid-template-rows: 1fr 200px;
   }
@@ -297,6 +290,8 @@ body.resizing .panel-splitter {
 .react-flow__edge path {
   pointer-events: all !important;
   cursor: pointer !important;
+  stroke-width: 2;
+  stroke-opacity: 0.7; /* Match Octane C++ alpha value */
 }
 
 .react-flow__edge-path {
@@ -308,12 +303,6 @@ body.resizing .panel-splitter {
 .react-flow__edge-interaction {
   pointer-events: all !important;
   cursor: pointer !important;
-}
-
-/* Increase hit area for easier edge selection */
-.react-flow__edge path {
-  stroke-width: 2;
-  stroke-opacity: 0.7; /* Match Octane C++ alpha value */
 }
 
 .react-flow__edge:hover path,
@@ -664,6 +653,12 @@ body.drag-over * {
   height: var(--menu-height);
 }
 
+.header-indicators {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .main-menu {
   display: flex;
   align-items: center;
@@ -718,18 +713,7 @@ body.drag-over * {
   animation: pulse 1s infinite;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: var(--opacity-full);
-  }
-  50% {
-    opacity: var(--opacity-medium);
-  }
-}
-
 /* Main Layout & Panels */
-/* Main Layout */
 .app-layout {
   display: grid;
   grid-template-columns: 200px 4px 1fr 4px 320px; /* Will be overridden by inline styles */

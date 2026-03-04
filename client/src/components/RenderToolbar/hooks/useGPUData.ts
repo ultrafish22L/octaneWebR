@@ -91,10 +91,10 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
           memory: totalMemory,
         }));
 
-        Logger.debug('🖥️ GPU data loaded:', { gpu: gpuName, version, memory: totalMemory });
+        Logger.info('GPU data loaded:', { gpu: gpuName, version, memory: totalMemory });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        Logger.error('❌ Failed to fetch GPU data:', errorMessage);
+        Logger.error('Failed to fetch GPU data:', errorMessage);
       }
     };
 

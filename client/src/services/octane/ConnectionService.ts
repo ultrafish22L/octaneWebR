@@ -46,7 +46,7 @@ export class ConnectionService extends BaseService {
       this.connected = true;
       Logger.debug('Setting connected = true, emitting connected event');
       this.emit('connected', undefined);
-      Logger.success('Connected to OctaneWebR server');
+      Logger.info('Connected to OctaneWebR server');
 
       return true;
     } catch (error) {
@@ -68,14 +68,20 @@ export class ConnectionService extends BaseService {
     Logger.network('Connecting WebSocket:', wsUrl);
 
     try {
-      // Capture the instance in a local variable so all handlers close over the same
-      // specific socket — not over `this.ws`, which can be overwritten if connect()
-      // is called again (e.g. React StrictMode double-invocation in development).
+      // Close any existing WebSocket before opening a new one.
+      // Prevents duplicate connections and memory leaks (e.g., React StrictMode
+      // double-invocation calls connect() twice rapidly).
+      if (this.ws) {
+        this.ws.onclose = null; // Prevent reconnect loop from old socket's onclose
+        this.ws.close();
+        this.ws = null;
+      }
+
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
 
       ws.onopen = () => {
-        Logger.success('WebSocket connected');
+        Logger.info('WebSocket connected');
         Logger.debug(`WebSocket readyState on open: ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
 
         /**
@@ -102,17 +108,17 @@ export class ConnectionService extends BaseService {
           } else if (message.type === 'newStatistics') {
             this.emit('OnNewStatistics', message.data);
           } else if (message.type === 'renderFailure') {
-            Logger.error('❌ WebSocket: renderFailure callback received');
+            Logger.error('WebSocket: renderFailure callback received');
             this.emit('OnRenderFailure', message.data);
           } else if (message.type === 'projectManagerChanged') {
             Logger.debug('WebSocket: projectManagerChanged callback received');
             this.emit('OnProjectManagerChanged', message.data);
           } else {
-            Logger.warn('⚠️ WebSocket: Unknown message type:', message.type);
+            Logger.warn('WebSocket: Unknown message type:', message.type);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          Logger.error('❌ WebSocket message parse error:', errorMessage);
+          Logger.error('WebSocket message parse error:', errorMessage);
         }
       };
 

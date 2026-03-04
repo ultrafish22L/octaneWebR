@@ -74,9 +74,7 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
       >
         <header className="modal-header">
           <h2>⌨️ Keyboard Shortcuts</h2>
-          <button className="close-button" onClick={onClose} aria-label="Close dialog">
-            ✕
-          </button>
+          <button className="close-button" onClick={onClose} aria-label="Close dialog"></button>
         </header>
 
         <div className="modal-body">

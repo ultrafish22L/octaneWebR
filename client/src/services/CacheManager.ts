@@ -69,6 +69,7 @@ const DEFAULT_CACHE_CONFIGS: Record<string, CacheConfig> = {
  * Multi-tier cache manager
  */
 export class CacheManager {
+  private cleanupTimerId: ReturnType<typeof setInterval> | null = null;
   private memoryCache: Map<string, CacheEntry<unknown>> = new Map();
   private stats: CacheStats = {
     hits: 0,
@@ -82,7 +83,7 @@ export class CacheManager {
   private maxSessionStorageSize = 5 * 1024 * 1024; // 5MB limit for session storage
 
   constructor() {
-    Logger.debug('💾 CacheManager initialized');
+    Logger.debug('CacheManager initialized');
     this.startCleanupTimer();
   }
 
@@ -96,7 +97,7 @@ export class CacheManager {
     if (memoryCached !== null) {
       this.stats.hits++;
       this.updateHitRate();
-      Logger.debug(`💾 Cache HIT (memory): ${key}`);
+      Logger.debugV(`Cache HIT (memory): ${key}`);
       return memoryCached;
     }
 
@@ -107,14 +108,14 @@ export class CacheManager {
       this.setInMemory(key, sessionCached, customTtl);
       this.stats.hits++;
       this.updateHitRate();
-      Logger.debug(`💾 Cache HIT (session): ${key}`);
+      Logger.debugV(`Cache HIT (session): ${key}`);
       return sessionCached;
     }
 
     // L3: Fetch from API
     this.stats.misses++;
     this.updateHitRate();
-    Logger.debug(`❌ Cache MISS: ${key}`);
+    Logger.debugV(`Cache MISS: ${key}`);
 
     const data = await fetcher();
 
@@ -151,19 +152,24 @@ export class CacheManager {
       }
     }
 
-    // Invalidate session storage
+    // Invalidate session storage — collect keys first, then remove.
+    // Removing during iteration causes index shift and skips entries.
     let sessionCleaned = 0;
+    const sessionKeysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
       if (key && key.startsWith('octane:cache:') && regex.test(key)) {
-        sessionStorage.removeItem(key);
-        sessionCleaned++;
+        sessionKeysToRemove.push(key);
       }
+    }
+    for (const key of sessionKeysToRemove) {
+      sessionStorage.removeItem(key);
+      sessionCleaned++;
     }
 
     this.updateStats();
     Logger.debug(
-      `💾 Cache invalidated: ${pattern} (${memoryCleaned} memory + ${sessionCleaned} session)`
+      `Cache invalidated: ${pattern} (${memoryCleaned} memory + ${sessionCleaned} session)`
     );
   }
 
@@ -192,7 +198,7 @@ export class CacheManager {
       evictions: 0,
     };
 
-    Logger.debug('💾 Cache cleared completely');
+    Logger.debug('Cache cleared completely');
   }
 
   /**
@@ -207,7 +213,7 @@ export class CacheManager {
    */
   logReport(): void {
     const stats = this.getStats();
-    Logger.info('💾 Cache Statistics Report:');
+    Logger.info('Cache Statistics Report:');
     Logger.info(`   Hits: ${stats.hits}`);
     Logger.info(`   Misses: ${stats.misses}`);
     Logger.info(`   Hit Rate: ${(stats.hitRate * 100).toFixed(1)}%`);
@@ -310,7 +316,7 @@ export class CacheManager {
 
       // Check if we'd exceed quota
       if (serialized.length > this.maxSessionStorageSize) {
-        Logger.warn(`💾 Cache entry too large for session storage: ${key}`);
+        Logger.warn(`Cache entry too large for session storage: ${key}`);
         return;
       }
 
@@ -318,7 +324,7 @@ export class CacheManager {
     } catch (error) {
       // Quota exceeded - evict old entries
       if (error instanceof Error && error.name === 'QuotaExceededError') {
-        Logger.warn('💾 Session storage quota exceeded, evicting old entries');
+        Logger.warn('Session storage quota exceeded, evicting old entries');
         this.evictOldSessionEntries();
         // Try again after eviction
         try {
@@ -359,7 +365,7 @@ export class CacheManager {
     if (lruKey) {
       this.memoryCache.delete(lruKey);
       this.stats.evictions++;
-      Logger.debug(`💾 Evicted least-accessed entry: ${lruKey}`);
+      Logger.debug(`Evicted least-accessed entry: ${lruKey}`);
     }
   }
 
@@ -395,14 +401,15 @@ export class CacheManager {
       sessionStorage.removeItem(entries[i].key);
     }
 
-    Logger.debug(`💾 Evicted ${toRemove} old session storage entries`);
+    Logger.debug(`Evicted ${toRemove} old session storage entries`);
   }
 
   /**
    * Start periodic cleanup of expired entries
    */
   private startCleanupTimer(): void {
-    setInterval(() => {
+    if (this.cleanupTimerId) return;
+    this.cleanupTimerId = setInterval(() => {
       this.cleanupExpired();
     }, 60000); // Every minute
   }
@@ -424,7 +431,7 @@ export class CacheManager {
 
     if (cleaned > 0) {
       this.updateStats();
-      Logger.debug(`💾 Cleaned ${cleaned} expired cache entries`);
+      Logger.debug(`Cleaned ${cleaned} expired cache entries`);
     }
   }
 

@@ -51,21 +51,21 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
     setErrorMessage('');
 
     try {
-      Logger.debug(`📤 Exporting render passes to: ${outputDirectory}`);
-      Logger.debug(`📄 Filename prefix: ${filenamePrefix}`);
-      Logger.debug(`🖼️ Format: ${format}`);
+      Logger.debug(`Exporting render passes to: ${outputDirectory}`);
+      Logger.debug(`Filename prefix: ${filenamePrefix}`);
+      Logger.debug(`Format: ${format}`);
 
       // Call Octane API to export all passes
       const success = await client.exportRenderPasses(outputDirectory, filenamePrefix, format);
 
       if (success) {
-        Logger.debug('✅ Render passes exported successfully');
+        Logger.debug('Render passes exported successfully');
         onClose();
       } else {
         setErrorMessage('Failed to export passes. Check console for details.');
       }
     } catch (error) {
-      Logger.error('❌ Error exporting passes:', error);
+      Logger.error('Error exporting passes:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setExporting(false);
@@ -151,7 +151,7 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
               Specular, etc.) as separate files.
             </p>
             <p>
-              📁 Example output:{' '}
+              Example output:{' '}
               <code>
                 {outputDirectory}/{filenamePrefix}_beauty.{format.toLowerCase()}
               </code>

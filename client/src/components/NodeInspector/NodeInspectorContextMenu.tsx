@@ -10,11 +10,11 @@ import { createPortal } from 'react-dom';
 interface NodeInspectorContextMenuProps {
   x: number;
   y: number;
+  onRender: () => void;
   onSave: () => void;
   onCut: () => void;
   onCopy: () => void;
   onPaste: () => void;
-  onFillEmptyPins: () => void;
   onDelete: () => void;
   onExpand: () => void;
   onShowInOutliner: () => void;
@@ -26,11 +26,11 @@ interface NodeInspectorContextMenuProps {
 export function NodeInspectorContextMenu({
   x,
   y,
+  onRender,
   onSave,
   onCut,
   onCopy,
   onPaste,
-  onFillEmptyPins,
   onDelete,
   onExpand,
   onShowInOutliner,
@@ -82,6 +82,8 @@ export function NodeInspectorContextMenu({
     <div
       ref={menuRef}
       className="node-context-menu"
+      role="menu"
+      aria-label="Node inspector context menu"
       style={{
         position: 'fixed',
         left: x,
@@ -89,22 +91,34 @@ export function NodeInspectorContextMenu({
         zIndex: 10000,
       }}
     >
+      {/* Render */}
+      <button
+        type="button"
+        className="context-menu-item"
+        role="menuitem"
+        onClick={() => handleMenuItemClick(onRender)}
+      >
+        Render
+      </button>
+
       {/* Save... */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onSave)}
       >
         Save...
       </button>
 
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Cut */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onCut)}
       >
         Cut
@@ -114,60 +128,56 @@ export function NodeInspectorContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onCopy)}
       >
         Copy
       </button>
 
-      {/* Paste (disabled for now) */}
+      {/* Paste */}
       <button
         type="button"
-        className="context-menu-item disabled"
-        onClick={() => handleMenuItemClick(onPaste, true)}
+        className="context-menu-item"
+        role="menuitem"
+        onClick={() => handleMenuItemClick(onPaste)}
       >
         Paste
       </button>
 
-      {/* Fill empty node pins */}
-      <button
-        type="button"
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onFillEmptyPins)}
-      >
-        Fill empty node pins
-      </button>
-
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Delete */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onDelete)}
       >
         Delete
       </button>
 
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Expand */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onExpand)}
       >
         Expand
       </button>
 
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Show in Outliner */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onShowInOutliner)}
       >
         Show in Outliner
@@ -177,6 +187,7 @@ export function NodeInspectorContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onShowInGraphEditor)}
       >
         Show in Graph Editor
@@ -186,6 +197,7 @@ export function NodeInspectorContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onShowInLuaBrowser)}
       >
         Show in Lua API browser

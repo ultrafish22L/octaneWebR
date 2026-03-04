@@ -43,7 +43,7 @@ export class CommandHistory {
       this.currentIndex--;
     }
 
-    Logger.debug(`✓ Executed: ${command.description}`);
+    Logger.debug(`Executed: ${command.description}`);
     Logger.debug(`History: ${this.currentIndex + 1}/${this.history.length}`);
   }
 
@@ -57,10 +57,16 @@ export class CommandHistory {
     }
 
     const command = this.history[this.currentIndex];
-    await command.undo();
-    this.currentIndex--;
 
-    Logger.debug(`↶ Undone: ${command.description}`);
+    try {
+      await command.undo();
+      this.currentIndex--; // Only decrement after successful undo
+    } catch (error) {
+      Logger.error(`Undo failed for "${command.description}":`, error);
+      return false;
+    }
+
+    Logger.debug(`Undone: ${command.description}`);
     Logger.debug(`History: ${this.currentIndex + 1}/${this.history.length}`);
     return true;
   }
@@ -74,11 +80,18 @@ export class CommandHistory {
       return false;
     }
 
-    this.currentIndex++;
-    const command = this.history[this.currentIndex];
-    await command.execute();
+    const nextIndex = this.currentIndex + 1;
+    const command = this.history[nextIndex];
 
-    Logger.debug(`↷ Redone: ${command.description}`);
+    try {
+      await command.execute();
+      this.currentIndex = nextIndex; // Only advance after successful execution
+    } catch (error) {
+      Logger.error(`Redo failed for "${command.description}":`, error);
+      return false;
+    }
+
+    Logger.debug(`Redone: ${command.description}`);
     Logger.debug(`History: ${this.currentIndex + 1}/${this.history.length}`);
     return true;
   }

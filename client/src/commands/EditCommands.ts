@@ -1,4 +1,3 @@
-/* eslint-disable no-alert */
 /**
  * Unified Edit Commands
  *
@@ -24,6 +23,7 @@ export interface EditCommandContext {
   selectedNodes: SceneNode[];
   onSelectionClear?: () => void;
   onComplete?: () => void;
+  onError?: (message: string) => void;
 }
 
 /**
@@ -47,14 +47,14 @@ export class EditCommands {
    * 6. Clear selection
    */
   static async deleteNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onSelectionClear, onComplete } = context;
+    const { client, selectedNodes, onSelectionClear, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Delete: No nodes selected');
+      Logger.warn('Delete: No nodes selected');
       return false;
     }
 
-    Logger.debug(`🗑️ EditCommands.delete: Deleting ${selectedNodes.length} node(s)...`);
+    Logger.debug(`EditCommands.delete: Deleting ${selectedNodes.length} node(s)...`);
 
     let successCount = 0;
     let failCount = 0;
@@ -64,36 +64,38 @@ export class EditCommands {
     for (const node of selectedNodes) {
       try {
         Logger.debug(
-          `🗑️ EditCommands: Deleting node handle=${node.handle} name="${node.name || node.label || 'unknown'}" type="${node.type || 'unknown'}"`
+          `EditCommands: Deleting node handle=${node.handle} name="${node.name || node.label || 'unknown'}" type="${node.type || 'unknown'}"`
         );
         const success = await client.deleteNode(String(node.handle));
 
         if (success) {
           successCount++;
           Logger.debug(
-            `✅ EditCommands: Deleted node ${node.handle} - 'nodeDeleted' event should have been emitted`
+            `EditCommands: Deleted node ${node.handle} - 'nodeDeleted' event should have been emitted`
           );
         } else {
           failCount++;
-          Logger.error(`❌ EditCommands: Failed to delete node: ${node.handle}`);
+          Logger.error(`EditCommands: Failed to delete node: ${node.handle}`);
+          onError?.(`Failed to delete node ${node.name || node.handle}`);
         }
       } catch (error) {
         failCount++;
-        Logger.error(`❌ EditCommands: Error deleting node ${node.handle}:`, error);
+        Logger.error(`EditCommands: Error deleting node ${node.handle}:`, error);
+        onError?.(`Error deleting node ${node.name || node.handle}`);
       }
     }
 
-    Logger.debug(`🗑️ Delete complete: ${successCount} succeeded, ${failCount} failed`);
+    Logger.debug(`Delete complete: ${successCount} succeeded, ${failCount} failed`);
 
     // Clear selection after successful deletion
     if (successCount > 0) {
       if (onSelectionClear) {
-        Logger.debug('🔲 Clearing selection after delete');
+        Logger.debug('Clearing selection after delete');
         onSelectionClear();
       }
 
       if (onComplete) {
-        Logger.debug('✅ Delete operation complete - calling onComplete');
+        Logger.debug('Delete operation complete - calling onComplete');
         onComplete();
       }
     }
@@ -111,21 +113,22 @@ export class EditCommands {
     const { selectedNodes } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Cut: No nodes selected');
+      Logger.warn('Cut: No nodes selected');
       return false;
     }
 
-    Logger.debug(`✂️ EditCommands.cut: ${selectedNodes.length} node(s) - mapping to delete`);
+    Logger.debug(`EditCommands.cut: ${selectedNodes.length} node(s) - mapping to delete`);
 
     // For now, just delete (no clipboard)
     // TODO: Add clipboard serialization before delete
     const deleted = await this.deleteNodes(context);
     if (!deleted) {
-      Logger.error('❌ Cut: Failed to delete nodes');
+      Logger.error('Cut: Failed to delete nodes');
+      context.onError?.('Failed to cut nodes');
       return false;
     }
 
-    Logger.debug('✅ Cut complete (deleted)');
+    Logger.debug('Cut complete (deleted)');
     return true;
   }
 
@@ -140,12 +143,11 @@ export class EditCommands {
     const { selectedNodes } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Copy: No nodes selected');
-      alert('Copy\n\nNo nodes selected.\n\nSelect one or more nodes first.');
+      Logger.warn('Copy: No nodes selected');
       return false;
     }
 
-    Logger.debug(`📋 EditCommands.copy: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.copy: ${selectedNodes.length} node(s)`);
 
     try {
       const clipboard = {
@@ -155,11 +157,12 @@ export class EditCommands {
       };
 
       localStorage.setItem('octane-clipboard', JSON.stringify(clipboard));
-      Logger.debug('✅ Copied to clipboard (localStorage):', clipboard.handles);
+      Logger.debug('Copied to clipboard (localStorage):', clipboard.handles);
 
       return true;
     } catch (error) {
-      Logger.error('❌ Copy failed:', error);
+      Logger.error('Copy failed:', error);
+      context.onError?.('Failed to copy nodes');
       return false;
     }
   }
@@ -173,46 +176,41 @@ export class EditCommands {
    * 3. Trigger scene refresh
    */
   static async pasteNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, onComplete } = context;
+    const { client, onComplete, onError } = context;
 
-    Logger.debug('📋 EditCommands.paste: Reading from clipboard...');
+    Logger.debug('EditCommands.paste: Reading from clipboard...');
 
     try {
       const clipboardText = localStorage.getItem('octane-clipboard');
       if (!clipboardText) {
-        Logger.warn('⚠️ Paste: Clipboard is empty');
-        alert('Clipboard is empty\n\nUse Copy first to add nodes to clipboard.');
+        Logger.warn('Paste: Clipboard is empty');
         return false;
       }
 
       const clipboard = JSON.parse(clipboardText);
 
       if (clipboard.type !== 'octane-nodes') {
-        Logger.warn('⚠️ Paste: Invalid clipboard data type');
-        alert('Invalid clipboard data\n\nClipboard does not contain nodes.');
+        Logger.warn('Paste: Invalid clipboard data type');
         return false;
       }
 
       const sourceHandles = clipboard.handles;
       if (!sourceHandles || sourceHandles.length === 0) {
-        Logger.warn('⚠️ Paste: No handles in clipboard');
-        alert('Clipboard is empty\n\nNo nodes to paste.');
+        Logger.warn('Paste: No handles in clipboard');
         return false;
       }
 
-      Logger.debug(`📋 Paste: ${sourceHandles.length} node(s) from clipboard`);
+      Logger.debug(`Paste: ${sourceHandles.length} node(s) from clipboard`);
 
       const copiedHandles = await client.copyNodes(sourceHandles);
 
       if (copiedHandles.length === 0) {
-        Logger.error('❌ Paste: Failed to copy nodes');
-        alert('Paste Failed\n\nFailed to copy nodes from clipboard.');
+        Logger.error('Paste: Failed to copy nodes');
+        onError?.('Failed to paste nodes');
         return false;
       }
 
-      Logger.debug(`✅ Pasted ${copiedHandles.length} node(s)`);
-
-      client.emit('forceSceneRefresh');
+      Logger.debug(`Pasted ${copiedHandles.length} node(s)`);
 
       if (onComplete) {
         onComplete();
@@ -220,8 +218,8 @@ export class EditCommands {
 
       return true;
     } catch (error) {
-      Logger.error('❌ Paste failed:', error);
-      alert(`Paste Failed\n\n${error}`);
+      Logger.error('Paste failed:', error);
+      onError?.('Failed to paste nodes');
       return false;
     }
   }
@@ -234,15 +232,14 @@ export class EditCommands {
    * 2. Trigger scene refresh
    */
   static async duplicateNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onComplete } = context;
+    const { client, selectedNodes, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Duplicate: No nodes selected');
-      alert('Duplicate\n\nNo nodes selected.\n\nSelect one or more nodes first.');
+      Logger.warn('Duplicate: No nodes selected');
       return false;
     }
 
-    Logger.debug(`📑 EditCommands.duplicate: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.duplicate: ${selectedNodes.length} node(s)`);
 
     try {
       const sourceHandles = selectedNodes
@@ -251,14 +248,12 @@ export class EditCommands {
       const copiedHandles = await client.copyNodes(sourceHandles);
 
       if (copiedHandles.length === 0) {
-        Logger.error('❌ Duplicate: Failed to duplicate nodes');
-        alert('Duplicate Failed\n\nFailed to duplicate selected nodes.');
+        Logger.error('Duplicate: Failed to duplicate nodes');
+        onError?.('Failed to duplicate nodes');
         return false;
       }
 
-      Logger.debug(`✅ Duplicated ${copiedHandles.length} node(s)`);
-
-      client.emit('forceSceneRefresh');
+      Logger.debug(`Duplicated ${copiedHandles.length} node(s)`);
 
       if (onComplete) {
         onComplete();
@@ -266,8 +261,8 @@ export class EditCommands {
 
       return true;
     } catch (error) {
-      Logger.error('❌ Duplicate failed:', error);
-      alert(`Duplicate Failed\n\n${error}`);
+      Logger.error('Duplicate failed:', error);
+      onError?.('Failed to duplicate nodes');
       return false;
     }
   }
@@ -281,15 +276,14 @@ export class EditCommands {
    * 3. Trigger scene refresh
    */
   static async groupNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onComplete } = context;
+    const { client, selectedNodes, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length < 2) {
-      Logger.warn('⚠️ Group: Need at least 2 nodes selected');
-      alert('Group Nodes\n\nSelect at least 2 nodes to create a group.');
+      Logger.warn('Group: Need at least 2 nodes selected');
       return false;
     }
 
-    Logger.debug(`📦 EditCommands.group: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.group: ${selectedNodes.length} node(s)`);
 
     try {
       const nodeHandles = selectedNodes
@@ -298,14 +292,12 @@ export class EditCommands {
       const groupHandle = await client.groupNodes(nodeHandles);
 
       if (!groupHandle) {
-        Logger.error('❌ Group: Failed to create group node');
-        alert('Group Failed\n\nFailed to create group node.');
+        Logger.error('Group: Failed to create group node');
+        onError?.('Failed to create group');
         return false;
       }
 
-      Logger.debug('✅ Group created:', groupHandle);
-
-      client.emit('forceSceneRefresh');
+      Logger.debug('Group created:', groupHandle);
 
       if (onComplete) {
         onComplete();
@@ -313,8 +305,8 @@ export class EditCommands {
 
       return true;
     } catch (error) {
-      Logger.error('❌ Group failed:', error);
-      alert(`Group Failed\n\n${error}`);
+      Logger.error('Group failed:', error);
+      onError?.('Failed to group nodes');
       return false;
     }
   }
@@ -327,15 +319,14 @@ export class EditCommands {
    * 2. Trigger scene refresh
    */
   static async ungroupNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onComplete } = context;
+    const { client, selectedNodes, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Ungroup: No nodes selected');
-      alert('Ungroup\n\nSelect one or more group nodes to ungroup.');
+      Logger.warn('Ungroup: No nodes selected');
       return false;
     }
 
-    Logger.debug(`🔓 EditCommands.ungroup: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.ungroup: ${selectedNodes.length} node(s)`);
 
     try {
       let totalUngrouped = 0;
@@ -343,30 +334,25 @@ export class EditCommands {
       for (const node of selectedNodes) {
         if (node.handle === undefined) continue;
 
-        Logger.debug(`🔓 Ungrouping node: ${node.label || node.handle}`);
+        Logger.debug(`Ungrouping node: ${node.label || node.handle}`);
         const ungroupedHandles = await client.ungroupNode(node.handle);
 
         if (ungroupedHandles.length > 0) {
           totalUngrouped += ungroupedHandles.length;
           Logger.debug(
-            `✅ Ungrouped ${ungroupedHandles.length} nodes from ${node.label || node.handle}`
+            `Ungrouped ${ungroupedHandles.length} nodes from ${node.label || node.handle}`
           );
         } else {
-          Logger.warn(`⚠️ Failed to ungroup ${node.label || node.handle} (might not be a group)`);
+          Logger.warn(`Failed to ungroup ${node.label || node.handle} (might not be a group)`);
         }
       }
 
       if (totalUngrouped === 0) {
-        Logger.warn('⚠️ Ungroup: No nodes were ungrouped');
-        alert('Ungroup Failed\n\nNo nodes were ungrouped.\n\nMake sure selected nodes are groups.');
+        Logger.warn('Ungroup: No nodes were ungrouped');
         return false;
       }
 
-      Logger.debug(
-        `✅ Total ungrouped: ${totalUngrouped} nodes from ${selectedNodes.length} groups`
-      );
-
-      client.emit('forceSceneRefresh');
+      Logger.debug(`Total ungrouped: ${totalUngrouped} nodes from ${selectedNodes.length} groups`);
 
       if (onComplete) {
         onComplete();
@@ -374,8 +360,8 @@ export class EditCommands {
 
       return true;
     } catch (error) {
-      Logger.error('❌ Ungroup failed:', error);
-      alert(`Ungroup Failed\n\n${error}`);
+      Logger.error('Ungroup failed:', error);
+      onError?.('Failed to ungroup nodes');
       return false;
     }
   }
@@ -388,14 +374,14 @@ export class EditCommands {
    * 2. Trigger scene refresh
    */
   static async collapseNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onComplete } = context;
+    const { client, selectedNodes, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Collapse: No nodes selected');
+      Logger.warn('Collapse: No nodes selected');
       return false;
     }
 
-    Logger.debug(`📉 EditCommands.collapse: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.collapse: ${selectedNodes.length} node(s)`);
 
     try {
       let successCount = 0;
@@ -406,13 +392,16 @@ export class EditCommands {
         const collapsed = await client.collapseNode(node.handle);
         if (collapsed) {
           successCount++;
-          Logger.debug(`✅ Collapsed node: ${node.label || node.handle}`);
+          Logger.debug(`Collapsed node: ${node.label || node.handle}`);
         }
       }
 
-      Logger.debug(`✅ Collapsed ${successCount}/${selectedNodes.length} nodes`);
+      Logger.debug(`Collapsed ${successCount}/${selectedNodes.length} nodes`);
 
-      client.emit('forceSceneRefresh');
+      // Rebuild scene tree to reflect updated pin structure
+      if (successCount > 0) {
+        await client.buildSceneTree();
+      }
 
       if (onComplete) {
         onComplete();
@@ -420,7 +409,8 @@ export class EditCommands {
 
       return successCount > 0;
     } catch (error) {
-      Logger.error('❌ Collapse failed:', error);
+      Logger.error('Collapse failed:', error);
+      onError?.('Failed to collapse nodes');
       return false;
     }
   }
@@ -433,14 +423,14 @@ export class EditCommands {
    * 2. Trigger scene refresh
    */
   static async expandNodes(context: EditCommandContext): Promise<boolean> {
-    const { client, selectedNodes, onComplete } = context;
+    const { client, selectedNodes, onComplete, onError } = context;
 
     if (!selectedNodes || selectedNodes.length === 0) {
-      Logger.warn('⚠️ Expand: No nodes selected');
+      Logger.warn('Expand: No nodes selected');
       return false;
     }
 
-    Logger.debug(`📈 EditCommands.expand: ${selectedNodes.length} node(s)`);
+    Logger.debug(`EditCommands.expand: ${selectedNodes.length} node(s)`);
 
     try {
       let successCount = 0;
@@ -451,13 +441,16 @@ export class EditCommands {
         const expanded = await client.expandNode(node.handle);
         if (expanded) {
           successCount++;
-          Logger.debug(`✅ Expanded node: ${node.label || node.handle}`);
+          Logger.debug(`Expanded node: ${node.label || node.handle}`);
         }
       }
 
-      Logger.debug(`✅ Expanded ${successCount}/${selectedNodes.length} nodes`);
+      Logger.debug(`Expanded ${successCount}/${selectedNodes.length} nodes`);
 
-      client.emit('forceSceneRefresh');
+      // Rebuild scene tree to reflect updated pin structure
+      if (successCount > 0) {
+        await client.buildSceneTree();
+      }
 
       if (onComplete) {
         onComplete();
@@ -465,7 +458,8 @@ export class EditCommands {
 
       return successCount > 0;
     } catch (error) {
-      Logger.error('❌ Expand failed:', error);
+      Logger.error('Expand failed:', error);
+      onError?.('Failed to expand nodes');
       return false;
     }
   }
@@ -479,16 +473,16 @@ export class EditCommands {
     allNodes: SceneNode[],
     onSelectionChange: (nodes: SceneNode[]) => void
   ): Promise<boolean> {
-    Logger.debug(`🔲 EditCommands.selectAll: ${allNodes.length} node(s)`);
+    Logger.debug(`EditCommands.selectAll: ${allNodes.length} node(s)`);
 
     if (!allNodes || allNodes.length === 0) {
-      Logger.warn('⚠️ Select All: No nodes in scene');
+      Logger.warn('Select All: No nodes in scene');
       return false;
     }
 
     // Get all root-level nodes (nodes that are displayed in graph)
     onSelectionChange(allNodes);
-    Logger.debug(`✅ Selected ${allNodes.length} node(s)`);
+    Logger.debug(`Selected ${allNodes.length} node(s)`);
 
     return true;
   }
@@ -498,7 +492,7 @@ export class EditCommands {
    * Opens search dialog - implementation depends on component
    */
   static async findNodes(onOpenSearchDialog: () => void): Promise<boolean> {
-    Logger.debug('🔍 EditCommands.find: Opening search dialog');
+    Logger.debug('EditCommands.find: Opening search dialog');
     onOpenSearchDialog();
     return true;
   }

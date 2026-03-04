@@ -3,7 +3,7 @@
  * Provides a way to show live status updates in the status bar
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 
 interface StatusMessageContextValue {
   statusMessage: string;
@@ -18,54 +18,46 @@ const DEFAULT_MESSAGE = 'OctaneWebR - React TypeScript + Node.js gRPC';
 
 export function StatusMessageProvider({ children }: { children: React.ReactNode }) {
   const [statusMessage, setStatusMessageState] = useState<string>(DEFAULT_MESSAGE);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const setStatusMessage = useCallback(
-    (message: string) => {
-      // Clear any existing timeout
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        setTimeoutId(null);
-      }
-      setStatusMessageState(message);
-    },
-    [timeoutId]
-  );
+  const setStatusMessage = useCallback((message: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setStatusMessageState(message);
+  }, []);
 
   const clearStatusMessage = useCallback(() => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      setTimeoutId(null);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
     setStatusMessageState(DEFAULT_MESSAGE);
-  }, [timeoutId]);
+  }, []);
 
-  const setTemporaryStatus = useCallback(
-    (message: string, duration: number = 3000) => {
-      // Clear any existing timeout
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+  const setTemporaryStatus = useCallback((message: string, duration: number = 3000) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-      setStatusMessageState(message);
+    setStatusMessageState(message);
 
-      // Set new timeout to clear message
-      const newTimeoutId = setTimeout(() => {
-        setStatusMessageState(DEFAULT_MESSAGE);
-        setTimeoutId(null);
-      }, duration);
+    timeoutRef.current = setTimeout(() => {
+      setStatusMessageState(DEFAULT_MESSAGE);
+      timeoutRef.current = null;
+    }, duration);
+  }, []);
 
-      setTimeoutId(newTimeoutId);
-    },
-    [timeoutId]
+  const value = useMemo<StatusMessageContextValue>(
+    () => ({
+      statusMessage,
+      setStatusMessage,
+      clearStatusMessage,
+      setTemporaryStatus,
+    }),
+    [statusMessage, setStatusMessage, clearStatusMessage, setTemporaryStatus]
   );
-
-  const value: StatusMessageContextValue = {
-    statusMessage,
-    setStatusMessage,
-    clearStatusMessage,
-    setTemporaryStatus,
-  };
 
   return <StatusMessageContext.Provider value={value}>{children}</StatusMessageContext.Provider>;
 }

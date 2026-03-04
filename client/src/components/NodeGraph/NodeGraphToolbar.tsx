@@ -45,7 +45,7 @@ export function NodeGraphToolbar({
 
   // 1. Recenter View
   const handleRecenterView = useCallback(() => {
-    Logger.debug('🎯 Recenter View');
+    Logger.debug('Recenter View');
     if (onRecenterView) {
       onRecenterView();
     }
@@ -55,13 +55,13 @@ export function NodeGraphToolbar({
   // Note: the current graph shows only top-level nodes; sub-graph expansion is not
   // yet implemented, so this runs the same layout as button 3.
   const handleRearrangeWithSubgraph = useCallback(() => {
-    Logger.debug('🔄 Re-arrange Graph with Sub-graph');
+    Logger.debug('Re-arrange Graph with Sub-graph');
     onAutoLayout?.();
   }, [onAutoLayout]);
 
   // 3. Re-arrange Graph
   const handleRearrangeGraph = useCallback(() => {
-    Logger.debug('📐 Re-arrange Graph');
+    Logger.debug('Re-arrange Graph');
     onAutoLayout?.();
   }, [onAutoLayout]);
 
@@ -69,7 +69,7 @@ export function NodeGraphToolbar({
   const handleToggleRenderTargetPreview = useCallback(() => {
     setRenderTargetPreview(prev => {
       const newState = !prev;
-      Logger.debug(`📹 Render Target Preview: ${newState ? 'SHOW' : 'HIDE'}`);
+      Logger.debug(`Render Target Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
     // TODO: Show/hide render target preview
@@ -79,7 +79,7 @@ export function NodeGraphToolbar({
   const handleToggleMeshPreview = useCallback(() => {
     setMeshPreview(prev => {
       const newState = !prev;
-      Logger.debug(`🔷 Mesh Preview: ${newState ? 'SHOW' : 'HIDE'}`);
+      Logger.debug(`Mesh Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
     // TODO: Show/hide mesh preview
@@ -89,7 +89,7 @@ export function NodeGraphToolbar({
   const handleToggleMaterialPreview = useCallback(() => {
     setMaterialPreview(prev => {
       const newState = !prev;
-      Logger.debug(`🎨 Material Preview: ${newState ? 'SHOW' : 'HIDE'}`);
+      Logger.debug(`Material Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
     // TODO: Show/hide material preview
@@ -99,7 +99,7 @@ export function NodeGraphToolbar({
   const handleToggleTexturePreview = useCallback(() => {
     setTexturePreview(prev => {
       const newState = !prev;
-      Logger.debug(`🖼️ Texture Preview: ${newState ? 'SHOW' : 'HIDE'}`);
+      Logger.debug(`Texture Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
     // TODO: Show/hide texture preview
@@ -109,14 +109,14 @@ export function NodeGraphToolbar({
   const handleToggleGridSnap = useCallback(() => {
     const newState = !snapToGrid;
     setSnapToGrid(newState);
-    Logger.debug(`🧲 Snap Items To Grid: ${newState ? 'ON' : 'OFF'}`);
+    Logger.debug(`Snap Items To Grid: ${newState ? 'ON' : 'OFF'}`);
   }, [snapToGrid, setSnapToGrid]);
 
   // 9. View/Hide Graph Editor Grid
   const handleToggleGrid = useCallback(() => {
     const newState = !gridVisible;
     setGridVisible(newState);
-    Logger.debug(`📊 Graph Editor Grid: ${newState ? 'SHOW' : 'HIDE'}`);
+    Logger.debug(`Graph Editor Grid: ${newState ? 'SHOW' : 'HIDE'}`);
   }, [gridVisible, setGridVisible]);
 
   return (

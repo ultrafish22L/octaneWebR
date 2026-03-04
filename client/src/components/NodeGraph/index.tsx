@@ -36,7 +36,6 @@ import { EditCommands } from '../../commands/EditCommands';
 import { Logger } from '../../utils/Logger';
 import { getPinColor } from '../../utils/PinColorUtils';
 import { computeDAGLayout } from '../../utils/NodeLayoutUtils';
-import { FEATURES } from '../../config/features';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
 import { useConnectionCutter } from './hooks/useConnectionCutter';
@@ -57,6 +56,11 @@ interface NodeGraphEditorProps {
   /** Called once on mount with the auto-layout function (layout + fitView + persist positions). */
   onAutoLayoutReady?: (callback: () => void) => void;
 }
+
+// Layout constants
+const NODE_SPACING_X = 250;
+const NODE_CENTER_Y = 300;
+const FIT_VIEW_DURATION = 300;
 
 // Define custom node types
 const nodeTypes = {
@@ -101,7 +105,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     if (onRecenterViewReady && !hasProvidedCallback.current) {
       hasProvidedCallback.current = true;
       onRecenterViewReady(() => {
-        fitView({ padding: 0.2, duration: 300 });
+        fitView({ padding: 0.2, duration: FIT_VIEW_DURATION });
       });
     }
   }, [fitView, onRecenterViewReady]);
@@ -151,7 +155,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         );
 
         // Fit view after React has rendered the new positions
-        setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+        setTimeout(() => fitView({ padding: 0.2, duration: FIT_VIEW_DURATION }), 50);
 
         // Persist positions to Octane so they survive a scene reload
         const cl = clientRef.current;
@@ -185,7 +189,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           const { x, y } = change.position;
 
           if (client && connected && nodeHandle) {
-            Logger.debug(`💾 Saving node position: handle=${nodeHandle}, x=${x}, y=${y}`);
+            Logger.debug(`Saving node position: handle=${nodeHandle}, x=${x}, y=${y}`);
             client.setNodePosition(nodeHandle, x, y).catch(error => {
               Logger.error('Failed to save node position:', error);
             });
@@ -233,7 +237,6 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     client,
     nodes,
     setNodes,
-    edges,
     sceneTree,
     onNodeSelect,
     editActions,
@@ -268,8 +271,8 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       }
 
       // Only process TOP-LEVEL nodes (matching octaneWeb behavior)
-      const nodeSpacing = 250;
-      const yCenter = 300;
+      const nodeSpacing = NODE_SPACING_X;
+      const yCenter = NODE_CENTER_Y;
 
       tree.forEach((item, index) => {
         if (!item.handle && !item.pinInfo) {
@@ -365,15 +368,13 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
               };
 
               graphEdges.push(edge);
-              Logger.debug(
-                `🔗 Edge created: ${sourceHandle} → ${targetHandle} (color: ${edgeColor})`
-              );
+              Logger.debug(`Edge created: ${sourceHandle} → ${targetHandle} (color: ${edgeColor})`);
             }
           }
         });
       });
 
-      Logger.debug(`🔄 Node Graph: ${graphNodes.length} nodes, ${graphEdges.length} edges`);
+      Logger.debug(`Node Graph: ${graphNodes.length} nodes, ${graphEdges.length} edges`);
 
       return { nodes: graphNodes, edges: graphEdges };
     },
@@ -391,18 +392,18 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
    * when nodeAdded/nodeDeleted event handlers are managing incremental updates.
    */
   useEffect(() => {
-    Logger.debug('📊 NodeGraphEditor: sceneTree changed, length =', sceneTree?.length || 0);
+    Logger.debug('NodeGraphEditor: sceneTree changed, length =', sceneTree?.length || 0);
 
     if (!sceneTree || sceneTree.length === 0) {
-      Logger.debug('📊 NodeGraphEditor: Empty scene tree, clearing graph');
+      Logger.debug('NodeGraphEditor: Empty scene tree, clearing graph');
       setNodes([]);
       setEdges([]);
       return;
     }
 
     // During progressive loading, skip this effect — we rebuild on explicit events
-    if (FEATURES.PROGRESSIVE_LOADING_P && progressiveLoadingRef.current) {
-      Logger.debug('📊 NodeGraphEditor: Progressive loading active, skipping sceneTree effect');
+    if (progressiveLoadingRef.current) {
+      Logger.debug('NodeGraphEditor: Progressive loading active, skipping sceneTree effect');
       return;
     }
 
@@ -415,9 +416,17 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         return currentNodes;
       }
 
-      Logger.debug('📊 NodeGraphEditor: Full graph rebuild triggered');
+      Logger.debug('NodeGraphEditor: Full graph rebuild triggered');
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
       setEdges(graphEdges);
+
+      // Preserve selection state from previous nodes across rebuild
+      const selectedId = currentNodes.find(n => n.selected)?.id;
+      if (selectedId) {
+        const target = graphNodes.find(n => n.id === selectedId);
+        if (target) target.selected = true;
+      }
+
       return graphNodes;
     });
   }, [sceneTree, convertSceneToGraph, setEdges, setNodes]);
@@ -429,12 +438,12 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     if (!connected || !client) return;
 
     const handleNodeAdded = (event: NodeAddedEvent) => {
-      Logger.debug('📊 NodeGraphEditor: Adding node incrementally:', event.node.name);
+      Logger.debug('NodeGraphEditor: Adding node incrementally:', event.node.name);
 
       // Convert just the new node to a ReactFlow node
       const nodeIndex = sceneTreeRef.current.length - 1; // New node position
-      const nodeSpacing = 250;
-      const yCenter = 300;
+      const nodeSpacing = NODE_SPACING_X;
+      const yCenter = NODE_CENTER_Y;
       const handleStr = String(event.node.handle || 0);
 
       // Extract input pins from item.children
@@ -489,7 +498,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     if (!connected || !client) return;
 
     const handleNodeDeleted = (event: NodeDeletedEvent) => {
-      Logger.debug('📊 NodeGraphEditor: Deleting node incrementally, handle:', event.handle);
+      Logger.debug('NodeGraphEditor: Deleting node incrementally, handle:', event.handle);
 
       const handleStr = String(event.handle);
 
@@ -497,7 +506,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       setNodes(nds => {
         const filtered = nds.filter(node => node.id !== handleStr);
         Logger.debug(
-          `📊 NodeGraphEditor: Removed node ${handleStr}, ${nds.length} → ${filtered.length} nodes`
+          `NodeGraphEditor: Removed node ${handleStr}, ${nds.length} → ${filtered.length} nodes`
         );
         return filtered;
       });
@@ -505,7 +514,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       // Remove connected edges
       setEdges(eds => {
         const filtered = eds.filter(edge => edge.source !== handleStr && edge.target !== handleStr);
-        Logger.debug(`📊 NodeGraphEditor: Removed edges for node ${handleStr}`);
+        Logger.debug(`NodeGraphEditor: Removed edges for node ${handleStr}`);
         return filtered;
       });
 
@@ -530,7 +539,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
    * tree without re-registering on every sceneTree change.
    */
   useEffect(() => {
-    if (!FEATURES.PROGRESSIVE_LOADING_P || !client) return;
+    if (!client) return;
 
     const handleBuildStart = () => {
       progressiveLoadingRef.current = true;
@@ -582,9 +591,17 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
      * By now all level-0 nodes and their immediate children/pins are loaded.
      */
     const handleStructureComplete = () => {
-      Logger.debug('📊 NodeGraphEditor: structureComplete — rebuilding graph with edges');
+      Logger.debug('NodeGraphEditor: structureComplete — rebuilding graph with edges');
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
-      setNodes(graphNodes);
+      // Preserve selection across rebuild
+      setNodes(prev => {
+        const selectedId = prev.find(n => n.selected)?.id;
+        if (selectedId) {
+          const target = graphNodes.find(n => n.id === selectedId);
+          if (target) target.selected = true;
+        }
+        return graphNodes;
+      });
       setEdges(graphEdges);
     };
 
@@ -592,10 +609,18 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
      * Scene complete — final rebuild to pick up any remaining changes.
      */
     const handleComplete = () => {
-      Logger.debug('📊 NodeGraphEditor: complete — final graph rebuild');
+      Logger.debug('NodeGraphEditor: complete — final graph rebuild');
       progressiveLoadingRef.current = false;
       const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
-      setNodes(graphNodes);
+      // Preserve selection across rebuild
+      setNodes(prev => {
+        const selectedId = prev.find(n => n.selected)?.id;
+        if (selectedId) {
+          const target = graphNodes.find(n => n.id === selectedId);
+          if (target) target.selected = true;
+        }
+        return graphNodes;
+      });
       setEdges(graphEdges);
     };
 
@@ -616,26 +641,16 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
    * Synchronize node selection when selectedNode changes externally (e.g., from SceneOutliner)
    */
   useEffect(() => {
-    if (!selectedNode || nodes.length === 0) {
-      // Clear selection
-      setNodes(nds =>
-        nds.map(node => ({
-          ...node,
-          selected: false,
-        }))
-      );
-      return;
-    }
-
-    const selectedHandle = String(selectedNode.handle);
+    const selectedHandle = selectedNode ? String(selectedNode.handle) : null;
 
     setNodes(nds =>
-      nds.map(node => ({
-        ...node,
-        selected: node.id === selectedHandle,
-      }))
+      nds.map(node => {
+        const shouldBeSelected = node.id === selectedHandle;
+        if (node.selected === shouldBeSelected) return node; // preserve reference
+        return { ...node, selected: shouldBeSelected };
+      })
     );
-  }, [selectedNode, setNodes, nodes.length]);
+  }, [selectedNode, setNodes]);
 
   /**
    * Fit view ONCE when initial scene is loaded
@@ -651,7 +666,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           includeHiddenNodes: false,
           minZoom: 0.5, // Don't zoom out too far
           maxZoom: 1.0, // Don't zoom in too much
-          duration: 300, // Smooth animation (300ms)
+          duration: FIT_VIEW_DURATION, // Smooth animation (300ms)
         });
         hasInitialFitView.current = true;
       }, 100);

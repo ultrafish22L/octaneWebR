@@ -49,19 +49,19 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
       const ext = format.toLowerCase();
       const fullPath = `${filename}.${ext}`;
 
-      Logger.debug(`💾 Saving render as ${format}: ${fullPath}`);
+      Logger.debug(`Saving render as ${format}: ${fullPath}`);
 
       // Call Octane API to save render
       const success = await client.saveRender(fullPath, format, 0);
 
       if (success) {
-        Logger.debug('✅ Render saved successfully');
+        Logger.debug('Render saved successfully');
         onClose();
       } else {
         setErrorMessage('Failed to save render. Check console for details.');
       }
     } catch (error) {
-      Logger.error('❌ Error saving render:', error);
+      Logger.error('Error saving render:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setSaving(false);

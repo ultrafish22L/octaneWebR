@@ -12,7 +12,6 @@ import {
   collapseAll,
 } from '../../../utils/TreeFlattener';
 import { SceneNode } from '../../../services/OctaneClient';
-import { FEATURES } from '../../../config/features';
 import { VirtualTreeRowProps } from '../VirtualTreeRow';
 
 interface UseTreeExpansionProps {
@@ -22,41 +21,26 @@ interface UseTreeExpansionProps {
   onNodeContextMenu: (node: SceneNode, event: React.MouseEvent) => void;
 }
 
+/** Wraps children in the synthetic Scene root node used by tree utilities. */
+const makeSyntheticRoot = (children: SceneNode[]): SceneNode[] => [
+  { handle: -1, name: 'Scene', type: 'SceneRoot', typeEnum: 0, children },
+];
+
 export function useTreeExpansion({
   sceneTree,
   selectedNode,
   onNodeSelect,
   onNodeContextMenu,
 }: UseTreeExpansionProps) {
-  // For progressive loading, pre-seed the expansion map with the Scene root
-  // expanded so level-1 nodes are visible as soon as they arrive via
-  // scene:nodeAdded events. The full expansion (including PT_RENDERTARGET)
-  // is initialized later by handleLevel0Complete → initializeExpansion().
+  // Pre-seed the expansion map with the Scene root expanded so level-1 nodes
+  // are visible as soon as they arrive via scene:nodeAdded events. The full
+  // expansion (including PT_RENDERTARGET) is initialized later by
+  // handleLevel0Complete → initializeExpansion().
   const [expansionMap, setExpansionMap] = useState<Map<string, boolean>>(() => {
-    if (FEATURES.PROGRESSIVE_LOADING_P) {
-      const map = new Map<string, boolean>();
-      map.set('-1', true); // Scene root (synthetic handle)
-      return map;
-    }
-    return new Map();
+    const map = new Map<string, boolean>();
+    map.set('-1', true); // Scene root (synthetic handle)
+    return map;
   });
-
-  // Auto-initialize expansion when sceneTree first loads (traditional loading only).
-  // For progressive loading P, the Scene root is already expanded via initial state
-  // above, and full expansion is set explicitly via initializeExpansion() called from
-  // handleLevel0Complete, which has the full set of level-0 nodes including
-  // PT_RENDERTARGET.
-  const hasInitializedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (FEATURES.PROGRESSIVE_LOADING_P) return;
-    if (sceneTree.length === 0 || hasInitializedRef.current) return;
-
-    hasInitializedRef.current = true;
-    const syntheticRoot: SceneNode[] = [
-      { handle: -1, name: 'Scene', type: 'SceneRoot', typeEnum: 0, children: sceneTree },
-    ];
-    setExpansionMap(initializeExpansionMap(syntheticRoot));
-  }, [sceneTree]);
 
   // Toggle node expansion.
   const handleToggleExpansion = useCallback((nodeKey: string) => {
@@ -66,38 +50,16 @@ export function useTreeExpansion({
   // Expand all nodes
   const handleExpandAll = useCallback(() => {
     if (!sceneTree || sceneTree.length === 0) return;
-
-    const syntheticRoot: SceneNode[] = [
-      {
-        handle: -1,
-        name: 'Scene',
-        type: 'SceneRoot',
-        typeEnum: 0,
-        children: sceneTree,
-      },
-    ];
-
-    setExpansionMap(expandAll(syntheticRoot));
+    setExpansionMap(expandAll(makeSyntheticRoot(sceneTree)));
   }, [sceneTree]);
 
   // Collapse all nodes
   const handleCollapseAll = useCallback(() => {
     if (!sceneTree || sceneTree.length === 0) return;
-
-    const syntheticRoot: SceneNode[] = [
-      {
-        handle: -1,
-        name: 'Scene',
-        type: 'SceneRoot',
-        typeEnum: 0,
-        children: sceneTree,
-      },
-    ];
-
-    setExpansionMap(collapseAll(syntheticRoot));
+    setExpansionMap(collapseAll(makeSyntheticRoot(sceneTree)));
   }, [sceneTree]);
 
-  // 🎯 NEW: Expand specific nodes by handle (for progressive loading)
+  // Expand specific nodes by handle (for progressive loading)
   const expandNodes = useCallback((handles: number[]) => {
     setExpansionMap(prevMap => {
       const newMap = new Map(prevMap);
@@ -111,33 +73,13 @@ export function useTreeExpansion({
 
   // Initialize expansion map when scene tree changes
   const initializeExpansion = useCallback((tree: SceneNode[]) => {
-    const syntheticRoot: SceneNode[] = [
-      {
-        handle: -1,
-        name: 'Scene',
-        type: 'SceneRoot',
-        typeEnum: 0,
-        children: tree,
-      },
-    ];
-    setExpansionMap(initializeExpansionMap(syntheticRoot));
+    setExpansionMap(initializeExpansionMap(makeSyntheticRoot(tree)));
   }, []);
 
   // Flatten tree for virtual scrolling
   const flattenedNodes = useMemo(() => {
     if (!sceneTree || sceneTree.length === 0) return [];
-
-    const syntheticRoot: SceneNode[] = [
-      {
-        handle: -1,
-        name: 'Scene',
-        type: 'SceneRoot',
-        typeEnum: 0,
-        children: sceneTree,
-      },
-    ];
-
-    return flattenTree(syntheticRoot, expansionMap);
+    return flattenTree(makeSyntheticRoot(sceneTree), expansionMap);
   }, [sceneTree, expansionMap]);
 
   // Create rowProps for react-window List

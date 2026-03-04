@@ -3,7 +3,6 @@
  * Shows real-time connection state with LED indicator
  */
 
-// React import not needed with new JSX transform
 import { useOctane } from '../../hooks/useOctane';
 
 export function ConnectionStatus() {

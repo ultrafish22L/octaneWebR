@@ -74,7 +74,7 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
         exportNestedReferenceGraphs: settings.exportNestedReferenceGraphs,
       };
 
-      Logger.debug('🎁 Saving package:', filename, referencePackageSettings);
+      Logger.debug('Saving package:', filename, referencePackageSettings);
 
       const response = await client.callApi('ApiProjectManager', 'saveProjectAsReferencePackage', {
         path: filename,
@@ -82,11 +82,11 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
       });
 
       if (response && response.result) {
-        Logger.debug('✅ Package saved successfully');
+        Logger.debug('Package saved successfully');
         alert(`Package saved successfully: ${filename}`);
         onClose();
       } else {
-        Logger.error('❌ Failed to save package');
+        Logger.error('Failed to save package');
         alert('Failed to save package');
       }
     } catch (error) {

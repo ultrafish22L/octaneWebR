@@ -79,9 +79,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
             className="modal-close-button"
             onClick={onClose}
             aria-label="Close batch rendering"
-          >
-            ✕
-          </button>
+          ></button>
         </div>
 
         <div className="modal-body">

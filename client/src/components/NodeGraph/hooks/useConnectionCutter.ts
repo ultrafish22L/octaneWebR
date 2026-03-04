@@ -96,7 +96,7 @@ export function useConnectionCutter(
       cutterStartRef.current = { x, y };
       setCutterPath([{ x, y }]);
 
-      Logger.debug('✂️ Connection cutter activated');
+      Logger.debug('Connection cutter activated');
     }
   }, []);
 
@@ -161,7 +161,7 @@ export function useConnectionCutter(
 
         // Delete intersected edges
         if (edgesToDelete.length > 0) {
-          Logger.debug(`✂️ Cutting ${edgesToDelete.length} connection(s)`);
+          Logger.debug(`Cutting ${edgesToDelete.length} connection(s)`);
 
           for (const edge of edgesToDelete) {
             // Delete via API
@@ -174,7 +174,7 @@ export function useConnectionCutter(
 
               if (targetHandle && !isNaN(targetPinIndex)) {
                 await client.disconnectPin(targetHandle, targetPinIndex);
-                Logger.debug(`✂️ Disconnected pin ${targetPinIndex} on node ${targetHandle}`);
+                Logger.debug(`Disconnected pin ${targetPinIndex} on node ${targetHandle}`);
               }
             }
           }

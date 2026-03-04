@@ -22,7 +22,7 @@ export class DeviceService extends BaseService {
       return (response?.result as number) ?? 0;
     } catch (error) {
       Logger.error(
-        '❌ Failed to get device count:',
+        'Failed to get device count:',
         error instanceof Error ? error.message : String(error)
       );
       return 0;
@@ -37,7 +37,7 @@ export class DeviceService extends BaseService {
       return (response?.result as string) ?? 'Unknown Device';
     } catch (error) {
       Logger.error(
-        `❌ Failed to get device name for device ${deviceIndex}:`,
+        `Failed to get device name for device ${deviceIndex}:`,
         error instanceof Error ? error.message : String(error)
       );
       return 'Unknown Device';
@@ -66,7 +66,7 @@ export class DeviceService extends BaseService {
       );
     } catch (error) {
       Logger.error(
-        `❌ Failed to get memory usage for device ${deviceIndex}:`,
+        `Failed to get memory usage for device ${deviceIndex}:`,
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -102,7 +102,7 @@ export class DeviceService extends BaseService {
       );
     } catch (error) {
       Logger.error(
-        `❌ Failed to get resource statistics for device ${deviceIndex}:`,
+        `Failed to get resource statistics for device ${deviceIndex}:`,
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -144,7 +144,7 @@ export class DeviceService extends BaseService {
       );
     } catch (error) {
       Logger.error(
-        `❌ Failed to get geometry statistics for device ${deviceIndex}:`,
+        `Failed to get geometry statistics for device ${deviceIndex}:`,
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -176,7 +176,7 @@ export class DeviceService extends BaseService {
       );
     } catch (error) {
       Logger.error(
-        `❌ Failed to get textures statistics for device ${deviceIndex}:`,
+        `Failed to get textures statistics for device ${deviceIndex}:`,
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -189,7 +189,7 @@ export class DeviceService extends BaseService {
       return (response?.result as string) ?? 'Unknown';
     } catch (error) {
       Logger.error(
-        '❌ Failed to get Octane version:',
+        'Failed to get Octane version:',
         error instanceof Error ? error.message : String(error)
       );
       return 'Unknown';

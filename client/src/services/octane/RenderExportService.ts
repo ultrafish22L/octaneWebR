@@ -41,17 +41,14 @@ export class RenderExportService extends BaseService {
       const success = asBool(response?.result, false);
 
       if (success) {
-        Logger.debug(`✅ Render saved successfully: ${filePath}`);
+        Logger.debug(`Render saved successfully: ${filePath}`);
       } else {
-        Logger.error(`❌ Failed to save render: ${filePath}`);
+        Logger.error(`Failed to save render: ${filePath}`);
       }
 
       return success;
     } catch (error) {
-      Logger.error(
-        '❌ Error saving render:',
-        error instanceof Error ? error.message : String(error)
-      );
+      Logger.error('Error saving render:', error instanceof Error ? error.message : String(error));
       return false;
     }
   }
@@ -63,7 +60,7 @@ export class RenderExportService extends BaseService {
       const renderImagesObj = asObject(response?.renderImages);
       const dataArr = renderImagesObj?.data;
       if (!response?.result || !Array.isArray(dataArr) || dataArr.length === 0) {
-        Logger.error('❌ No render images available');
+        Logger.error('No render images available');
         return null;
       }
 
@@ -71,7 +68,7 @@ export class RenderExportService extends BaseService {
       const bufferObj = asObject(renderImage?.buffer);
 
       if (!bufferObj?.data) {
-        Logger.error('❌ No image buffer data');
+        Logger.error('No image buffer data');
         return null;
       }
 
@@ -82,7 +79,7 @@ export class RenderExportService extends BaseService {
       return base64Data;
     } catch (error) {
       Logger.error(
-        '❌ Error grabbing render for clipboard:',
+        'Error grabbing render for clipboard:',
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -111,15 +108,15 @@ export class RenderExportService extends BaseService {
       const success = asBool(response?.result, false);
 
       if (success) {
-        Logger.debug(`✅ Render passes exported successfully to: ${outputDirectory}`);
+        Logger.debug(`Render passes exported successfully to: ${outputDirectory}`);
       } else {
-        Logger.error(`❌ Failed to export render passes to: ${outputDirectory}`);
+        Logger.error(`Failed to export render passes to: ${outputDirectory}`);
       }
 
       return success;
     } catch (error) {
       Logger.error(
-        '❌ Error exporting render passes:',
+        'Error exporting render passes:',
         error instanceof Error ? error.message : String(error)
       );
       return false;

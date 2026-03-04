@@ -11,13 +11,13 @@
   max-width: 600px;
   padding: 32px;
   background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .error-content h2 {
-  color: var(--text-error);
+  color: var(--accent-red);
   margin: 0 0 16px 0;
   font-size: 20px;
   font-weight: 600;
@@ -34,7 +34,7 @@
   margin: 16px 0;
   padding: 12px;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -78,7 +78,7 @@
 }
 
 .error-reset-button:hover {
-  background: var(--accent-blue-hover);
+  background: var(--accent-blue-dim);
 }
 
 .error-reset-button:active {

@@ -1,123 +1,106 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import { IncomingMessage } from 'http';
 import { OctaneGrpcClient } from '../grpc/client';
 import { CallbackManager } from '../services/callbackManager';
+
+const RED = '\x1b[31m';
+const RESET = '\x1b[0m';
+
+// Dev mode: only accept localhost connections
+const ALLOWED_ORIGINS = ['http://localhost', 'http://127.0.0.1'];
+
+function isLocalOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin || '';
+  return ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+}
 
 export function setupCallbackStreaming(
   server: Server,
   grpcClient: OctaneGrpcClient,
   callbackManager: CallbackManager
 ): void {
-  const wss = new WebSocketServer({ 
-    server, 
-    path: '/api/callbacks' 
+  const wss = new WebSocketServer({
+    server,
+    path: '/api/callbacks',
+    verifyClient: ({ req }: { req: IncomingMessage }) => isLocalOrigin(req),
   });
-  
-  console.log('📡 WebSocket server initialized at /api/callbacks');
-  
+
+  console.log('WebSocket server initialized at /api/callbacks');
+
   wss.on('connection', (ws: WebSocket) => {
-    console.log('🔌 Callback client connected');
-    
-    // Forward OnNewImage events from CallbackManager to WebSocket
+    console.log('Callback client connected');
+
     const forwardNewImage = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          // High-frequency logging commented out to reduce console spam during rendering
-          // console.log('📡 [WebSocket] Forwarding OnNewImage to client');
-          ws.send(JSON.stringify({
-            type: 'newImage',
-            data,
-            timestamp: Date.now()
-          }));
+          ws.send(JSON.stringify({ type: 'newImage', data, timestamp: Date.now() }));
         } catch (error: any) {
-          console.error('❌ Error forwarding OnNewImage:', error.message);
+          console.error(`${RED}Error forwarding OnNewImage: ${error.message}${RESET}`);
         }
       }
     };
 
-    // Forward OnNewStatistics events from CallbackManager to WebSocket
     const forwardNewStatistics = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          // High-frequency logging commented out to reduce console spam during rendering
-          // console.log('📊 [WebSocket] Forwarding OnNewStatistics to client (FULL DATA):', JSON.stringify(data, null, 2));
-          ws.send(JSON.stringify({
-            type: 'newStatistics',
-            data,
-            timestamp: Date.now()
-          }));
+          ws.send(JSON.stringify({ type: 'newStatistics', data, timestamp: Date.now() }));
         } catch (error: any) {
-          console.error('❌ Error forwarding OnNewStatistics:', error.message);
+          console.error(`${RED}Error forwarding OnNewStatistics: ${error.message}${RESET}`);
         }
       }
     };
 
-    // Forward OnRenderFailure events from CallbackManager to WebSocket
     const forwardRenderFailure = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          console.log('❌ [WebSocket] Forwarding OnRenderFailure to client');
-          ws.send(JSON.stringify({
-            type: 'renderFailure',
-            data,
-            timestamp: Date.now()
-          }));
+          console.log('Forwarding OnRenderFailure to client');
+          ws.send(JSON.stringify({ type: 'renderFailure', data, timestamp: Date.now() }));
         } catch (error: any) {
-          console.error('❌ Error forwarding OnRenderFailure:', error.message);
+          console.error(`${RED}Error forwarding OnRenderFailure: ${error.message}${RESET}`);
         }
       }
     };
 
-    // Forward OnProjectManagerChanged events from CallbackManager to WebSocket
     const forwardProjectManagerChanged = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          console.log('📁 [WebSocket] Forwarding OnProjectManagerChanged to client');
-          ws.send(JSON.stringify({
-            type: 'projectManagerChanged',
-            data,
-            timestamp: Date.now()
-          }));
+          console.log('Forwarding OnProjectManagerChanged to client');
+          ws.send(JSON.stringify({ type: 'projectManagerChanged', data, timestamp: Date.now() }));
         } catch (error: any) {
-          console.error('❌ Error forwarding OnProjectManagerChanged:', error.message);
+          console.error(`${RED}Error forwarding OnProjectManagerChanged: ${error.message}${RESET}`);
         }
       }
     };
-    
-    // Listen for all callback types from CallbackManager
+
     callbackManager.on('OnNewImage', forwardNewImage);
     callbackManager.on('OnNewStatistics', forwardNewStatistics);
     callbackManager.on('OnRenderFailure', forwardRenderFailure);
     callbackManager.on('OnProjectManagerChanged', forwardProjectManagerChanged);
-    
-    // Handle messages from client
+
     ws.on('message', (message: Buffer) => {
       try {
         const data = JSON.parse(message.toString());
-        
         if (data.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-        } else if (data.type === 'subscribe') {
-          // Handle subscription requests if needed
-          console.log('📥 Client subscribed to callbacks');
         }
       } catch (error: any) {
-        console.error('❌ Error handling WebSocket message:', error.message);
+        console.error(`${RED}Error handling WebSocket message: ${error.message}${RESET}`);
       }
     });
-    
+
     ws.on('close', () => {
-      console.log('🔌 Callback client disconnected');
+      console.log('Callback client disconnected');
       callbackManager.off('OnNewImage', forwardNewImage);
       callbackManager.off('OnNewStatistics', forwardNewStatistics);
       callbackManager.off('OnRenderFailure', forwardRenderFailure);
       callbackManager.off('OnProjectManagerChanged', forwardProjectManagerChanged);
     });
-    
-    ws.on('error', (error) => {
-      console.error('❌ WebSocket error:', error.message);
+
+    ws.on('error', error => {
+      console.error(`${RED}WebSocket error: ${error.message}${RESET}`);
     });
   });
-  
-  console.log('✅ WebSocket callback streaming ready');
+
+  console.log('WebSocket callback streaming ready');
 }

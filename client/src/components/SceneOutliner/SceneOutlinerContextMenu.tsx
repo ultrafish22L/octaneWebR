@@ -15,8 +15,8 @@ interface SceneOutlinerContextMenuProps {
   onCut: () => void;
   onCopy: () => void;
   onPaste: () => void;
-  onFillEmptyPins: () => void;
   onDelete: () => void;
+  onExpand: () => void;
   onShowInGraphEditor: () => void;
   onShowInLuaBrowser: () => void;
   onClose: () => void;
@@ -30,8 +30,8 @@ export function SceneOutlinerContextMenu({
   onCut,
   onCopy,
   onPaste,
-  onFillEmptyPins,
   onDelete,
+  onExpand,
   onShowInGraphEditor,
   onShowInLuaBrowser,
   onClose,
@@ -80,6 +80,8 @@ export function SceneOutlinerContextMenu({
     <div
       ref={menuRef}
       className="node-context-menu"
+      role="menu"
+      aria-label="Scene outliner context menu"
       style={{
         position: 'fixed',
         left: x,
@@ -91,6 +93,7 @@ export function SceneOutlinerContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onRender)}
       >
         Render
@@ -100,18 +103,20 @@ export function SceneOutlinerContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onSave)}
       >
         Save...
       </button>
 
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Cut */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onCut)}
       >
         Cut
@@ -121,48 +126,56 @@ export function SceneOutlinerContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onCopy)}
       >
         Copy
       </button>
 
-      {/* Paste (disabled for now) */}
+      {/* Paste */}
       <button
         type="button"
-        className="context-menu-item disabled"
-        onClick={() => handleMenuItemClick(onPaste, true)}
+        className="context-menu-item"
+        role="menuitem"
+        onClick={() => handleMenuItemClick(onPaste)}
       >
         Paste
       </button>
 
-      {/* Fill empty node pins */}
-      <button
-        type="button"
-        className="context-menu-item"
-        onClick={() => handleMenuItemClick(onFillEmptyPins)}
-      >
-        Fill empty node pins
-      </button>
-
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
       {/* Delete */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onDelete)}
       >
         Delete
       </button>
 
       {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
+
+      {/* Expand */}
+      <button
+        type="button"
+        className="context-menu-item"
+        role="menuitem"
+        onClick={() => handleMenuItemClick(onExpand)}
+      >
+        Expand
+      </button>
+
+      {/* Separator */}
+      <div className="context-menu-separator" role="separator" />
 
       {/* Show in Graph Editor */}
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onShowInGraphEditor)}
       >
         Show in Graph Editor
@@ -172,6 +185,7 @@ export function SceneOutlinerContextMenu({
       <button
         type="button"
         className="context-menu-item"
+        role="menuitem"
         onClick={() => handleMenuItemClick(onShowInLuaBrowser)}
       >
         Show in Lua API browser

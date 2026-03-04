@@ -39,6 +39,30 @@ export class MaterialDatabaseService extends BaseService {
     this.sceneService = sceneService;
   }
 
+  /**
+   * Resolve the destination graph handle. If none is provided, falls back to the
+   * node graph connected to pin 0 of the current render target.
+   */
+  private async resolveGraphHandle(destinationGraphHandle?: number): Promise<number | undefined> {
+    if (destinationGraphHandle) return destinationGraphHandle;
+
+    const renderTargetResponse = await this.apiService.callApi(
+      'ApiRenderEngine',
+      'getRenderTargetNode',
+      {}
+    );
+    const renderTargetHandle = extractHandle(renderTargetResponse?.result);
+    if (renderTargetHandle === undefined) return undefined;
+
+    const graphResponse = await this.apiService.callApi(
+      'ApiNode',
+      'connectedNodeIx',
+      renderTargetHandle,
+      { pinIx: 0 }
+    );
+    return extractHandle(graphResponse?.result);
+  }
+
   // ==================== LocalDB Methods (Offline Material Library) ====================
 
   async getLocalDBRoot(): Promise<number | null> {
@@ -46,12 +70,12 @@ export class MaterialDatabaseService extends BaseService {
       const response = await this.apiService.callApi('ApiLocalDB', 'root', null, {});
       const handle = extractHandle(response?.result);
       if (handle !== undefined) {
-        Logger.debug(`✅ LocalDB root category handle: ${handle}`);
+        Logger.debug(`LocalDB root category handle: ${handle}`);
         return handle;
       }
       return null;
     } catch (error) {
-      Logger.error('❌ Failed to get LocalDB root:', error);
+      Logger.error('Failed to get LocalDB root:', error);
       return null;
     }
   }
@@ -66,7 +90,7 @@ export class MaterialDatabaseService extends BaseService {
       );
       return (response?.result as string | undefined) || 'Unknown Category';
     } catch (error) {
-      Logger.error(`❌ Failed to get category name for handle ${categoryHandle}:`, error);
+      Logger.error(`Failed to get category name for handle ${categoryHandle}:`, error);
       return 'Error';
     }
   }
@@ -81,7 +105,7 @@ export class MaterialDatabaseService extends BaseService {
       );
       return (response?.result as number | undefined) || 0;
     } catch (error) {
-      Logger.error(`❌ Failed to get subcategory count:`, error);
+      Logger.error(`Failed to get subcategory count:`, error);
       return 0;
     }
   }
@@ -97,7 +121,7 @@ export class MaterialDatabaseService extends BaseService {
       const handle = extractHandle(response?.result);
       return handle ?? null;
     } catch (error) {
-      Logger.error(`❌ Failed to get subcategory at index ${index}:`, error);
+      Logger.error(`Failed to get subcategory at index ${index}:`, error);
       return null;
     }
   }
@@ -112,7 +136,7 @@ export class MaterialDatabaseService extends BaseService {
       );
       return (response?.result as number | undefined) || 0;
     } catch (error) {
-      Logger.error(`❌ Failed to get package count:`, error);
+      Logger.error(`Failed to get package count:`, error);
       return 0;
     }
   }
@@ -128,7 +152,7 @@ export class MaterialDatabaseService extends BaseService {
       const handle = extractHandle(response?.result);
       return handle ?? null;
     } catch (error) {
-      Logger.error(`❌ Failed to get package at index ${index}:`, error);
+      Logger.error(`Failed to get package at index ${index}:`, error);
       return null;
     }
   }
@@ -143,7 +167,7 @@ export class MaterialDatabaseService extends BaseService {
       );
       return (response?.result as string | undefined) || 'Unknown Package';
     } catch (error) {
-      Logger.error(`❌ Failed to get package name:`, error);
+      Logger.error(`Failed to get package name:`, error);
       return 'Error';
     }
   }
@@ -158,36 +182,16 @@ export class MaterialDatabaseService extends BaseService {
       );
       return (response?.result as boolean | undefined) || false;
     } catch (error) {
-      Logger.error(`❌ Failed to check package thumbnail:`, error);
+      Logger.error(`Failed to check package thumbnail:`, error);
       return false;
     }
   }
 
   async loadPackage(packageHandle: number, destinationGraphHandle?: number): Promise<boolean> {
     try {
-      let graphHandle = destinationGraphHandle;
+      const graphHandle = await this.resolveGraphHandle(destinationGraphHandle);
       if (!graphHandle) {
-        // Get the render target from the render engine
-        const renderTargetResponse = await this.apiService.callApi(
-          'ApiRenderEngine',
-          'getRenderTargetNode',
-          {}
-        );
-        const renderTargetHandle = extractHandle(renderTargetResponse?.result);
-        if (renderTargetHandle !== undefined) {
-          // Get the node graph connected to the render target (pin 0 is the graph input)
-          const graphResponse = await this.apiService.callApi(
-            'ApiNode',
-            'connectedNodeIx',
-            renderTargetHandle,
-            { pinIx: 0 }
-          );
-          graphHandle = extractHandle(graphResponse?.result);
-        }
-      }
-
-      if (!graphHandle) {
-        Logger.error('❌ No graph found to load package into');
+        Logger.error('No graph found to load package into');
         return false;
       }
 
@@ -201,14 +205,14 @@ export class MaterialDatabaseService extends BaseService {
       );
 
       if (response?.result) {
-        Logger.debug(`✅ Package loaded into graph (handle: ${graphHandle})`);
+        Logger.debug(`Package loaded into graph (handle: ${graphHandle})`);
         await this.sceneService.buildSceneTree();
         this.emit('sceneTreeUpdated', this.sceneService.getScene());
         return true;
       }
       return false;
     } catch (error) {
-      Logger.error(`❌ Failed to load package:`, error);
+      Logger.error(`Failed to load package:`, error);
       return false;
     }
   }
@@ -217,7 +221,7 @@ export class MaterialDatabaseService extends BaseService {
 
   async getLiveDBCategories(): Promise<MaterialCategory[]> {
     try {
-      Logger.debug('📂 Fetching LiveDB categories...');
+      Logger.debug('Fetching LiveDB categories...');
       const response = await this.apiService.callApi(
         'ApiDBMaterialManager',
         'getCategories',
@@ -227,7 +231,7 @@ export class MaterialDatabaseService extends BaseService {
 
       const listHandle = extractHandle(response?.list);
       if (response?.result && listHandle !== undefined) {
-        Logger.debug('📂 LiveDB categories returned handle:', listHandle);
+        Logger.debug('LiveDB categories returned handle:', listHandle);
 
         // getCategory returns ALL categories at once (no index parameter)
         const catResponse = await this.apiService.callApi(
@@ -248,21 +252,21 @@ export class MaterialDatabaseService extends BaseService {
           typeID: cat.typeID || 0,
         }));
 
-        Logger.debug(`✅ Loaded ${categories.length} LiveDB categories`);
+        Logger.debug(`Loaded ${categories.length} LiveDB categories`);
         return categories;
       }
 
-      Logger.warn('⚠️ No LiveDB categories returned');
+      Logger.warn('No LiveDB categories returned');
       return [];
     } catch (error) {
-      Logger.error('❌ Failed to get LiveDB categories:', error);
+      Logger.error('Failed to get LiveDB categories:', error);
       return [];
     }
   }
 
   async getLiveDBMaterials(categoryId: number): Promise<Material[]> {
     try {
-      Logger.debug(`📦 Fetching LiveDB materials for category ${categoryId}...`);
+      Logger.debug(`Fetching LiveDB materials for category ${categoryId}...`);
       const response = await this.apiService.callApi('ApiDBMaterialManager', 'getMaterials', null, {
         categoryId,
       });
@@ -288,14 +292,14 @@ export class MaterialDatabaseService extends BaseService {
           copyright: mat.copyright || '',
         }));
 
-        Logger.debug(`✅ Loaded ${materials.length} materials`);
+        Logger.debug(`Loaded ${materials.length} materials`);
         return materials;
       }
 
-      Logger.warn('⚠️ No materials returned for category');
+      Logger.warn('No materials returned for category');
       return [];
     } catch (error) {
-      Logger.error(`❌ Failed to get LiveDB materials:`, error);
+      Logger.error(`Failed to get LiveDB materials:`, error);
       return [];
     }
   }
@@ -306,7 +310,7 @@ export class MaterialDatabaseService extends BaseService {
     view: number = 0
   ): Promise<string | null> {
     try {
-      Logger.debug(`🖼️ Fetching preview for material ${materialId}...`);
+      Logger.debug(`Fetching preview for material ${materialId}...`);
       const response = await this.apiService.callApi(
         'ApiDBMaterialManager',
         'getMaterialPreview',
@@ -346,7 +350,7 @@ export class MaterialDatabaseService extends BaseService {
 
       return null;
     } catch (error) {
-      Logger.error(`❌ Failed to get material preview:`, error);
+      Logger.error(`Failed to get material preview:`, error);
       return null;
     }
   }
@@ -356,31 +360,11 @@ export class MaterialDatabaseService extends BaseService {
     destinationGraphHandle?: number
   ): Promise<number | null> {
     try {
-      Logger.debug(`⬇️ Downloading LiveDB material ${materialId}...`);
+      Logger.debug(`Downloading LiveDB material ${materialId}...`);
 
-      let graphHandle = destinationGraphHandle;
+      const graphHandle = await this.resolveGraphHandle(destinationGraphHandle);
       if (!graphHandle) {
-        // Get the render target from the render engine
-        const renderTargetResponse = await this.apiService.callApi(
-          'ApiRenderEngine',
-          'getRenderTargetNode',
-          {}
-        );
-        const renderTargetHandle = extractHandle(renderTargetResponse?.result);
-        if (renderTargetHandle !== undefined) {
-          // Get the node graph connected to the render target (pin 0 is the graph input)
-          const graphResponse = await this.apiService.callApi(
-            'ApiNode',
-            'connectedNodeIx',
-            renderTargetHandle,
-            { pinIx: 0 }
-          );
-          graphHandle = extractHandle(graphResponse?.result);
-        }
-      }
-
-      if (!graphHandle) {
-        Logger.error('❌ No graph found to download material into');
+        Logger.error('No graph found to download material into');
         return null;
       }
 
@@ -396,7 +380,7 @@ export class MaterialDatabaseService extends BaseService {
 
       const outputHandle = extractHandle(response?.outputNode);
       if (response?.result && outputHandle !== undefined) {
-        Logger.debug(`✅ Material downloaded (handle: ${outputHandle})`);
+        Logger.debug(`Material downloaded (handle: ${outputHandle})`);
 
         await this.sceneService.buildSceneTree();
         this.emit('sceneTreeUpdated', this.sceneService.getScene());
@@ -404,11 +388,63 @@ export class MaterialDatabaseService extends BaseService {
         return outputHandle;
       }
 
-      Logger.warn('⚠️ Material download succeeded but no output node returned');
+      Logger.warn('Material download succeeded but no output node returned');
       return null;
     } catch (error) {
-      Logger.error(`❌ Failed to download LiveDB material:`, error);
+      Logger.error(`Failed to download LiveDB material:`, error);
       return null;
     }
+  }
+
+  // ==================== Unified dbType API ====================
+  // These methods use the simpler ApiDBMaterialManager endpoint that accepts a
+  // dbType discriminator (0 = LiveDB, 1 = LocalDB) rather than explicit handles.
+
+  /**
+   * Fetch material categories for a database type.
+   * Used by React Query hooks that need a single call for either LiveDB or LocalDB.
+   */
+  async getMaterialCategoriesForDbType(dbType: 'livedb' | 'localdb'): Promise<MaterialCategory[]> {
+    try {
+      const response = await this.apiService.callApi(
+        'ApiDBMaterialManager',
+        'getCategories',
+        null,
+        { dbType: dbType === 'livedb' ? 0 : 1 }
+      );
+      return (response?.categories as unknown as MaterialCategory[]) ?? [];
+    } catch (error) {
+      Logger.error('getMaterialCategoriesForDbType failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch materials for a category in the given database type.
+   */
+  async getMaterialsForDbType(
+    categoryId: number,
+    dbType: 'livedb' | 'localdb'
+  ): Promise<Material[]> {
+    try {
+      const response = await this.apiService.callApi('ApiDBMaterialManager', 'getMaterials', null, {
+        categoryId,
+        dbType: dbType === 'livedb' ? 0 : 1,
+      });
+      return (response?.materials as unknown as Material[]) ?? [];
+    } catch (error) {
+      Logger.error('getMaterialsForDbType failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Download a material identified by materialId from the given database type.
+   */
+  async downloadMaterialForDbType(materialId: number, dbType: 'livedb' | 'localdb'): Promise<void> {
+    await this.apiService.callApi('ApiDBMaterialManager', 'downloadMaterial', null, {
+      materialId,
+      dbType: dbType === 'livedb' ? 0 : 1,
+    });
   }
 }

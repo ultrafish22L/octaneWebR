@@ -76,9 +76,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
             className="modal-close-button"
             onClick={onClose}
             aria-label="Close turntable animation"
-          >
-            ✕
-          </button>
+          ></button>
         </div>
 
         <div className="modal-body">

@@ -10,7 +10,7 @@
  * - Proper disabled state prevents clicks
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 interface NodeContextMenuProps {
@@ -100,66 +100,19 @@ export function NodeContextMenu({
     }
   }, [x, y]);
 
-  const handleMenuItemClick = useCallback(
-    (action: () => void, disabled = false) => {
-      if (disabled) return;
-      action();
-      onClose();
-    },
-    [onClose]
-  );
-
-  // Memoized menu item handlers
-  const handleRenderClick = useCallback(
-    () => handleMenuItemClick(onRenderNode),
-    [handleMenuItemClick, onRenderNode]
-  );
-  const handleSaveClick = useCallback(
-    () => handleMenuItemClick(onSaveAsMacro),
-    [handleMenuItemClick, onSaveAsMacro]
-  );
-  const handleCutClick = useCallback(
-    () => handleMenuItemClick(onCut),
-    [handleMenuItemClick, onCut]
-  );
-  const handleCopyClick = useCallback(
-    () => handleMenuItemClick(onCopy),
-    [handleMenuItemClick, onCopy]
-  );
-  const handlePasteClick = useCallback(
-    () => handleMenuItemClick(onPaste),
-    [handleMenuItemClick, onPaste]
-  );
-  const handleDeleteClick = useCallback(
-    () => handleMenuItemClick(onDeleteSelected),
-    [handleMenuItemClick, onDeleteSelected]
-  );
-  const handleCollapseClick = useCallback(
-    () => handleMenuItemClick(onCollapseItems),
-    [handleMenuItemClick, onCollapseItems]
-  );
-  const handleExpandClick = useCallback(
-    () => handleMenuItemClick(onExpandItems),
-    [handleMenuItemClick, onExpandItems]
-  );
-  const handleGroupClick = useCallback(
-    () => handleMenuItemClick(onGroupItems, selectedNodeCount < 2),
-    [handleMenuItemClick, onGroupItems, selectedNodeCount]
-  );
-  const handleShowInOutlinerClick = useCallback(
-    () => handleMenuItemClick(onShowInOutliner),
-    [handleMenuItemClick, onShowInOutliner]
-  );
-  const handleShowInLuaBrowserClick = useCallback(
-    () => handleMenuItemClick(onShowInLuaBrowser),
-    [handleMenuItemClick, onShowInLuaBrowser]
-  );
+  const handleMenuItemClick = (action: () => void, disabled = false) => {
+    if (disabled) return;
+    action();
+    onClose();
+  };
 
   // Render to document.body using portal
   return createPortal(
     <div
       ref={menuRef}
       className="node-context-menu"
+      role="menu"
+      aria-label="Node context menu"
       style={{
         position: 'fixed',
         left: x,
@@ -167,77 +120,104 @@ export function NodeContextMenu({
         zIndex: 10000,
       }}
     >
-      {/* Render */}
-      <button type="button" className="context-menu-item disabled" onClick={handleRenderClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onRenderNode)}
+      >
         Render
       </button>
-
-      {/* Save... */}
-      <button type="button" className="context-menu-item disabled" onClick={handleSaveClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onSaveAsMacro)}
+      >
         Save...
       </button>
 
-      {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
-      {/* Cut */}
-      <button type="button" className="context-menu-item" onClick={handleCutClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onCut)}
+      >
         Cut
       </button>
-
-      {/* Copy */}
-      <button type="button" className="context-menu-item" onClick={handleCopyClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onCopy)}
+      >
         Copy
       </button>
-
-      {/* Paste */}
-      <button type="button" className="context-menu-item" onClick={handlePasteClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onPaste)}
+      >
         Paste
       </button>
 
-      {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
-      {/* Delete */}
-      <button type="button" className="context-menu-item" onClick={handleDeleteClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onDeleteSelected)}
+      >
         Delete
       </button>
 
-      {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
-      {/* Collapse items */}
-      <button type="button" className="context-menu-item" onClick={handleCollapseClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onCollapseItems)}
+      >
         Collapse items
       </button>
-
-      {/* Expand items */}
-      <button type="button" className="context-menu-item" onClick={handleExpandClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onExpandItems)}
+      >
         Expand items
       </button>
-
-      {/* Group Items */}
       <button
         type="button"
+        role="menuitem"
         className={`context-menu-item ${selectedNodeCount < 2 ? 'disabled' : ''}`}
-        onClick={handleGroupClick}
+        aria-disabled={selectedNodeCount < 2}
+        onClick={() => handleMenuItemClick(onGroupItems, selectedNodeCount < 2)}
       >
-        Group Items
+        Group items
       </button>
 
-      {/* Separator */}
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
 
-      {/* Show in Outliner */}
-      <button type="button" className="context-menu-item" onClick={handleShowInOutlinerClick}>
+      <button
+        type="button"
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onShowInOutliner)}
+      >
         Show in Outliner
       </button>
-
-      {/* Show in Lua API browser */}
       <button
         type="button"
-        className="context-menu-item disabled"
-        onClick={handleShowInLuaBrowserClick}
+        role="menuitem"
+        className="context-menu-item"
+        onClick={() => handleMenuItemClick(onShowInLuaBrowser)}
       >
         Show in Lua API browser
       </button>

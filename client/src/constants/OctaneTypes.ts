@@ -125,14 +125,6 @@ export function getObjectTypeForService(serviceName: string): number | undefined
 }
 
 /**
- * Get type name from type value (for debugging)
- */
-export function getObjectTypeName(type: number): string {
-  const entry = Object.entries(ObjectType).find(([_name, value]) => value === type);
-  return entry ? entry[0] : `Unknown(${type})`;
-}
-
-/**
  * Attribute IDs for node attributes
  * These match the AttributeId enum from Octane
  */

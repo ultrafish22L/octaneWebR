@@ -59,7 +59,7 @@ export function LocalDBTreeItem({
           >
             {expanded ? '−' : '+'}
           </span>
-          <span className="node-icon">📁</span>
+          <span className="node-icon"></span>
           <span className="node-name">{category.name}</span>
         </div>
       </div>

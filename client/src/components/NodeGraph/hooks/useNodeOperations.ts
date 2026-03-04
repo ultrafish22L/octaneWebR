@@ -13,20 +13,20 @@
  */
 
 import React, { useCallback, useState, useEffect } from 'react';
-import { Node, Edge } from '@xyflow/react';
+import { Node } from '@xyflow/react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { OctaneNodeData } from '../OctaneNode';
 import { NodeType } from '../../../constants/OctaneTypes';
 import { EditCommands } from '../../../commands/EditCommands';
 import { Logger } from '../../../utils/Logger';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 import type { EditActionsContextType } from '../../../contexts/EditActionsContext';
 
 interface UseNodeOperationsParams {
   client: OctaneClient;
   nodes: Node<OctaneNodeData>[];
   setNodes: React.Dispatch<React.SetStateAction<Node<OctaneNodeData>[]>>;
-  edges: Edge[];
   sceneTree: SceneNode[];
 
   onNodeSelect?: (node: SceneNode | null) => void;
@@ -53,6 +53,8 @@ export interface NodeOperationsHandlers {
   handleCollapseItems: () => Promise<void>;
   handleExpandItems: () => Promise<void>;
   handleGroupItems: () => Promise<void>;
+  handleDuplicate: () => Promise<void>;
+  handleUngroup: () => Promise<void>;
 
   // Context menu action handlers
   handleShowInOutliner: () => void;
@@ -78,11 +80,12 @@ export function useNodeOperations({
   client,
   nodes,
   setNodes,
-  edges,
   sceneTree,
   onNodeSelect,
   editActions,
 }: UseNodeOperationsParams): NodeOperationsHandlers {
+  const { setTemporaryStatus } = useStatusMessage();
+
   // Context menu state
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -92,86 +95,12 @@ export function useNodeOperations({
   // Search dialog state
   const [searchDialogVisible, setSearchDialogVisible] = useState(false);
 
-  // Copy/paste clipboard state
-  const [copiedNodes, setCopiedNodes] = useState<Node<OctaneNodeData>[]>([]);
-  const [copiedEdges, setCopiedEdges] = useState<Edge[]>([]);
-
-  /**
-   * Handle paste operation
-   * Creates new nodes via API and recreates connections
-   */
-  const handlePasteNodes = useCallback(async () => {
-    if (copiedNodes.length === 0 || !client) return;
-
-    Logger.debug(`📋 Pasting ${copiedNodes.length} node(s)...`);
-
-    try {
-      // Map old node IDs to new node handles
-      const oldToNewHandleMap = new Map<string, number>();
-
-      // Create new nodes via API
-      for (const copiedNode of copiedNodes) {
-        const nodeData = copiedNode.data as OctaneNodeData;
-        const nodeTypeName = nodeData.sceneNode.nodeInfo?.nodeTypeName;
-
-        if (!nodeTypeName) {
-          Logger.warn('Cannot paste node without type name:', nodeData.sceneNode.name);
-          continue;
-        }
-
-        // Look up numeric node type ID
-        const nodeTypeId = NodeType[nodeTypeName];
-        if (!nodeTypeId) {
-          Logger.warn('Unknown node type:', nodeTypeName);
-          continue;
-        }
-
-        // Create node via API
-        const newHandle = await client.createNode(nodeTypeName, nodeTypeId);
-
-        if (newHandle) {
-          oldToNewHandleMap.set(copiedNode.id, newHandle);
-          Logger.debug(`✅ Created ${nodeTypeName} with handle ${newHandle}`);
-        }
-      }
-
-      // Wait for scene to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Recreate connections between pasted nodes
-      for (const copiedEdge of copiedEdges) {
-        const newSourceHandle = oldToNewHandleMap.get(copiedEdge.source);
-        const newTargetHandle = oldToNewHandleMap.get(copiedEdge.target);
-
-        if (!newSourceHandle || !newTargetHandle) continue;
-
-        // Extract target pin index from edge ID
-        const targetHandleId = copiedEdge.targetHandle || 'input-0';
-
-        // Parse pin index from handle ID (e.g., "input-0" -> 0)
-        const targetPinIndex = parseInt(targetHandleId.split('-')[1], 10);
-
-        if (isNaN(targetPinIndex)) continue;
-
-        // Connect the pins
-        await client.connectPinByIndex(newTargetHandle, targetPinIndex, newSourceHandle);
-        Logger.debug(`🔗 Connected ${newSourceHandle} → ${newTargetHandle}[${targetPinIndex}]`);
-      }
-
-      Logger.debug(`✅ Pasted ${copiedNodes.length} node(s) successfully`);
-
-      // Note: Scene will auto-refresh via sceneTree prop update from parent
-    } catch (error) {
-      Logger.error('Failed to paste nodes:', error);
-    }
-  }, [copiedNodes, copiedEdges, client]);
-
   /**
    * Context menu event handlers
    */
   // Handle right-click on empty pane (add node menu)
   const handlePaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
-    Logger.debug('🖱️ [NodeGraphEditor] Pane context menu triggered', {
+    Logger.debug('[NodeGraphEditor] Pane context menu triggered', {
       position: { x: event.clientX, y: event.clientY },
     });
     event.preventDefault();
@@ -185,7 +114,7 @@ export function useNodeOperations({
   // Handle right-click on a node (node actions menu)
   const handleNodeContextMenu = useCallback(
     (event: React.MouseEvent, nodeId: string) => {
-      Logger.debug('🖱️ [NodeGraphEditor] handleNodeContextMenu fired!', {
+      Logger.debug('[NodeGraphEditor] handleNodeContextMenu fired!', {
         nodeId,
         position: { x: event.clientX, y: event.clientY },
       });
@@ -220,6 +149,7 @@ export function useNodeOperations({
       const nodeTypeId = NodeType[nodeType];
       if (nodeTypeId === undefined) {
         Logger.error('Unknown node type:', nodeType);
+        setTemporaryStatus('Unknown node type', 3000);
         return;
       }
 
@@ -230,12 +160,14 @@ export function useNodeOperations({
           // Note: createNode() already performs optimized scene tree update
         } else {
           Logger.error('Failed to create node');
+          setTemporaryStatus('Failed to create node', 3000);
         }
       } catch (error) {
         Logger.error('Error creating node:', error);
+        setTemporaryStatus('Error creating node', 3000);
       }
     },
-    [client]
+    [client, setTemporaryStatus]
   );
 
   const handleCloseContextMenu = useCallback(() => {
@@ -261,14 +193,15 @@ export function useNodeOperations({
       client,
       selectedNodes: sceneNodes,
       onSelectionClear: () => {
-        setNodes(nodes.map(n => ({ ...n, selected: false })));
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         onNodeSelect?.(null);
       },
       onComplete: () => {
         Logger.debug('Cut operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client, setNodes, onNodeSelect]);
+  }, [nodes, client, setNodes, onNodeSelect, setTemporaryStatus]);
 
   const handleCopy = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -277,25 +210,13 @@ export function useNodeOperations({
       return;
     }
 
-    // Store selected nodes and edges between them for Ctrl+V paste
-    const selectedNodeIds = selectedNodes.map(n => n.id);
-    const relatedEdges = edges.filter(
-      e => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
-    );
-
-    setCopiedNodes(selectedNodes);
-    setCopiedEdges(relatedEdges);
-    Logger.debug(`📋 Copied ${selectedNodes.length} node(s) for keyboard paste`);
-
-    // Convert ReactFlow nodes to SceneNodes for EditCommands (Octane clipboard)
     const sceneNodes: SceneNode[] = selectedNodes.map(n => n.data.sceneNode);
-
-    // Use unified EditCommands
     await EditCommands.copyNodes({
       client,
       selectedNodes: sceneNodes,
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, edges, client]);
+  }, [nodes, client, setTemporaryStatus]);
 
   const handlePaste = useCallback(async () => {
     Logger.debug('Paste at position:', contextMenuPosition);
@@ -307,8 +228,9 @@ export function useNodeOperations({
       onComplete: () => {
         Logger.debug('Paste operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [client, contextMenuPosition]);
+  }, [client, contextMenuPosition, setTemporaryStatus]);
 
   const handleDeleteSelected = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -326,16 +248,17 @@ export function useNodeOperations({
       client,
       selectedNodes: sceneNodes,
       onSelectionClear: () => {
-        // Clear selection in ReactFlow
-        setNodes(nodes.map(n => ({ ...n, selected: false })));
+        // Clear selection in ReactFlow (use functional updater to avoid stale closure)
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         // Clear selection in parent (Node Inspector)
         onNodeSelect?.(null);
       },
       onComplete: () => {
         Logger.debug('Delete operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client, setNodes, onNodeSelect]);
+  }, [nodes, client, setNodes, onNodeSelect, setTemporaryStatus]);
 
   /**
    * Node manipulation handlers (Collapse/Expand/Group)
@@ -357,8 +280,9 @@ export function useNodeOperations({
       onComplete: () => {
         Logger.debug('Collapse operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client]);
+  }, [nodes, client, setTemporaryStatus]);
 
   const handleExpandItems = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -377,8 +301,9 @@ export function useNodeOperations({
       onComplete: () => {
         Logger.debug('Expand operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client]);
+  }, [nodes, client, setTemporaryStatus]);
 
   const handleGroupItems = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -398,14 +323,51 @@ export function useNodeOperations({
       onComplete: () => {
         Logger.debug('Group operation completed from NodeGraph');
       },
+      onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client]);
+  }, [nodes, client, setTemporaryStatus]);
+
+  const handleDuplicate = useCallback(async () => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    if (selectedNodes.length === 0) {
+      Logger.warn('No nodes selected for duplicate');
+      return;
+    }
+
+    const sceneNodes: SceneNode[] = selectedNodes.map(n => n.data.sceneNode);
+    await EditCommands.duplicateNodes({
+      client,
+      selectedNodes: sceneNodes,
+      onComplete: () => {
+        Logger.debug('Duplicate operation completed from NodeGraph');
+      },
+      onError: msg => setTemporaryStatus(msg, 3000),
+    });
+  }, [nodes, client, setTemporaryStatus]);
+
+  const handleUngroup = useCallback(async () => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    if (selectedNodes.length === 0) {
+      Logger.warn('No nodes selected for ungroup');
+      return;
+    }
+
+    const sceneNodes: SceneNode[] = selectedNodes.map(n => n.data.sceneNode);
+    await EditCommands.ungroupNodes({
+      client,
+      selectedNodes: sceneNodes,
+      onComplete: () => {
+        Logger.debug('Ungroup operation completed from NodeGraph');
+      },
+      onError: msg => setTemporaryStatus(msg, 3000),
+    });
+  }, [nodes, client, setTemporaryStatus]);
 
   /**
    * Context menu action handlers
    */
   const handleShowInOutliner = useCallback(() => {
-    Logger.debug('🔍 Show in Outliner - Node ID:', contextMenuNodeId);
+    Logger.debug('Show in Outliner - Node ID:', contextMenuNodeId);
 
     // Find the node and its corresponding scene node
     const reactFlowNode = nodes.find(n => n.id === contextMenuNodeId);
@@ -420,31 +382,19 @@ export function useNodeOperations({
   }, [contextMenuNodeId, nodes, sceneTree, onNodeSelect]);
 
   const handleShowInLuaBrowser = useCallback(() => {
-    Logger.debug('🔍 Show in Lua API browser - Node ID:', contextMenuNodeId);
-    // TODO: Implement Lua API browser integration
-    // Requires: LUA API documentation viewer/browser component
-    // eslint-disable-next-line no-alert
-    alert('Lua API browser integration coming soon!');
-  }, [contextMenuNodeId]);
+    Logger.warn('Lua API browser not yet implemented');
+    setTemporaryStatus('Lua API browser not yet implemented', 3000);
+  }, [setTemporaryStatus]);
 
   const handleRenderNode = useCallback(() => {
-    Logger.debug('🎬 Render Node - Node ID:', contextMenuNodeId);
-    // TODO: Implement render target switching
-    // Requires: API to set render target to specific node
-    // eslint-disable-next-line no-alert
-    alert('Render Node feature requires render target switching API\n\nComing soon!');
-  }, [contextMenuNodeId]);
+    Logger.warn('Render Node not yet implemented');
+    setTemporaryStatus('Render Node not yet implemented', 3000);
+  }, [setTemporaryStatus]);
 
   const handleSaveAsMacro = useCallback(() => {
-    const selectedNodes = nodes.filter(n => n.selected);
-    Logger.debug('💾 Save as Macro - Selected nodes:', selectedNodes.length);
-    // TODO: Implement save to LocalDB
-    // Requires: apilocaldb.proto API integration
-    // eslint-disable-next-line no-alert
-    alert(
-      'Save as Macro feature requires LocalDB API integration\n(apilocaldb.proto)\n\nComing soon!'
-    );
-  }, [nodes]);
+    Logger.warn('Save as Macro not yet implemented');
+    setTemporaryStatus('Save as Macro not yet implemented', 3000);
+  }, [setTemporaryStatus]);
 
   /**
    * Search handler
@@ -471,10 +421,7 @@ export function useNodeOperations({
   );
 
   /**
-   * Keyboard shortcut handlers
-   * Per Octane SE manual:
-   * - "Pressing CTRL+F brings up the Search Dialog"
-   * - "copy and paste operations...by simple keyboard shortcuts Ctrl+C for copy and Ctrl+V for paste"
+   * Keyboard shortcut handlers for NodeGraph
    */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -486,35 +433,30 @@ export function useNodeOperations({
 
       const modifier = event.ctrlKey || event.metaKey;
 
-      // Ctrl+F: Search dialog
       if (modifier && event.key === 'f') {
         event.preventDefault();
         setSearchDialogVisible(true);
-      }
-
-      // Ctrl+C: Copy selected nodes
-      if (modifier && event.key === 'c') {
+      } else if (modifier && event.key === 'c') {
         event.preventDefault();
-        const selectedNodes = nodes.filter(n => n.selected);
-        if (selectedNodes.length === 0) return;
-
-        // Store selected nodes and edges between them
-        const selectedNodeIds = selectedNodes.map(n => n.id);
-        const relatedEdges = edges.filter(
-          e => selectedNodeIds.includes(e.source) && selectedNodeIds.includes(e.target)
-        );
-
-        setCopiedNodes(selectedNodes);
-        setCopiedEdges(relatedEdges);
-        Logger.debug(`📋 Copied ${selectedNodes.length} node(s)`);
-      }
-
-      // Ctrl+V: Paste nodes
-      if (modifier && event.key === 'v') {
+        handleCopy();
+      } else if (modifier && event.key === 'v') {
         event.preventDefault();
-        if (copiedNodes.length === 0) return;
-
-        handlePasteNodes();
+        handlePaste();
+      } else if (modifier && event.key === 'd') {
+        event.preventDefault();
+        handleDuplicate();
+      } else if (modifier && event.shiftKey && (event.key === 'g' || event.key === 'G')) {
+        event.preventDefault();
+        handleUngroup();
+      } else if (modifier && event.key === 'g') {
+        event.preventDefault();
+        handleGroupItems();
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        handleDeleteSelected();
+      } else if (event.key === 'Escape') {
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        onNodeSelect?.(null);
       }
     };
 
@@ -522,7 +464,16 @@ export function useNodeOperations({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [nodes, edges, copiedNodes, copiedEdges, handlePasteNodes]);
+  }, [
+    handleCopy,
+    handlePaste,
+    handleDuplicate,
+    handleUngroup,
+    handleGroupItems,
+    handleDeleteSelected,
+    setNodes,
+    onNodeSelect,
+  ]);
 
   /**
    * Register edit action handlers with global EditActionsContext
@@ -539,13 +490,22 @@ export function useNodeOperations({
       paste: handlePaste,
       delete: handleDeleteSelected,
       group: handleGroupItems,
+      ungroup: handleUngroup,
       find: handleFind,
     });
 
     return () => {
       editActions.unregisterHandlers();
     };
-  }, [editActions, handleCut, handleCopy, handlePaste, handleDeleteSelected, handleGroupItems]);
+  }, [
+    editActions,
+    handleCut,
+    handleCopy,
+    handlePaste,
+    handleDeleteSelected,
+    handleGroupItems,
+    handleUngroup,
+  ]);
 
   return {
     // Context menu handlers
@@ -564,6 +524,8 @@ export function useNodeOperations({
     handleCollapseItems,
     handleExpandItems,
     handleGroupItems,
+    handleDuplicate,
+    handleUngroup,
 
     // Context menu action handlers
     handleShowInOutliner,

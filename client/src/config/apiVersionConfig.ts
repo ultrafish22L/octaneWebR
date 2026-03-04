@@ -42,7 +42,7 @@
 /**
  * API version setting injected at build time by Vite.
  *
- * ⭐ TO SWITCH API VERSIONS: Edit api-version.config.js at project root!
+ * TO SWITCH API VERSIONS: Edit api-version.config.js at project root!
  *
  * This ensures both client and server use identical settings.
  * Previous bugs were caused by mismatched configurations.
@@ -184,7 +184,7 @@ export function transformRequestParams(
   // getValueByAttrID / setValueByAttrID transformations
   // -------------------------------------------------------------------------
   if (methodName === 'getValueByAttrID' || methodName === 'setValueByAttrID') {
-    // ✅ NO CLIENT-SIDE TRANSFORMATIONS NEEDED
+    // NO CLIENT-SIDE TRANSFORMATIONS NEEDED
     // Proto verification (2025-01-31): Both Alpha 5 and Beta 2 use identical
     // parameter structures (item_ref, attribute_id, value oneof).
     // Server-side handles objectPtr → item_ref transformation at HTTP boundary.

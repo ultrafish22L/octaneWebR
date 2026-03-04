@@ -222,11 +222,11 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               // Format match context message
               let matchContext = '';
               if (matchType === 'nodeName') {
-                matchContext = '📌 Matched in node name';
+                matchContext = ' Matched in node name';
               } else if (matchType === 'nodeType') {
                 matchContext = '🏷️ Matched in node type';
               } else if (matchType === 'pinName' && matchedPins) {
-                matchContext = `📍 Matched in ${matchedPins.length} pin${matchedPins.length > 1 ? 's' : ''}: ${matchedPins.slice(0, 3).join(', ')}${matchedPins.length > 3 ? '...' : ''}`;
+                matchContext = ` Matched in ${matchedPins.length} pin${matchedPins.length > 1 ? 's' : ''}: ${matchedPins.slice(0, 3).join(', ')}${matchedPins.length > 3 ? '...' : ''}`;
               }
 
               return (

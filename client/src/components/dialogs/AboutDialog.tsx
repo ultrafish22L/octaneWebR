@@ -40,9 +40,11 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       >
         <div className="modal-header">
           <h2 id="about-title">About OctaneRender</h2>
-          <button className="modal-close-button" onClick={onClose} aria-label="Close about dialog">
-            ✕
-          </button>
+          <button
+            className="modal-close-button"
+            onClick={onClose}
+            aria-label="Close about dialog"
+          ></button>
         </div>
 
         <div className="modal-body">

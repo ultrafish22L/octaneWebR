@@ -127,12 +127,12 @@ export function MenuDropdown({
         disabled={isDisabled}
       >
         {item.checked !== undefined && (
-          <span className="context-menu-check">{item.checked ? '✓' : ' '}</span>
+          <span className="context-menu-check">{item.checked ? '' : ' '}</span>
         )}
         {item.icon && <span className="context-menu-icon">{item.icon}</span>}
         <span className="context-menu-label">{item.label}</span>
         {item.shortcut && <span className="context-menu-shortcut">{item.shortcut}</span>}
-        {hasSubmenu && <span className="context-menu-arrow">▶</span>}
+        {hasSubmenu && <span className="context-menu-arrow"></span>}
       </button>
     );
   };

@@ -100,9 +100,9 @@ export function formatShortcut(shortcut: Omit<KeyboardShortcut, 'handler'>): str
   // Detect platform
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-  if (shortcut.ctrl) parts.push(isMac ? '⌘' : 'Ctrl');
+  if (shortcut.ctrl) parts.push(isMac ? '' : 'Ctrl');
   if (shortcut.shift) parts.push('Shift');
-  if (shortcut.alt) parts.push(isMac ? '⌥' : 'Alt');
+  if (shortcut.alt) parts.push(isMac ? '' : 'Alt');
   if (shortcut.meta) parts.push('Meta');
 
   // Capitalize key for display

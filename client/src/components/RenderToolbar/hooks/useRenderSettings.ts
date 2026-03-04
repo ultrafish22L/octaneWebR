@@ -71,21 +71,21 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
         // Initialize clay mode
         const clayModeValue = await client.getClayMode();
         setState(prev => ({ ...prev, clayMode: clayModeValue !== 0 }));
-        Logger.debug('🎨 Clay mode initialized:', clayModeValue === 0 ? 'OFF' : 'ON');
+        Logger.debug('Clay mode initialized:', clayModeValue === 0 ? 'OFF' : 'ON');
 
         // Initialize sub-sampling mode
         const subSampleValue = await client.getSubSampleMode();
         const subSamplingMode =
           subSampleValue === 2 ? '2x2' : subSampleValue === 4 ? '4x4' : 'none';
         setState(prev => ({ ...prev, subSampling: subSamplingMode }));
-        Logger.debug('📐 Sub-sampling initialized:', subSamplingMode.toUpperCase());
+        Logger.debug('Sub-sampling initialized:', subSamplingMode.toUpperCase());
 
         // Initialize viewport resolution lock
         const resolutionLock = await client.getViewportResolutionLock();
         setState(prev => ({ ...prev, viewportResolutionLock: resolutionLock }));
-        Logger.debug('🔒 Viewport resolution lock initialized:', resolutionLock ? 'ON' : 'OFF');
+        Logger.debug('Viewport resolution lock initialized:', resolutionLock ? 'ON' : 'OFF');
       } catch (err) {
-        Logger.error('❌ Failed to initialize render settings:', err);
+        Logger.error('Failed to initialize render settings:', err);
       }
     };
 

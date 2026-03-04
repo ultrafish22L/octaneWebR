@@ -23,7 +23,7 @@ class RequestQueue {
   constructor(maxConcurrent: number = 4) {
     // Use 4 instead of 6 to leave room for other UI requests
     this.maxConcurrent = maxConcurrent;
-    Logger.debug(`🔄 RequestQueue initialized with max ${maxConcurrent} concurrent requests`);
+    Logger.debug(`RequestQueue initialized with max ${maxConcurrent} concurrent requests`);
   }
 
   /**
@@ -83,7 +83,7 @@ class RequestQueue {
     const cleared = this.queue.length;
     this.queue.forEach(req => req.reject(new Error('Queue cleared')));
     this.queue = [];
-    Logger.debug(`🧹 Cleared ${cleared} pending requests from queue`);
+    Logger.debug(`Cleared ${cleared} pending requests from queue`);
   }
 }
 

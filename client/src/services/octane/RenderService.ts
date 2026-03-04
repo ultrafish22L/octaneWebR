@@ -80,7 +80,7 @@ export class RenderService extends BaseService {
       return (asObject(response?.statistics) as Record<string, unknown> | null) ?? null;
     } catch (error) {
       Logger.error(
-        '❌ Failed to get render statistics:',
+        'Failed to get render statistics:',
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -104,7 +104,7 @@ export class RenderService extends BaseService {
       };
     } catch (error) {
       Logger.error(
-        '❌ Failed to get render region:',
+        'Failed to get render region:',
         error instanceof Error ? error.message : String(error)
       );
       return {
@@ -129,17 +129,16 @@ export class RenderService extends BaseService {
         regionMax,
         featherWidth,
       });
-      Logger.debug(`✅ Render region ${active ? 'enabled' : 'disabled'}:`, {
+      Logger.debug(`Render region ${active ? 'enabled' : 'disabled'}:`, {
         regionMin,
         regionMax,
         featherWidth,
       });
     } catch (error) {
       Logger.error(
-        '❌ Failed to set render region:',
+        'Failed to set render region:',
         error instanceof Error ? error.message : String(error)
       );
-      throw error;
     }
   }
 
@@ -165,15 +164,15 @@ export class RenderService extends BaseService {
       const success = asBool(response?.result, false);
 
       if (success) {
-        Logger.debug(`✅ Render target set to node handle: ${nodeHandle || 'null'}`);
+        Logger.debug(`Render target set to node handle: ${nodeHandle || 'null'}`);
       } else {
-        Logger.warn(`⚠️ Failed to set render target (invalid node or wrong type)`);
+        Logger.warn(`Failed to set render target (invalid node or wrong type)`);
       }
 
       return success;
     } catch (error) {
       Logger.error(
-        '❌ Failed to set render target node:',
+        'Failed to set render target node:',
         error instanceof Error ? error.message : String(error)
       );
       return false;
@@ -197,7 +196,7 @@ export class RenderService extends BaseService {
       return handle;
     } catch (error) {
       Logger.error(
-        '❌ Failed to get render target node:',
+        'Failed to get render target node:',
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -217,7 +216,7 @@ export class RenderService extends BaseService {
     try {
       const renderTargetHandle = await this.getRenderTargetNode();
       if (!renderTargetHandle) {
-        Logger.warn('⚠️ No render target found');
+        Logger.warn('No render target found');
         return null;
       }
 
@@ -234,14 +233,14 @@ export class RenderService extends BaseService {
 
       // API returns 0 for disconnected pins
       if (!handle || handle === 0) {
-        Logger.warn('⚠️ No Film Settings node connected to render target');
+        Logger.warn('No Film Settings node connected to render target');
         return null;
       }
 
       return handle;
     } catch (error) {
       Logger.error(
-        '❌ Failed to get Film Settings node:',
+        'Failed to get Film Settings node:',
         error instanceof Error ? error.message : String(error)
       );
       return null;
@@ -268,7 +267,7 @@ export class RenderService extends BaseService {
       return asBool(valueResponse?.bool_value, false);
     } catch (error) {
       Logger.error(
-        '❌ Failed to get viewport resolution lock:',
+        'Failed to get viewport resolution lock:',
         error instanceof Error ? error.message : String(error)
       );
       return false;
@@ -289,14 +288,91 @@ export class RenderService extends BaseService {
       });
     } catch (error) {
       Logger.error(
-        '❌ Failed to set viewport resolution lock:',
+        'Failed to set viewport resolution lock:',
         error instanceof Error ? error.message : String(error)
       );
-      throw error;
     }
   }
 
   getRenderState(): RenderState {
     return this.renderState;
+  }
+
+  async setRenderPriority(priority: number): Promise<void> {
+    await this.apiService.callApi('ApiRenderEngine', 'setRenderPriority', null, { priority });
+  }
+
+  // ==================== Viewport Picking ====================
+
+  async pick(x: number, y: number): Promise<Record<string, unknown>[]> {
+    try {
+      Logger.debug(`Picking at viewport position (${x}, ${y})...`);
+      const response = await this.apiService.callApi('ApiRenderEngine', 'pick', null, {
+        position: { x, y },
+      });
+
+      const intersections = response?.intersections;
+      if (!Array.isArray(intersections) || intersections.length === 0) {
+        Logger.debug('Pick: No intersections found');
+        return [];
+      }
+
+      Logger.debug(`Pick: Found ${intersections.length} intersection(s)`);
+      Logger.debug('Pick result:', intersections);
+      return intersections as Record<string, unknown>[];
+    } catch (error) {
+      Logger.error(
+        'Failed to pick at viewport position:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return [];
+    }
+  }
+
+  async pickWhitePoint(x: number, y: number): Promise<{ x: number; y: number; z: number } | null> {
+    try {
+      const response = await this.apiService.callApi('ApiRenderEngine', 'pickWhitePoint', null, {
+        x,
+        y,
+      });
+      const whitePointObj = asObject(response?.whitePoint);
+      if (response?.result && whitePointObj) {
+        const wp = {
+          x: asNumber(whitePointObj.x, 0),
+          y: asNumber(whitePointObj.y, 0),
+          z: asNumber(whitePointObj.z, 0),
+        };
+        Logger.debug(`White point picked at (${x}, ${y}):`, wp);
+        return wp;
+      } else {
+        Logger.warn('No white point returned from pick');
+        return null;
+      }
+    } catch (error) {
+      Logger.error(
+        'Failed to pick white point:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return null;
+    }
+  }
+
+  async pickSceneInfo(x: number, y: number): Promise<Record<string, unknown>> {
+    try {
+      const response = await this.apiService.callApi('ApiRenderEngine', 'pick', null, {
+        x,
+        y,
+        filterDuplicateMaterialPins: true,
+        intersectionsSize: 10,
+      });
+      Logger.debug(`Scene pick at (${x}, ${y}):`, response);
+      return response;
+    } catch (error) {
+      Logger.error(
+        'Failed to pick scene info:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return {};
+    }
   }
 }

@@ -10,7 +10,10 @@
       "Bash(ping:*)",
       "Bash(npm run lint)",
       "Read(//tmp/**)",
-      "Bash(npm run lint:fix:*)"
+      "Bash(npm run lint:fix:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx lint-staged)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\)\\);d.forEach\\(f=>{if\\(f.messages.length\\){const n=f.filePath.split\\(/[\\\\/]/\\).pop\\(\\);f.messages.forEach\\(m=>console.log\\(n+'':''+m.line+'':''+m.column+'' ''+m.severity+''\\(''+\\([''off'',''warn'',''error''][m.severity]\\)+''\\) ''+m.ruleId\\)\\)}}\\)\")"
     ]
   }
 }

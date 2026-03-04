@@ -16,7 +16,6 @@
 import { Logger } from './utils/Logger';
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-//import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
 import { OctaneProvider, useOctane } from './hooks/useOctane';
 import { useResizablePanels } from './hooks/useResizablePanels';
@@ -39,7 +38,6 @@ import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
 import { SaveRenderDialog } from './components/dialogs/SaveRenderDialog';
 import { ExportPassesDialog } from './components/dialogs/ExportPassesDialog';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
-import { logFeatureFlags, FEATURES } from './config/features';
 import './styles/error-boundary.css';
 
 // Lazy load heavy components
@@ -93,21 +91,17 @@ function AppContent() {
     useResizablePanels();
   const viewportRef = useRef<CallbackRenderViewportHandle>(null);
 
-  // Scene tree change handler
-  const handleSceneTreeChange = (tree: SceneNode[]) => {
+  // Scene tree change handler — stable identity (useCallback) to prevent listener churn
+  // in useSceneTree's event registration useEffect.
+  const handleSceneTreeChange = useCallback((tree: SceneNode[]) => {
     setSceneTree(tree);
-
-    // Update selected node reference from the new tree (not scene.map, which holds
-    // the original mutated-in-place reference and won't differ from selectedNode).
-    // The tree passed here has cloned references via structural sharing, so we find
-    // the matching node in the top-level array to pick up the new reference.
-    if (selectedNode && selectedNode.handle) {
-      const updatedNode = tree.find(n => n.handle === selectedNode.handle) || null;
-      if (updatedNode && updatedNode !== selectedNode) {
-        setSelectedNode(updatedNode);
-      }
-    }
-  };
+    // Use functional updater to avoid capturing selectedNode in closure
+    setSelectedNode(current => {
+      if (!current || !current.handle) return current;
+      const updatedNode = tree.find(n => n.handle === current.handle);
+      return updatedNode && updatedNode !== current ? updatedNode : current;
+    });
+  }, []);
 
   // Node selection handler.
   // Wrapped in useCallback so downstream useEffects don't re-register on every render.
@@ -115,10 +109,20 @@ function AppContent() {
     setSelectedNode(node);
   }, []);
 
+  // Stable callback handlers for LazyNodeGraphEditor
+  const handleRecenterViewReady = useCallback(
+    (cb: (() => void) | null) => setRecenterViewCallback(() => cb),
+    []
+  );
+  const handleAutoLayoutReady = useCallback(
+    (cb: (() => void) | null) => setAutoLayoutCallback(() => cb),
+    []
+  );
+
   // Scene sync state handler
   const handleSyncStateChange = (syncing: boolean) => {
     setIsSyncing(syncing);
-    Logger.debug(syncing ? '🔄 Scene sync started...' : '✅ Scene sync complete');
+    Logger.debug(syncing ? 'Scene sync started...' : 'Scene sync complete');
   };
 
   // Scene refresh handler for MenuBar
@@ -126,47 +130,17 @@ function AppContent() {
     setSceneRefreshTrigger(prev => prev + 1);
   };
 
-  // Add Node button handler - creates geometric plane primitive (reserved for future use)
-  // Commented out - not currently used but kept for future reference
-  /*
-  const handleAddNode = async () => {
-    if (!connected || !client) {
-      Logger.debug('⚠️ Cannot create node: not connected to Octane');
-      return;
-    }
-
-    if (isSyncing) {
-      Logger.debug('⚠️ Cannot create node: scene is currently syncing');
-      return;
-    }
-
-    Logger.debug('➕ Creating geometric plane primitive...');
-    
-    try {
-      const createdHandle = await client.createNode('NT_GEO_PLANE', NodeType.NT_GEO_PLANE);
-      if (createdHandle) {
-        Logger.debug('✅ Geometric plane created with handle:', createdHandle);
-        // Note: UI will auto-refresh via sceneUpdated event listener
-      } else {
-        Logger.error('❌ Failed to create geometric plane');
-      }
-    } catch (error) {
-      Logger.error('❌ Error creating node:', error);
-    }
-  };
-  */
-
   // Copy render to clipboard handler
   const handleCopyToClipboard = async () => {
     if (!viewportRef.current) {
-      Logger.warn('⚠️ Viewport not available for clipboard copy');
+      Logger.warn('Viewport not available for clipboard copy');
       return;
     }
 
     try {
       await viewportRef.current.copyToClipboard();
     } catch (error) {
-      Logger.error('❌ Failed to copy to clipboard:', error);
+      Logger.error('Failed to copy to clipboard:', error);
     }
   };
 
@@ -183,20 +157,18 @@ function AppContent() {
   // Viewport lock change handler
   const handleViewportLockChange = (locked: boolean) => {
     setViewportLocked(locked);
-    Logger.debug(`🔒 App.tsx: Viewport lock ${locked ? 'enabled' : 'disabled'}`);
+    Logger.debug(`App.tsx: Viewport lock ${locked ? 'enabled' : 'disabled'}`);
   };
 
   // Toggle viewport lock handler (for context menu)
   const handleToggleLockViewport = () => {
     setViewportLocked(prev => !prev);
-    Logger.debug(
-      `🔒 App.tsx: Viewport lock toggled to ${!viewportLocked ? 'enabled' : 'disabled'}`
-    );
+    Logger.debug(`App.tsx: Viewport lock toggled to ${!viewportLocked ? 'enabled' : 'disabled'}`);
   };
 
   // Set background image handler (for context menu)
   const handleSetBackgroundImage = () => {
-    Logger.debug('🖼️  Set Background Image - TODO: Implement file picker');
+    Logger.debug('Set Background Image - TODO: Implement file picker');
     // TODO: Implement file picker and set background image
     Logger.warn(
       'Set Background Image: Feature coming soon! This will allow you to set a background image visible through alpha channel.'
@@ -216,23 +188,23 @@ function AppContent() {
       | 'filmRegion'
   ) => {
     setPickingMode(mode);
-    Logger.debug(`🎯 App.tsx: Picking mode changed to: ${mode}`);
+    Logger.debug(`App.tsx: Picking mode changed to: ${mode}`);
   };
 
   // Recenter view handler - resets 2D canvas pan/zoom
   const handleRecenterView = () => {
-    Logger.debug('⌖ App.tsx: Recenter view requested');
+    Logger.debug(' App.tsx: Recenter view requested');
     viewportRef.current?.recenterView();
   };
 
   // Material Database handlers
   const handleMaterialDatabaseOpen = () => {
-    Logger.debug('💎 Opening Material Database');
+    Logger.debug('Opening Material Database');
     setMaterialDatabaseVisible(true);
   };
 
   const handleMaterialDatabaseClose = () => {
-    Logger.debug('💎 Closing Material Database');
+    Logger.debug('Closing Material Database');
     setMaterialDatabaseVisible(false);
   };
 
@@ -244,7 +216,7 @@ function AppContent() {
       ...prev,
       [panel]: !prev[panel],
     }));
-    Logger.debug(`👁️ Toggled ${panel} visibility`);
+    Logger.debug(`Toggled ${panel} visibility`);
   };
 
   // Reset layout handler - resets all panels to visible and default sizes
@@ -265,21 +237,18 @@ function AppContent() {
 
   useEffect(() => {
     // Auto-connect on mount
-    Logger.debug('🚀 OctaneWebR starting...');
-
-    // Log enabled feature flags
-    logFeatureFlags();
+    Logger.debug('OctaneWebR starting...');
 
     connect()
       .then(success => {
         if (success) {
-          Logger.debug('✅ Auto-connected to server');
+          Logger.debug('Auto-connected to server');
         } else {
-          Logger.debug('⚠️ Could not connect to server');
+          Logger.debug('Could not connect to server');
         }
       })
       .catch(error => {
-        Logger.error('❌ App.tsx: connect() threw error:', error);
+        Logger.error('App.tsx: connect() threw error:', error);
       });
   }, [connect]);
 
@@ -301,12 +270,12 @@ function AppContent() {
     if (!client) return;
 
     const handleNodeDeleted = (event: NodeDeletedEvent) => {
-      Logger.debug('🗑️ App: Node deleted event received:', event.handle);
+      Logger.debug('App: Node deleted event received:', event.handle);
 
       // If selected node was deleted, clear selection (Node Inspector behavior)
       setSelectedNode(current => {
         if (current && current.handle === event.handle) {
-          Logger.debug('⚠️ Selected node was deleted - clearing selection');
+          Logger.debug('Selected node was deleted - clearing selection');
           return null;
         }
         return current;
@@ -314,7 +283,7 @@ function AppContent() {
     };
 
     const handleRenderFailure = (data: unknown) => {
-      Logger.error('❌ Render failure detected:', data);
+      Logger.error('Render failure detected:', data);
       // TODO: Show user-facing error notification
       Logger.error(
         'Render Failed: Octane encountered an error during rendering. Check console for details.'
@@ -322,7 +291,7 @@ function AppContent() {
     };
 
     const handleProjectManagerChanged = (data: unknown) => {
-      Logger.debug('📁 Project manager changed:', data);
+      Logger.debug('Project manager changed:', data);
       // Refresh scene tree when project changes
       setSceneRefreshTrigger(prev => prev + 1);
     };
@@ -334,7 +303,7 @@ function AppContent() {
     client.on('OnProjectManagerChanged', handleProjectManagerChanged);
 
     Logger.debug(
-      '✅ Listening for callback events (nodeDeleted, OnRenderFailure, OnProjectManagerChanged)'
+      'Listening for callback events (nodeDeleted, OnRenderFailure, OnProjectManagerChanged)'
     );
 
     // Cleanup listener on unmount
@@ -342,7 +311,7 @@ function AppContent() {
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('OnRenderFailure', handleRenderFailure);
       client.off('OnProjectManagerChanged', handleProjectManagerChanged);
-      Logger.debug('🔇 Stopped listening for callback events');
+      Logger.debug('Stopped listening for callback events');
     };
   }, [client]); // Only re-register when client changes, not on every selection
 
@@ -395,15 +364,11 @@ function AppContent() {
     client.on('nodeDeleted', handleNodeDeletedStatus);
     client.on('connection:changed', handleConnectionChanged);
 
-    // Progressive loading status listener
-    if (FEATURES.PROGRESSIVE_LOADING_P) {
-      const handleLevel0Complete = (data: { nodes?: SceneNode[] }) => {
-        setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
-      };
-      client.on('scene:level0Complete', handleLevel0Complete);
-    }
+    const handleLevel0Complete = (data: { nodes?: SceneNode[] }) => {
+      setTemporaryStatus(`Structure loaded: ${data.nodes?.length || 0} nodes`, 2000);
+    };
+    client.on('scene:level0Complete', handleLevel0Complete);
 
-    /*
     return () => {
       client.off('scene:buildStart', handleBuildStart);
       client.off('scene:buildProgress', handleBuildProgress);
@@ -411,24 +376,26 @@ function AppContent() {
       client.off('nodeAdded', handleNodeAdded);
       client.off('nodeDeleted', handleNodeDeletedStatus);
       client.off('connection:changed', handleConnectionChanged);
+      client.off('scene:level0Complete', handleLevel0Complete);
     };
- */
   }, [client, setStatusMessage, setTemporaryStatus]);
 
   return (
     <div className="app-container">
       {/* Top Menu Bar */}
       <header className="menu-bar">
-        <MenuBar
-          onSceneRefresh={handleSceneRefresh}
-          onMaterialDatabaseOpen={handleMaterialDatabaseOpen}
-          panelVisibility={panelVisibility}
-          onTogglePanelVisibility={handleTogglePanelVisibility}
-          onResetLayout={handleResetLayout}
-        />
+        <ErrorBoundary>
+          <MenuBar
+            onSceneRefresh={handleSceneRefresh}
+            onMaterialDatabaseOpen={handleMaterialDatabaseOpen}
+            panelVisibility={panelVisibility}
+            onTogglePanelVisibility={handleTogglePanelVisibility}
+            onResetLayout={handleResetLayout}
+          />
+        </ErrorBoundary>
 
         {/* Sync Indicator & Connection Status */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="header-indicators">
           <SyncIndicator syncing={isSyncing} />
           <ConnectionStatus />
         </div>
@@ -502,10 +469,10 @@ function AppContent() {
                   1:1
                 </button>
                 <button className="viewport-btn" title="Zoom In">
-                  🔍+
+                  +
                 </button>
                 <button className="viewport-btn" title="Zoom Out">
-                  🔍-
+                  -
                 </button>
               </div>
             </div>
@@ -534,15 +501,17 @@ function AppContent() {
             </div>
 
             {/* Render Toolbar - Official Octane viewport controls */}
-            <RenderToolbar
-              onToggleWorldCoord={() => setShowWorldCoord(!showWorldCoord)}
-              onCopyToClipboard={handleCopyToClipboard}
-              onSaveRender={handleSaveRender}
-              onExportPasses={handleExportPasses}
-              onRecenterView={handleRecenterView}
-              onViewportLockChange={handleViewportLockChange}
-              onPickingModeChange={handlePickingModeChange}
-            />
+            <ErrorBoundary>
+              <RenderToolbar
+                onToggleWorldCoord={() => setShowWorldCoord(!showWorldCoord)}
+                onCopyToClipboard={handleCopyToClipboard}
+                onSaveRender={handleSaveRender}
+                onExportPasses={handleExportPasses}
+                onRecenterView={handleRecenterView}
+                onViewportLockChange={handleViewportLockChange}
+                onPickingModeChange={handlePickingModeChange}
+              />
+            </ErrorBoundary>
           </section>
         )}
 
@@ -596,14 +565,16 @@ function AppContent() {
               </div>
               <div className="node-graph-container">
                 {/* Node Graph Toolbar - Figure 10 vertical buttons, docked left */}
-                <NodeGraphToolbar
-                  gridVisible={gridVisible}
-                  setGridVisible={setGridVisible}
-                  snapToGrid={snapToGrid}
-                  setSnapToGrid={setSnapToGrid}
-                  onRecenterView={recenterViewCallback || undefined}
-                  onAutoLayout={autoLayoutCallback || undefined}
-                />
+                <ErrorBoundary>
+                  <NodeGraphToolbar
+                    gridVisible={gridVisible}
+                    setGridVisible={setGridVisible}
+                    snapToGrid={snapToGrid}
+                    setSnapToGrid={setSnapToGrid}
+                    onRecenterView={recenterViewCallback || undefined}
+                    onAutoLayout={autoLayoutCallback || undefined}
+                  />
+                </ErrorBoundary>
                 <div className="node-graph-tabgraph">
                   {/* Node Graph Tabs */}
                   <div className="node-graph-tabs">
@@ -622,8 +593,8 @@ function AppContent() {
                         setGridVisible={setGridVisible}
                         snapToGrid={snapToGrid}
                         setSnapToGrid={setSnapToGrid}
-                        onRecenterViewReady={callback => setRecenterViewCallback(() => callback)}
-                        onAutoLayoutReady={callback => setAutoLayoutCallback(() => callback)}
+                        onRecenterViewReady={handleRecenterViewReady}
+                        onAutoLayoutReady={handleAutoLayoutReady}
                       />
                     </Suspense>
                   </ErrorBoundary>

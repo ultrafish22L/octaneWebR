@@ -74,7 +74,7 @@ function ParameterControlComponent({
   const nodeName = node.pinInfo?.staticLabel || node.name;
   if (nodeName.toLowerCase().includes('stereo')) {
     Logger.debugV(
-      '🔧 ParameterControl RENDERING:',
+      ' ParameterControl RENDERING:',
       JSON.stringify(
         {
           nodeName,

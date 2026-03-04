@@ -14,19 +14,27 @@ interface PanelSizes {
   bottom: number; // Calculated from window height - top
 }
 
+// Layout constants
+const MENU_BAR_HEIGHT = 30;
+const STATUS_BAR_HEIGHT = 25;
+const VIEWPORT_HEIGHT_RATIO = 0.6;
+const MIN_OUTLINER_WIDTH = 150;
+const MIN_INSPECTOR_WIDTH = 250;
+const MIN_CENTER_WIDTH = 400;
+const MIN_VIEWPORT_HEIGHT = 200;
+const MIN_GRAPH_HEIGHT = 150;
+
 const DEFAULT_PANEL_SIZES: PanelSizes = {
-  left: 260, // Scene Outliner width
-  center: 0, // Will be calculated
-  right: 550, // Node Inspector width
-  top: 0, // Will be calculated as 60% of window height on mount
-  bottom: 0, // Will be calculated from window height - top
+  left: 260,
+  center: 0,
+  right: 550,
+  top: 0,
+  bottom: 0,
 };
 
-// Calculate initial top panel height as 60% of available height
 const getInitialTopHeight = (): number => {
-  // Subtract menu bar (30px) and status bar (25px) from window height
-  const availableHeight = window.innerHeight - 30 - 25;
-  return Math.floor(availableHeight * 0.6); // 60% for render viewport
+  const availableHeight = window.innerHeight - MENU_BAR_HEIGHT - STATUS_BAR_HEIGHT;
+  return Math.floor(availableHeight * VIEWPORT_HEIGHT_RATIO);
 };
 
 export function useResizablePanels() {
@@ -50,7 +58,7 @@ export function useResizablePanels() {
 
   // Handle mouse down on splitter
   const handleSplitterMouseDown = useCallback((type: 'left' | 'right' | 'top') => {
-    Logger.debug(`🖱️ Splitter drag started: ${type}`);
+    Logger.debug(`Splitter drag started: ${type}`);
     setIsDragging(true);
     setDragType(type);
     document.body.style.cursor = type === 'top' ? 'row-resize' : 'col-resize';
@@ -74,10 +82,10 @@ export function useResizablePanels() {
 
         if (dragType === 'left') {
           // Dragging left boundary (between Scene Outliner and center)
-          const minLeft = 150;
-          const maxLeft = containerRect.width - prev.right - TOTAL_SPLITTERS - 400;
+          const minLeft = MIN_OUTLINER_WIDTH;
+          const maxLeft = containerRect.width - prev.right - TOTAL_SPLITTERS - MIN_CENTER_WIDTH;
           const newLeft = Math.max(minLeft, Math.min(maxLeft, mouseX));
-          Logger.debug(`📏 Left panel resize: ${newLeft}px (mouse: ${mouseX}px)`);
+          Logger.debug(`Left panel resize: ${newLeft}px (mouse: ${mouseX}px)`);
 
           return {
             ...prev,
@@ -85,11 +93,11 @@ export function useResizablePanels() {
           };
         } else if (dragType === 'right') {
           // Dragging right boundary (between center and Node Inspector)
-          const minRight = 250;
-          const maxRight = containerRect.width - prev.left - TOTAL_SPLITTERS - 400;
+          const minRight = MIN_INSPECTOR_WIDTH;
+          const maxRight = containerRect.width - prev.left - TOTAL_SPLITTERS - MIN_CENTER_WIDTH;
           const distanceFromRight = containerRect.width - mouseX;
           const newRight = Math.max(minRight, Math.min(maxRight, distanceFromRight));
-          Logger.debug(`📏 Right panel resize: ${newRight}px (mouse: ${mouseX}px)`);
+          Logger.debug(`Right panel resize: ${newRight}px (mouse: ${mouseX}px)`);
 
           return {
             ...prev,
@@ -97,10 +105,10 @@ export function useResizablePanels() {
           };
         } else if (dragType === 'top') {
           // Dragging top/bottom boundary (between top row and Node Graph Editor)
-          const minTop = 200;
-          const maxTop = containerRect.height - 150; // Leave room for node graph
+          const minTop = MIN_VIEWPORT_HEIGHT;
+          const maxTop = containerRect.height - MIN_GRAPH_HEIGHT;
           const newTop = Math.max(minTop, Math.min(maxTop, mouseY));
-          Logger.debug(`📏 Top row resize: ${newTop}px (mouse: ${mouseY}px)`);
+          Logger.debug(`Top row resize: ${newTop}px (mouse: ${mouseY}px)`);
 
           return {
             ...prev,
@@ -113,7 +121,7 @@ export function useResizablePanels() {
     };
 
     const handleMouseUp = () => {
-      Logger.debug('🖱️ Splitter drag ended');
+      Logger.debug('Splitter drag ended');
       setIsDragging(false);
       setDragType(null);
       document.body.style.cursor = '';

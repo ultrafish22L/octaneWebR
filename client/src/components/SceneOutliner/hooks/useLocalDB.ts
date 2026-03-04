@@ -67,7 +67,7 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
 
         category.loaded = true;
       } catch (error) {
-        Logger.error('❌ Failed to load category children:', error);
+        Logger.error('Failed to load category children:', error);
       }
     },
     [client]
@@ -81,7 +81,7 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
     try {
       const rootHandle = await client.getLocalDBRoot();
       if (!rootHandle) {
-        Logger.warn('⚠️ LocalDB not available or empty');
+        Logger.warn('LocalDB not available or empty');
         setLocalDBRoot(null);
         return;
       }
@@ -98,9 +98,9 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
       // Load root level categories and packages
       await loadCategoryChildren(root);
       setLocalDBRoot(root);
-      Logger.debug('✅ LocalDB loaded:', root);
+      Logger.debug('LocalDB loaded:', root);
     } catch (error) {
-      Logger.error('❌ Failed to load LocalDB:', error);
+      Logger.error('Failed to load LocalDB:', error);
       setLocalDBRoot(null);
     } finally {
       setLocalDBLoading(false);
@@ -117,14 +117,14 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
         const success = await client.loadPackage(pkg.handle);
         if (success) {
           alert(
-            `✅ Package "${pkg.name}" loaded successfully!\n\nCheck the Node Graph to see the loaded nodes.`
+            ` Package "${pkg.name}" loaded successfully!\n\nCheck the Node Graph to see the loaded nodes.`
           );
         } else {
-          alert(`❌ Failed to load package "${pkg.name}"`);
+          alert(` Failed to load package "${pkg.name}"`);
         }
       } catch (error) {
-        Logger.error('❌ Failed to load package:', error);
-        alert(`❌ Error loading package: ${error}`);
+        Logger.error('Failed to load package:', error);
+        alert(` Error loading package: ${error}`);
       }
     },
     [client]

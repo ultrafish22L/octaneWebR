@@ -1,326 +1,173 @@
 /**
  * Centralized logging utility for OctaneWebR
- * Provides environment-aware logging with configurable log levels
  *
- * DEBUG_MODE controls server-side file logging to /tmp/octaneWebR_client.log
- * Set to true to enable, false to disable
+ * Log levels: NONE < ERROR < WARN < INFO < DEBUG < DEBUGV
+ * Set level to control verbosity — higher level = more verbose output.
+ * Errors and warnings use native browser console coloring.
+ *
+ * Server-side file logging (batched to /api/log) is enabled in dev mode.
  */
 /* eslint-disable no-console */
 
-// Debug mode — when true, batches logs and flushes them to /api/log for server-side file logging.
-// Set to false for production builds to avoid unnecessary network traffic.
-const DEBUG_MODE = true;
+const DEBUG_MODE = import.meta.env.DEV;
 
 export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3,
-  DEBUGV = 4,
-  NONE = 5,
-}
-
-export interface LoggerConfig {
-  level: LogLevel;
-  prefix?: string;
-  timestamp?: boolean;
-  colors?: boolean;
-}
-
-interface LogEntry {
-  level: string;
-  message: string;
-  timestamp: number;
+  NONE = 0, // Silent — suppress all output
+  ERROR = 1, // Errors — failures requiring attention
+  WARN = 2, // Warnings — degraded state, fallbacks
+  INFO = 3, // Normal operation — startup, connection events
+  DEBUG = 4, // Standard debug — connection state, scene operations
+  DEBUGV = 5, // Verbose debug — high-frequency, API calls, proto details
 }
 
 class LoggerInstance {
-  private config: LoggerConfig;
-  private readonly isDevelopment: boolean;
-  private logBuffer: LogEntry[] = [];
+  level: LogLevel;
+  private logBuffer: { level: string; message: string }[] = [];
   private flushInterval: number | null = null;
-  private readonly MAX_BUFFER_SIZE = 100;
-  private readonly FLUSH_INTERVAL_MS = 1000;
 
   constructor() {
-    // Detect environment
-    this.isDevelopment = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-
-    // Default configuration
-    this.config = {
-      level: this.isDevelopment ? LogLevel.INFO : LogLevel.WARN,
-      prefix: '[OctaneWebR]',
-      timestamp: this.isDevelopment,
-      colors: true,
-    };
-
+    const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
+    this.level = isDev ? LogLevel.INFO : LogLevel.WARN;
+    // Clear server log file on startup
     try {
-      // Send to server endpoint (handled by vite-plugin-octane-grpc.ts in dev mode)
-      fetch('/api/logClear', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      fetch('/api/logClear', { method: 'POST' });
     } catch {
-      // Silently fail if endpoint not available (e.g., production mode)
-      // Don't log to avoid infinite loop
+      /* noop */
     }
 
-    // Start flush timer if DEBUG_MODE is enabled
     if (DEBUG_MODE) {
-      this.startFlushTimer();
+      this.flushInterval = setInterval(() => this.flush(), 1000) as unknown as number;
     }
   }
 
-  /**
-   * Configure logger settings
-   */
-  configure(config: Partial<LoggerConfig>): void {
-    this.config = { ...this.config, ...config };
+  // ── Level checks ────────────────────────────────────────────────
+
+  /** Verbose debug — API calls, proto resolution, high-frequency data */
+  debugV(...args: unknown[]): void {
+    if (this.level < LogLevel.DEBUGV) return;
+    console.log(...args);
+    this.buffer('debugv', args);
   }
 
-  /**
-   * Get current log level
-   */
-  getLevel(): LogLevel {
-    return this.config.level;
+  /** Standard debug — state changes, scene operations */
+  debug(...args: unknown[]): void {
+    if (this.level < LogLevel.DEBUG) return;
+    console.log(...args);
+    this.buffer('debug', args);
   }
 
-  /**
-   * Set log level
-   */
+  /** Info — normal operation events */
+  info(...args: unknown[]): void {
+    if (this.level < LogLevel.INFO) return;
+    console.log(...args);
+    this.buffer('info', args);
+  }
+
+  /** Warning — degraded state, fallbacks (browser renders yellow) */
+  warn(...args: unknown[]): void {
+    if (this.level < LogLevel.WARN) return;
+    console.warn(...args);
+    this.buffer('warn', args);
+  }
+
+  /** Error — failures (browser renders red) */
+  error(...args: unknown[]): void {
+    if (this.level < LogLevel.ERROR) return;
+    console.error(...args);
+    this.buffer('error', args);
+  }
+
+  // ── Aliases ─────────────────────────────────────────────────────
+
+  /** API call logging (verbose) */
+  api(service: string, method: string, handle?: unknown): void {
+    if (this.level < LogLevel.DEBUGV) return;
+    const h = handle ? ` (handle: ${handle})` : '';
+    this.debugV(`${service}.${method}${h}`);
+  }
+
+  /** Network events (debug) */
+  network(...args: unknown[]): void {
+    this.debug(...args);
+  }
+
+  /** Scene operations (debug) */
+  scene(...args: unknown[]): void {
+    this.debug(...args);
+  }
+
+  /** Render events (debug) */
+  render(...args: unknown[]): void {
+    this.debug(...args);
+  }
+
+  /** Console group (debug) */
+  group(label: string): void {
+    if (this.level < LogLevel.DEBUG) return;
+    console.group(label);
+  }
+
+  groupEnd(): void {
+    if (this.level < LogLevel.DEBUG) return;
+    console.groupEnd();
+  }
+
+  // ── Configuration ───────────────────────────────────────────────
+
   setLevel(level: LogLevel): void {
-    this.config.level = level;
+    this.level = level;
+  }
+  getLevel(): LogLevel {
+    return this.level;
   }
 
-  /**
-   * Start the timer to flush logs to server
-   */
-  private startFlushTimer(): void {
-    if (this.flushInterval) return;
-
-    this.flushInterval = setInterval(() => {
-      this.flushLogs();
-    }, this.FLUSH_INTERVAL_MS) as unknown as number;
+  destroy(): void {
+    if (this.flushInterval) clearInterval(this.flushInterval);
+    this.flush();
   }
 
-  /**
-   * Stop the flush timer
-   */
-  private stopFlushTimer(): void {
-    if (this.flushInterval) {
-      clearInterval(this.flushInterval);
-      this.flushInterval = null;
-    }
-  }
+  // ── Server file logging ─────────────────────────────────────────
 
-  /**
-   * Add log entry to buffer for server-side file logging
-   */
-  private addToBuffer(level: string, ...args: unknown[]): void {
+  private buffer(level: string, args: unknown[]): void {
     if (!DEBUG_MODE) return;
 
-    // Format args to string
     const message = args
-      .map(arg => {
-        if (typeof arg === 'string') return arg;
-        if (arg instanceof Error) return arg.stack || arg.message;
+      .map(a => {
+        if (typeof a === 'string') return a;
+        if (a instanceof Error) return a.stack || a.message;
         try {
-          return JSON.stringify(arg);
+          return JSON.stringify(a);
         } catch {
-          return String(arg);
+          return String(a);
         }
       })
       .join(' ');
 
-    this.logBuffer.push({
-      level,
-      message,
-      timestamp: Date.now(),
-    });
+    this.logBuffer.push({ level, message });
 
-    // Flush immediately if buffer is full
-    if (this.logBuffer.length >= this.MAX_BUFFER_SIZE) {
-      this.flushLogs();
-    }
+    if (this.logBuffer.length >= 100) this.flush();
   }
 
-  /**
-   * Flush log buffer to server endpoint
-   */
-  private async flushLogs(): Promise<void> {
+  private async flush(): Promise<void> {
     if (this.logBuffer.length === 0) return;
 
-    const logsToSend = [...this.logBuffer];
+    const batch = this.logBuffer;
     this.logBuffer = [];
 
     try {
-      // Send to server endpoint (handled by vite-plugin-octane-grpc.ts in dev mode)
       await fetch('/api/log', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          level: logsToSend[logsToSend.length - 1].level,
-          message: logsToSend.map(log => `[${log.level.toUpperCase()}] ${log.message}`).join('\n'),
+          level: batch[batch.length - 1].level,
+          message: batch.map(e => e.message).join('\n'),
         }),
       });
     } catch {
-      // Silently fail if endpoint not available (e.g., production mode)
-      // Don't log to avoid infinite loop
-    }
-  }
-
-  /**
-   * Clean up resources
-   */
-  destroy(): void {
-    this.stopFlushTimer();
-    this.flushLogs(); // Final flush
-  }
-
-  /**
-   * Format log message with prefix and timestamp
-   */
-  private formatMessage(icon: string, ...args: unknown[]): unknown[] {
-    const parts: string[] = [];
-
-    if (this.config.prefix) {
-      parts.push(this.config.prefix);
-    }
-
-    if (this.config.timestamp) {
-      const time = new Date().toLocaleTimeString();
-      parts.push(`[${time}]`);
-    }
-
-    if (this.config.colors) {
-      parts.push(icon);
-    }
-
-    const prefix = parts.length > 0 ? parts.join(' ') : '';
-    return prefix ? [prefix, ...args] : args;
-  }
-
-  /**
-   * Debug Verbose level logging (development only)
-   */
-  debugV(...args: unknown[]): void {
-    if (this.config.level === LogLevel.DEBUGV) {
-      console.log(...this.formatMessage('🔍', ...args));
-      this.addToBuffer('debug', ...args);
-    }
-  }
-
-  /**
-   * Debug level logging (development only)
-   */
-  debug(...args: unknown[]): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.log(...this.formatMessage('🔍', ...args));
-      this.addToBuffer('debug', ...args);
-    }
-  }
-
-  /**
-   * Info level logging
-   */
-  info(...args: unknown[]): void {
-    if (this.config.level <= LogLevel.INFO) {
-      console.log(...this.formatMessage('ℹ️', ...args));
-      this.addToBuffer('info', ...args);
-    }
-  }
-
-  /**
-   * Success logging (special case of info)
-   */
-  success(...args: unknown[]): void {
-    if (this.config.level <= LogLevel.INFO) {
-      console.log(...this.formatMessage('✅', ...args));
-      this.addToBuffer('info', ...args);
-    }
-  }
-
-  /**
-   * Warning level logging
-   */
-  warn(...args: unknown[]): void {
-    if (this.config.level <= LogLevel.WARN) {
-      console.warn(...this.formatMessage('⚠️', ...args));
-      this.addToBuffer('warn', ...args);
-    }
-  }
-
-  /**
-   * Error level logging
-   */
-  error(...args: unknown[]): void {
-    if (this.config.level <= LogLevel.ERROR) {
-      console.error(...this.formatMessage('❌', ...args));
-      this.addToBuffer('error', ...args);
-    }
-  }
-
-  /**
-   * Group logging (for nested logs)
-   */
-  group(label: string): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.group(...this.formatMessage('📁', label));
-    }
-  }
-
-  /**
-   * End group logging
-   */
-  groupEnd(): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.groupEnd();
-    }
-  }
-
-  /**
-   * API call logging (specialized debug)
-   */
-  api(service: string, method: string, handle?: unknown): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      const handleStr = handle ? `(handle: ${handle})` : '';
-      this.debugV(`📤 ${service}.${method}`, handleStr);
-    }
-  }
-
-  /**
-   * Network logging (specialized debug)
-   */
-  network(message: string, ...args: unknown[]): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.log(...this.formatMessage('📡', message, ...args));
-    }
-  }
-
-  /**
-   * Scene logging (specialized debug)
-   */
-  scene(message: string, ...args: unknown[]): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.log(...this.formatMessage('🌲', message, ...args));
-    }
-  }
-
-  /**
-   * Render logging (specialized debug)
-   */
-  render(message: string, ...args: unknown[]): void {
-    if (this.config.level <= LogLevel.DEBUG) {
-      console.log(...this.formatMessage('🎬', message, ...args));
+      /* noop */
     }
   }
 }
 
-// Export singleton instance
 export const Logger = new LoggerInstance();
-
-// Export default for convenience
 export default Logger;

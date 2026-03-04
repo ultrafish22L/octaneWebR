@@ -85,11 +85,11 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
         { materialId, materialName, dbType: activeTab },
         {
           onSuccess: () => {
-            Logger.debug(`✅ Download complete: ${materialName}`);
+            Logger.debug(`Download complete: ${materialName}`);
             // TODO: Show success notification
           },
           onError: (error: unknown) => {
-            Logger.error(`❌ Download failed: ${materialName}`, error);
+            Logger.error(`Download failed: ${materialName}`, error);
             // Error is already logged by the mutation hook
           },
         }
@@ -133,9 +133,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
       >
         <div className="material-database-header">
           <h2>Material Database</h2>
-          <button className="close-button" onClick={onClose} title="Close">
-            ✕
-          </button>
+          <button className="close-button" onClick={onClose} title="Close"></button>
         </div>
 
         {/* Tab Buttons: LiveDB / LocalDB */}

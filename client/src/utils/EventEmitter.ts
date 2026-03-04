@@ -32,7 +32,17 @@ export class EventEmitter {
   emit(event: string, ...args: unknown[]): void {
     const handlers = this.events.get(event);
     if (handlers) {
-      handlers.forEach(handler => (handler as (...a: unknown[]) => void)(...args));
+      // Iterate a copy so handlers that call off() during emit don't skip entries.
+      // Each handler is wrapped in try-catch so one failing listener doesn't
+      // prevent the remaining listeners from executing.
+      const snapshot = [...handlers];
+      for (const handler of snapshot) {
+        try {
+          (handler as (...a: unknown[]) => void)(...args);
+        } catch (error) {
+          console.error(`EventEmitter: handler error for "${event}":`, error);
+        }
+      }
     }
   }
 

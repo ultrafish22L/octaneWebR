@@ -43,7 +43,7 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
     try {
       const rawCategories = await client.getLiveDBCategories();
       if (!rawCategories || rawCategories.length === 0) {
-        Logger.warn('⚠️ LiveDB not available or empty');
+        Logger.warn('LiveDB not available or empty');
         setLiveDBCategories([]);
         return;
       }
@@ -63,10 +63,10 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
 
       setLiveDBCategories(categories);
       Logger.debug(
-        `✅ LiveDB loaded with ${categories.length} root categories (${rawCategories.length} total)`
+        `LiveDB loaded with ${categories.length} root categories (${rawCategories.length} total)`
       );
     } catch (error) {
-      Logger.error('❌ Failed to load LiveDB:', error);
+      Logger.error('Failed to load LiveDB:', error);
       setLiveDBCategories([]);
     } finally {
       setLiveDBLoading(false);
@@ -96,7 +96,7 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
           category.materials = [...materialsWithPreviews, ...materials.slice(10)];
           category.loaded = true;
         } catch (error) {
-          Logger.error(`❌ Failed to load materials for category ${category.name}:`, error);
+          Logger.error(`Failed to load materials for category ${category.name}:`, error);
         }
       }
 
@@ -117,14 +117,14 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
         const materialHandle = await client.downloadLiveDBMaterial(material.id);
         if (materialHandle) {
           alert(
-            `✅ Material "${material.name}" downloaded successfully!\n\nCheck the Node Graph to see the material nodes.`
+            ` Material "${material.name}" downloaded successfully!\n\nCheck the Node Graph to see the material nodes.`
           );
         } else {
-          alert(`❌ Failed to download material "${material.name}"`);
+          alert(` Failed to download material "${material.name}"`);
         }
       } catch (error) {
-        Logger.error('❌ Failed to download material:', error);
-        alert(`❌ Error downloading material: ${error}`);
+        Logger.error('Failed to download material:', error);
+        alert(` Error downloading material: ${error}`);
       }
     },
     [client]

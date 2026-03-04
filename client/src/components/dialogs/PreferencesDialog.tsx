@@ -50,9 +50,7 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
             className="preferences-close-button"
             onClick={onClose}
             aria-label="Close preferences"
-          >
-            ✕
-          </button>
+          ></button>
         </div>
 
         <div className="preferences-content">

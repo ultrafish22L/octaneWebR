@@ -12,12 +12,12 @@ import {
   CameraService,
   RenderService,
   DeviceService,
-  ViewportService,
   SceneService,
   NodeService,
   MaterialDatabaseService,
   RenderExportService,
-  SceneServiceP,
+  ItemService,
+  ProjectService,
   RenderState,
   SceneNode,
   Scene,
@@ -28,7 +28,7 @@ import {
   Material,
   CameraState,
 } from './octane';
-import { FEATURES } from '../config/features';
+import type { ParameterRawValue, ParameterValue, ReferencePackageSettings } from './octane';
 
 // Re-export types for backward compatibility
 export type {
@@ -41,6 +41,9 @@ export type {
   MaterialCategory,
   Material,
   CameraState,
+  ParameterRawValue,
+  ParameterValue,
+  ReferencePackageSettings,
 };
 
 /**
@@ -56,28 +59,25 @@ export class OctaneClient extends EventEmitter {
   private cameraService: CameraService;
   private renderService: RenderService;
   private deviceService: DeviceService;
-  private viewportService: ViewportService;
   private sceneService: SceneService;
   private nodeService: NodeService;
   private materialDatabaseService: MaterialDatabaseService;
   private renderExportService: RenderExportService;
-
-  // Progressive loading service
-  private sceneServiceP: SceneServiceP;
+  private itemService: ItemService;
+  private projectService: ProjectService;
 
   constructor(serverUrl?: string) {
     super();
     this.serverUrl = serverUrl || window.location.origin;
-    Logger.debug('🎬 OctaneClient initialized:', this.serverUrl);
+    Logger.debug('OctaneClient initialized:', this.serverUrl);
 
-    // Initialize services
+    // Initialize services (progressive events enabled by default)
     this.apiService = new ApiService(this, this.serverUrl);
     this.connectionService = new ConnectionService(this, this.serverUrl, this.apiService);
     this.cameraService = new CameraService(this, this.serverUrl, this.apiService);
     this.renderService = new RenderService(this, this.serverUrl, this.apiService);
     this.deviceService = new DeviceService(this, this.serverUrl, this.apiService);
-    this.viewportService = new ViewportService(this, this.serverUrl, this.apiService);
-    this.sceneService = new SceneService(this, this.serverUrl, this.apiService);
+    this.sceneService = new SceneService(this, this.serverUrl, this.apiService, true);
     this.nodeService = new NodeService(this, this.serverUrl, this.apiService, this.sceneService);
     this.materialDatabaseService = new MaterialDatabaseService(
       this,
@@ -86,8 +86,8 @@ export class OctaneClient extends EventEmitter {
       this.sceneService
     );
     this.renderExportService = new RenderExportService(this, this.serverUrl, this.apiService);
-
-    this.sceneServiceP = new SceneServiceP(this, this.serverUrl, this.apiService);
+    this.itemService = new ItemService(this, this.serverUrl, this.apiService);
+    this.projectService = new ProjectService(this, this.serverUrl, this.apiService);
   }
 
   // ==================== Connection Methods ====================
@@ -111,6 +111,10 @@ export class OctaneClient extends EventEmitter {
 
   // ==================== API Methods ====================
 
+  /**
+   * @internal Transport escape hatch — do not call from UI code.
+   * Use the typed service methods on this class instead.
+   */
   async callApi(
     service: string,
     method: string,
@@ -160,31 +164,12 @@ export class OctaneClient extends EventEmitter {
 
   // ==================== Scene Methods ====================
 
-  /**
-   * Build the scene tree. Routes to SceneServiceP (Progressive) when enabled,
-   * or SceneService (traditional) otherwise.
-   * When called with a handle, performs an incremental single-node update via SceneService.
-   */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
-    // Incremental update (add single node) - always use traditional service
-    if (newNodeHandle !== undefined) {
-      return this.sceneService.buildSceneTree(newNodeHandle);
-    }
-
-    if (FEATURES.PROGRESSIVE_LOADING_P) {
-      return this.sceneServiceP.buildSceneTree();
-    }
-
-    return this.sceneService.buildSceneTree();
+    return this.sceneService.buildSceneTree(newNodeHandle);
   }
 
-  /**
-   * Abort current scene loading operation.
-   */
   abortSceneLoad(): void {
-    if (FEATURES.PROGRESSIVE_LOADING_P) {
-      this.sceneServiceP.abort();
-    }
+    this.sceneService.abort();
   }
 
   /**
@@ -211,15 +196,7 @@ export class OctaneClient extends EventEmitter {
     return this.sceneService.setNodeVisibility(handle, visible);
   }
 
-  /**
-   * Get current scene from the active loading service.
-   * Falls back to SceneService when SceneServiceP hasn't loaded anything yet
-   * (e.g., the first call before progressive loading completes).
-   */
   getScene(): Scene {
-    if (FEATURES.PROGRESSIVE_LOADING_P && this.sceneServiceP.getScene().tree.length > 0) {
-      return this.sceneServiceP.getScene();
-    }
     return this.sceneService.getScene();
   }
 
@@ -358,15 +335,46 @@ export class OctaneClient extends EventEmitter {
   // ==================== Viewport Methods ====================
 
   async pick(x: number, y: number): Promise<Record<string, unknown>[]> {
-    return this.viewportService.pick(x, y);
+    return this.renderService.pick(x, y);
   }
 
   async pickWhitePoint(x: number, y: number): Promise<{ x: number; y: number; z: number } | null> {
-    return this.viewportService.pickWhitePoint(x, y);
+    return this.renderService.pickWhitePoint(x, y);
   }
 
   async pickSceneInfo(x: number, y: number): Promise<Record<string, unknown>> {
-    return this.viewportService.pickSceneInfo(x, y);
+    return this.renderService.pickSceneInfo(x, y);
+  }
+
+  async setRenderPriority(priority: number): Promise<void> {
+    return this.renderService.setRenderPriority(priority);
+  }
+
+  // ==================== Item Methods ====================
+
+  async getParameterValue(handle: string, expectedType: number): Promise<ParameterValue | null> {
+    return this.itemService.getParameterValue(handle, expectedType);
+  }
+
+  async setParameterValue(
+    handle: string,
+    expectedType: number,
+    newValue: ParameterRawValue
+  ): Promise<void> {
+    return this.itemService.setParameterValue(handle, expectedType, newValue);
+  }
+
+  async reloadFileNode(handle: string): Promise<void> {
+    return this.itemService.reloadFileNode(handle);
+  }
+
+  // ==================== Project Methods ====================
+
+  async saveProjectAsReferencePackage(
+    path: string,
+    settings: ReferencePackageSettings
+  ): Promise<boolean> {
+    return this.projectService.saveProjectAsReferencePackage(path, settings);
   }
 
   // ==================== Node Methods ====================
@@ -503,6 +511,21 @@ export class OctaneClient extends EventEmitter {
     destinationGraphHandle?: number
   ): Promise<number | null> {
     return this.materialDatabaseService.downloadLiveDBMaterial(materialId, destinationGraphHandle);
+  }
+
+  async getMaterialCategoriesForDbType(dbType: 'livedb' | 'localdb'): Promise<MaterialCategory[]> {
+    return this.materialDatabaseService.getMaterialCategoriesForDbType(dbType);
+  }
+
+  async getMaterialsForDbType(
+    categoryId: number,
+    dbType: 'livedb' | 'localdb'
+  ): Promise<Material[]> {
+    return this.materialDatabaseService.getMaterialsForDbType(categoryId, dbType);
+  }
+
+  async downloadMaterialForDbType(materialId: number, dbType: 'livedb' | 'localdb'): Promise<void> {
+    return this.materialDatabaseService.downloadMaterialForDbType(materialId, dbType);
   }
 
   // ==================== Render Export Methods ====================

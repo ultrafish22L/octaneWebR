@@ -46,7 +46,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.cut) {
       handlersRef.current.cut();
     } else {
-      Logger.debug('✂️ Cut action - no handler registered');
+      Logger.debug('Cut action - no handler registered');
     }
   }, []);
 
@@ -54,7 +54,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.copy) {
       handlersRef.current.copy();
     } else {
-      Logger.debug('📋 Copy action - no handler registered');
+      Logger.debug('Copy action - no handler registered');
     }
   }, []);
 
@@ -62,7 +62,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.paste) {
       handlersRef.current.paste();
     } else {
-      Logger.debug('📋 Paste action - no handler registered');
+      Logger.debug('Paste action - no handler registered');
     }
   }, []);
 
@@ -70,7 +70,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.delete) {
       handlersRef.current.delete();
     } else {
-      Logger.debug('🗑️ Delete action - no handler registered');
+      Logger.debug('Delete action - no handler registered');
     }
   }, []);
 
@@ -78,7 +78,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.group) {
       handlersRef.current.group();
     } else {
-      Logger.debug('🔗 Group action - no handler registered');
+      Logger.debug('Group action - no handler registered');
     }
   }, []);
 
@@ -86,7 +86,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.ungroup) {
       handlersRef.current.ungroup();
     } else {
-      Logger.debug('🔓 Ungroup action - no handler registered');
+      Logger.debug('Ungroup action - no handler registered');
     }
   }, []);
 
@@ -94,7 +94,7 @@ export function EditActionsProvider({ children }: { children: ReactNode }) {
     if (handlersRef.current.find) {
       handlersRef.current.find();
     } else {
-      Logger.debug('🔍 Find action - no handler registered');
+      Logger.debug('Find action - no handler registered');
     }
   }, []);
 

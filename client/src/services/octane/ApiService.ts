@@ -8,6 +8,9 @@ import { BaseService } from './BaseService';
 import { Logger } from '../../utils/Logger';
 import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
 
+/** Default timeout for API calls (ms). Prevents zombie requests from accumulating. */
+const API_TIMEOUT_MS = 30_000;
+
 /**
  * Loosely typed API response value. A recursive union that covers all JSON
  * value types, allowing chained property access without using `any`.
@@ -117,7 +120,7 @@ export class ApiService extends BaseService {
     const compatibleMethod = getCompatibleMethodName(service, method);
 
     if (method !== compatibleMethod) {
-      Logger.debugV(`🔄 API Compatibility: ${service}.${method} → ${compatibleMethod}`);
+      Logger.debugV(`API Compatibility: ${service}.${method} → ${compatibleMethod}`);
     }
 
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
@@ -152,7 +155,7 @@ export class ApiService extends BaseService {
       // Log if parameters were transformed
       const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
       if (paramsChanged) {
-        Logger.debugV(`🔄 API Compatibility: Parameter transformation applied`);
+        Logger.debugV(`API Compatibility: Parameter transformation applied`);
         Logger.debugV(`   Original:`, params);
         Logger.debugV(`   Transformed:`, transformedParams);
       }
@@ -163,25 +166,41 @@ export class ApiService extends BaseService {
 
     Logger.debug('Request body:', JSON.stringify(body));
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `API call failed: ${response.status}`);
+        let errorMsg = `API call failed: ${response.status}`;
+        try {
+          const error = await response.json();
+          errorMsg = error.error || errorMsg;
+        } catch {
+          // Response body isn't JSON (e.g., HTML 502 from proxy) — use status text
+        }
+        throw new Error(errorMsg);
       }
 
       const data = (await response.json()) as ApiCallResult;
       Logger.debugV(`${service}.${method} success`);
       return data;
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        Logger.error(`${service}.${method} timed out after ${API_TIMEOUT_MS}ms`);
+        throw new Error(`${service}.${method} timed out after ${API_TIMEOUT_MS}ms`);
+      }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Logger.error(`${service}.${method} error:`, errorMessage);
       throw error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -193,10 +212,14 @@ export class ApiService extends BaseService {
     const healthUrl = `${this.serverUrl}/api/health`;
     Logger.debug('Fetching health check:', healthUrl);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
     try {
       const healthResponse = await fetch(healthUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
       });
 
       Logger.debug('Health response status:', healthResponse.status);
@@ -214,6 +237,8 @@ export class ApiService extends BaseService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Logger.error('Health check failed:', errorMessage);
       return false;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 }

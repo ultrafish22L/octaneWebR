@@ -100,12 +100,12 @@ export const CallbackRenderViewport = React.memo(
 
       // Component mount logging
       useEffect(() => {
-        Logger.debug('🎯 [VIEWPORT] CallbackRenderViewport component MOUNTED');
-        Logger.debug('🎯 [VIEWPORT] Initial connected state:', connected);
-        Logger.debug('🎯 [VIEWPORT] Canvas ref available:', !!canvasRef.current);
-        Logger.debug('🎯 [VIEWPORT] Viewport ref available:', !!viewportRef.current);
+        Logger.debug('[VIEWPORT] CallbackRenderViewport component MOUNTED');
+        Logger.debug('[VIEWPORT] Initial connected state:', connected);
+        Logger.debug('[VIEWPORT] Canvas ref available:', !!canvasRef.current);
+        Logger.debug('[VIEWPORT] Viewport ref available:', !!viewportRef.current);
         return () => {
-          Logger.debug('🎯 [VIEWPORT] CallbackRenderViewport component UNMOUNTED');
+          Logger.debug('[VIEWPORT] CallbackRenderViewport component UNMOUNTED');
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
@@ -170,7 +170,7 @@ export const CallbackRenderViewport = React.memo(
 
       /**
        * MOUSE CONTROLS: Camera orbit, pan, zoom, and picker tools
-       * ✅ Phase 3: Now returns isDragging state for viewport throttling
+       * Phase 3: Now returns isDragging state for viewport throttling
        */
       const { isDragging } = useMouseInteraction({
         canvasRef,
@@ -193,13 +193,13 @@ export const CallbackRenderViewport = React.memo(
         setContextMenuVisible,
       });
 
-      // ✅ Phase 3: Image buffer processor hook (now receives isDragging for throttling)
-      // ✅ Phase 4: Now returns flushPendingFrame to clear stale progressive renders
+      // Phase 3: Image buffer processor hook (now receives isDragging for throttling)
+      // Phase 4: Now returns flushPendingFrame to clear stale progressive renders
       const { displayImage, flushPendingFrame } = useImageBufferProcessor({
         canvasRef,
         onFrameRendered: () => setFrameCount(prev => prev + 1),
         onStatusUpdate: setStatus,
-        isDragging, // ✅ Phase 3: Pass drag state for input-side throttling
+        isDragging, // Phase 3: Pass drag state for input-side throttling
       });
 
       // Expose methods to parent via ref
@@ -217,42 +217,41 @@ export const CallbackRenderViewport = React.memo(
        * Trigger initial render when connected
        */
       useEffect(() => {
-        Logger.debug('🎯 [VIEWPORT] Initialization useEffect triggered, connected:', connected);
+        Logger.debug('[VIEWPORT] Initialization useEffect triggered, connected:', connected);
 
         if (!connected) {
-          Logger.info('⚠️  [VIEWPORT] Not connected, skipping initialization');
-          // Defer setState to avoid cascading renders
-          setTimeout(() => setStatus('Disconnected from Octane'), 0);
+          Logger.info('[VIEWPORT] Not connected, skipping initialization');
+          setStatus('Disconnected from Octane');
           return;
         }
 
         const initializeRendering = async () => {
           try {
-            Logger.debug('🎯 [VIEWPORT] Starting initialization...');
-            Logger.debug('🎯 [VIEWPORT] Canvas ref at init:', !!canvasRef.current);
-            Logger.debug('🎯 [VIEWPORT] Viewport ref at init:', !!viewportRef.current);
+            Logger.debug('[VIEWPORT] Starting initialization...');
+            Logger.debug('[VIEWPORT] Canvas ref at init:', !!canvasRef.current);
+            Logger.debug('[VIEWPORT] Viewport ref at init:', !!viewportRef.current);
 
             setStatus('Initializing camera...');
 
             // Initialize camera from Octane's current state
-            Logger.debug('📷 [VIEWPORT] Initializing camera from Octane...');
+            Logger.debug('[VIEWPORT] Initializing camera from Octane...');
             await initializeCamera();
-            Logger.debug('✅ [VIEWPORT] Camera initialized');
+            Logger.debug('[VIEWPORT] Camera initialized');
 
             setStatus('Triggering initial render...');
 
             // Trigger initial render via ApiChangeManager
-            Logger.debug('🎬 [VIEWPORT] Triggering initial render...');
+            Logger.debug('[VIEWPORT] Triggering initial render...');
             await triggerOctaneUpdate();
-            Logger.debug('✅ [VIEWPORT] Initial render triggered');
+            Logger.debug('[VIEWPORT] Initial render triggered');
 
             setIsRendering(true);
             setStatus('Waiting for render...');
 
-            Logger.debug('✅ [VIEWPORT] Render viewport initialized');
+            Logger.debug('[VIEWPORT] Render viewport initialized');
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            Logger.error('❌ [VIEWPORT] Failed to initialize rendering:', error);
+            Logger.error('[VIEWPORT] Failed to initialize rendering:', error);
             setStatus(`Error: ${errorMessage}`);
           }
         };
@@ -264,26 +263,26 @@ export const CallbackRenderViewport = React.memo(
        * Setup callback listener for OnNewImage events
        */
       useEffect(() => {
-        Logger.debugV('🎯 [VIEWPORT] OnNewImage listener useEffect triggered, connected:', connected);
+        Logger.debugV('[VIEWPORT] OnNewImage listener useEffect triggered, connected:', connected);
 
         if (!connected) {
-          Logger.info('⚠️  [VIEWPORT] Not connected, skipping callback listener setup');
+          Logger.info('[VIEWPORT] Not connected, skipping callback listener setup');
           return;
         }
 
         const handleNewImage = (data: CallbackData) => {
-          Logger.debugV('🎯🎯🎯 [VIEWPORT] handleNewImage CALLED');
-          Logger.debugV('📊 [VIEWPORT] Callback data:', {
+          Logger.debugV('[VIEWPORT] handleNewImage CALLED');
+          Logger.debugV('[VIEWPORT] Callback data:', {
             hasRenderImages: !!data.render_images,
             hasData: !!data.render_images?.data,
             imageCount: data.render_images?.data?.length || 0,
           });
 
           if (data.render_images && data.render_images.data && data.render_images.data.length > 0) {
-            Logger.debugV('✅ [VIEWPORT] Valid image data received, calling displayImage');
+            Logger.debugV('[VIEWPORT] Valid image data received, calling displayImage');
             displayImage(data.render_images.data[0]);
           } else {
-            Logger.warn('⚠️  [VIEWPORT] No valid image data in callback');
+            Logger.warn('[VIEWPORT] No valid image data in callback');
             // Logger.warn('   [VIEWPORT] data:', data);
           }
         };
@@ -295,8 +294,8 @@ export const CallbackRenderViewport = React.memo(
       }, [connected, client, displayImage]);
 
       /**
-       * ✅ Phase 4: Flush stale progressive render images when camera drag starts/changes
-       * 
+       * Phase 4: Flush stale progressive render images when camera drag starts/changes
+       *
        * CRITICAL for smooth progressive rendering:
        * - Octane sends 1000s of onNewImage for a single render (progressive refinement)
        * - When camera moves, old images from previous position queue up in RAF
@@ -305,7 +304,7 @@ export const CallbackRenderViewport = React.memo(
        */
       useEffect(() => {
         if (isDragging) {
-          Logger.debugV('[VIEWPORT] 🚮 Camera drag detected - flushing stale progressive renders');
+          Logger.debugV('[VIEWPORT] Camera drag detected - flushing stale progressive renders');
           flushPendingFrame();
         }
       }, [isDragging, flushPendingFrame]);
@@ -318,13 +317,13 @@ export const CallbackRenderViewport = React.memo(
         if (!connected) return;
 
         const handleCameraReset = () => {
-          Logger.debug('🔔 [VIEWPORT] Camera reset event received, re-syncing camera state');
-          
-          // ✅ Phase 4: Flush stale renders when camera is reset
+          Logger.debug('[VIEWPORT] Camera reset event received, re-syncing camera state');
+
+          // Phase 4: Flush stale renders when camera is reset
           flushPendingFrame();
-          
+
           initializeCamera().catch(err => {
-            Logger.error('❌ Failed to re-sync camera after reset:', err);
+            Logger.error('Failed to re-sync camera after reset:', err);
           });
         };
 
@@ -335,7 +334,7 @@ export const CallbackRenderViewport = React.memo(
         };
       }, [connected, client, initializeCamera, flushPendingFrame]);
 
-      // ✅ Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
+      // Memoize canvas style to prevent recreation on every render (Phase 1 optimization)
       // Stable object reference prevents unnecessary React DOM updates
       const canvasStyle = useMemo(
         () => ({

@@ -176,7 +176,7 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
     if (onContextMenu) {
       event.preventDefault();
       event.stopPropagation();
-      Logger.debug('🖱️ [OctaneNode] Context menu triggered for node:', id);
+      Logger.debug('[OctaneNode] Context menu triggered for node:', id);
       onContextMenu(event, id);
     }
   };

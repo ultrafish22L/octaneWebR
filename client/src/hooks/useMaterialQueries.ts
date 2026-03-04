@@ -48,7 +48,7 @@ export function useMaterialCategories(dbType: DBType, enabled = true) {
         throw new Error('Octane client not initialized');
       }
 
-      Logger.debug(`🗂️ Fetching ${dbType} categories via React Query...`);
+      Logger.debug(`Fetching ${dbType} categories via React Query...`);
 
       const response = await client.callApi('ApiDBMaterialManager', 'getCategories', {
         dbType: dbType === 'livedb' ? 0 : 1, // 0 = LiveDB, 1 = LocalDB
@@ -56,11 +56,11 @@ export function useMaterialCategories(dbType: DBType, enabled = true) {
 
       if (response?.categories) {
         const categories = response.categories as unknown as MaterialCategory[];
-        Logger.debug(`✅ Fetched ${categories.length} ${dbType} categories`);
+        Logger.debug(`Fetched ${categories.length} ${dbType} categories`);
         return categories;
       }
 
-      Logger.warn(`⚠️ No categories returned from ${dbType} API`);
+      Logger.warn(`No categories returned from ${dbType} API`);
       return [];
     },
 
@@ -102,7 +102,7 @@ export function useMaterialsForCategory(categoryId: number | null, dbType: DBTyp
         return [];
       }
 
-      Logger.debug(`📦 Fetching materials for category ${categoryId} (${dbType})...`);
+      Logger.debug(`Fetching materials for category ${categoryId} (${dbType})...`);
 
       const response = await client.callApi('ApiDBMaterialManager', 'getMaterials', {
         categoryId,
@@ -111,11 +111,11 @@ export function useMaterialsForCategory(categoryId: number | null, dbType: DBTyp
 
       if (response?.materials) {
         const materials = response.materials as unknown as Material[];
-        Logger.debug(`✅ Fetched ${materials.length} materials`);
+        Logger.debug(`Fetched ${materials.length} materials`);
         return materials;
       }
 
-      Logger.warn('⚠️ No materials returned from API');
+      Logger.warn('No materials returned from API');
       return [];
     },
 
@@ -158,27 +158,27 @@ export function useDownloadMaterial() {
         throw new Error('Not connected to Octane');
       }
 
-      Logger.debug(`⬇️ Downloading material: ${materialName} (ID: ${materialId})`);
+      Logger.debug(`Downloading material: ${materialName} (ID: ${materialId})`);
 
       await client.callApi('ApiDBMaterialManager', 'downloadMaterial', {
         materialId,
         dbType: dbType === 'livedb' ? 0 : 1,
       });
 
-      Logger.debug(`✅ Material downloaded: ${materialName}`);
+      Logger.debug(`Material downloaded: ${materialName}`);
 
       return { materialId, materialName };
     },
 
     onSuccess: (_data, variables) => {
-      Logger.debug(`✅ Download mutation success: ${variables.materialName}`);
+      Logger.debug(`Download mutation success: ${variables.materialName}`);
 
       // Invalidate scene queries since a new material was added
       queryClient.invalidateQueries({ queryKey: queryKeys.scene.all });
     },
 
     onError: (error: unknown, variables) => {
-      Logger.error(`❌ Failed to download material ${variables.materialName}:`, error);
+      Logger.error(`Failed to download material ${variables.materialName}:`, error);
     },
   });
 }

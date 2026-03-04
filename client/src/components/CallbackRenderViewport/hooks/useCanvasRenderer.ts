@@ -102,7 +102,7 @@ export function useCanvasRenderer({
       const width = imageData.size.x;
       const height = imageData.size.y;
 
-      // ✅ Only resize canvas when dimensions change (Phase 1 optimization)
+      // Only resize canvas when dimensions change (Phase 1 optimization)
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
@@ -133,7 +133,7 @@ export function useCanvasRenderer({
         onFrameRendered();
       }
 
-      // ✅ Throttled status updates (Phase 1 optimization)
+      // Throttled status updates (Phase 1 optimization)
       if (onStatusUpdate) {
         const now = Date.now();
         if (now - lastStatusUpdateRef.current >= STATUS_UPDATE_INTERVAL) {
@@ -196,13 +196,13 @@ export function useCanvasRenderer({
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
-      Logger.debugV('[RAF] 🚮 Cancelled pending RAF (camera changed)');
+      Logger.debugV('[RAF] Cancelled pending RAF (camera changed)');
     }
 
     // Clear pending image (discard stale frame)
     if (pendingImageRef.current !== null) {
       pendingImageRef.current = null;
-      Logger.debugV('[RAF] 🚮 Flushed pending image (stale data)');
+      Logger.debugV('[RAF] Flushed pending image (stale data)');
     }
   }, []);
 

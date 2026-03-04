@@ -59,7 +59,7 @@ export function useCameraPresets({ client, state, setState }: UseCameraPresetsPr
 
   const applyRenderPriority = useCallback(
     async (priority: 'low' | 'normal' | 'high') => {
-      Logger.debug(`⚙️ Setting render priority: ${priority.toUpperCase()}`);
+      Logger.debug(`Setting render priority: ${priority.toUpperCase()}`);
 
       try {
         // Map priority to API values (assuming 0=low, 1=normal, 2=high based on common conventions)
@@ -67,9 +67,9 @@ export function useCameraPresets({ client, state, setState }: UseCameraPresetsPr
 
         await client.callApi('ApiRenderEngine', 'setRenderPriority', { priority: priorityValue });
         setState(prev => ({ ...prev, renderPriority: priority, showRenderPriorityMenu: false }));
-        Logger.debug(`✅ Render priority set to ${priority.toUpperCase()}`);
+        Logger.debug(`Render priority set to ${priority.toUpperCase()}`);
       } catch (err) {
-        Logger.error(`❌ Failed to set render priority to ${priority}:`, err);
+        Logger.error(`Failed to set render priority to ${priority}:`, err);
       }
     },
     [client, setState]
@@ -81,7 +81,7 @@ export function useCameraPresets({ client, state, setState }: UseCameraPresetsPr
 
   const applyCameraPreset = useCallback(
     async (presetName: string) => {
-      Logger.debug(`📷 Applying camera preset: ${presetName}`);
+      Logger.debug(`Applying camera preset: ${presetName}`);
 
       const distance = 10; // Distance from origin for camera position
       const target = { x: 0, y: 0, z: 0 }; // Look at origin
@@ -121,10 +121,10 @@ export function useCameraPresets({ client, state, setState }: UseCameraPresetsPr
           target.y,
           target.z
         );
-        Logger.debug(`✅ Camera preset "${presetName}" applied successfully`);
+        Logger.debug(`Camera preset "${presetName}" applied successfully`);
         setState(prev => ({ ...prev, showCameraPresetsMenu: false })); // Close menu after selection
       } catch (err) {
-        Logger.error(`❌ Failed to apply camera preset "${presetName}":`, err);
+        Logger.error(`Failed to apply camera preset "${presetName}":`, err);
       }
     },
     [client, setState]

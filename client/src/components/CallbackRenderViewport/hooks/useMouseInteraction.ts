@@ -19,6 +19,7 @@
 
 import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 
 interface CameraState {
   radius: number;
@@ -128,7 +129,9 @@ export function useMouseInteraction({
   setContextMenuPos,
   setContextMenuVisible,
 }: UseMouseInteractionParams) {
-  // ✅ Phase 3: Drag state for viewport throttling
+  const { setTemporaryStatus } = useStatusMessage();
+
+  // Phase 3: Drag state for viewport throttling
   // Tracks if ANY camera manipulation is in progress (orbit, pan, 2D pan)
   const [isDragging, setIsDragging] = useState(false);
 
@@ -140,26 +143,26 @@ export function useMouseInteraction({
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    Logger.debug('🎯 [VIEWPORT] Mouse interaction hook mounted');
-    Logger.debug('🎯 [VIEWPORT] Connected:', connected);
+    Logger.debug('[VIEWPORT] Mouse interaction hook mounted');
+    Logger.debug('[VIEWPORT] Connected:', connected);
 
     const canvas = canvasRef.current;
     if (!canvas || !connected) {
-      Logger.info('⚠️  [VIEWPORT] Skipping mouse controls setup (canvas or not connected)');
+      Logger.info('[VIEWPORT] Skipping mouse controls setup (canvas or not connected)');
       return;
     }
 
-    Logger.debug('🎯 [VIEWPORT] Setting up mouse event handlers...');
+    Logger.debug('[VIEWPORT] Setting up mouse event handlers...');
 
     const handleMouseDown = (e: MouseEvent) => {
-      Logger.debug('🎯 [VIEWPORT] handleMouseDown CALLED', {
+      Logger.debug('[VIEWPORT] handleMouseDown CALLED', {
         button: e.button,
         x: e.clientX,
         y: e.clientY,
       });
 
       if (viewportLocked) {
-        Logger.info('🔒 [VIEWPORT] Viewport locked, ignoring mouse input');
+        Logger.info('[VIEWPORT] Viewport locked, ignoring mouse input');
         return;
       }
 
@@ -167,14 +170,14 @@ export function useMouseInteraction({
       const rect = canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
-      Logger.debug('🎯 [VIEWPORT] Canvas coords:', { canvasX, canvasY });
+      Logger.debug('[VIEWPORT] Canvas coords:', { canvasX, canvasY });
 
       if (e.button === 0) {
         // Left button
         // CTRL+LEFT: 2D Canvas Pan (Octane SE Manual: Control key + left mouse button pans the rendered display)
         if (e.ctrlKey || e.metaKey) {
           is2DPanningRef.current = true;
-          setIsDragging(true); // ✅ Phase 3: Track drag for throttling
+          setIsDragging(true); // Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
           canvas.style.cursor = 'move';
           e.preventDefault();
@@ -192,14 +195,14 @@ export function useMouseInteraction({
         } else {
           // CAMERA MODE: Orbit
           isDraggingRef.current = true;
-          setIsDragging(true); // ✅ Phase 3: Track drag for throttling
+          setIsDragging(true); // Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
           canvas.style.cursor = 'grabbing';
         }
       } else if (e.button === 2) {
         // Right button = PAN (always available)
         isPanningRef.current = true;
-        setIsDragging(true); // ✅ Phase 3: Track drag for throttling
+        setIsDragging(true); // Phase 3: Track drag for throttling
         hasRightDraggedRef.current = false; // Reset drag tracking
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
         canvas.style.cursor = 'move';
@@ -322,6 +325,7 @@ export function useMouseInteraction({
             'Failed to set render region:',
             error instanceof Error ? error.message : String(error)
           );
+          setTemporaryStatus('Failed to set render region', 3000);
         }
 
         // Clear region selection (visual overlay will be removed)
@@ -436,6 +440,7 @@ export function useMouseInteraction({
                     'Failed to get material node:',
                     err instanceof Error ? err.message : String(err)
                   );
+                  setTemporaryStatus('Failed to pick material', 3000);
                 }
               }
             } else {
@@ -476,6 +481,7 @@ export function useMouseInteraction({
             `Picking failed (${pickingMode}):`,
             error instanceof Error ? error.message : String(error)
           );
+          setTemporaryStatus(`Picking failed (${pickingMode})`, 3000);
         }
         return;
       }
@@ -483,7 +489,7 @@ export function useMouseInteraction({
       // 2D CANVAS PAN MODE: Complete pan
       if (is2DPanningRef.current) {
         is2DPanningRef.current = false;
-        setIsDragging(false); // ✅ Phase 3: End drag throttling
+        setIsDragging(false); // Phase 3: End drag throttling
         canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
         return;
       }
@@ -493,7 +499,7 @@ export function useMouseInteraction({
         const wasPanning = isPanningRef.current;
         isDraggingRef.current = false;
         isPanningRef.current = false;
-        setIsDragging(false); // ✅ Phase 3: End drag throttling
+        setIsDragging(false); // Phase 3: End drag throttling
         canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
 
         // Show context menu if right-click without drag (Octane SE behavior)
@@ -545,7 +551,7 @@ export function useMouseInteraction({
     canvas.addEventListener('mouseleave', handleMouseUp);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('contextmenu', handleContextMenu);
-    Logger.debug('✅ [VIEWPORT] All mouse event listeners attached');
+    Logger.debug('[VIEWPORT] All mouse event listeners attached');
 
     // Set cursor based on viewport lock state and picking mode
     if (viewportLocked) {
@@ -555,7 +561,7 @@ export function useMouseInteraction({
     } else {
       canvas.style.cursor = 'grab';
     }
-    Logger.debug('🎯 [VIEWPORT] Cursor style set to:', canvas.style.cursor);
+    Logger.debug('[VIEWPORT] Cursor style set to:', canvas.style.cursor);
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
@@ -584,8 +590,9 @@ export function useMouseInteraction({
     setCanvasTransform,
     setContextMenuPos,
     setContextMenuVisible,
+    setTemporaryStatus,
   ]);
 
-  // ✅ Phase 3: Return drag state for viewport throttling
+  // Phase 3: Return drag state for viewport throttling
   return { isDragging };
 }

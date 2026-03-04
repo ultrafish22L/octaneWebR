@@ -1,6 +1,24 @@
 /**
  * Scene Service - Scene tree building and management
- * Handles building and maintaining the scene hierarchy
+ *
+ * Sequential, recursive, single-pass scene loader. When progressiveEvents is
+ * enabled (default), emits incremental UI update events at natural breakpoints
+ * so the Outliner, NodeGraph, and NodeInspector can update during the load
+ * without flashing. When disabled, the tree loads silently and emits a single
+ * burst of events at the end.
+ *
+ * Events emitted (always):
+ *   scene:buildStart         - Load begins
+ *   scene:buildProgress      - Status message            { step, progress? }
+ *   scene:buildComplete      - Final stats               { nodeCount, topLevelCount, elapsedTime }
+ *   sceneTreeUpdated         - Legacy compat              scene
+ *
+ * Events emitted (progressiveEvents only):
+ *   scene:nodeAdded          - Level-1 node created       { node, level: 0 }
+ *   scene:level0Complete     - All level-1 nodes created  { nodes }
+ *   scene:childrenLoaded     - Children fully loaded      { parent, children }
+ *   scene:structureComplete  - Entire tree built          { nodeCount, topLevelCount, elapsedTime }
+ *   scene:complete           - Done signal                { scene }
  */
 
 import { Logger } from '../../utils/Logger';
@@ -15,10 +33,17 @@ export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
   private abortController: AbortController | null = null;
+  private readonly progressiveEvents: boolean;
 
-  constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
+  constructor(
+    emitter: EventEmitter,
+    serverUrl: string,
+    apiService: ApiService,
+    progressiveEvents: boolean = true
+  ) {
     super(emitter, serverUrl);
     this.apiService = apiService;
+    this.progressiveEvents = progressiveEvents;
     this.scene = {
       tree: [],
       map: new Map(),
@@ -27,169 +52,118 @@ export class SceneService extends BaseService {
   }
 
   /**
-   * Builds or updates the scene tree
-   * @param newNodeHandle - If provided, only builds metadata for this specific node (incremental update)
-   *                        If omitted, performs full scene tree rebuild
+   * Builds or updates the scene tree.
+   * @param newNodeHandle - If provided, only builds metadata for this specific node (incremental).
+   *                        If omitted, performs full scene tree rebuild.
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
-    // Abort any previous build operation
+    // Abort any previous build
     if (this.abortController) {
-      Logger.debug('🚫 Cancelling previous scene tree build');
+      Logger.debug('Cancelling previous scene tree build');
       this.abortController.abort();
     }
-
-    // Create new abort controller for this operation
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
+    // Incremental: single node update
     if (newNodeHandle !== undefined) {
-      Logger.debug('➕ Building new node metadata:', newNodeHandle);
-
+      Logger.debug('Building new node metadata:', newNodeHandle);
       try {
         const tempArray: SceneNode[] = [];
         const newNode = await this.addSceneItem(tempArray, { handle: newNodeHandle }, null, 1);
-
         if (newNode) {
-          Logger.debug(`🔄 Building children for new node: ${newNode.name}`);
+          Logger.debug(`Building children for new node: ${newNode.name}`);
           await this.addItemChildren(newNode);
-          Logger.debug('✅ Node metadata built:', newNode.name);
+          Logger.debug('Node metadata built:', newNode.name);
         } else {
-          Logger.error('❌ Failed to create new scene node');
+          Logger.error('Failed to create new scene node');
         }
-
         return this.scene.tree;
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        Logger.error('❌ Failed to build new node metadata:', message);
-        throw error;
+        Logger.error('Failed to build new node metadata:', message);
+        return this.scene.tree;
       }
     }
 
-    /**
-     * Full rebuild: Clears scene state and reconstructs entire tree from root.
-     * Used on initial connection or when incremental updates aren't sufficient.
-     */
-    Logger.info('🌳 Building scene tree...');
+    // Full rebuild
+    Logger.info('Building scene tree...');
     this.emit('scene:buildStart');
 
-    this.scene = {
-      tree: [],
-      map: new Map(),
-      connections: new Map(),
-    };
+    this.scene = { tree: [], map: new Map(), connections: new Map() };
+
+    const startTime = performance.now();
 
     try {
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
-      }
+      this.checkAborted(signal);
       this.emit('scene:buildProgress', { step: 'Building scene tree' });
-      Logger.debug('🔍 Step 1: Getting root node graph...');
+      Logger.debug('Step 1: Getting root node graph...');
 
       const rootResponse = await this.apiService.callApi('ApiProjectManager', 'rootNodeGraph', {});
       const rootHandle = getHandle(rootResponse?.result);
       if (!rootHandle) {
         throw new Error('Failed to get root node graph');
       }
+      Logger.debug('Root handle:', rootHandle);
 
-      Logger.debug('📍 Root handle:', rootHandle);
+      this.checkAborted(signal);
 
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
-      }
-
-      Logger.debug('🔍 Step 2: Checking if root is graph...');
+      Logger.debug('Step 2: Checking if root is graph...');
       const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', rootHandle);
-      const isGraph = asBool(isGraphResponse?.result, false);
-      Logger.debug('📍 Is graph:', isGraph);
+      const rootIsGraph = asBool(isGraphResponse?.result, false);
+      Logger.debug('Is graph:', rootIsGraph);
 
-      // Check for cancellation
-      if (signal.aborted) {
-        throw new Error('Scene tree build was cancelled');
+      this.checkAborted(signal);
+
+      if (!rootIsGraph) {
+        throw new Error('Root handle is not a graph');
       }
 
-      // Choose sync strategy based on configuration
-      const startTime = performance.now();
+      Logger.debug('Step 3: Building tree...');
+      this.scene.tree = await this.syncSceneSequential(rootHandle, null, rootIsGraph, 0);
 
-      Logger.debug('🔍 Step 3: Building tree synchronously...');
-      this.scene.tree = await this.syncSceneSequential(rootHandle, null, isGraph, 0);
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
 
-      Logger.info(`✅ Sequential Scene tree built in ${elapsedTime}s:`);
+      Logger.info(`Scene tree built in ${elapsedTime}s:`);
       Logger.info(`   - ${this.scene.tree.length} top-level items`);
       Logger.info(`   - ${this.scene.map.size} total nodes`);
 
-      Logger.debug('🔍 Step 4: Emitting sceneTreeUpdated event...');
-      this.emit('scene:buildComplete', {
+      const stats = {
         nodeCount: this.scene.map.size,
         topLevelCount: this.scene.tree.length,
         elapsedTime,
-      });
+      };
+
+      if (this.progressiveEvents) {
+        this.emit('scene:structureComplete', stats);
+      }
+
+      this.emit('scene:buildComplete', stats);
+
+      if (this.progressiveEvents) {
+        this.emit('scene:complete', { scene: this.scene });
+      }
+
       this.emit('sceneTreeUpdated', this.scene);
-      Logger.info('✅ SceneTreeUpdated event emitted');
+      Logger.info('SceneTreeUpdated event emitted');
 
       return this.scene.tree;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-
-      // Don't log cancellation as error
-      if (message.includes('cancelled')) {
-        Logger.debug('🚫 Scene tree build cancelled');
+      if (message.includes('abort') || message.includes('cancelled')) {
+        Logger.debug('Scene tree build cancelled');
       } else {
-        Logger.error('❌ Failed to build scene tree:', message);
+        Logger.error('Failed to build scene tree:', message);
         if (error instanceof Error && error.stack) {
-          Logger.error('❌ Error stack:', error.stack);
+          Logger.error('Error stack:', error.stack);
         }
       }
-      throw error;
+      return this.scene.tree;
     }
   }
 
-  lookupItem(handle: number): SceneNode | null {
-    return this.scene.map.get(handle) || null;
-  }
+  // ─── Sequential recursive traversal ────────────────────────────────
 
-  removeFromScene(handle: number): void {
-    this.scene.map.delete(handle);
-
-    const removeFromArray = (arr: SceneNode[]): boolean => {
-      for (let i = 0; i < arr.length; i++) {
-        if (arr[i].handle === handle) {
-          arr.splice(i, 1);
-          return true;
-        }
-        if (arr[i].children && arr[i].children!.length > 0) {
-          if (removeFromArray(arr[i].children!)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    removeFromArray(this.scene.tree);
-  }
-
-  getNodeByHandle(handle: number): SceneNode | undefined {
-    return this.scene.map.get(handle);
-  }
-
-  async setNodeVisibility(handle: number, visible: boolean): Promise<void> {
-    await this.apiService.callApi('ApiSceneOutliner', 'setNodeVisibility', { handle, visible });
-  }
-
-  getScene(): Scene {
-    return this.scene;
-  }
-
-  /**
-   * Recursively builds scene tree by traversing node graphs and their pins.
-   * @param itemHandle - Current item to process (null = start from root)
-   * @param sceneItems - Accumulator array for nodes at this level
-   * @param isGraph - Whether current item is a NodeGraph (contains owned items vs pins)
-   * @param level - Current recursion depth (capped at 5 to prevent infinite loops)
-   */
   private async syncSceneSequential(
     itemHandle: number | null,
     sceneItems: SceneNode[] | null,
@@ -199,7 +173,6 @@ export class SceneService extends BaseService {
     if (sceneItems === null) {
       sceneItems = [];
     }
-
     level = level + 1;
 
     try {
@@ -210,7 +183,6 @@ export class SceneService extends BaseService {
           throw new Error('Failed ApiProjectManager/rootNodeGraph');
         }
         itemHandle = resolvedHandle;
-
         const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', itemHandle);
         isGraph = asBool(isGraphResponse?.result, false);
       }
@@ -219,7 +191,6 @@ export class SceneService extends BaseService {
        * NodeGraph vs Node traversal strategy:
        * - NodeGraphs contain "owned items" (child nodes) via getOwnedItems()
        * - Regular Nodes expose connections via their pins via connectedNodeIx()
-       * This branch handles NodeGraphs by iterating their owned items array
        */
       if (isGraph) {
         const ownedResponse = await this.apiService.callApi(
@@ -231,7 +202,6 @@ export class SceneService extends BaseService {
         if (!ownedItemsHandle) {
           throw new Error('Failed ApiNodeGraph/getOwnedItems');
         }
-
         const sizeResponse = await this.apiService.callApi(
           'ApiItemArray',
           'size',
@@ -239,7 +209,7 @@ export class SceneService extends BaseService {
         );
         const size = asNumber(sizeResponse?.result, 0);
 
-        Logger.debug(`📦 Level ${level}: Found ${size} owned items`);
+        Logger.debug(`Level ${level}: Found ${size} owned items`);
 
         for (let i = 0; i < size; i++) {
           const itemResponse = await this.apiService.callApi(
@@ -250,30 +220,46 @@ export class SceneService extends BaseService {
           );
           const itemResultHandle = getHandle(itemResponse?.result);
           if (itemResultHandle) {
-            await this.addSceneItem(
+            const node = await this.addSceneItem(
               sceneItems,
               asObject(itemResponse.result) as Record<string, unknown>,
               null,
               level
             );
+
+            // Progressive: notify UI about each level-1 node as it's created
+            if (this.progressiveEvents && level === 1 && node) {
+              this.emitAsync('scene:nodeAdded', { node, level: 0 });
+            }
           }
         }
 
-        // Only build deep children for top-level items (avoids exponential API calls)
+        // Build deep children for top-level items
         if (level === 1) {
-          Logger.debug(`🔄 Building children for ${sceneItems.length} level 1 items`);
+          if (this.progressiveEvents) {
+            this.emitAsync('scene:level0Complete', { nodes: sceneItems });
+          }
+
+          Logger.debug(`Building children for ${sceneItems.length} level 1 items`);
+
           for (const item of sceneItems) {
             await this.addItemChildren(item);
-            // Small yield between items to keep the event loop responsive and
-            // avoid blocking the UI on scenes with many top-level nodes.
-            await new Promise(resolve => setTimeout(resolve, 50));
+
+            if (this.progressiveEvents) {
+              // Notify UI that this subtree is complete (non-blocking)
+              if (item.children && item.children.length > 0) {
+                this.emitAsync('scene:childrenLoaded', { parent: item, children: item.children });
+              }
+            } else {
+              // Non-progressive: yield between items to keep event loop responsive
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
           }
-          Logger.debug(`✅ Finished building children for all level 1 items`);
+          Logger.debug(`Finished building children for all level 1 items`);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
-        Logger.debug(`📌 Level ${level}: Processing node pins for handle ${itemHandle}`);
-
+        Logger.debug(`Level ${level}: Processing node pins for handle ${itemHandle}`);
         try {
           const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', itemHandle);
           const pinCount = asNumber(pinCountResponse?.result, 0);
@@ -288,7 +274,6 @@ export class SceneService extends BaseService {
                 itemHandle,
                 { pinIx: i, enterWrapperNode: true }
               );
-
               const connectedNode =
                 (asObject(connectedResponse?.result) as Record<string, unknown> | null) ?? null;
 
@@ -319,27 +304,29 @@ export class SceneService extends BaseService {
               }
             } catch (pinError) {
               Logger.warn(
-                `  ⚠️ Failed to load pin ${i}:`,
+                `Failed to load pin ${i}:`,
                 pinError instanceof Error ? pinError.message : String(pinError)
               );
             }
           }
         } catch (pinCountError) {
           Logger.error(
-            `  ❌ Failed to get pin count:`,
+            `Failed to get pin count:`,
             pinCountError instanceof Error ? pinCountError.message : String(pinCountError)
           );
         }
       }
     } catch (error) {
       Logger.error(
-        '❌ syncSceneSequential failed:',
+        'syncSceneSequential failed:',
         error instanceof Error ? error.message : String(error)
       );
     }
 
     return sceneItems;
   }
+
+  // ─── Node creation ─────────────────────────────────────────────────
 
   private async addSceneItem(
     sceneItems: SceneNode[],
@@ -354,7 +341,6 @@ export class SceneService extends BaseService {
     let isGraph = false;
     let position: { x: number; y: number } | undefined;
 
-    // Resolve handle from item
     const handleNum = item?.handle != null ? Number(item.handle) : 0;
 
     if (item != null && handleNum !== 0) {
@@ -375,13 +361,13 @@ export class SceneService extends BaseService {
         outType = String(outTypeResponse?.result ?? '');
 
         Logger.debug(
-          `  🔍 API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
+          `API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
         );
 
         const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', handleNum);
         isGraph = asBool(isGraphResponse?.result, false);
 
-        // Fetch position for top-level nodes (level 1)
+        // Position for level-1 nodes
         if (level === 1) {
           try {
             const posResponse = await this.apiService.callApi('ApiItem', 'position', handleNum);
@@ -391,11 +377,11 @@ export class SceneService extends BaseService {
                 x: asNumber(posObj.x, 0),
                 y: asNumber(posObj.y, 0),
               };
-              Logger.debug(`  📍 Position for ${itemName}: (${position.x}, ${position.y})`);
+              Logger.debug(`  Position for ${itemName}: (${position.x}, ${position.y})`);
             }
           } catch (posError) {
             Logger.warn(
-              `  ⚠️ Failed to get position for ${itemName}:`,
+              `Failed to get position for ${itemName}:`,
               posError instanceof Error ? posError.message : String(posError)
             );
           }
@@ -410,12 +396,12 @@ export class SceneService extends BaseService {
         }
       } catch (error) {
         Logger.error(
-          '❌ addSceneItem failed to fetch item data:',
+          'addSceneItem failed to fetch item data:',
           error instanceof Error ? error.message : String(error)
         );
       }
     } else {
-      Logger.debug(`  ⚪ Unconnected pin: ${itemName}`);
+      Logger.debug(`  Unconnected pin: ${itemName}`);
     }
 
     const displayName = String(pinInfo?.staticLabel || itemName);
@@ -442,7 +428,7 @@ export class SceneService extends BaseService {
     if (item != null && handleNum !== 0) {
       this.scene.map.set(handleNum, entry);
       Logger.debug(
-        `  📄 Added item: ${itemName} (type: "${outType}", icon: ${icon}, level: ${level})`
+        `Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`
       );
 
       if (level > 1) {
@@ -453,12 +439,12 @@ export class SceneService extends BaseService {
     return entry;
   }
 
-  private async addItemChildren(item: SceneNode): Promise<void> {
-    if (!item || !item.handle) {
-      return;
-    }
+  // ─── Recursive child loading ───────────────────────────────────────
 
-    const isGraph = item.graphInfo !== null && item.graphInfo !== undefined;
+  private async addItemChildren(item: SceneNode): Promise<void> {
+    if (!item || !item.handle) return;
+
+    const isGraph = item.graphInfo != null;
 
     try {
       const children = await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
@@ -484,15 +470,73 @@ export class SceneService extends BaseService {
       }
     } catch (error) {
       Logger.error(
-        '❌ addItemChildren failed:',
+        'addItemChildren failed:',
         error instanceof Error ? error.message : String(error)
       );
     }
-    return;
   }
+
+  // ─── Utilities ─────────────────────────────────────────────────────
 
   private getNodeIcon(outType: string | number, name?: string): string {
     const typeStr = typeof outType === 'string' ? outType : String(outType);
     return getIconForType(typeStr, name);
+  }
+
+  private checkAborted(signal: AbortSignal): void {
+    if (signal.aborted) {
+      throw new Error('Scene tree build was cancelled');
+    }
+  }
+
+  /**
+   * Emit an event asynchronously via setTimeout so it never blocks the loading loop.
+   * React processes the state updates in a future macrotask while the loader
+   * continues making API calls uninterrupted.
+   */
+  private emitAsync(event: string, data?: unknown): void {
+    setTimeout(() => this.emit(event, data), 0);
+  }
+
+  // ─── Public API ────────────────────────────────────────────────────
+
+  abort(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  lookupItem(handle: number): SceneNode | null {
+    return this.scene.map.get(handle) || null;
+  }
+
+  removeFromScene(handle: number): void {
+    this.scene.map.delete(handle);
+    const removeFromArray = (arr: SceneNode[]): boolean => {
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i].handle === handle) {
+          arr.splice(i, 1);
+          return true;
+        }
+        if (arr[i].children?.length) {
+          if (removeFromArray(arr[i].children!)) return true;
+        }
+      }
+      return false;
+    };
+    removeFromArray(this.scene.tree);
+  }
+
+  getNodeByHandle(handle: number): SceneNode | undefined {
+    return this.scene.map.get(handle);
+  }
+
+  async setNodeVisibility(handle: number, visible: boolean): Promise<void> {
+    await this.apiService.callApi('ApiSceneOutliner', 'setNodeVisibility', { handle, visible });
+  }
+
+  getScene(): Scene {
+    return this.scene;
   }
 }

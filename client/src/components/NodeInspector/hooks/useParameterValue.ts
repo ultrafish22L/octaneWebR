@@ -17,20 +17,10 @@ import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { Logger } from '../../../utils/Logger';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 import { requestQueue } from '../../../utils/RequestQueue';
-
-export type ParameterRawValue =
-  | boolean
-  | string
-  | number
-  | number[]
-  | { x: number; y?: number; z?: number; w?: number };
-
-export interface ParameterValue {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value: any;
-  type: number;
-}
+import type { ParameterRawValue, ParameterValue } from '../../../services/octane/ItemService';
+export type { ParameterRawValue, ParameterValue };
 
 export interface UseParameterValueReturn {
   paramValue: ParameterValue | null;
@@ -45,6 +35,7 @@ export function useParameterValue(
   client: OctaneClient,
   isEndNode: boolean
 ): UseParameterValueReturn {
+  const { setTemporaryStatus } = useStatusMessage();
   const [paramValue, setParamValue] = useState<ParameterValue | null>(null);
 
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
@@ -89,7 +80,7 @@ export function useParameterValue(
           const valueField = (responseMap.value as string) || Object.keys(responseMap)[0];
           const actualValue = responseMap[valueField];
 
-          Logger.debugV(`✅ ApiItem:getValueByAttrID for ${node.name}: ${actualValue}`);
+          Logger.debugV(`ApiItem:getValueByAttrID for ${node.name}: ${actualValue}`);
 
           setParamValue({
             value: actualValue,
@@ -99,7 +90,7 @@ export function useParameterValue(
       } catch (error: unknown) {
         // Log Alpha 5 errors for debugging, silently ignore Beta 2 errors
         Logger.error(
-          `❌ getValueByAttrID error for ${node.name}: ${error instanceof Error ? error.message : error}`
+          `getValueByAttrID error for ${node.name}: ${error instanceof Error ? error.message : error}`
         );
       }
     };
@@ -171,11 +162,11 @@ export function useParameterValue(
             formattedValue = String(newValue);
             break;
           default:
-            Logger.warn(`⚠️  Unsupported type for setValue: ${node.attrInfo.type}`);
+            Logger.warn(`Unsupported type for setValue: ${node.attrInfo.type}`);
             return;
         }
 
-        Logger.debug(`📝 Setting ${node.name} = ${JSON.stringify(formattedValue)}`);
+        Logger.debug(`Setting ${node.name} = ${JSON.stringify(formattedValue)}`);
 
         // Call setValueByAttrID to update the value in Octane
         // Note: evaluate: false is required (matches octaneWeb behavior)
@@ -192,18 +183,19 @@ export function useParameterValue(
           type: expectedType,
         });
 
-        Logger.debug(`✅ Successfully updated ${node.name}`);
+        Logger.debug(`Successfully updated ${node.name}`);
 
         // Trigger render update to see changes
         await client.callApi('ApiChangeManager', 'update', {});
       } catch (error: unknown) {
         Logger.error(
-          `❌ Failed to update ${node.name}:`,
+          `Failed to update ${node.name}:`,
           error instanceof Error ? error.message : error
         );
+        setTemporaryStatus(`Failed to update ${node.name}`, 3000);
       }
     },
-    [node.handle, node.attrInfo, node.name, client]
+    [node.handle, node.attrInfo, node.name, client, setTemporaryStatus]
   );
 
   return {

@@ -146,7 +146,7 @@
   --font-size-header: 28px; /* Header text */
   --font-size-title: 32px; /* Title text */
   --font-size-huge: 48px; /* Huge text */
-  --font-weight-light: 50;
+  --font-weight-light: 300;
   --font-weight-label: 300;
   --font-weight-normal: 400;
   --font-weight-bold: 600;

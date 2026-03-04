@@ -70,7 +70,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
 
         // Get device count
         const deviceCount = await client.getDeviceCount();
-        Logger.debug(`📊 Found ${deviceCount} GPU device(s)`);
+        Logger.debug(`Found ${deviceCount} GPU device(s)`);
 
         // Fetch statistics for each device
         const deviceStats: DeviceStatistics[] = [];
@@ -131,7 +131,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
         setDevices(deviceStats);
       } catch (error) {
         Logger.error(
-          '❌ Failed to fetch GPU statistics:',
+          'Failed to fetch GPU statistics:',
           error instanceof Error ? error.message : String(error)
         );
       } finally {

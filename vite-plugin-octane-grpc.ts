@@ -12,460 +12,208 @@
  */
 
 import { Plugin, ViteDevServer } from 'vite';
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
 import { WebSocketServer, WebSocket } from 'ws';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IncomingMessage } from 'http';
+
+import {
+  OctaneGrpcClientBase,
+  transformObjectPtrParams,
+} from './server/src/grpc/OctaneGrpcClientBase';
 
 // ============================================================================
 // SERVER LOGGING CONFIGURATION
 // ============================================================================
 // Set to true to enable detailed server-side logging
 // Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = false; // Enabled to debug render callback image data
+const DEBUG_SERVER_LOGS = false;
 
 // ============================================================================
-// API VERSION CONFIGURATION
+// FILE LOGGING CONFIGURATION
 // ============================================================================
-/**
- * Import centralized API version config to ensure client/server consistency.
- *
- * ⭐ TO SWITCH API VERSIONS: Edit api-version.config.js (NOT this file!)
- *
- * This ensures both client and server use the same API version settings.
- * Previous bugs were caused by mismatched client/server configs.
- */
-import { USE_ALPHA5_API, getProtoDir } from './api-version.config.js';
+// Set to true to log all gRPC request/response pairs to a file
+const DEBUG_FILE_LOG = false;
+const LOG_FILE_PATH = path.resolve(__dirname, 'grpc-debug.log');
 
-// Server log helper functions with clear tagging
-const serverLog = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.log('[OCTANE-SERVER]', ...args);
-};
-const serverError = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.error('[OCTANE-SERVER]', ...args);
-};
-const serverWarn = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.warn('[OCTANE-SERVER]', ...args);
-};
-const serverInfo = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.info('[OCTANE-SERVER]', ...args);
-};
-// ============================================================================
-
-interface GrpcCallOptions {
-  timeout?: number;
-  metadata?: grpc.Metadata;
+// Truncate log file on startup
+if (DEBUG_FILE_LOG) {
+  fs.writeFileSync(LOG_FILE_PATH, `=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
 }
 
+function fileLog(msg: string) {
+  if (!DEBUG_FILE_LOG) return;
+  const ts = new Date().toISOString().substring(11, 23);
+  fs.appendFileSync(LOG_FILE_PATH, `[${ts}] ${msg}\n`);
+}
+
+// ANSI color codes for server-side terminal output
+const RED = '\x1b[31m';
+const YELLOW = '\x1b[33m';
+const RESET = '\x1b[0m';
+
+// Server log helpers — colors for errors/warnings, plain for info/debug
+const serverLog = (...args: any[]) => {
+  if (DEBUG_SERVER_LOGS) console.log(...args);
+};
+const serverError = (...args: any[]) => {
+  if (DEBUG_SERVER_LOGS) console.error(RED, ...args, RESET);
+};
+const serverWarn = (...args: any[]) => {
+  if (DEBUG_SERVER_LOGS) console.warn(YELLOW, ...args, RESET);
+};
+
+// ============================================================================
+
+/**
+ * Vite-specific gRPC client.
+ * Wraps OctaneGrpcClientBase with Set-based callback management
+ * (no EventEmitter since this runs inside the Vite dev server process).
+ */
 class OctaneGrpcClient {
-  private channel: grpc.Channel;
-  private services: Map<string, any> = new Map();
-  private packageDefinition: protoLoader.PackageDefinition | null = null;
-  private protoDescriptor: grpc.GrpcObject | null = null;
+  private base: OctaneGrpcClientBase;
   private callbacks: Set<(data: any) => void> = new Set();
   private statisticsCallbacks: Set<(data: any) => void> = new Set();
   private callbackId: number = 0;
   private isCallbackRegistered: boolean = false;
-  private pollingInterval: NodeJS.Timeout | null = null;
   private callbackStream: any = null;
   private streamActive: boolean = false;
 
-  constructor(
-    private octaneHost: string = process.env.OCTANE_HOST || OctaneGrpcClient.detectDefaultHost(),
-    private octanePort: number = parseInt(process.env.OCTANE_PORT || '51022')
-  ) {
-    const address = `${this.octaneHost}:${this.octanePort}`;
-    this.channel = new grpc.Channel(address, grpc.credentials.createInsecure(), {});
+  constructor() {
+    // Proto base path: the 'server/' directory relative to this file (project root)
+    const protoBasePath = path.resolve(__dirname, 'server');
+    this.base = new OctaneGrpcClientBase(undefined, undefined, protoBasePath);
 
-    const isSandbox = this.octaneHost === 'host.docker.internal';
-    serverLog(`📡 Vite gRPC Plugin: Connected to Octane at ${address}`);
+    const isSandbox = this.base.address.includes('host.docker.internal');
+    serverLog(` Vite gRPC Plugin: Connected to Octane at ${this.base.address}`);
     if (isSandbox) {
-      serverLog(`🐳 Using Docker networking (sandbox environment detected)`);
+      serverLog(` Using Docker networking (sandbox environment detected)`);
     }
-  }
-
-  private static detectDefaultHost(): string {
-    // Detect sandbox/Docker environment
-    const indicators = [
-      fs.existsSync('/.dockerenv'),
-      process.env.USER?.toLowerCase().includes('sandbox'),
-      process.env.KUBERNETES_SERVICE_HOST !== undefined,
-      fs.existsSync('/workspace'), // OpenHands indicator
-    ];
-
-    const isSandbox = indicators.some(indicator => indicator);
-    return isSandbox ? 'host.docker.internal' : '127.0.0.1';
   }
 
   async initialize(): Promise<void> {
-    const PROTO_DIR = getProtoDir();
-    const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
-
-    // Check if proto directory exists
-    if (!fs.existsSync(PROTO_PATH)) {
-      serverLog('⚠️  Proto directory not found:', PROTO_PATH);
-      return;
-    }
-
-    const apiVersion = USE_ALPHA5_API ? 'Alpha 5 (2026.1)' : 'Beta 2 (2026.1)';
-    serverLog(`📦 Proto files ready for lazy loading from:`, PROTO_PATH);
-    serverLog(`✅ Proto definitions will be loaded on-demand per service (${apiVersion})`);
-
-    // Note: We use lazy loading to avoid duplicate name conflicts
-    // Each service loads its own proto file when first accessed
-  }
-
-  private loadServiceProto(serviceName: string): any {
-    const PROTO_DIR = getProtoDir();
-    const PROTO_PATH = path.resolve(__dirname, `./server/${PROTO_DIR}`);
-
-    const serviceToProtoMap: Record<string, string> = {
-      // Core node system
-      ApiProjectManager: 'apiprojectmanager.proto',
-      ApiItemService: 'apinodesystem_3.proto',
-      ApiItem: 'apinodesystem_3.proto',
-      ApiItemGetter: 'apinodesystem_3.proto',
-      ApiItemGetterService: 'apinodesystem.proto',
-      ApiItemSetter: 'apinodesystem_3.proto',
-      ApiItemSetterService: 'apinodesystem.proto',
-      ApiNodeGraphService: 'apinodesystem_6.proto',
-      ApiNodeGraph: 'apinodesystem_6.proto',
-      ApiItemArrayService: 'apinodesystem_1.proto',
-      ApiItemArray: 'apinodesystem_1.proto',
-      ApiNodeService: 'apinodesystem_7.proto',
-      ApiNode: 'apinodesystem_7.proto',
-      ApiNodeArray: 'apinodesystem_5.proto',
-      ApiNodePinInfoEx: 'apinodepininfohelper.proto',
-      // Render
-      ApiRenderEngine: 'apirender.proto',
-      ApiRenderEngineService: 'apirender.proto',
-      // Info
-      ApiInfo: 'apiinfo.proto',
-      ApiInfoService: 'apiinfo.proto',
-      // Scene
-      ApiSceneOutliner: 'apisceneoutliner.proto',
-      // LiveDB
-      ApiDBMaterialManager: 'apidbmaterialmanager.proto',
-      ApiDBMaterialManager_DBCategoryArray: 'apidbmaterialmanager.proto',
-      ApiDBMaterialManager_DBMaterialArray: 'apidbmaterialmanager.proto',
-      // LocalDB
-      ApiLocalDB: 'apilocaldb.proto',
-      ApiLocalDB_Category: 'apilocaldb.proto',
-      ApiLocalDB_Package: 'apilocaldb.proto',
-      // Callbacks
-      StreamCallbackService: 'callback.proto',
-      CallbackHandler: 'callback.proto',
-    };
-
-    const protoFileName = serviceToProtoMap[serviceName] || serviceName.toLowerCase() + '.proto';
-    const protoFilePath = path.join(PROTO_PATH, protoFileName);
-
-    if (!fs.existsSync(protoFilePath)) {
-      return null;
-    }
-
-    try {
-      // Load proto file - proto-loader will automatically resolve imports via includeDirs
-      const packageDefinition = protoLoader.loadSync(protoFilePath, {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-        includeDirs: [PROTO_PATH], // This makes proto-loader auto-resolve imports
-      });
-
-      const loadedProto = grpc.loadPackageDefinition(packageDefinition);
-
-      return loadedProto;
-    } catch (error: any) {
-      serverLog(`⚠️  Could not load proto for ${serviceName}:`, error.message);
-      return null;
-    }
-  }
-
-  private getService(serviceName: string): any {
-    if (this.services.has(serviceName)) {
-      return this.services.get(serviceName);
-    }
-
-    let descriptor = this.protoDescriptor;
-
-    if (!descriptor) {
-      descriptor = this.loadServiceProto(serviceName);
-      if (!descriptor) {
-        throw new Error(`Could not load proto for service ${serviceName}`);
-      }
-    }
-
-    let ServiceConstructor: any = null;
-    const patterns = [
-      `octaneapi.${serviceName}Service`,
-      `octaneapi.${serviceName}`,
-      `livelinkapi.${serviceName}Service`,
-      `livelinkapi.${serviceName}`,
-      `${serviceName}Service`,
-      serviceName,
-    ];
-
-    for (const pattern of patterns) {
-      ServiceConstructor = this.resolveServicePath(descriptor, pattern);
-      if (ServiceConstructor) {
-        break;
-      }
-    }
-
-    if (!ServiceConstructor && descriptor === this.protoDescriptor) {
-      const serviceDescriptor = this.loadServiceProto(serviceName);
-      if (serviceDescriptor) {
-        for (const pattern of patterns) {
-          ServiceConstructor = this.resolveServicePath(serviceDescriptor, pattern);
-          if (ServiceConstructor) {
-            break;
-          }
-        }
-      }
-    }
-
-    if (!ServiceConstructor || typeof ServiceConstructor !== 'function') {
-      throw new Error(`Service ${serviceName} not found in proto definitions`);
-    }
-
-    const service = new ServiceConstructor(
-      `${this.octaneHost}:${this.octanePort}`,
-      grpc.credentials.createInsecure()
-    );
-
-    this.services.set(serviceName, service);
-    return service;
-  }
-
-  private resolveServicePath(descriptor: any, path: string): any {
-    const parts = path.split('.');
-    let current = descriptor;
-
-    for (const part of parts) {
-      if (current && current[part]) {
-        current = current[part];
-      } else {
-        return null;
-      }
-    }
-
-    return current;
+    // Vite uses lazy loading — no batch proto loading
+    await this.base.initialize();
+    serverLog(` Proto files ready for lazy loading`);
   }
 
   async callMethod(
     serviceName: string,
     methodName: string,
     params: any = {},
-    options: GrpcCallOptions = {}
+    options: any = {}
   ): Promise<any> {
-    try {
-      const service = this.getService(serviceName);
-      const method = service[methodName];
-
-      if (!method || typeof method !== 'function') {
-        throw new Error(`Method ${methodName} not found in service ${serviceName}`);
-      }
-
-      const request = Object.keys(params).length === 0 ? {} : params;
-      const metadata = options.metadata || new grpc.Metadata();
-      const deadline = Date.now() + (options.timeout || 30000);
-
-      return new Promise((resolve, reject) => {
-        method.call(
-          service,
-          request,
-          metadata,
-          { deadline },
-          (error: grpc.ServiceError | null, response: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(response);
-            }
-          }
-        );
-      });
-    } catch (error: any) {
-      serverError(`❌ ${serviceName}.${methodName}:`, error.message);
-      throw error;
-    }
+    return this.base.callMethod(serviceName, methodName, params, options);
   }
 
   async checkHealth(): Promise<boolean> {
+    return this.base.checkHealth();
+  }
+
+  // ========== Callback Management ==========
+
+  async registerOctaneCallbacks(): Promise<void> {
+    if (this.isCallbackRegistered) return;
+
     try {
-      // Use rootNodeGraph as a health check - it's a valid lightweight method
-      await this.callMethod('ApiProjectManager', 'rootNodeGraph', {}, { timeout: 5000 });
-      return true;
-    } catch (error) {
-      return false;
+      this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
+      console.log(`Registering callbacks with ID: ${this.callbackId}`);
+
+      await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
+        callback: { callbackSource: 'grpc', callbackId: this.callbackId },
+        userData: 0,
+      });
+
+      await this.callMethod('ApiRenderEngine', 'setOnNewStatisticsCallback', {
+        callback: { callbackSource: 'grpc', callbackId: this.callbackId },
+        userData: 0,
+      });
+
+      this.isCallbackRegistered = true;
+      this.startCallbackStreaming();
+      console.log('Callback registration complete');
+    } catch (error: any) {
+      console.error(`${RED}Failed to register callbacks: ${error.message}${RESET}`);
     }
   }
 
-  async registerOctaneCallbacks(): Promise<void> {
-    console.log('🎯 [CALLBACK-REGISTER] registerOctaneCallbacks() called');
-
-    if (this.isCallbackRegistered) {
-      console.log('⚠️  [CALLBACK-REGISTER] Callbacks already registered');
-      return;
-    }
+  async unregisterOctaneCallbacks(): Promise<void> {
+    if (!this.isCallbackRegistered) return;
 
     try {
-      this.callbackId = Math.floor(Math.random() * 1000000);
-      console.log(
-        `📡 [CALLBACK-REGISTER] Registering callbacks (OnNewImage, OnNewStatistics) with ID: ${this.callbackId}`
-      );
+      if (this.callbackStream) {
+        this.streamActive = false;
+        this.callbackStream.cancel();
+        this.callbackStream = null;
+        serverLog(` Callback stream closed`);
+      }
 
-      // Register OnNewImage callback
-      console.log('📡 [CALLBACK-REGISTER] Calling setOnNewImageCallback...');
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
-        callback: {
-          callbackSource: 'grpc',
-          callbackId: this.callbackId,
-        },
+        callback: null,
         userData: 0,
       });
-      console.log('✅ [CALLBACK-REGISTER] setOnNewImageCallback SUCCESS');
 
-      // Register OnNewStatistics callback
-      console.log('📡 [CALLBACK-REGISTER] Calling setOnNewStatisticsCallback...');
-      await this.callMethod('ApiRenderEngine', 'setOnNewStatisticsCallback', {
-        callback: {
-          callbackSource: 'grpc',
-          callbackId: this.callbackId,
-        },
-        userData: 0,
-      });
-      console.log('✅ [CALLBACK-REGISTER] setOnNewStatisticsCallback SUCCESS');
-
-      console.log(`✅ [CALLBACK-REGISTER] Both callbacks registered with Octane`);
-      this.isCallbackRegistered = true;
-
-      // Start streaming callbacks
-      console.log('📡 [CALLBACK-REGISTER] Starting callback streaming...');
-      this.startCallbackStreaming();
-      console.log('✅ [CALLBACK-REGISTER] Registration complete');
+      serverLog(` Callbacks unregistered`);
+      this.isCallbackRegistered = false;
+      this.callbackId = 0;
     } catch (error: any) {
-      console.error('❌ [CALLBACK-REGISTER] Failed to register callbacks:', error.message);
-      console.error('❌ [CALLBACK-REGISTER] Stack:', error.stack);
-      serverError('   (Callbacks will not work until Octane is running and LiveLink is enabled)');
+      serverError(` Failed to unregister callback:`, error.message);
     }
   }
 
   /**
-   * Start streaming callbacks from Octane via StreamCallbackService
-   * This is more efficient than polling - Octane pushes updates in real-time
+   * Dispatch a single callback stream response to the appropriate handler.
+   */
+  private handleCallbackData(callbackRequest: any): void {
+    if (callbackRequest.newImage) {
+      const renderImages = callbackRequest.newImage.render_images;
+      if (renderImages?.data?.length > 0) {
+        this.notifyCallbacks({
+          callback_source: callbackRequest.newImage.callback_source || 'grpc',
+          callback_id: callbackRequest.newImage.callback_id || this.callbackId,
+          user_data: callbackRequest.newImage.user_data,
+          render_images: renderImages,
+        });
+      }
+    } else if (callbackRequest.renderFailure) {
+      console.error(`${RED}Render failure callback received${RESET}`);
+    } else if (callbackRequest.newStatistics) {
+      this.notifyStatisticsCallbacks({
+        callback_source: 'grpc',
+        callback_id: this.callbackId,
+        user_data: callbackRequest.newStatistics.user_data,
+        statistics: callbackRequest.newStatistics.statistics,
+      });
+    } else if (callbackRequest.projectManagerChanged) {
+      console.log('Project manager changed callback received');
+    }
+  }
+
+  /**
+   * Start streaming callbacks from Octane via StreamCallbackService.
    */
   private startCallbackStreaming(): void {
-    console.log('🎯 [CALLBACK-STREAM] startCallbackStreaming() called');
-
-    if (this.callbackStream || this.streamActive) {
-      console.log('⚠️  [CALLBACK-STREAM] Callback stream already active');
-      return;
-    }
+    if (this.callbackStream || this.streamActive) return;
 
     try {
-      console.log('📡 [CALLBACK-STREAM] Starting callback streaming...');
       this.streamActive = true;
-
-      // Get StreamCallbackService instance (getService returns cached instance, not constructor)
-      console.log('📡 [CALLBACK-STREAM] Getting StreamCallbackService instance...');
-      const streamService = this.getService('StreamCallbackService');
-
-      console.log('✅ [CALLBACK-STREAM] StreamCallbackService instance obtained');
-
-      // Start streaming - callbackChannel returns a stream of StreamCallbackRequest
-      // Pass empty google.protobuf.Empty message
-      console.log('📡 [CALLBACK-STREAM] Opening callbackChannel stream...');
+      const streamService = this.base.getService('StreamCallbackService');
       this.callbackStream = streamService.callbackChannel({});
 
-      console.log('✅ [CALLBACK-STREAM] Callback stream opened');
-
-      this.callbackStream.on('data', async (callbackRequest: any) => {
-        //        console.log('🎯🎯🎯 [CALLBACK-STREAM] ========== DATA EVENT FIRED ==========');
+      this.callbackStream.on('data', (callbackRequest: any) => {
         try {
-          // DEBUG: Log the entire callback request to see what we're actually receiving
-          // console.log('📡 [CALLBACK-STREAM] Stream data received:', JSON.stringify(callbackRequest, null, 2));
-          //          console.log('📡 [CALLBACK-STREAM] Callback request keys:', Object.keys(callbackRequest));
-
-          // StreamCallbackRequest has oneof payload: newImage, renderFailure, newStatistics, projectManagerChanged
-          if (callbackRequest.newImage) {
-            //            console.log('🖼️  [CALLBACK-STREAM] OnNewImage callback received');
-            //            console.log('   [CALLBACK-STREAM] user_data:', callbackRequest.newImage.user_data);
-            //            console.log('   [CALLBACK-STREAM] callback_source:', callbackRequest.newImage.callback_source);
-            //            console.log('   [CALLBACK-STREAM] callback_id:', callbackRequest.newImage.callback_id);
-
-            // Proto verification: OnNewImageRequest contains render_images field directly
-            // No need to call grabRenderResult - images are already in the callback
-            const renderImages = callbackRequest.newImage.render_images;
-
-            //            console.log('📡 [CALLBACK-STREAM] Callback contains render_images:', {
-            //              hasRenderImages: !!renderImages,
-            //              imageCount: renderImages?.data?.length || 0,
-            //              hasData: !!(renderImages?.data)
-            //            });
-
-            if (renderImages && renderImages.data && renderImages.data.length > 0) {
-              //              console.log('✅ [CALLBACK-STREAM] Got', renderImages.data.length, 'render images from callback');
-              //              console.log('📊 [CALLBACK-STREAM] First image info:', {
-              //                type: renderImages.data[0]?.type,
-              //                width: renderImages.data[0]?.size?.x,
-              //                height: renderImages.data[0]?.size?.y,
-              //                hasBuffer: !!renderImages.data[0]?.buffer,
-              //                bufferSize: renderImages.data[0]?.buffer?.size
-              //              });
-
-              // Build the image data to send to frontend
-              const imageData = {
-                callback_source: callbackRequest.newImage.callback_source || 'grpc',
-                callback_id: callbackRequest.newImage.callback_id || this.callbackId,
-                user_data: callbackRequest.newImage.user_data,
-                render_images: renderImages,
-              };
-
-              //              console.log('📤 [CALLBACK-STREAM] Calling notifyCallbacks with image data');
-              this.notifyCallbacks(imageData);
-              //              console.log('✅ [CALLBACK-STREAM] notifyCallbacks completed');
-            } else {
-              //              console.warn('⚠️  [CALLBACK-STREAM] Callback has no render_images data');
-              //              console.warn('   [CALLBACK-STREAM] renderImages:', renderImages);
-            }
-          } else if (callbackRequest.renderFailure) {
-            console.log('❌ [CALLBACK-STREAM] Render failure callback received');
-          } else if (callbackRequest.newStatistics) {
-            //            console.log('📊 [CALLBACK-STREAM] OnNewStatistics callback received');
-            // OnNewStatisticsRequest contains render statistics
-            const statsData = {
-              callback_source: 'grpc',
-              callback_id: this.callbackId,
-              user_data: callbackRequest.newStatistics.user_data,
-              statistics: callbackRequest.newStatistics.statistics,
-            };
-            this.notifyStatisticsCallbacks(statsData);
-          } else if (callbackRequest.projectManagerChanged) {
-            console.log('🔄 [CALLBACK-STREAM] Project manager changed callback received');
-          } else {
-            console.warn('⚠️  [CALLBACK-STREAM] Unknown callback type received');
-            console.warn('   [CALLBACK-STREAM] Request:', callbackRequest);
-          }
+          this.handleCallbackData(callbackRequest);
         } catch (error: any) {
-          serverError('❌ Error processing callback data:', error.message);
-          serverError('   Stack:', error.stack);
+          serverError(' Error processing callback data:', error.message);
         }
       });
 
       this.callbackStream.on('error', (error: any) => {
-        serverError('❌ Callback stream error:', error.message);
+        serverError(' Callback stream error:', error.message);
         this.streamActive = false;
         this.callbackStream = null;
 
-        // Attempt to reconnect after 5 seconds
         if (this.isCallbackRegistered) {
-          serverLog('🔄 Reconnecting callback stream in 5 seconds...');
           setTimeout(() => {
             if (this.isCallbackRegistered) {
               this.startCallbackStreaming();
@@ -475,47 +223,16 @@ class OctaneGrpcClient {
       });
 
       this.callbackStream.on('end', () => {
-        serverLog('🔌 Callback stream ended');
+        serverLog(' Callback stream ended');
         this.streamActive = false;
         this.callbackStream = null;
       });
 
-      serverLog('✅ Callback streaming active');
+      serverLog(' Callback streaming active');
     } catch (error: any) {
-      serverError('❌ Failed to start callback streaming:', error.message);
+      serverError(' Failed to start callback streaming:', error.message);
       this.streamActive = false;
       this.callbackStream = null;
-    }
-  }
-  async unregisterOctaneCallbacks(): Promise<void> {
-    if (!this.isCallbackRegistered) {
-      return;
-    }
-
-    try {
-      // Stop streaming
-      if (this.callbackStream) {
-        this.streamActive = false;
-        this.callbackStream.cancel();
-        this.callbackStream = null;
-        serverLog('🔌 Callback stream closed');
-      }
-
-      if (this.pollingInterval) {
-        clearInterval(this.pollingInterval);
-        this.pollingInterval = null;
-      }
-
-      await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
-        callback: null,
-        userData: 0,
-      });
-
-      serverLog('✅ Callbacks unregistered');
-      this.isCallbackRegistered = false;
-      this.callbackId = 0;
-    } catch (error: any) {
-      serverError('❌ Failed to unregister callback:', error.message);
     }
   }
 
@@ -527,34 +244,6 @@ class OctaneGrpcClient {
     this.callbacks.delete(callback);
   }
 
-  private notifyCallbacks(data: any): void {
-    //    console.log('🎯 [NOTIFY] notifyCallbacks called');
-    //    console.log('📊 [NOTIFY] Number of registered callbacks:', this.callbacks.size);
-    //    console.log('📊 [NOTIFY] Data keys:', Object.keys(data));
-
-    this.callbacks.forEach((callback, index) => {
-      try {
-        //        console.log(`📤 [NOTIFY] Calling callback ${((index as unknown) as number) + 1}/${this.callbacks.size}...`);
-        callback(data);
-        //        console.log(`✅ [NOTIFY] Callback ${((index as unknown) as number) + 1} completed`);
-      } catch (error) {
-        console.error(`❌ [NOTIFY] Error in callback ${(index as unknown as number) + 1}:`, error);
-      }
-    });
-
-    //    console.log('✅ [NOTIFY] All callbacks notified');
-  }
-
-  private notifyStatisticsCallbacks(data: any): void {
-    this.statisticsCallbacks.forEach(callback => {
-      try {
-        callback(data);
-      } catch (error) {
-        serverError('❌ Error in statistics callback handler:', error);
-      }
-    });
-  }
-
   addStatisticsCallback(callback: (data: any) => void): void {
     this.statisticsCallbacks.add(callback);
   }
@@ -563,11 +252,34 @@ class OctaneGrpcClient {
     this.statisticsCallbacks.delete(callback);
   }
 
+  private notifyCallbacks(data: any): void {
+    this.callbacks.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error(`${RED}Error in image callback:${RESET}`, error);
+      }
+    });
+  }
+
+  private notifyStatisticsCallbacks(data: any): void {
+    this.statisticsCallbacks.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        serverError(' Error in statistics callback handler:', error);
+      }
+    });
+  }
+
   close(): void {
-    this.channel.close();
-    this.services.clear();
+    this.base.close();
   }
 }
+
+// ============================================================================
+// VITE PLUGIN
+// ============================================================================
 
 export function octaneGrpcPlugin(): Plugin {
   let grpcClient: OctaneGrpcClient | null = null;
@@ -578,14 +290,14 @@ export function octaneGrpcPlugin(): Plugin {
 
     async configureServer(server: ViteDevServer) {
       // Delete old log file at startup (before logging is initialized)
-      const logFilePath = '/tmp/octaneWebR_client.log';
+      const logFilePath = 'octaneWebR_client.log';
       try {
         if (fs.existsSync(logFilePath)) {
           fs.unlinkSync(logFilePath);
-          serverLog('🗑️  Deleted old client log file');
+          serverLog(' Deleted old client log file');
         }
       } catch (error: any) {
-        serverWarn('⚠️  Could not delete old log file:', error.message);
+        serverWarn(' Could not delete old log file:', error.message);
       }
 
       // Initialize gRPC client
@@ -596,61 +308,45 @@ export function octaneGrpcPlugin(): Plugin {
       try {
         await grpcClient.registerOctaneCallbacks();
       } catch (error: any) {
-        serverError('⚠️  Initial callback registration failed:', error.message);
+        serverError(' Initial callback registration failed:', error.message);
       }
 
       // Setup WebSocket server for callbacks
       wss = new WebSocketServer({ noServer: true });
 
       wss.on('connection', (ws: WebSocket) => {
-        console.log('🎯 [WSS] WebSocket client connected');
-        console.log('📊 [WSS] Client ready state:', ws.readyState);
+        console.log('WebSocket client connected');
 
         const callbackHandler = (data: any) => {
-          //          console.log('🎯🎯🎯 [WSS] callbackHandler CALLED');
-          //          console.log('📊 [WSS] Has render_images:', !!data.render_images);
-          //          console.log('📊 [WSS] WebSocket ready state:', ws.readyState);
-
           try {
-            const message = JSON.stringify({ type: 'newImage', data });
-            //            console.log('📤 [WSS] Sending message, length:', message.length);
-            ws.send(message);
-            //            console.log('✅ [WSS] Message sent successfully');
+            ws.send(JSON.stringify({ type: 'newImage', data }));
           } catch (error) {
-            console.error('❌ [WSS] Error sending WebSocket message:', error);
+            console.error(`${RED}Error sending WebSocket message:${RESET}`, error);
           }
         };
 
         const statisticsHandler = (data: any) => {
           try {
-            //            ws.send(JSON.stringify({ type: 'newStatistics', data }));
+            // ws.send(JSON.stringify({ type: 'newStatistics', data }));
           } catch (error) {
-            serverError('❌ Error sending statistics WebSocket message:', error);
+            console.error(`${RED}Error sending statistics message:${RESET}`, error);
           }
         };
 
-        console.log('📝 [WSS] Registering callbackHandler with grpcClient...');
         grpcClient?.registerCallback(callbackHandler);
-        console.log('✅ [WSS] callbackHandler registered');
-
-        console.log('📝 [WSS] Registering statisticsHandler with grpcClient...');
         grpcClient?.addStatisticsCallback(statisticsHandler);
-        console.log('✅ [WSS] statisticsHandler registered');
 
         ws.on('close', () => {
-          console.log('🔌 [WSS] WebSocket client disconnected');
+          console.log('WebSocket client disconnected');
           grpcClient?.unregisterCallback(callbackHandler);
           grpcClient?.removeStatisticsCallback(statisticsHandler);
         });
 
         ws.on('message', (message: string) => {
           try {
-            const data = JSON.parse(message.toString());
-            if (data.type === 'subscribe') {
-              serverLog('📡 Client subscribed to callbacks');
-            }
+            JSON.parse(message.toString()); // validate
           } catch (error) {
-            serverError('❌ Error parsing WebSocket message:', error);
+            console.error(`${RED}Error parsing WebSocket message:${RESET}`, error);
           }
         });
       });
@@ -701,7 +397,7 @@ export function octaneGrpcPlugin(): Plugin {
         // Client log clear endpoint (camelCase to match client call)
         if (url === '/api/logClear' && req.method === 'POST') {
           try {
-            fs.rmSync('/tmp/octaneWebR_client.log', { force: true });
+            fs.rmSync('octaneWebR_client.log', { force: true });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ status: 'ok', message: 'Log cleared' }));
           } catch (error: any) {
@@ -719,29 +415,25 @@ export function octaneGrpcPlugin(): Plugin {
             try {
               const logData = JSON.parse(body);
               const timestamp = new Date().toISOString();
-              const logLine = `[${timestamp}] [${logData.level.toUpperCase()}] ${logData.message}\n`;
+              const logLine = `${timestamp} ${logData.level.toUpperCase()} ${logData.message}\n`;
 
-              // Append to log file
-              fs.appendFileSync('/tmp/octaneWebR_client.log', logLine);
+              fs.appendFileSync('octaneWebR_client.log', logLine);
 
-              // Also log to console with appropriate emoji based on level
+              // Console output with ANSI colors for errors/warnings
               const logLevel = logData.level.toLowerCase();
               if (logLevel === 'error') {
-                console.error('🔴 ', logData.message);
+                console.error(`${RED}${logData.message}${RESET}`);
               } else if (logLevel === 'warn') {
-                console.warn('🟡 ', logData.message);
-              } else if (logLevel === 'info') {
-                console.info('  ', logData.message);
+                console.warn(`${YELLOW}${logData.message}${RESET}`);
               } else {
-                // if (logLevel === 'debug') {
-                console.log('  ', logData.message);
+                console.log(logData.message);
               }
 
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(JSON.stringify({ success: true }));
             } catch (error: any) {
-              serverError('❌ Failed to write client log:', error.message);
+              serverError(' Failed to write client log:', error.message);
               res.statusCode = 500;
               res.end(JSON.stringify({ success: false, error: error.message }));
             }
@@ -763,48 +455,27 @@ export function octaneGrpcPlugin(): Plugin {
             try {
               let params = body ? JSON.parse(body) : {};
 
-              // Parameter remapping (to match Python proxy behavior)
-              // Some proto messages use different field names than what the client sends
-              if (params.objectPtr) {
-                if (service === 'ApiNodePinInfoEx' && method === 'getApiNodePinInfo') {
-                  // GetNodePinInfoRequest uses nodePinInfoRef instead of objectPtr
-                  params = { nodePinInfoRef: params.objectPtr };
-                } else if (
-                  method === 'getValueByAttrID' ||
-                  method === 'setValueByAttrID' ||
-                  method === 'getValue' ||
-                  method === 'getByAttrID' ||
-                  method === 'setByAttrID'
-                ) {
-                  // ApiItem methods use item_ref instead of objectPtr
-                  // Both Beta 2 names (getValueByAttrID) and Alpha 5 names (getByAttrID) need transformation
-                  serverLog(`🔄 Transform: objectPtr → item_ref for ${service}.${method}`);
-                  params = { item_ref: params.objectPtr, ...params };
-                  delete params.objectPtr;
-                } else if (
-                  method === 'getPinValueByIx' ||
-                  method === 'getPinValueByPinID' ||
-                  method === 'getPinValueByName' ||
-                  method === 'setPinValueByIx' ||
-                  method === 'setPinValueByPinID' ||
-                  method === 'setPinValueByName'
-                ) {
-                  // getPinValueByX and setPinValueByX methods use item_ref instead of objectPtr (apinodesystem_7.proto)
-                  params = { item_ref: params.objectPtr, ...params };
-                  delete params.objectPtr;
-                }
-              }
+              // Unified parameter transforms (shared with Express server)
+              params = transformObjectPtrParams(service, method, params);
 
               // Verbose API logging
-              serverLog(`📤 ${service}.${method}`, JSON.stringify(params).substring(0, 100));
+              serverLog(` ${service}.${method}`, JSON.stringify(params).substring(0, 100));
+              const isHighFreq = method === 'getByAttrID' || method === 'getValueByAttrID';
+              if (!isHighFreq) {
+                fileLog(` REQ ${service}.${method} ${JSON.stringify(params)}`);
+              }
               const response = await grpcClient?.callMethod(service, method, params);
-              serverLog(`✅ ${service}.${method} → ${JSON.stringify(response).substring(0, 100)}`);
+              serverLog(` ${service}.${method} → ${JSON.stringify(response).substring(0, 100)}`);
+              if (!isHighFreq) {
+                fileLog(` RES ${service}.${method} ${JSON.stringify(response).substring(0, 500)}`);
+              }
 
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(JSON.stringify(response || {}));
             } catch (error: any) {
-              serverError(`❌ API error: ${service}.${method}:`, error.message);
+              fileLog(` ERR ${service}.${method} ${error.message}`);
+              serverError(` API error: ${service}.${method}:`, error.message);
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;
               res.end(
@@ -824,7 +495,7 @@ export function octaneGrpcPlugin(): Plugin {
         next();
       });
 
-      serverLog('✅ Octane gRPC Plugin configured');
+      serverLog(' Octane gRPC Plugin configured');
       serverLog('   • HTTP API: /api/grpc/:service/:method');
       serverLog('   • WebSocket: /api/callbacks');
       serverLog('   • Health: /api/health');
@@ -835,7 +506,7 @@ export function octaneGrpcPlugin(): Plugin {
         try {
           await grpcClient.unregisterOctaneCallbacks();
         } catch (error) {
-          serverError('❌ Error unregistering callbacks:', error);
+          serverError(' Error unregistering callbacks:', error);
         }
         grpcClient.close();
       }

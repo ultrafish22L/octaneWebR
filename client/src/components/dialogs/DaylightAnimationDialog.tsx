@@ -78,9 +78,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
             className="modal-close-button"
             onClick={onClose}
             aria-label="Close daylight animation"
-          >
-            ✕
-          </button>
+          ></button>
         </div>
 
         <div className="modal-body">

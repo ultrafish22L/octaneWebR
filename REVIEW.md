@@ -1,235 +1,428 @@
-# octaneWebR Code Review
+# OctaneWebR - Senior Engineer Code Review
 
-**Date:** 2026-02-24
-**Reviewer:** Code review pass (assisted)
-**Scope:** Full codebase — `client/src/` (~17k lines TypeScript/React)
+**Reviewer**: Principal Engineer
+**Date**: 2026-03-03
+**Scope**: Full codebase audit - server, client, services, components, CSS, build config
+**Verdict**: **C+** - Functional but fragile. Good architecture, poor execution details. Needs hardening before production.
 
 ---
 
 ## Executive Summary
 
-octaneWebR is a well-structured React application. The architecture is clean, the service layer follows a consistent pattern, and the component hierarchy is sensible. The codebase works and is actively developed.
+This is a React/TypeScript web frontend for the Octane renderer communicating via gRPC. The architecture is sound: modular service layer, event-driven updates, lazy loading, progressive scene building. However, the execution has systemic issues: no request timeouts anywhere, race conditions in mutable state, massive code duplication between the Vite plugin and Express server, CSS specificity wars, and too many unimplemented features left as `alert()` calls.
 
-The main weaknesses are (in order of impact):
+The codebase works for a demo. It will break under real usage.
 
-1. **Code duplication** — `SceneService` and `SceneServiceP` share ~300 lines of identical logic with no shared base.
+**Issue counts**: 15 critical, 30 high, 56 medium, 22 low
 
 ---
 
-## Architecture Overview
+## 1. Critical Issues (Production Blockers)
 
-```
-client/src/
-├── services/
-│   ├── OctaneClient.ts          # Facade — single entry point for all UI code
-│   ├── CacheManager.ts          # L1/L2 cache (memory + sessionStorage)
-│   └── octane/
-│       ├── ApiService.ts        # Core gRPC wrapper (fetch → /api/grpc/...)
-│       ├── BaseService.ts       # EventEmitter base for all services
-│       ├── SceneService.ts      # Traditional scene loader
-│       ├── SceneServiceP.ts     # Progressive scene loader (P = Progressive)
-│       ├── NodeService.ts       # Node CRUD operations
-│       ├── ConnectionService.ts # WebSocket + health check
-│       ├── RenderExportService.ts
-│       ├── MaterialDatabaseService.ts
-│       └── ...
-├── components/
-│   ├── SceneOutliner/           # Left panel — hierarchical scene tree
-│   ├── NodeGraph/               # Bottom center — ReactFlow node editor
-│   ├── NodeInspector/           # Right panel — parameter editing
-│   └── RenderViewport/          # Top center — live render display
-├── constants/
-│   ├── OctaneTypes.ts           # ObjectType, AttrType, NodeType, PinId enums
-│   └── PinTypes.ts              # Pin color/icon mappings
-├── config/
-│   ├── features.ts              # Feature flags
-│   └── apiVersionConfig.ts      # Alpha5/Beta2 API compatibility shims
-└── utils/
-    ├── Logger.ts                # Centralized logging (buffers to /api/log)
-    └── ...
+### 1.1 No Request Timeouts Anywhere
+
+**Files**: `ApiService.ts:169`, all service files
+**Impact**: Hanging requests accumulate indefinitely. Browser tabs freeze.
+
+Every `fetch()` call in the entire client has no timeout. If the gRPC server hangs (common with Octane under load), the browser accumulates zombie requests until it crashes.
+
+```typescript
+// CURRENT - hangs forever
+const response = await fetch(url, { method: 'POST', body });
+
+// NEEDED
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000);
+const response = await fetch(url, { method: 'POST', body, signal: controller.signal });
+clearTimeout(timeout);
 ```
 
-### Data flow
-
-1. `OctaneClient` (facade) is the only object UI components import.
-2. `useOctane()` hook provides the client instance to all components.
-3. Scene loading: `SceneServiceP.buildSceneTree()` emits incremental events (`scene:nodeAdded`, `scene:childrenLoaded`, `scene:structureComplete`, `scene:complete`).
-4. `useSceneTree` hook in `SceneOutliner` listens to those events and updates React state.
-5. `onSceneTreeChange` callback propagates to `App.tsx`, which feeds `NodeGraphEditor` and `NodeInspector`.
+**Fix**: Add AbortController with 30s timeout to `ApiService.callApi()`. One fix, entire app covered.
 
 ---
 
-## What Works Well
+### 1.2 Massive Code Duplication: Vite Plugin vs Express Server
 
-- **Service layer pattern is consistent.** All services extend `BaseService`, receive dependencies via constructor injection, and communicate via `EventEmitter`. Easy to add a new service.
-- **`ApiService.callApi()` is clean.** A single method handles all gRPC calls with automatic handle wrapping (`objectPtr` vs bare `handle`), version compatibility shims, and error propagation.
-- **Progressive loading is well-designed.** `SceneServiceP` emits at natural breakpoints, `useSceneTree` updates only what changed via structural sharing (`clonePathToHandle`), and `NodeGraph` rebuilds edges only at `structureComplete`.
-- **TypeScript types are mostly strong.** The `GrpcValue / GrpcObject` union in `ApiService` avoids `any` for API responses. `as const` enums in `OctaneTypes.ts` give full type inference.
-- **`useConnectionOperations` / `useNodeOperations` hooks** cleanly separate concerns from the main `NodeGraph/index.tsx`.
-- **`EditCommands`** provides a single place for copy/paste/delete logic shared between `NodeGraph`, `NodeInspector`, and the menu bar.
+**Files**: `vite-plugin-octane-grpc.ts` vs `server/src/grpc/client.ts`
+**Impact**: Maintenance nightmare. Bugs fixed in one place silently persist in the other.
 
----
+The `OctaneGrpcClient` class is duplicated across both files (~800 lines each). The `serviceToProtoMap`, `resolveServicePath()`, `loadServiceProto()`, `getService()`, `callMethod()`, and `startCallbackStreaming()` are nearly identical copies. Parameter transformation logic is also duplicated in `server/src/index.ts`.
 
-## Issues by Category
+Changes to proto handling require editing 2-3 files. This has already caused divergence - the Vite plugin version has different logging and slightly different error handling.
 
-### Bugs Fixed
-
-| File                             | Issue                                                                                                                 | Fix Applied                                     |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `ApiService.ts:164`              | `Logger.info('Request body:...')` fired on every API call — extremely noisy                                           | Changed to `Logger.debugV`                      |
-| `SceneService.ts:492,519`        | `responseHas.result == true` (loose equality)                                                                         | Changed to `=== true`                           |
-| `RenderExportService.ts`         | `formatMap` object defined twice (DRY violation)                                                                      | Extracted to module-level `FORMAT_MAP` constant |
-| `CacheManager.ts`                | `evictLRU` method and log message said "LRU" but algorithm is LFU (least-hits)                                        | Fixed comment and log                           |
-| `MaterialDatabaseService.ts:227` | `Logger.debug('📂 Fetching LiveDB categories...')` fired _after_ the API call, duplicating the `Logger.info` above it | Removed duplicate; kept one `Logger.debug`      |
-
-### Dead Code Removed
-
-| Item                                           | Reason                                                                                                                                                                                          |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useGraphSync.ts` (entire file, deleted)       | Entire hook duplicated in `NodeGraph/index.tsx`. The index version is better: uses O(1) `nodeMap` lookups vs O(n) `tree.some()`/`tree.find()`, and uses `sceneTreeRef` to avoid stale closures. |
-| `OctaneNode.tsx: _desaturateColor()`           | Function was unused; guarded by `// @ts-ignore - Kept for future use`. Removed entirely.                                                                                                        |
-| `NodeGraph/index.tsx` lines ~625-628, ~682-688 | "OLD IMPLEMENTATION REMOVED" tombstone comments listing deleted handlers — added no value once the code was gone.                                                                               |
-| `ApiService.ts:120`                            | Commented-out `Logger.debugV` line. Uncommented and cleaned up.                                                                                                                                 |
-| `SceneService.ts:276-278`                      | Incomplete "🎯 PROGRESSIVE UPDATE: Emit after level 1 completes" comment block with no code body.                                                                                               |
-| `SceneServiceP.ts:316`                         | Commented-out `Logger.info` for file path.                                                                                                                                                      |
-| `FileNodeToolbar.tsx`                          | `polygonCount` state was declared with `useState` but never set; `formatPolygonCount` was dead code that consumed it.                                                                           |
-| `useParameterValue.ts:53-57`                   | Multi-line block of commented-out debug logging.                                                                                                                                                |
-
-### Code Duplication
-
-The biggest structural issue: `SceneService.ts` and `SceneServiceP.ts` share roughly 300 lines of nearly-identical tree-building logic (`syncSceneSequential`, `addSceneItem`, `addItemChildren`, `getNodeName`, `getNodeIcon`, `getNodeInfo`, etc.).
-
-The only meaningful difference: `SceneServiceP` calls `this.emitAsync(event, data)` at breakpoints (after each level-0 node, after all children of a node, after structure is complete). `SceneService` does not.
-
-**Recommendation:** Extract the shared logic into a protected `SceneServiceBase` class, then have both extend it. `SceneServiceP` overrides (or adds) the emit calls. This would eliminate ~300 lines of duplication and make future changes to the loading algorithm apply to both.
-
-This is the highest-priority refactor in the codebase but was left for a dedicated pass to avoid scope creep.
-
-### Comment Issues Fixed
-
-| File                   | What Changed                                                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SceneService.ts`      | Removed duplicate JSDoc block (two `/** */` for same method); added explanation for 50ms `setTimeout` yield                                 |
-| `ConnectionService.ts` | Removed `🎯🎯🎯` triple-emoji debug artifact; trimmed verbose per-field WebSocket message logging                                           |
-| `NodeService.ts`       | Added JSDoc to `deleteNodeOptimized` explaining what "Optimized" means; clarified `getNodeTypeId` stub                                      |
-| `OctaneClient.ts`      | Improved comments on `buildSceneTree` and `getScene`                                                                                        |
-| `NodeGraph/index.tsx`  | Removed "Phase 3/3 refactoring" and "Phase 4/4 refactoring" breadcrumbs from hook descriptions                                              |
-| `OctaneTypes.ts`       | Added comment explaining `ApiNodePinInfoEx: 44` intentional duplicate value                                                                 |
-| `features.ts`          | Added comment explaining `\|\| true` is intentional (SceneServiceP is always active)                                                        |
-| `Logger.ts`            | Added note that `DEBUG_MODE` should be `false` in production builds                                                                         |
-| `CacheManager.ts`      | Fixed "LRU eviction" to "LFU-style eviction (least-hit entry)" in header and method                                                         |
-| `useSceneTree.ts`      | Added comment explaining why `hasSelectedRenderTarget` is a mutable closure variable instead of React state; removed verbose delete logging |
-| `useParameterValue.ts` | Improved "CRITICAL: Must match exact field names" to reference the actual protobuf `oneof` field names                                      |
-| `FileNodeToolbar.tsx`  | Improved TODO comments to be actionable                                                                                                     |
-
-### Naming
-
-- `deleteNodeOptimized` — "Optimized" was not meaningful without context. The JSDoc now explains it: avoids a full reload by patching `scene.map`/`scene.tree` directly.
-- `evictLRU` — The method name says LRU but uses least-hits (LFU). Name kept for now (renaming a private method is low priority), but the docstring now accurately describes the algorithm.
-- `sceneServiceP` / `SceneServiceP` — The "P" was unexplained. Comments now say "P = Progressive".
-
-### Complexity
-
-- `NodeGraph/index.tsx` is the largest component at ~900 lines, but it's well-decomposed via hooks (`useConnectionOperations`, `useNodeOperations`, `useConnectionCutter`). The remaining code is mostly straightforward ReactFlow wiring.
-- `NodeInspector/index.tsx` has a complex `hasGroupMap` / `groupChildren` system that faithfully replicates `octaneWeb`'s `GenericNodeRenderer.js` indentation logic. It's complex by necessity, and the comments explain the `octaneWeb` equivalents.
-- `useSceneTree.ts` — The event handler for `handleNodeDeleted` contains a structural-sharing tree filter. It's well-commented and correct.
-
-### TypeScript Type Safety
-
-- The `GrpcValue` recursive union (`ApiService.ts`) is the right pattern. Most service code uses the `asObject()`, `asNumber()`, `asBool()`, `asString()`, `getHandle()` helpers correctly.
-- `useParameterValue.ts` still has `// eslint-disable-next-line @typescript-eslint/no-explicit-any` on the `value: any` in `ParameterValue`. This is acceptable: the value type is genuinely dynamic (bool, number, float3 struct, etc.) and narrows at the switch statement in `handleValueChange`.
-- `NodeInspector/index.tsx` uses `node.nodeInfo?.nodeColor` without typing `nodeColor` — it passes through as `unknown`. Not a bug (guarded by `formatNodeColor`), but could be typed.
+**Fix**: Extract shared gRPC client to `server/src/grpc/OctaneGrpcClient.ts`. Both the Express server and Vite plugin import from the same source.
 
 ---
 
-## File-by-File Notes
+### 1.3 Race Conditions in Mutable Scene State
 
-### `ApiService.ts`
+**Files**: `SceneService.ts`, `NodeService.ts`
+**Impact**: Scene tree corruption; stale references; crashes.
 
-Clean. The request body construction logic (objectPtr vs bare handle) is well-documented. The helper functions (`asObject`, `asBool`, `getHandle`, etc.) are the right abstraction.
+The scene is stored as a mutable `Map` + `tree` array. Multiple async operations read and mutate this state without any synchronization:
 
-### `SceneService.ts` / `SceneServiceP.ts`
+```typescript
+// NodeService.ts - deleteNodeOptimized
+const collapsedChildren = this.findCollapsedChildren(node); // snapshot
+await this.apiService.callApi('ApiItem', 'destroy', nodeHandle, {}); // async gap
+scene.map.delete(nodeHandle); // mutate using stale snapshot
+collapsedChildren.forEach(h => scene.map.delete(h)); // could be wrong
+```
 
-Functionally correct. The duplication is the main concern. `SceneServiceP.emitAsync()` (using `setTimeout(fn, 0)` to defer events) is a good pattern for yielding the event loop without breaking the sequential API call chain.
+Between the snapshot and the mutation, another operation (progressive loading, user action) could modify the scene. The delete then operates on stale data.
 
-### `ConnectionService.ts`
-
-Clean after this pass. The 50ms WebSocket send delay is well-documented.
-
-### `NodeService.ts`
-
-Clean. `deleteNodeOptimized` is the right approach — deleting from `scene.map` directly avoids a full reload. The `getNodeTypeId` stub is documented; it can be removed entirely if the API truly doesn't need it.
-
-### `OctaneClient.ts`
-
-Good facade. The `getScene()` fallback (`sceneServiceP.getScene().tree.length > 0`) is now documented.
-
-### `RenderExportService.ts`
-
-Clean after extracting `FORMAT_MAP`. The save-format enum values (PNG=0, JPG=1, EXR=2, TIFF=3) match Octane's `imageSaveFormat` enum.
-
-### `CacheManager.ts`
-
-Well-structured. The three-tier cache (memory → sessionStorage → fetch) is a good pattern for this use case. Eviction algorithm is LFU-style, now correctly documented.
-
-### `NodeGraph/index.tsx`
-
-Well-organized after removing tombstone comments. The progressive loading event lifecycle (`buildStart` → `nodeAdded` → `structureComplete` → `complete`) is clearly documented in the useEffect.
-
-### `OctaneNode.tsx`
-
-Clean after removing `_desaturateColor`. The pin-color saturation logic (`saturateColor`) is correct.
-
-### `NodeInspector/index.tsx`
-
-The `hasGroupMap` / `groupChildren` logic is complex but necessary and well-commented. The `NodeParameter` component handles both end-nodes (show `ParameterControl`) and branch-nodes (show dropdown + children) cleanly.
-
-### `useSceneTree.ts`
-
-The structural sharing in `clonePathToHandle` is correct. The `hasSelectedRenderTarget` closure flag is now documented. The delete filter (`filterDeleted`) is a clean structural-sharing implementation.
-
-### `useParameterValue.ts`
-
-The response extraction (`Object.keys(response)[1]` → value field name) is a hack around the dynamic protobuf response format. It's documented in the file. The queued fetch (via `RequestQueue`) prevents connection pool exhaustion on large scenes.
-
-### `features.ts`
-
-The `|| true` guard is intentional and now documented.
-
-### `OctaneTypes.ts`
-
-The `AT_FLOAT2 = 90` (not 10) is a genuine protobuf quirk, now commented. `ApiNodePinInfoEx: 44` alias is documented.
-
-### `Logger.ts`
-
-`DEBUG_MODE = true` needs to be changed to `false` before production deployment. This is now noted in the code.
+**Fix**: Snapshot state before async calls. Re-validate before mutations. Consider immutable scene state with copy-on-write.
 
 ---
 
-## Recommendations (Prioritized)
+### 1.4 WebSocket Double-Initialization Memory Leak
 
-### High Priority
+**File**: `ConnectionService.ts:74-75`
+**Impact**: Multiple WebSocket connections; duplicate messages; memory leak.
 
-1. **Extract `SceneServiceBase`** — Merge the ~300 shared lines from `SceneService` and `SceneServiceP` into an abstract base class. This is the largest maintainability risk in the codebase.
+```typescript
+const ws = new WebSocket(wsUrl);
+this.ws = ws;
+```
 
-2. **Set `DEBUG_MODE = false`** in `Logger.ts` before any production deployment. Currently every log message is buffered and sent to `/api/log` every second, regardless of log level.
+If `connect()` is called twice rapidly (which happens on React StrictMode mount/unmount), the first WebSocket is replaced before it closes. The old connection stays open, receiving and processing duplicate messages.
 
-### Medium Priority
+**Fix**: Close existing WebSocket before creating new one:
 
-3. **`useGraphSync.ts` was dead** — Confirmed and deleted. If a future refactor moves graph logic back into a hook, start fresh rather than restoring this file.
-
-4. **`getNodeTypeId` stub** — Either implement it (query the API for the type ID) or remove it and its callsite. Currently it always returns `1` and is only called from `createNodeForPin`, which may never reach that path.
-
-5. **`hasAttr` before `getValueByAttrID`** — `useParameterValue.ts` makes two sequential API calls per parameter (hasAttr → getValueByAttrID). For scenes with many parameters this doubles fetch count. Consider whether `getValueByAttrID` returns a distinguishable "no attribute" response that eliminates the preliminary check.
-
-### Low Priority
-
-6. **`package.json` missing `"type": "module"`** — ESLint warns about this on every run. Add `"type": "module"` to `package.json` to silence the warning.
-
-7. **`evictLRU` rename** — Consider renaming to `evictLeastAccessed` to match the actual algorithm. Low urgency since it's a private method.
-
-8. **`NodeInspector/index.tsx:handleToggle`** — Currently a no-op placeholder. Either implement centralized expansion state or remove the `onToggle` prop entirely.
+```typescript
+if (this.ws) {
+  this.ws.close();
+  this.ws = null;
+}
+const ws = new WebSocket(wsUrl);
+```
 
 ---
 
-_Review completed 2026-02-24. All identified bugs and comment issues have been fixed. TypeScript (`npx tsc --noEmit`) and ESLint (`npm run lint`) pass clean._
+### 1.5 CommandHistory Corrupts on Error
+
+**File**: `CommandHistory.ts:35-38, 79-84`
+**Impact**: Undo/redo chain breaks after any failed command.
+
+In `redo()`, the index is incremented _before_ execution. If `execute()` throws, the index points to a failed command. Next undo will try to undo a command that never executed.
+
+**Fix**: Increment index only after successful execution. Wrap in try-catch with rollback.
+
+---
+
+### 1.6 CacheManager Skips Items During Invalidation
+
+**File**: `CacheManager.ts:157-162`
+**Impact**: Cache not fully invalidated; stale data persists.
+
+```typescript
+for (let i = 0; i < sessionStorage.length; i++) {
+  const key = sessionStorage.key(i);
+  if (key && key.startsWith('octane:cache:') && regex.test(key)) {
+    sessionStorage.removeItem(key); // length decreases, next item skipped
+    sessionCleaned++;
+  }
+}
+```
+
+Iterating `sessionStorage` while removing items causes index shift. Every removal skips the next item.
+
+**Fix**: Collect keys first, then remove:
+
+```typescript
+const keys = [];
+for (let i = 0; i < sessionStorage.length; i++) {
+  const key = sessionStorage.key(i);
+  if (key?.startsWith('octane:cache:') && regex.test(key)) keys.push(key);
+}
+keys.forEach(k => sessionStorage.removeItem(k));
+```
+
+---
+
+### 1.7 EventEmitter Stops on First Handler Error
+
+**File**: `EventEmitter.ts:35`
+**Impact**: One bad listener kills all event propagation.
+
+```typescript
+handlers.forEach(handler => (handler as (...a: unknown[]) => void)(...args));
+```
+
+If handler #1 of 5 throws, handlers #2-5 never execute. Scene tree updates, render callbacks, and UI synchronization all depend on this EventEmitter.
+
+**Fix**: Wrap each handler in try-catch:
+
+```typescript
+handlers.forEach(handler => {
+  try {
+    (handler as (...a: unknown[]) => void)(...args);
+  } catch (error) {
+    console.error(`Event handler error for "${event}":`, error);
+  }
+});
+```
+
+---
+
+### 1.8 Server Initialization Race Condition
+
+**File**: `server/src/index.ts:29-34`
+**Impact**: Server accepts requests before gRPC is ready.
+
+`grpcClient.initialize()` is fire-and-forget. The server starts listening before proto files are loaded. Early requests hit uninitialized gRPC client.
+
+**Fix**: `await grpcClient.initialize()` before `app.listen()`.
+
+---
+
+### 1.9 `startCallbackStreaming()` is 230 Lines
+
+**Files**: `server/src/grpc/client.ts:369-599`, `vite-plugin-octane-grpc.ts:381-507`
+**Impact**: Unmaintainable. High cyclomatic complexity. Duplicated across two files.
+
+This single function handles: stream creation, callback registration, image extraction from 4+ different response shapes, statistics parsing, error recovery, reconnection with delay, and logging. It has nested if/else chains 5 levels deep.
+
+**Fix**: Break into `handleNewImageCallback()`, `handleStatisticsCallback()`, `setupStreamHandlers()`, `reconnectStream()`. Then the main function is ~20 lines.
+
+---
+
+## 2. High Priority Issues
+
+### 2.1 Sequential API Calls in Loops
+
+**Files**: `NodeService.ts:275-293`, `SceneService.ts:213-235`
+
+```typescript
+// 10k items = 10k sequential API calls. No batching.
+for (let i = 0; i < size; i++) {
+  const itemResponse = await this.apiService.callApi('ApiItemArray', 'get', listHandle, {
+    index: i,
+  });
+}
+```
+
+**Fix**: Batch into groups of 10-50 using `Promise.all()` with concurrency limit. Or add batch endpoints server-side.
+
+---
+
+### 2.2 `ApiService.callApi()` Unsafe Error Parsing
+
+**File**: `ApiService.ts:174`
+
+`response.json()` can throw if the error response is HTML (e.g., 502 from a proxy). No fallback parsing.
+
+**Fix**: Wrap in try-catch: `try { await response.json() } catch { throw new Error(response.statusText) }`
+
+---
+
+### 2.3 No WebSocket Authentication
+
+**File**: `server/src/api/websocket.ts:18`
+
+The WebSocket endpoint at `/api/callbacks` accepts all connections without authentication. Combined with `0.0.0.0` binding, this exposes render data to the entire network.
+
+---
+
+### 2.4 Optimistic State Updates Without Rollback
+
+**File**: `RenderService.ts:31-32`
+
+```typescript
+this.renderState.isRendering = true; // optimistic
+this.emit('renderStateChanged', this.renderState);
+// API call may fail - no rollback
+```
+
+---
+
+### 2.5 `alert()` in Production Code
+
+**Files**: `useNodeOperations.ts:375,383,392`
+
+Three `alert()` calls for unimplemented features. Blocks main thread. Unprofessional.
+
+**Fix**: Replace with `setTemporaryStatus()` or disable the buttons with tooltips.
+
+---
+
+### 2.6 Stale Cache Reuse in Scene Building
+
+**File**: `SceneService.ts:346-354`
+
+Cached `SceneNode` returned without refreshing from API. If node type changed server-side, UI sees stale data.
+
+---
+
+### 2.7 Memory Leak: mouseleave Event Listener
+
+**File**: `useMouseInteraction.ts:545`
+
+Event listener added but cleanup doesn't match the handler reference.
+
+---
+
+### 2.8 Insecure gRPC Credentials
+
+**Files**: `server/src/grpc/client.ts:30`, `vite-plugin-octane-grpc.ts:30`
+
+`grpc.credentials.createInsecure()` everywhere. Acceptable for local dev only.
+
+---
+
+### 2.9 CSS: Pervasive `!important` Usage
+
+**Files**: `app.css`, `node-graph.css`, `render-viewport.css`, `scene-outliner.css`
+
+13+ `!important` flags on ReactFlow edges alone. This is a CSS architecture failure that makes future styling changes nearly impossible.
+
+---
+
+### 2.10 CSS: Massive Duplication and Dead Code
+
+**Files**: All CSS files (~5,500 lines total)
+
+Documented duplicate removals (comments saying "see line X"), commented-out code blocks, empty selectors, incomplete selectors (bare `.param-increment,` with no rules), duplicate `@keyframes` definitions across files.
+
+---
+
+### 2.11 Callback Listener Memory Leak on Re-registration
+
+**File**: `server/src/services/callbackManager.ts:35-52`
+
+`registerCallbacks()` adds 4 new listeners on `grpcClient` but never removes old ones. Re-registration adds duplicates.
+
+---
+
+### 2.12 CORS Misconfiguration
+
+**File**: `server/src/index.ts:11-16`
+
+`origin: '*'` with `credentials: true` is invalid per CORS spec. Browsers will reject this.
+
+---
+
+## 3. Medium Priority Issues
+
+| #    | Issue                                                                 | File(s)                                   |
+| ---- | --------------------------------------------------------------------- | ----------------------------------------- |
+| 3.1  | Leading spaces in all error messages (copy-paste bug)                 | `NodeService.ts` (7 occurrences)          |
+| 3.2  | No URL encoding in API path construction                              | `ApiService.ts:123`                       |
+| 3.3  | Fixed 5s reconnect delay (no exponential backoff)                     | `ConnectionService.ts:131`                |
+| 3.4  | `connected = true` set before WebSocket `onopen` fires                | `ConnectionService.ts:46`                 |
+| 3.5  | `Promise.all` without `allSettled` for partial failures               | `server/src/index.ts:88`, `client.ts:710` |
+| 3.6  | ~15 hardcoded hex colors that should use CSS variables                | All CSS files                             |
+| 3.7  | Z-index inconsistency (variables vs hardcoded values)                 | All CSS files                             |
+| 3.8  | Inconsistent error handling: some throw, some return null             | All service files                         |
+| 3.9  | Keyboard handler registered on `document` instead of component        | `useNodeOperations.ts:461`                |
+| 3.10 | Connection cutter uses wrong coordinate system for zoomed graphs      | `useConnectionCutter.ts:151`              |
+| 3.11 | Empty features config file serves no purpose                          | `features.ts`                             |
+| 3.12 | Logger fire-and-forget fetch in constructor                           | `Logger.ts:56`                            |
+| 3.13 | Invalid CSS font weight value (`--font-weight-light: 50`)             | `theme-octane.css`                        |
+| 3.14 | Duplicate `grid-template-columns` in same `@media` block              | `app.css:196-250`                         |
+| 3.15 | `OctaneTypes.ts` manually maintained, should auto-generate from proto | `OctaneTypes.ts`                          |
+| 3.16 | Cut = delete, paste = localStorage (incomplete clipboard)             | `EditCommands.ts:109-129`                 |
+| 3.17 | Zero tests in entire codebase                                         | Everywhere                                |
+| 3.18 | MaterialDatabaseService has duplicated graph-handle fallback logic    | Lines 170-214 and 361-385                 |
+| 3.19 | `RequestQueue.processNext()` race condition on activeCount            | `RequestQueue.ts:44-65`                   |
+| 3.20 | `useNodeOperations` has stale `nodes` in effect closure               | `useNodeOperations.ts:411`                |
+| 3.21 | CameraService double-casts response via `unknown`                     | `CameraService.ts:24`                     |
+| 3.22 | `RenderExportService` doesn't validate format string                  | `RenderExportService.ts:12`               |
+| 3.23 | `ItemService.setParameterValue` silently returns on unknown type      | `ItemService.ts:130`                      |
+| 3.24 | App.tsx is 668 lines - should split into sub-components               | `App.tsx`                                 |
+| 3.25 | CSS media queries scattered across files with same breakpoints        | `app.css`, `node-graph.css`               |
+| 3.26 | Unused `_serviceName` parameter in `getCompatibleMethodName`          | `apiVersionConfig.ts:80`                  |
+
+---
+
+## 4. What's Done Well
+
+### Architecture
+
+- **Modular service layer**: Clean separation into ApiService, NodeService, SceneService, etc. Each has single responsibility. BaseService provides consistent EventEmitter patterns.
+- **Event-driven data flow**: Scene changes propagate naturally via events without tight coupling between components.
+- **Progressive scene loading**: 4-level strategy (structure, types, children, metadata) provides fast initial render with progressive detail.
+- **Dual API version support**: Clean Alpha 5 / Beta 2 compatibility via single config file (`api-version.config.js`).
+- **Lazy loading**: NodeGraph and MaterialDatabase loaded via `React.lazy()` with proper Suspense fallbacks.
+- **Vite plugin for dev mode**: Eliminates need for separate Express server during development.
+
+### React Patterns
+
+- **Stable callback identities**: `handleSceneTreeChange`, `handleNodeSelect` correctly wrapped in `useCallback([])` with functional state updaters to avoid stale closures.
+- **Error boundaries**: Every major panel wrapped in `<ErrorBoundary>`.
+- **EditActionsContext**: Clean pattern routing menu commands to the active component's handlers.
+- **Custom hooks**: Good decomposition of NodeGraph into `useNodeOperations`, `useConnectionOperations`, `useConnectionCutter`.
+
+### Code Quality
+
+- **ApiService type helpers**: `asObject()`, `asNumber()`, `asBool()`, `getHandle()` provide proper runtime type narrowing.
+- **RequestQueue**: Concurrency-limited queue prevents connection pool exhaustion.
+- **CacheManager**: Multi-tier caching (memory + sessionStorage) with LRU eviction.
+- **Accessibility**: ARIA roles on context menus, `prefers-reduced-motion` and `prefers-contrast` media queries.
+- **Theme system**: Comprehensive CSS custom properties covering colors, spacing, typography, z-index.
+
+### Infrastructure
+
+- **Husky + lint-staged**: Pre-commit hooks enforce formatting.
+- **TypeScript strict mode**: `strict: true`, `noUnusedLocals`, `noUnusedParameters`.
+- **ESLint + Prettier**: Consistent formatting enforced.
+
+---
+
+## 5. Recommendations (Priority Order)
+
+### Immediate (This Week)
+
+1. **Add request timeout to `ApiService.callApi()`** - Single change, biggest impact
+2. **Close existing WebSocket before reconnect** in ConnectionService
+3. **Wrap EventEmitter handlers in try-catch** - Prevents cascade failures
+4. **Replace `alert()` calls** with status bar messages (3 occurrences)
+5. **Fix CacheManager iteration-during-removal** bug
+6. **Remove leading spaces from error messages** in NodeService
+
+### Short Term (This Month)
+
+7. **Extract shared gRPC client** from vite-plugin and server into single source
+8. **Add exponential backoff** to WebSocket reconnection
+9. **Fix CommandHistory error handling** - Only push after successful execute
+10. **Break `startCallbackStreaming()`** into smaller methods (both copies)
+11. **Remove all CSS `!important`** and restructure specificity
+12. **Add stylelint** to catch CSS duplicates and dead code
+13. **Auto-generate `OctaneTypes.ts`** from proto files
+
+### Medium Term (This Quarter)
+
+14. **Add unit tests** - Start with services layer (ApiService, NodeService, SceneService)
+15. **Implement proper cut/paste** with Octane clipboard API
+16. **Batch sequential API calls** in loops (NodeService, SceneService)
+17. **Add response validation** (zod schemas) to replace unsafe type casts
+18. **Implement notification system** to replace TODO comments about user-facing errors
+19. **Scope keyboard handlers** to component containers instead of `document`
+20. **Consolidate CSS** into component-based structure
+
+### Long Term
+
+21. **Add E2E tests** with Playwright
+22. **Implement WebSocket authentication**
+23. **Add TLS support** for gRPC connections
+24. **Consider CSS modules** for component encapsulation
+25. **Implement proper undo/redo** with tested CommandHistory
+
+---
+
+## 6. Metrics
+
+| Category              | Files   | Lines       | Critical | High   | Medium | Low    |
+| --------------------- | ------- | ----------- | -------- | ------ | ------ | ------ |
+| Server (Express/gRPC) | 4       | ~1,300      | 3        | 4      | 12     | 4      |
+| Vite Plugin           | 1       | ~875        | 3        | 1      | 10     | 2      |
+| Client Services       | 16      | ~4,500      | 4        | 8      | 12     | 6      |
+| React Components      | 25+     | ~8,000      | 2        | 10     | 14     | 6      |
+| CSS                   | 7       | ~5,500      | 3        | 7      | 8      | 4      |
+| **Total**             | **53+** | **~20,000** | **15**   | **30** | **56** | **22** |
+
+**Overall: 123 issues found. 15 are production blockers.**
+
+---
+
+_The bones are good. The muscles need work._

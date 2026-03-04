@@ -15,6 +15,7 @@ import { Logger } from '../../utils/Logger';
 import React, { useState, useMemo } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
+import { useStatusMessage } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
 import { formatNodeColor } from '../../utils/ColorUtils';
@@ -58,7 +59,7 @@ function ParameterGroup({
         role="button"
         tabIndex={0}
       >
-        <span className="inspector-group-icon">{expanded ? '▼' : '▶'}</span>
+        <span className="inspector-group-icon">{expanded ? '▼' : ''}</span>
         <span className="inspector-group-label">{groupName}</span>
       </div>
       <div className="inspector-group-content" style={{ display: expanded ? 'block' : 'none' }}>
@@ -79,6 +80,7 @@ function NodeParameter({
   hasGroupMap: Map<number, boolean>;
 }) {
   const { client } = useOctane();
+  const { setTemporaryStatus } = useStatusMessage();
   const [expanded, setExpanded] = useState(level < 2);
 
   const hasChildren = node.children && node.children.length > 0;
@@ -119,24 +121,27 @@ function NodeParameter({
       const parentHandle = node.pinInfo?.pinOwner?.handle;
       const pinIdx = node.pinInfo?.pinId;
       if (!parentHandle || pinIdx === undefined) {
-        Logger.error('❌ Could not find parent or pin index for empty pin');
+        Logger.error('Could not find parent or pin index for empty pin');
+        setTemporaryStatus('Failed to create node for this parameter', 3000);
         return;
       }
-      Logger.debug(`➕ Creating ${newNodeType} for empty pin`);
+      Logger.debug(`Creating ${newNodeType} for empty pin`);
       try {
         await client.createNodeForPin(parentHandle, pinIdx, newNodeType);
-        Logger.debug(`✅ Node created and connected`);
+        Logger.debug(`Node created and connected`);
       } catch (error) {
-        Logger.error('❌ Failed to create node for empty pin:', error);
+        Logger.error('Failed to create node for empty pin:', error);
+        setTemporaryStatus('Failed to create node for this parameter', 3000);
       }
     } else {
       if (!node.handle) return;
-      Logger.debug(`🔄 Replacing node ${node.handle} (${currentNodeType}) with ${newNodeType}`);
+      Logger.debug(`Replacing node ${node.handle} (${currentNodeType}) with ${newNodeType}`);
       try {
         await client.replaceNode(node.handle, newNodeType);
-        Logger.debug(`✅ Node replaced successfully`);
+        Logger.debug(`Node replaced successfully`);
       } catch (error) {
-        Logger.error('❌ Failed to replace node:', error);
+        Logger.error('Failed to replace node:', error);
+        setTemporaryStatus('Failed to replace node', 3000);
       }
     }
   };
@@ -160,7 +165,7 @@ function NodeParameter({
     level === 0 ? 'node-indent-0' : hasGroupAtLevel ? 'node-indent-done' : 'node-indent';
 
   // Determine collapse/expand icon
-  const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '▶') : '';
+  const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '') : '';
 
   // Build tooltip with detailed description
   const buildTooltip = () => {
@@ -452,35 +457,35 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
     setContextMenuVisible(false);
   };
 
+  const handleRender = () => {
+    Logger.debug('Render action for node:', node?.name);
+    // TODO: Implement render action
+  };
+
   const handleSave = () => {
-    Logger.debug('💾 Save action for node:', node?.name);
+    Logger.debug('Save action for node:', node?.name);
     // TODO: Implement save action
   };
 
   const handleCut = () => {
-    Logger.debug('✂️ Cut action for node:', node?.name);
+    Logger.debug('Cut action for node:', node?.name);
     // TODO: Implement cut action
   };
 
   const handleCopy = () => {
-    Logger.debug('📋 Copy action for node:', node?.name);
+    Logger.debug('Copy action for node:', node?.name);
     // TODO: Implement copy action
   };
 
   const handlePaste = () => {
-    Logger.debug('📌 Paste action for node:', node?.name);
+    Logger.debug('Paste action for node:', node?.name);
     // TODO: Implement paste action
-  };
-
-  const handleFillEmptyPins = () => {
-    Logger.debug('📌 Fill empty pins for node:', node?.name);
-    // TODO: Implement fill empty pins action
   };
 
   const handleDelete = async () => {
     if (!node || !client) return;
 
-    Logger.debug('🗑️ Delete action for node:', node.name);
+    Logger.debug('Delete action for node:', node.name);
 
     // Use unified EditCommands for consistent delete behavior
     // Note: App.tsx listens to 'nodeDeleted' event and clears selection
@@ -488,28 +493,28 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
       client,
       selectedNodes: [node],
       onComplete: () => {
-        Logger.debug('✅ Delete operation completed from NodeInspector');
+        Logger.debug('Delete operation completed from NodeInspector');
       },
     });
   };
 
   const handleExpand = () => {
-    Logger.debug('📂 Expand action for node:', node?.name);
+    Logger.debug('Expand action for node:', node?.name);
     // TODO: Implement expand all children action
   };
 
   const handleShowInOutliner = () => {
-    Logger.debug('🔍 Show in Outliner:', node?.name);
+    Logger.debug('Show in Outliner:', node?.name);
     // TODO: Implement outliner navigation
   };
 
   const handleShowInGraphEditor = () => {
-    Logger.debug('🔍 Show in Graph Editor:', node?.name);
+    Logger.debug('Show in Graph Editor:', node?.name);
     // TODO: Implement graph editor navigation
   };
 
   const handleShowInLuaBrowser = () => {
-    Logger.debug('🔍 Show in Lua Browser:', node?.name);
+    Logger.debug('Show in Lua Browser:', node?.name);
     // TODO: Implement Lua browser navigation
   };
 
@@ -546,11 +551,11 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
         <NodeInspectorContextMenu
           x={contextMenuPosition.x}
           y={contextMenuPosition.y}
+          onRender={handleRender}
           onSave={handleSave}
           onCut={handleCut}
           onCopy={handleCopy}
           onPaste={handlePaste}
-          onFillEmptyPins={handleFillEmptyPins}
           onDelete={handleDelete}
           onExpand={handleExpand}
           onShowInOutliner={handleShowInOutliner}

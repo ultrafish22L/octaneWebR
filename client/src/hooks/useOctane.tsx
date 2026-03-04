@@ -2,7 +2,7 @@
  * React hooks and context for Octane client
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import {
   OctaneClient,
   getOctaneClient,
@@ -72,14 +72,10 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
     await client.disconnect();
   }, [client]);
 
-  const value: OctaneContextValue = {
-    client,
-    connected,
-    scene,
-    renderState,
-    connect,
-    disconnect,
-  };
+  const value = useMemo<OctaneContextValue>(
+    () => ({ client, connected, scene, renderState, connect, disconnect }),
+    [client, connected, scene, renderState, connect, disconnect]
+  );
 
   return <OctaneContext.Provider value={value}>{children}</OctaneContext.Provider>;
 }
