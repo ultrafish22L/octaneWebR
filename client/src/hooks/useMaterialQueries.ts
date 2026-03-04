@@ -90,7 +90,7 @@ export function useMaterialsForCategory(categoryId: number | null, dbType: DBTyp
   return useQuery({
     queryKey:
       dbType === 'livedb'
-        ? queryKeys.materials.livedb.category(categoryId!)
+        ? queryKeys.materials.livedb.category(categoryId ?? 0)
         : queryKeys.materials.localdb.category(categoryId?.toString() || ''),
 
     queryFn: async (): Promise<Material[]> => {

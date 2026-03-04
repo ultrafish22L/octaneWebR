@@ -59,7 +59,7 @@ function ParameterGroup({
         role="button"
         tabIndex={0}
       >
-        <span className="inspector-group-icon">{expanded ? '▼' : ''}</span>
+        <span className="inspector-group-icon">{expanded ? '▼' : '▶'}</span>
         <span className="inspector-group-label">{groupName}</span>
       </div>
       <div className="inspector-group-content" style={{ display: expanded ? 'block' : 'none' }}>
@@ -69,8 +69,9 @@ function ParameterGroup({
   );
 }
 
-// Node parameter item component
-function NodeParameter({
+// Node parameter item component — memoized to avoid re-rendering entire tree
+// when only a sibling's data changes
+const NodeParameter = React.memo(function NodeParameter({
   node,
   level,
   hasGroupMap,
@@ -111,13 +112,12 @@ function NodeParameter({
   // Get current node type (for nodes, not pins)
   const currentNodeType = node.nodeInfo?.type || '';
 
-  // Handler for node type change
+  // Handler for node type change — value is "key:id" to carry both pieces
   const handleNodeTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newNodeType = event.target.value;
-    if (!newNodeType || newNodeType === currentNodeType) return;
+    const selected = compatibleNodeTypes.find(t => t.key === event.target.value);
+    if (!selected || selected.key === currentNodeType) return;
 
     if (isEmptyPin) {
-      // Empty pin: create a new node and connect it
       const parentHandle = node.pinInfo?.pinOwner?.handle;
       const pinIdx = node.pinInfo?.pinId;
       if (!parentHandle || pinIdx === undefined) {
@@ -125,20 +125,16 @@ function NodeParameter({
         setTemporaryStatus('Failed to create node for this parameter', 3000);
         return;
       }
-      Logger.debug(`Creating ${newNodeType} for empty pin`);
       try {
-        await client.createNodeForPin(parentHandle, pinIdx, newNodeType);
-        Logger.debug(`Node created and connected`);
+        await client.createNodeForPin(parentHandle, pinIdx, selected.key, selected.id);
       } catch (error) {
         Logger.error('Failed to create node for empty pin:', error);
         setTemporaryStatus('Failed to create node for this parameter', 3000);
       }
     } else {
       if (!node.handle) return;
-      Logger.debug(`Replacing node ${node.handle} (${currentNodeType}) with ${newNodeType}`);
       try {
-        await client.replaceNode(node.handle, newNodeType);
-        Logger.debug(`Node replaced successfully`);
+        await client.replaceNode(node.handle, selected.key, selected.id);
       } catch (error) {
         Logger.error('Failed to replace node:', error);
         setTemporaryStatus('Failed to replace node', 3000);
@@ -165,7 +161,7 @@ function NodeParameter({
     level === 0 ? 'node-indent-0' : hasGroupAtLevel ? 'node-indent-done' : 'node-indent';
 
   // Determine collapse/expand icon
-  const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '') : '';
+  const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '▶') : '';
 
   // Build tooltip with detailed description
   const buildTooltip = () => {
@@ -292,12 +288,12 @@ function NodeParameter({
                       No Node
                     </option>
                   )}
-                  {compatibleNodeTypes.map(nodeType => {
-                    const nodeTypeInfo = getNodeTypeInfo(nodeType);
+                  {compatibleNodeTypes.map(t => {
+                    const nodeTypeInfo = getNodeTypeInfo(t.key);
                     const displayName =
-                      nodeTypeInfo?.name || nodeType.replace('NT_', '').replace(/_/g, ' ');
+                      nodeTypeInfo?.name || t.key.replace('NT_', '').replace(/_/g, ' ');
                     return (
-                      <option key={nodeType} value={nodeType}>
+                      <option key={t.key} value={t.key}>
                         {displayName}
                       </option>
                     );
@@ -397,7 +393,7 @@ function NodeParameter({
       )}
     </div>
   );
-}
+});
 
 // Helper: Build a map of which levels have groups (matches octaneWeb's hasGroup[] array)
 // This is used to determine indentation for all nodes at each level globally

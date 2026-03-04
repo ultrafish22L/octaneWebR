@@ -3,7 +3,7 @@
  * Displays all available keyboard shortcuts in a modal dialog
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface KeyboardShortcutsDialogProps {
   isOpen: boolean;
@@ -42,19 +42,11 @@ const SHORTCUTS: ShortcutSection[] = [
 ];
 
 export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDialogProps) {
-  // Close dialog on Escape key
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -66,15 +58,21 @@ export function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDi
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="modal-dialog keyboard-shortcuts-dialog"
         role="dialog"
         aria-modal="true"
         aria-label="Keyboard Shortcuts"
+        tabIndex={-1}
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
       >
         <header className="modal-header">
           <h2>⌨️ Keyboard Shortcuts</h2>
-          <button className="close-button" onClick={onClose} aria-label="Close dialog"></button>
+          <button className="modal-close-btn" onClick={onClose} aria-label="Close dialog"></button>
         </header>
 
         <div className="modal-body">

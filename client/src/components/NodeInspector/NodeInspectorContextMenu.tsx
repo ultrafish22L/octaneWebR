@@ -4,7 +4,7 @@
  * Matches Octane SE node inspector context menu exactly
  */
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 interface NodeInspectorContextMenuProps {
@@ -40,6 +40,36 @@ export function NodeInspectorContextMenu({
 }: NodeInspectorContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Focus menu when mounted
+  useEffect(() => {
+    menuRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const menu = menuRef.current;
+        if (!menu) return;
+        const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+        if (items.length === 0) return;
+        const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+        let nextIndex: number;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        }
+        items[nextIndex].focus();
+      }
+    },
+    [onClose]
+  );
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,18 +89,6 @@ export function NodeInspectorContextMenu({
     };
   }, [onClose]);
 
-  // Close menu on Escape key
-  useEffect(() => {
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => document.removeEventListener('keydown', handleEscapeKey);
-  }, [onClose]);
-
   const handleMenuItemClick = (callback: () => void, disabled = false) => {
     if (disabled) return;
     callback();
@@ -84,6 +102,8 @@ export function NodeInspectorContextMenu({
       className="node-context-menu"
       role="menu"
       aria-label="Node inspector context menu"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
       style={{
         position: 'fixed',
         left: x,

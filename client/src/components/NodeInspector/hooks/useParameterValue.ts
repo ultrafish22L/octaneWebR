@@ -40,42 +40,28 @@ export function useParameterValue(
 
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
   useEffect(() => {
+    let cancelled = false;
+
     const fetchValue = async () => {
       if (!node.attrInfo || !node.handle || !isEndNode) {
         return;
       }
       try {
-        // attrInfo.type is already a STRING like "AT_FLOAT3" from the API
-        // Use it directly, no conversion needed
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
-
-        // hasAttr check removed — getValueByAttrID returns an empty/error response when
-        // the attribute is absent, which the catch block handles. Removing the preliminary
-        // check halves the number of API round-trips per parameter.
-        // const responseHas = await requestQueue.enqueue(() =>
-        //   client.callApi('ApiItem', 'hasAttr', node.handle, { id: AttributeId.A_VALUE })
-        // );
-        // if (responseHas && responseHas.result == false) return;
 
         // Queue the API call to prevent connection pool exhaustion
         // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
         // This queues them with max 4 concurrent requests to stay within browser limits
         const response = await requestQueue.enqueue(() =>
-          client.callApi(
-            'ApiItem',
-            'getValueByAttrID', // Use correct method name for API version
-            node.handle, // Pass handle as string
-            {
-              attribute_id: AttributeId.A_VALUE, // 185 - Use constant instead of hardcoded value
-              expected_type: expectedType, // number
-            }
-          )
+          client.callApi('ApiItem', 'getValueByAttrID', node.handle, {
+            attribute_id: AttributeId.A_VALUE,
+            expected_type: expectedType,
+          })
         );
 
+        if (cancelled) return;
+
         if (response) {
-          // Extract the actual value from the response
-          // API returns format like: {float_value: 2, value: "float_value"}
-          // We need to get the value from the field indicated by response.value
           const responseMap = response as Record<string, unknown>;
           const valueField = (responseMap.value as string) || Object.keys(responseMap)[0];
           const actualValue = responseMap[valueField];
@@ -88,7 +74,7 @@ export function useParameterValue(
           });
         }
       } catch (error: unknown) {
-        // Log Alpha 5 errors for debugging, silently ignore Beta 2 errors
+        if (cancelled) return;
         Logger.error(
           `getValueByAttrID error for ${node.name}: ${error instanceof Error ? error.message : error}`
         );
@@ -96,6 +82,9 @@ export function useParameterValue(
     };
 
     fetchValue();
+    return () => {
+      cancelled = true;
+    };
   }, [isEndNode, node.handle, node.attrInfo, node.name, node.outType, client]);
 
   // Handle parameter value change (memoized with useCallback)

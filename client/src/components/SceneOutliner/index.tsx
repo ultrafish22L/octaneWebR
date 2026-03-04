@@ -270,11 +270,17 @@ export const SceneOutliner = React.memo(function SceneOutliner({
                 category={localDB.localDBRoot}
                 depth={0}
                 onLoadCategory={async cat => {
-                  await localDB.loadCategoryChildren(cat);
-                  // Force re-render by updating state
-                  if (localDB.localDBRoot) {
-                    localDB.setLocalDBRoot({ ...localDB.localDBRoot });
-                  }
+                  const updated = await localDB.loadCategoryChildren(cat);
+                  // Immutably replace the category in the tree using functional updater
+                  // to avoid stale closure over localDBRoot
+                  localDB.setLocalDBRoot(prev => {
+                    if (!prev) return prev;
+                    const replaceInTree = (node: typeof cat): typeof cat =>
+                      node.handle === cat.handle
+                        ? updated
+                        : { ...node, subcategories: node.subcategories.map(replaceInTree) };
+                    return replaceInTree(prev);
+                  });
                 }}
                 onLoadPackage={localDB.handlePackageLoad}
               />

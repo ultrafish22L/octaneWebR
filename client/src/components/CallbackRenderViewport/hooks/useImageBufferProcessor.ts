@@ -7,7 +7,7 @@
  * CRITICAL: Direct port of octaneWeb buffer processing logic - preserves buffer isolation
  */
 
-import { useCallback, useRef, RefObject } from 'react';
+import { useCallback, useEffect, useRef, RefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useCanvasRenderer } from './useCanvasRenderer';
 
@@ -44,6 +44,10 @@ export function useImageBufferProcessor({
   // Phase 3: Input-side throttling during camera drag
   // Track last accepted image time to throttle to 30 FPS during drag
   const lastAcceptedTimeRef = useRef(0);
+  const isDraggingRef = useRef(isDragging);
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
   const DRAG_THROTTLE_INTERVAL = 33; // ms (30 FPS = 1000ms / 30 = 33.33ms)
 
   /**
@@ -210,7 +214,7 @@ export function useImageBufferProcessor({
    */
   const displayImage = useCallback(
     (imageData: OctaneImageData) => {
-      Logger.debug('[VIEWPORT] displayImage CALLED (RAF scheduling)');
+      Logger.debugV('[VIEWPORT] displayImage CALLED (RAF scheduling)');
       Logger.debugV('[VIEWPORT] Image data:', {
         hasSize: !!imageData.size,
         width: imageData.size?.x,
@@ -236,7 +240,7 @@ export function useImageBufferProcessor({
         // During drag, only accept 1 image every 33ms (30 FPS)
         // This gives CPU more time per frame (33ms vs 16.6ms at 60 FPS)
         // Result: Smooth 30 FPS with relaxed CPU vs choppy 60 FPS with stressed CPU
-        if (isDragging) {
+        if (isDraggingRef.current) {
           const now = Date.now();
           const timeSinceLastAccepted = now - lastAcceptedTimeRef.current;
 
@@ -263,7 +267,7 @@ export function useImageBufferProcessor({
         Logger.error('[VIEWPORT] Stack:', error instanceof Error ? error.stack : undefined);
       }
     },
-    [canvasRef, scheduleRender, isDragging]
+    [canvasRef, scheduleRender]
   );
 
   return { displayImage, flushPendingFrame };

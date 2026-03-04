@@ -26,6 +26,14 @@ export abstract class BaseService {
   }
 
   /**
+   * Emit a user-facing error message via the status bar.
+   * Components listen for 'status:error' and call setTemporaryStatus.
+   */
+  protected emitUserError(message: string): void {
+    this.emitter.emit('status:error', message);
+  }
+
+  /**
    * Register an event listener
    * @param event - Event name
    * @param handler - Event handler function

@@ -4,7 +4,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 
 interface SaveRenderDialogProps {
@@ -20,6 +20,12 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
   const [filename, setFilename] = useState('render');
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Auto-focus dialog on open
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   // Generate default filename with timestamp
   useEffect(() => {
@@ -78,11 +84,17 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="modal-dialog save-render-dialog"
         role="dialog"
         aria-modal="true"
         aria-label="Save Render"
+        tabIndex={-1}
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
       >
         <div className="modal-header">
           <h2>Save Render</h2>
@@ -93,10 +105,10 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
 
         <div className="modal-body">
           <div className="form-group">
-            <label htmlFor="filename">Filename:</label>
+            <label htmlFor="save-render-filename">Filename:</label>
             <input
               type="text"
-              id="filename"
+              id="save-render-filename"
               className="form-control"
               value={filename}
               onChange={e => setFilename(e.target.value)}
@@ -108,9 +120,9 @@ export function SaveRenderDialog({ isOpen, onClose }: SaveRenderDialogProps) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="format">Format:</label>
+            <label htmlFor="save-render-format">Format:</label>
             <select
-              id="format"
+              id="save-render-format"
               className="form-control"
               value={format}
               onChange={e => setFormat(e.target.value as ImageFormat)}

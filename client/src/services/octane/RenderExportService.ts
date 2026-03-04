@@ -44,23 +44,28 @@ export class RenderExportService extends BaseService {
         Logger.debug(`Render saved successfully: ${filePath}`);
       } else {
         Logger.error(`Failed to save render: ${filePath}`);
+        this.emitUserError('Failed to save render');
       }
 
       return success;
     } catch (error) {
       Logger.error('Error saving render:', error instanceof Error ? error.message : String(error));
+      this.emitUserError('Failed to save render');
       return false;
     }
   }
 
   async grabRenderForClipboard(): Promise<string | null> {
+    let grabbed = false;
     try {
       const response = await this.apiService.callApi('ApiRenderEngine', 'grabRenderResult', {});
+      grabbed = true;
 
       const renderImagesObj = asObject(response?.renderImages);
       const dataArr = renderImagesObj?.data;
       if (!response?.result || !Array.isArray(dataArr) || dataArr.length === 0) {
         Logger.error('No render images available');
+        this.emitUserError('No render available to copy');
         return null;
       }
 
@@ -72,17 +77,25 @@ export class RenderExportService extends BaseService {
         return null;
       }
 
-      const base64Data = asString(bufferObj.data, '');
-
-      await this.apiService.callApi('ApiRenderEngine', 'releaseRenderResult', {});
-
-      return base64Data;
+      return asString(bufferObj.data, '');
     } catch (error) {
       Logger.error(
         'Error grabbing render for clipboard:',
         error instanceof Error ? error.message : String(error)
       );
+      this.emitUserError('Failed to copy render to clipboard');
       return null;
+    } finally {
+      if (grabbed) {
+        await this.apiService
+          .callApi('ApiRenderEngine', 'releaseRenderResult', {})
+          .catch(e =>
+            Logger.error(
+              'Failed to release render result:',
+              e instanceof Error ? e.message : String(e)
+            )
+          );
+      }
     }
   }
 
@@ -111,6 +124,7 @@ export class RenderExportService extends BaseService {
         Logger.debug(`Render passes exported successfully to: ${outputDirectory}`);
       } else {
         Logger.error(`Failed to export render passes to: ${outputDirectory}`);
+        this.emitUserError('Failed to export render passes');
       }
 
       return success;
@@ -119,6 +133,7 @@ export class RenderExportService extends BaseService {
         'Error exporting render passes:',
         error instanceof Error ? error.message : String(error)
       );
+      this.emitUserError('Failed to export render passes');
       return false;
     }
   }

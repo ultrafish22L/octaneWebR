@@ -11,7 +11,7 @@
  * - Immediate updates for final position on mouse up
  */
 
-import { useCallback, useRef, MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, MutableRefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
 import type { CameraState as OctaneCameraState } from '../../../services/OctaneClient';
 
@@ -168,6 +168,16 @@ export function useCameraSync({
       }, delay);
     }
   }, [updateCamera]);
+
+  // Clean up pending timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingCameraUpdateRef.current) {
+        clearTimeout(pendingCameraUpdateRef.current);
+        pendingCameraUpdateRef.current = null;
+      }
+    };
+  }, []);
 
   /**
    * Force immediate camera update - used on mouse up to ensure final position is sent

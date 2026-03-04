@@ -49,9 +49,10 @@ export function useKeyboardShortcuts(
       // Skip if disabled or if typing in an input field
       if (!enabled) return;
 
-      const target = event.target as HTMLElement;
+      const target = event.target as HTMLElement | null;
       const isInputField =
-        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
       // Find matching shortcut
       for (const shortcut of shortcutsRef.current) {
@@ -97,12 +98,11 @@ export function useKeyboardShortcuts(
 export function formatShortcut(shortcut: Omit<KeyboardShortcut, 'handler'>): string {
   const parts: string[] = [];
 
-  // Detect platform
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const isMac = /mac/i.test(navigator.platform);
 
-  if (shortcut.ctrl) parts.push(isMac ? '' : 'Ctrl');
-  if (shortcut.shift) parts.push('Shift');
-  if (shortcut.alt) parts.push(isMac ? '' : 'Alt');
+  if (shortcut.ctrl) parts.push(isMac ? '\u2318' : 'Ctrl');
+  if (shortcut.shift) parts.push(isMac ? '\u21E7' : 'Shift');
+  if (shortcut.alt) parts.push(isMac ? '\u2325' : 'Alt');
   if (shortcut.meta) parts.push('Meta');
 
   // Capitalize key for display

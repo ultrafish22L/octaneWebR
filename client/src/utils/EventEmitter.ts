@@ -11,12 +11,20 @@ type EventHandler = Function;
 
 export class EventEmitter {
   private events: Map<string, EventHandler[]> = new Map();
+  private maxListeners = 20;
 
   on(event: string, handler: EventHandler): void {
     if (!this.events.has(event)) {
       this.events.set(event, []);
     }
-    this.events.get(event)!.push(handler);
+    const handlers = this.events.get(event)!;
+    handlers.push(handler);
+
+    if (handlers.length > this.maxListeners) {
+      console.warn(
+        `EventEmitter: "${event}" has ${handlers.length} listeners (max ${this.maxListeners}). Possible memory leak.`
+      );
+    }
   }
 
   off(event: string, handler: EventHandler): void {

@@ -4,6 +4,7 @@ import { getGrpcClient } from './grpc/client';
 import { transformObjectPtrParams } from './grpc/OctaneGrpcClientBase';
 import { setupCallbackStreaming } from './api/websocket';
 import { CallbackManager, getCallbackManager } from './services/callbackManager';
+import type { WebSocketServer } from 'ws';
 
 const RED = '\x1b[31m';
 const RESET = '\x1b[0m';
@@ -89,7 +90,7 @@ app.get('/api/scene/geometry', async (req, res) => {
 // Device info endpoint
 app.get('/api/device/info', async (req, res) => {
   try {
-    const deviceIndex = parseInt((req.query.index as string) || '0');
+    const deviceIndex = parseInt((req.query.index as string) || '0', 10) || 0;
     const [name, hasRT, memory] = await Promise.all([
       grpcClient.getDeviceName(deviceIndex),
       grpcClient.deviceUsesHardwareRayTracing(deviceIndex),
@@ -168,7 +169,7 @@ async function startServer() {
     `);
 
     // Setup WebSocket callback streaming
-    setupCallbackStreaming(server, grpcClient, callbackManager);
+    wss = setupCallbackStreaming(server, grpcClient, callbackManager);
 
     // Register for Octane callbacks
     try {
@@ -183,6 +184,7 @@ async function startServer() {
   return server;
 }
 
+let wss: WebSocketServer | null = null;
 const serverPromise = startServer();
 
 // Graceful shutdown
@@ -192,6 +194,21 @@ async function shutdown(signal: string) {
   isShuttingDown = true;
   console.log(`${signal} received, shutting down gracefully...`);
   await callbackManager.unregisterCallbacks();
+  // Force exit if graceful shutdown takes too long
+  const forceExitTimer = setTimeout(() => {
+    console.error('Graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 10000);
+  forceExitTimer.unref();
+
+  // Close WebSocket server — terminate connected clients then close
+  if (wss) {
+    for (const client of wss.clients) {
+      client.close(1001, 'Server shutting down');
+    }
+    wss.close();
+  }
+
   const server = await serverPromise;
   server.close(() => {
     grpcClient.close();

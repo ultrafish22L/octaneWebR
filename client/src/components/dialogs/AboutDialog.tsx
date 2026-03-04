@@ -4,12 +4,21 @@
  * Matches Octane SE: Help > About
  */
 
+import React, { useRef, useEffect } from 'react';
+import { APP_VERSION } from '../../config/apiVersionConfig';
+
 interface AboutDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -25,23 +34,21 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="about-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="about-title"
         tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         <div className="modal-header">
           <h2 id="about-title">About OctaneRender</h2>
           <button
-            className="modal-close-button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close about dialog"
           ></button>
@@ -52,7 +59,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
             <div className="about-logo">
               <img src="/octane-logo-small.png" alt="OctaneRender Logo" className="app-icon" />
               <h1>OctaneWebR</h1>
-              <p className="version">Version 1.0.0</p>
+              <p className="version">Version {APP_VERSION}</p>
             </div>
 
             <div className="about-description">

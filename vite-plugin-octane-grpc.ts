@@ -25,15 +25,24 @@ import {
 // ============================================================================
 // SERVER LOGGING CONFIGURATION
 // ============================================================================
-// Set to true to enable detailed server-side logging
-// Set to false (default) to suppress server logs for cleaner console output
-const DEBUG_SERVER_LOGS = false;
+// Log levels: NONE < ERROR < WARN < INFO < DEBUG < DEBUGV
+// ERROR/WARN always print. INFO shows startup & connection events.
+// DEBUG shows gRPC calls & callback lifecycle. DEBUGV shows per-request detail.
+enum ServerLogLevel {
+  NONE = 0,
+  ERROR = 1,
+  WARN = 2,
+  INFO = 3,
+  DEBUG = 4,
+  DEBUGV = 5,
+}
+const SERVER_LOG_LEVEL: ServerLogLevel = ServerLogLevel.DEBUG;
 
 // ============================================================================
 // FILE LOGGING CONFIGURATION
 // ============================================================================
 // Set to true to log all gRPC request/response pairs to a file
-const DEBUG_FILE_LOG = false;
+const DEBUG_FILE_LOG = true;
 const LOG_FILE_PATH = path.resolve(__dirname, 'grpc-debug.log');
 
 // Truncate log file on startup
@@ -44,23 +53,34 @@ if (DEBUG_FILE_LOG) {
 function fileLog(msg: string) {
   if (!DEBUG_FILE_LOG) return;
   const ts = new Date().toISOString().substring(11, 23);
-  fs.appendFileSync(LOG_FILE_PATH, `[${ts}] ${msg}\n`);
+  fs.appendFile(LOG_FILE_PATH, `[${ts}] ${msg}\n`, err => {
+    if (err) console.error('fileLog write failed:', err.message);
+  });
 }
 
 // ANSI color codes for server-side terminal output
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
 const RESET = '\x1b[0m';
+const MAX_BODY_SIZE = 50 * 1024 * 1024; // 50MB, matches Express server limit
 
-// Server log helpers — colors for errors/warnings, plain for info/debug
-const serverLog = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.log(...args);
-};
-const serverError = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.error(RED, ...args, RESET);
-};
-const serverWarn = (...args: any[]) => {
-  if (DEBUG_SERVER_LOGS) console.warn(YELLOW, ...args, RESET);
+// Server log helpers — leveled output with colors for errors/warnings
+const slog = {
+  error: (...args: any[]) => {
+    if (SERVER_LOG_LEVEL >= ServerLogLevel.ERROR) console.error(RED, ...args, RESET);
+  },
+  warn: (...args: any[]) => {
+    if (SERVER_LOG_LEVEL >= ServerLogLevel.WARN) console.warn(YELLOW, ...args, RESET);
+  },
+  info: (...args: any[]) => {
+    if (SERVER_LOG_LEVEL >= ServerLogLevel.INFO) console.log(...args);
+  },
+  debug: (...args: any[]) => {
+    if (SERVER_LOG_LEVEL >= ServerLogLevel.DEBUG) console.log(...args);
+  },
+  debugV: (...args: any[]) => {
+    if (SERVER_LOG_LEVEL >= ServerLogLevel.DEBUGV) console.log(...args);
+  },
 };
 
 // ============================================================================
@@ -85,16 +105,16 @@ class OctaneGrpcClient {
     this.base = new OctaneGrpcClientBase(undefined, undefined, protoBasePath);
 
     const isSandbox = this.base.address.includes('host.docker.internal');
-    serverLog(` Vite gRPC Plugin: Connected to Octane at ${this.base.address}`);
+    slog.info(`Vite gRPC Plugin: Connected to Octane at ${this.base.address}`);
     if (isSandbox) {
-      serverLog(` Using Docker networking (sandbox environment detected)`);
+      slog.info(`Using Docker networking (sandbox environment detected)`);
     }
   }
 
   async initialize(): Promise<void> {
     // Vite uses lazy loading — no batch proto loading
     await this.base.initialize();
-    serverLog(` Proto files ready for lazy loading`);
+    slog.info(`Proto files ready for lazy loading`);
   }
 
   async callMethod(
@@ -114,38 +134,48 @@ class OctaneGrpcClient {
 
   async registerOctaneCallbacks(): Promise<void> {
     if (this.isCallbackRegistered) return;
+    this.isCallbackRegistered = true; // Set immediately to prevent concurrent calls
 
     try {
       this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
-      console.log(`Registering callbacks with ID: ${this.callbackId}`);
+      slog.info(`Registering callbacks with ID: ${this.callbackId}`);
 
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
         callback: { callbackSource: 'grpc', callbackId: this.callbackId },
         userData: 0,
       });
+      slog.debug('Image callback registered');
 
-      await this.callMethod('ApiRenderEngine', 'setOnNewStatisticsCallback', {
-        callback: { callbackSource: 'grpc', callbackId: this.callbackId },
-        userData: 0,
-      });
+      try {
+        await this.callMethod('ApiRenderEngine', 'setOnNewStatisticsCallback', {
+          callback: { callbackSource: 'grpc', callbackId: this.callbackId },
+          userData: 0,
+        });
+        slog.debug('Statistics callback registered');
+      } catch (statsError: any) {
+        slog.warn('Statistics callback registration failed (non-fatal):', statsError.message);
+      }
 
-      this.isCallbackRegistered = true;
       this.startCallbackStreaming();
-      console.log('Callback registration complete');
+      slog.info('Callback registration complete');
     } catch (error: any) {
-      console.error(`${RED}Failed to register callbacks: ${error.message}${RESET}`);
+      this.isCallbackRegistered = false; // Reset on failure
+      slog.error(`Failed to register callbacks: ${error.message}`);
     }
   }
 
   async unregisterOctaneCallbacks(): Promise<void> {
     if (!this.isCallbackRegistered) return;
 
+    // Set flag before cancel to prevent the async error event from triggering a reconnect
+    this.isCallbackRegistered = false;
+
     try {
       if (this.callbackStream) {
         this.streamActive = false;
         this.callbackStream.cancel();
         this.callbackStream = null;
-        serverLog(` Callback stream closed`);
+        slog.debug('Callback stream closed');
       }
 
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
@@ -153,11 +183,10 @@ class OctaneGrpcClient {
         userData: 0,
       });
 
-      serverLog(` Callbacks unregistered`);
-      this.isCallbackRegistered = false;
+      slog.info('Callbacks unregistered');
       this.callbackId = 0;
     } catch (error: any) {
-      serverError(` Failed to unregister callback:`, error.message);
+      slog.error('Failed to unregister callback:', error.message);
     }
   }
 
@@ -175,18 +204,49 @@ class OctaneGrpcClient {
           render_images: renderImages,
         });
       }
+      // Poll render statistics on each image callback
+      this.pollRenderStatistics();
     } else if (callbackRequest.renderFailure) {
-      console.error(`${RED}Render failure callback received${RESET}`);
+      slog.error('Render failure callback received');
     } else if (callbackRequest.newStatistics) {
-      this.notifyStatisticsCallbacks({
-        callback_source: 'grpc',
-        callback_id: this.callbackId,
-        user_data: callbackRequest.newStatistics.user_data,
-        statistics: callbackRequest.newStatistics.statistics,
-      });
+      // Note: Octane never sends newStatistics stream events in practice (see known-issues.md).
+      // Kept for forward-compatibility; the newImage handler above is the real stats trigger.
+      this.pollRenderStatistics();
     } else if (callbackRequest.projectManagerChanged) {
-      console.log('Project manager changed callback received');
+      slog.debug('Project manager changed callback received');
     }
+  }
+
+  private isPollingStatistics = false;
+  private lastStatsPollTime = 0;
+  private static readonly STATS_POLL_INTERVAL = 250; // ms — throttle to max 4 polls/sec
+
+  private pollRenderStatistics(): void {
+    // Serialize: skip if a poll is already in flight to avoid overwhelming the gRPC channel
+    if (this.isPollingStatistics) return;
+    // Throttle: skip if polled too recently
+    const now = Date.now();
+    if (now - this.lastStatsPollTime < OctaneGrpcClient.STATS_POLL_INTERVAL) return;
+    this.isPollingStatistics = true;
+    this.lastStatsPollTime = now;
+
+    this.callMethod('ApiRenderEngine', 'getRenderStatistics', {})
+      .then((response: any) => {
+        if (response?.statistics) {
+          this.notifyStatisticsCallbacks({
+            callback_source: 'grpc',
+            callback_id: this.callbackId,
+            user_data: 0,
+            statistics: response.statistics,
+          });
+        }
+      })
+      .catch((err: any) => {
+        slog.debug('Failed to poll render statistics:', err.message);
+      })
+      .finally(() => {
+        this.isPollingStatistics = false;
+      });
   }
 
   /**
@@ -204,13 +264,19 @@ class OctaneGrpcClient {
         try {
           this.handleCallbackData(callbackRequest);
         } catch (error: any) {
-          serverError(' Error processing callback data:', error.message);
+          slog.error('Error processing callback data:', error.message);
         }
       });
 
       this.callbackStream.on('error', (error: any) => {
-        serverError(' Callback stream error:', error.message);
+        slog.error('Callback stream error:', error.message);
         this.streamActive = false;
+        // Cancel the stream before releasing the reference to free server-side resources
+        try {
+          this.callbackStream?.cancel();
+        } catch {
+          /* already errored */
+        }
         this.callbackStream = null;
 
         if (this.isCallbackRegistered) {
@@ -223,14 +289,14 @@ class OctaneGrpcClient {
       });
 
       this.callbackStream.on('end', () => {
-        serverLog(' Callback stream ended');
+        slog.debug('Callback stream ended');
         this.streamActive = false;
         this.callbackStream = null;
       });
 
-      serverLog(' Callback streaming active');
+      slog.info('Callback streaming active');
     } catch (error: any) {
-      serverError(' Failed to start callback streaming:', error.message);
+      slog.error('Failed to start callback streaming:', error.message);
       this.streamActive = false;
       this.callbackStream = null;
     }
@@ -257,7 +323,7 @@ class OctaneGrpcClient {
       try {
         callback(data);
       } catch (error) {
-        console.error(`${RED}Error in image callback:${RESET}`, error);
+        slog.error('Error in image callback:', error);
       }
     });
   }
@@ -267,7 +333,7 @@ class OctaneGrpcClient {
       try {
         callback(data);
       } catch (error) {
-        serverError(' Error in statistics callback handler:', error);
+        slog.error('Error in statistics callback handler:', error);
       }
     });
   }
@@ -294,10 +360,10 @@ export function octaneGrpcPlugin(): Plugin {
       try {
         if (fs.existsSync(logFilePath)) {
           fs.unlinkSync(logFilePath);
-          serverLog(' Deleted old client log file');
+          slog.debug('Deleted old client log file');
         }
       } catch (error: any) {
-        serverWarn(' Could not delete old log file:', error.message);
+        slog.warn('Could not delete old log file:', error.message);
       }
 
       // Initialize gRPC client
@@ -308,28 +374,36 @@ export function octaneGrpcPlugin(): Plugin {
       try {
         await grpcClient.registerOctaneCallbacks();
       } catch (error: any) {
-        serverError(' Initial callback registration failed:', error.message);
+        slog.error('Initial callback registration failed:', error.message);
       }
 
       // Setup WebSocket server for callbacks
       wss = new WebSocketServer({ noServer: true });
 
       wss.on('connection', (ws: WebSocket) => {
-        console.log('WebSocket client connected');
+        slog.info('WebSocket client connected');
+
+        const MAX_WS_BUFFER = 10 * 1024 * 1024; // 10 MB backpressure limit
 
         const callbackHandler = (data: any) => {
           try {
-            ws.send(JSON.stringify({ type: 'newImage', data }));
+            if (ws.readyState === WebSocket.OPEN) {
+              if (ws.bufferedAmount > MAX_WS_BUFFER) return; // backpressure: drop frame
+              ws.send(JSON.stringify({ type: 'newImage', data }));
+            }
           } catch (error) {
-            console.error(`${RED}Error sending WebSocket message:${RESET}`, error);
+            slog.error('Error sending WebSocket message:', error);
           }
         };
 
         const statisticsHandler = (data: any) => {
           try {
-            // ws.send(JSON.stringify({ type: 'newStatistics', data }));
+            if (ws.readyState === WebSocket.OPEN) {
+              if (ws.bufferedAmount > MAX_WS_BUFFER) return;
+              ws.send(JSON.stringify({ type: 'newStatistics', data }));
+            }
           } catch (error) {
-            console.error(`${RED}Error sending statistics message:${RESET}`, error);
+            slog.error('Error sending statistics message:', error);
           }
         };
 
@@ -337,24 +411,39 @@ export function octaneGrpcPlugin(): Plugin {
         grpcClient?.addStatisticsCallback(statisticsHandler);
 
         ws.on('close', () => {
-          console.log('WebSocket client disconnected');
+          slog.info('WebSocket client disconnected');
+          grpcClient?.unregisterCallback(callbackHandler);
+          grpcClient?.removeStatisticsCallback(statisticsHandler);
+        });
+
+        ws.on('error', error => {
+          slog.error('WebSocket error:', error);
           grpcClient?.unregisterCallback(callbackHandler);
           grpcClient?.removeStatisticsCallback(statisticsHandler);
         });
 
         ws.on('message', (message: string) => {
           try {
-            JSON.parse(message.toString()); // validate
+            const data = JSON.parse(message.toString());
+            if (data.type === 'ping') {
+              ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+            }
           } catch (error) {
-            console.error(`${RED}Error parsing WebSocket message:${RESET}`, error);
+            slog.warn('Error parsing WebSocket message:', error);
           }
         });
       });
 
-      // Handle WebSocket upgrade
+      // Handle WebSocket upgrade (with origin validation matching Express server)
       server.httpServer?.on('upgrade', (request: IncomingMessage, socket, head) => {
         const url = request.url;
         if (url === '/api/callbacks') {
+          const origin = request.headers.origin || '';
+          if (origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+            socket.destroy();
+            return;
+          }
           wss?.handleUpgrade(request, socket, head, ws => {
             wss?.emit('connection', ws, request);
           });
@@ -367,9 +456,9 @@ export function octaneGrpcPlugin(): Plugin {
 
         // Health check endpoint
         if (url === '/api/health') {
-          (async () => {
-            try {
-              const isHealthy = await grpcClient?.checkHealth();
+          grpcClient
+            ?.checkHealth()
+            .then(isHealthy => {
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(
@@ -380,7 +469,8 @@ export function octaneGrpcPlugin(): Plugin {
                   timestamp: new Date().toISOString(),
                 })
               );
-            } catch (error: any) {
+            })
+            .catch((error: any) => {
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;
               res.end(
@@ -390,8 +480,7 @@ export function octaneGrpcPlugin(): Plugin {
                   timestamp: new Date().toISOString(),
                 })
               );
-            }
-          })();
+            });
           return;
         }
         // Client log clear endpoint (camelCase to match client call)
@@ -410,30 +499,45 @@ export function octaneGrpcPlugin(): Plugin {
         // Client logging endpoint
         if (url === '/api/log' && req.method === 'POST') {
           let body = '';
-          req.on('data', chunk => (body += chunk));
+          let aborted = false;
+          req.on('error', () => {
+            aborted = true;
+          });
+          req.on('data', chunk => {
+            body += chunk;
+            if (body.length > MAX_BODY_SIZE) {
+              aborted = true;
+              res.statusCode = 413;
+              res.end(JSON.stringify({ error: 'Request body too large' }));
+              req.destroy();
+            }
+          });
           req.on('end', () => {
+            if (aborted) return;
             try {
               const logData = JSON.parse(body);
               const timestamp = new Date().toISOString();
-              const logLine = `${timestamp} ${logData.level.toUpperCase()} ${logData.message}\n`;
 
-              fs.appendFileSync('octaneWebR_client.log', logLine);
+              // Support both legacy single-message and new per-entry format
+              const entries: { level: string; message: string }[] = logData.entries || [
+                { level: logData.level || 'info', message: logData.message },
+              ];
 
-              // Console output with ANSI colors for errors/warnings
-              const logLevel = logData.level.toLowerCase();
-              if (logLevel === 'error') {
-                console.error(`${RED}${logData.message}${RESET}`);
-              } else if (logLevel === 'warn') {
-                console.warn(`${YELLOW}${logData.message}${RESET}`);
-              } else {
-                console.log(logData.message);
+              let fileContent = '';
+              for (const entry of entries) {
+                const lvl = entry.level || 'info';
+                fileContent += `${timestamp} ${lvl.toUpperCase()} ${entry.message}\n`;
               }
+
+              fs.appendFile('octaneWebR_client.log', fileContent, err => {
+                if (err) slog.warn('Client log write failed:', err.message);
+              });
 
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(JSON.stringify({ success: true }));
             } catch (error: any) {
-              serverError(' Failed to write client log:', error.message);
+              slog.warn('Failed to write client log:', error.message);
               res.statusCode = 500;
               res.end(JSON.stringify({ success: false, error: error.message }));
             }
@@ -447,25 +551,66 @@ export function octaneGrpcPlugin(): Plugin {
           const [, service, method] = grpcMatch;
 
           let body = '';
+          let aborted = false;
+          req.on('error', () => {
+            aborted = true;
+          });
           req.on('data', chunk => {
             body += chunk.toString();
+            if (body.length > MAX_BODY_SIZE) {
+              aborted = true;
+              res.statusCode = 413;
+              res.end(JSON.stringify({ error: 'Request body too large' }));
+              req.destroy();
+            }
           });
 
           req.on('end', async () => {
+            if (aborted) return;
             try {
               let params = body ? JSON.parse(body) : {};
 
               // Unified parameter transforms (shared with Express server)
               params = transformObjectPtrParams(service, method, params);
 
-              // Verbose API logging
-              serverLog(` ${service}.${method}`, JSON.stringify(params).substring(0, 100));
               const isHighFreq = method === 'getByAttrID' || method === 'getValueByAttrID';
+              // DEBUG: log mutations (set*, create*, destroy, update, connect, disconnect, etc.)
+              const isMutation =
+                method.startsWith('set') ||
+                method.startsWith('create') ||
+                method.startsWith('delete') ||
+                method.startsWith('copy') ||
+                method === 'destroy' ||
+                method === 'update' ||
+                method === 'connect' ||
+                method === 'disconnect' ||
+                method === 'group' ||
+                method === 'ungroup' ||
+                method === 'replace' ||
+                method === 'move';
+              if (isMutation) {
+                const paramStr = JSON.stringify(params);
+                slog.debug(
+                  `${service}.${method}${paramStr !== '{}' ? ' ' + paramStr.substring(0, 120) : ''}`
+                );
+              }
+              // DEBUGV: log all calls with params
+              slog.debugV(`${service}.${method}`, JSON.stringify(params).substring(0, 100));
               if (!isHighFreq) {
                 fileLog(` REQ ${service}.${method} ${JSON.stringify(params)}`);
               }
-              const response = await grpcClient?.callMethod(service, method, params);
-              serverLog(` ${service}.${method} → ${JSON.stringify(response).substring(0, 100)}`);
+              if (!grpcClient) {
+                res.setHeader('Content-Type', 'application/json');
+                res.statusCode = 503;
+                res.end(JSON.stringify({ error: 'gRPC client not available' }));
+                return;
+              }
+              const response = await grpcClient.callMethod(service, method, params);
+              if (isMutation) {
+                const resStr = JSON.stringify(response);
+                if (resStr !== '{}') slog.debug(`  → ${resStr.substring(0, 120)}`);
+              }
+              slog.debugV(`${service}.${method} →`, JSON.stringify(response).substring(0, 100));
               if (!isHighFreq) {
                 fileLog(` RES ${service}.${method} ${JSON.stringify(response).substring(0, 500)}`);
               }
@@ -475,7 +620,7 @@ export function octaneGrpcPlugin(): Plugin {
               res.end(JSON.stringify(response || {}));
             } catch (error: any) {
               fileLog(` ERR ${service}.${method} ${error.message}`);
-              serverError(` API error: ${service}.${method}:`, error.message);
+              slog.error(`API error: ${service}.${method}:`, error.message);
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;
               res.end(
@@ -495,10 +640,24 @@ export function octaneGrpcPlugin(): Plugin {
         next();
       });
 
-      serverLog(' Octane gRPC Plugin configured');
-      serverLog('   • HTTP API: /api/grpc/:service/:method');
-      serverLog('   • WebSocket: /api/callbacks');
-      serverLog('   • Health: /api/health');
+      // Ensure cleanup runs when the dev server shuts down (Ctrl+C, etc.)
+      // closeBundle() only fires for production builds, not dev server
+      server.httpServer?.on('close', () => {
+        if (grpcClient) {
+          grpcClient.unregisterOctaneCallbacks().catch(() => {});
+          grpcClient.close();
+          grpcClient = null as any;
+        }
+        if (wss) {
+          wss.close();
+          wss = null as any;
+        }
+      });
+
+      slog.info('Octane gRPC Plugin configured');
+      slog.info('  HTTP API: /api/grpc/:service/:method');
+      slog.info('  WebSocket: /api/callbacks');
+      slog.info('  Health: /api/health');
     },
 
     async closeBundle() {
@@ -506,7 +665,7 @@ export function octaneGrpcPlugin(): Plugin {
         try {
           await grpcClient.unregisterOctaneCallbacks();
         } catch (error) {
-          serverError(' Error unregistering callbacks:', error);
+          slog.error('Error unregistering callbacks:', error);
         }
         grpcClient.close();
       }

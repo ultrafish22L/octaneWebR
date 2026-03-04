@@ -24,19 +24,25 @@ class LoggerInstance {
   level: LogLevel;
   private logBuffer: { level: string; message: string }[] = [];
   private flushInterval: number | null = null;
+  private initialized = false;
 
   constructor() {
     const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-    this.level = isDev ? LogLevel.INFO : LogLevel.WARN;
-    // Clear server log file on startup
+    this.level = isDev ? LogLevel.DEBUG : LogLevel.WARN;
+
+    if (DEBUG_MODE) {
+      this.flushInterval = setInterval(() => this.flush(), 1000) as unknown as number;
+    }
+  }
+
+  /** Clear server log file — called on first use rather than at import time */
+  private ensureInitialized(): void {
+    if (this.initialized) return;
+    this.initialized = true;
     try {
       fetch('/api/logClear', { method: 'POST' });
     } catch {
       /* noop */
-    }
-
-    if (DEBUG_MODE) {
-      this.flushInterval = setInterval(() => this.flush(), 1000) as unknown as number;
     }
   }
 
@@ -70,10 +76,10 @@ class LoggerInstance {
     this.buffer('warn', args);
   }
 
-  /** Error — failures (browser renders red) */
+  /** Error — failures, styled red for visibility */
   error(...args: unknown[]): void {
     if (this.level < LogLevel.ERROR) return;
-    console.error(...args);
+    console.error('%c[ERROR]', 'color:#ff4444;font-weight:bold', ...args);
     this.buffer('error', args);
   }
 
@@ -130,6 +136,7 @@ class LoggerInstance {
 
   private buffer(level: string, args: unknown[]): void {
     if (!DEBUG_MODE) return;
+    this.ensureInitialized();
 
     const message = args
       .map(a => {
@@ -158,10 +165,7 @@ class LoggerInstance {
       await fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          level: batch[batch.length - 1].level,
-          message: batch.map(e => e.message).join('\n'),
-        }),
+        body: JSON.stringify({ entries: batch }),
       });
     } catch {
       /* noop */
@@ -171,3 +175,10 @@ class LoggerInstance {
 
 export const Logger = new LoggerInstance();
 export default Logger;
+
+// Clean up interval on HMR to prevent stacking
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    Logger.destroy();
+  });
+}

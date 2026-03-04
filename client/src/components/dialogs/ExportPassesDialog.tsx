@@ -4,7 +4,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 
 interface ExportPassesDialogProps {
@@ -21,6 +21,12 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
   const [filenamePrefix, setFilenamePrefix] = useState('render');
   const [exporting, setExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Auto-focus dialog on open
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   // Generate default prefix with timestamp
   useEffect(() => {
@@ -82,11 +88,17 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="modal-dialog export-passes-dialog"
         role="dialog"
         aria-modal="true"
         aria-label="Export Render Passes"
+        tabIndex={-1}
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
       >
         <div className="modal-header">
           <h2>Export Render Passes</h2>
@@ -129,9 +141,9 @@ export function ExportPassesDialog({ isOpen, onClose }: ExportPassesDialogProps)
           </div>
 
           <div className="form-group">
-            <label htmlFor="format">Format:</label>
+            <label htmlFor="export-passes-format">Format:</label>
             <select
-              id="format"
+              id="export-passes-format"
               className="form-control"
               value={format}
               onChange={e => setFormat(e.target.value as ImageFormat)}

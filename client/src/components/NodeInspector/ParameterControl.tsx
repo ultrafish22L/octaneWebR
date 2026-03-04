@@ -16,7 +16,7 @@
  * - Custom comparison function for deep equality checks on paramValue
  */
 
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { AttrType } from '../../constants/OctaneTypes';
 import { formatColorValue } from '../../utils/ColorUtils';
@@ -44,6 +44,46 @@ function formatFloatForDisplay(value: number): string {
 function parseFloatValue(value: string | number): number {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   return isNaN(num) ? 0 : parseFloat(num.toFixed(6));
+}
+
+/**
+ * Input that defers API calls until blur or Enter.
+ * Prevents firing gRPC calls on every keystroke for text/number inputs.
+ */
+function DeferredInput({
+  displayValue,
+  onCommit,
+  ...inputProps
+}: Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'value' | 'onChange' | 'onBlur' | 'onKeyDown' | 'onFocus'
+> & {
+  displayValue: string;
+  onCommit: (value: string) => void;
+}) {
+  const [localValue, setLocalValue] = useState(displayValue);
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <input
+      {...inputProps}
+      value={focused ? localValue : displayValue}
+      onChange={e => setLocalValue(e.target.value)}
+      onFocus={() => {
+        setFocused(true);
+        setLocalValue(displayValue);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        onCommit(localValue);
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
+  );
 }
 
 type ParameterValueType =
@@ -121,11 +161,11 @@ function ParameterControlComponent({
       controlHtml = (
         <div className="parameter-control-container">
           <div className="parameter-number-with-spinner">
-            <input
+            <DeferredInput
               type="text"
               className="number-input parameter-control"
-              value={formatFloatForDisplay(floatValue)}
-              onChange={e => onValueChange(parseFloatValue(e.target.value))}
+              displayValue={formatFloatForDisplay(floatValue)}
+              onCommit={v => onValueChange(parseFloatValue(v))}
               autoComplete="off"
               name="octane-number-input-1"
             />
@@ -161,20 +201,20 @@ function ParameterControlComponent({
 
         controlHtml = (
           <div className="parameter-control-container">
-            <input
+            <DeferredInput
               type="text"
               className="number-input parameter-control"
-              value={formatFloatForDisplay(x)}
-              onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y })}
+              displayValue={formatFloatForDisplay(x)}
+              onCommit={v => onValueChange({ x: parseFloatValue(v), y })}
               autoComplete="off"
               name="octane-number-input-2"
             />
             {dimCount >= 2 && (
-              <input
+              <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                value={formatFloatForDisplay(y)}
-                onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value) })}
+                displayValue={formatFloatForDisplay(y)}
+                onCommit={v => onValueChange({ x, y: parseFloatValue(v) })}
                 autoComplete="off"
                 name="octane-number-input-3"
               />
@@ -221,30 +261,30 @@ function ParameterControlComponent({
         } else {
           controlHtml = (
             <div className="parameter-control-container">
-              <input
+              <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                value={formatFloatForDisplay(x)}
-                onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z })}
+                displayValue={formatFloatForDisplay(x)}
+                onCommit={v => onValueChange({ x: parseFloatValue(v), y, z })}
                 autoComplete="off"
                 name="octane-number-input-5"
               />
               {dimCount >= 2 && (
-                <input
+                <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(y)}
-                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z })}
+                  displayValue={formatFloatForDisplay(y)}
+                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z })}
                   autoComplete="off"
                   name="octane-number-input-6"
                 />
               )}
               {dimCount >= 3 && (
-                <input
+                <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(z)}
-                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value) })}
+                  displayValue={formatFloatForDisplay(z)}
+                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v) })}
                   autoComplete="off"
                   name="octane-number-input-7"
                 />
@@ -261,19 +301,17 @@ function ParameterControlComponent({
         const { x = 0, y = 0, z = 0, w = 0 } = value;
         const floatInfo = node.pinInfo?.floatInfo;
         const dimCount = floatInfo?.dimCount ?? 4;
-        const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
 
         // Render based on dimension count (matching octaneWeb exactly)
         switch (dimCount) {
           case 1:
             controlHtml = (
               <div className="parameter-control-container">
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(x)}
-                  step={step}
-                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
+                  displayValue={formatFloatForDisplay(x)}
+                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-8"
                 />
@@ -283,21 +321,19 @@ function ParameterControlComponent({
           case 2:
             controlHtml = (
               <div className="parameter-control-container">
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(x)}
-                  step={step}
-                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
+                  displayValue={formatFloatForDisplay(x)}
+                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-9"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(y)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
+                  displayValue={formatFloatForDisplay(y)}
+                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-10"
                 />
@@ -307,30 +343,27 @@ function ParameterControlComponent({
           case 3:
             controlHtml = (
               <div className="parameter-control-container">
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(x)}
-                  step={step}
-                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
+                  displayValue={formatFloatForDisplay(x)}
+                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-11"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(y)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
+                  displayValue={formatFloatForDisplay(y)}
+                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-12"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(z)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value), w })}
+                  displayValue={formatFloatForDisplay(z)}
+                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v), w })}
                   autoComplete="off"
                   name="octane-number-input-13"
                 />
@@ -341,39 +374,35 @@ function ParameterControlComponent({
             // 4 dimensions (full RGBA or XYZW)
             controlHtml = (
               <div className="parameter-control-container">
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(x)}
-                  step={step}
-                  onChange={e => onValueChange({ x: parseFloatValue(e.target.value), y, z, w })}
+                  displayValue={formatFloatForDisplay(x)}
+                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-14"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(y)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y: parseFloatValue(e.target.value), z, w })}
+                  displayValue={formatFloatForDisplay(y)}
+                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-15"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(z)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y, z: parseFloatValue(e.target.value), w })}
+                  displayValue={formatFloatForDisplay(z)}
+                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v), w })}
                   autoComplete="off"
                   name="octane-number-input-16"
                 />
-                <input
-                  type="number"
+                <DeferredInput
+                  type="text"
                   className="number-input parameter-control"
-                  value={formatFloatForDisplay(w)}
-                  step={step}
-                  onChange={e => onValueChange({ x, y, z, w: parseFloatValue(e.target.value) })}
+                  displayValue={formatFloatForDisplay(w)}
+                  onCommit={v => onValueChange({ x, y, z, w: parseFloatValue(v) })}
                   autoComplete="off"
                   name="octane-number-input-17"
                 />
@@ -403,7 +432,7 @@ function ParameterControlComponent({
                 const optValue = option.value ?? option.id ?? idx;
                 const optLabel = option.label ?? option.name ?? String(optValue);
                 return (
-                  <option key={idx} value={optValue}>
+                  <option key={optValue} value={optValue}>
                     {optLabel}
                   </option>
                 );
@@ -459,26 +488,23 @@ function ParameterControlComponent({
         const { x = 0, y = 0 } = value;
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 2;
-        const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
 
         controlHtml = (
           <div className="parameter-control-container">
-            <input
-              type="number"
+            <DeferredInput
+              type="text"
               className="number-input parameter-control"
-              value={x || 0}
-              step={step}
-              onChange={e => onValueChange({ x: parseInt(e.target.value), y })}
+              displayValue={String(x || 0)}
+              onCommit={v => onValueChange({ x: parseInt(v) || 0, y })}
               autoComplete="off"
               name="octane-number-input-20"
             />
             {dimCount >= 2 && (
-              <input
-                type="number"
+              <DeferredInput
+                type="text"
                 className="number-input parameter-control"
-                value={y || 0}
-                step={step}
-                onChange={e => onValueChange({ x, y: parseInt(e.target.value) })}
+                displayValue={String(y || 0)}
+                onCommit={v => onValueChange({ x, y: parseInt(v) || 0 })}
                 autoComplete="off"
                 name="octane-number-input-21"
               />
@@ -494,37 +520,33 @@ function ParameterControlComponent({
         const { x = 0, y = 0, z = 0 } = value;
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 3;
-        const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
 
         controlHtml = (
           <div className="parameter-control-container">
-            <input
-              type="number"
+            <DeferredInput
+              type="text"
               className="number-input parameter-control"
-              value={x || 0}
-              step={step}
-              onChange={e => onValueChange({ x: parseInt(e.target.value), y, z })}
+              displayValue={String(x || 0)}
+              onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z })}
               autoComplete="off"
               name="octane-number-input-22"
             />
             {dimCount >= 2 && (
-              <input
-                type="number"
+              <DeferredInput
+                type="text"
                 className="number-input parameter-control"
-                value={y || 0}
-                step={step}
-                onChange={e => onValueChange({ x, y: parseInt(e.target.value), z })}
+                displayValue={String(y || 0)}
+                onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z })}
                 autoComplete="off"
                 name="octane-number-input-23"
               />
             )}
             {dimCount >= 3 && (
-              <input
-                type="number"
+              <DeferredInput
+                type="text"
                 className="number-input parameter-control"
-                value={z || 0}
-                step={step}
-                onChange={e => onValueChange({ x, y, z: parseInt(e.target.value) })}
+                displayValue={String(z || 0)}
+                onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0 })}
                 autoComplete="off"
                 name="octane-number-input-24"
               />
@@ -540,18 +562,16 @@ function ParameterControlComponent({
         const { x = 0, y = 0, z = 0, w = 0 } = value;
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 4;
-        const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
 
         const inputs = [];
         if (dimCount >= 1) {
           inputs.push(
-            <input
+            <DeferredInput
               key="x"
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={x || 0}
-              step={step}
-              onChange={e => onValueChange({ x: parseInt(e.target.value), y, z, w })}
+              displayValue={String(x || 0)}
+              onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z, w })}
               autoComplete="off"
               name="octane-number-input-25"
             />
@@ -559,13 +579,12 @@ function ParameterControlComponent({
         }
         if (dimCount >= 2) {
           inputs.push(
-            <input
+            <DeferredInput
               key="y"
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={y || 0}
-              step={step}
-              onChange={e => onValueChange({ x, y: parseInt(e.target.value), z, w })}
+              displayValue={String(y || 0)}
+              onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z, w })}
               autoComplete="off"
               name="octane-number-input-26"
             />
@@ -573,13 +592,12 @@ function ParameterControlComponent({
         }
         if (dimCount >= 3) {
           inputs.push(
-            <input
+            <DeferredInput
               key="z"
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={z || 0}
-              step={step}
-              onChange={e => onValueChange({ x, y, z: parseInt(e.target.value), w })}
+              displayValue={String(z || 0)}
+              onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0, w })}
               autoComplete="off"
               name="octane-number-input-27"
             />
@@ -587,13 +605,12 @@ function ParameterControlComponent({
         }
         if (dimCount >= 4) {
           inputs.push(
-            <input
+            <DeferredInput
               key="w"
-              type="number"
+              type="text"
               className="number-input parameter-control"
-              value={w || 0}
-              step={step}
-              onChange={e => onValueChange({ x, y, z, w: parseInt(e.target.value) })}
+              displayValue={String(w || 0)}
+              onCommit={v => onValueChange({ x, y, z, w: parseInt(v) || 0 })}
               autoComplete="off"
               name="octane-number-input-28"
             />
@@ -646,21 +663,19 @@ function ParameterControlComponent({
         const { x = 0, y = 0 } = value;
         controlHtml = (
           <div className="parameter-control-container">
-            <input
-              type="number"
+            <DeferredInput
+              type="text"
               className="number-input parameter-control"
-              value={x || 0}
-              step="1"
-              onChange={e => onValueChange({ x: parseInt(e.target.value), y })}
+              displayValue={String(x || 0)}
+              onCommit={v => onValueChange({ x: parseInt(v) || 0, y })}
               autoComplete="off"
               name="octane-number-input-30"
             />
-            <input
-              type="number"
+            <DeferredInput
+              type="text"
               className="number-input parameter-control"
-              value={y || 0}
-              step="1"
-              onChange={e => onValueChange({ x, y: parseInt(e.target.value) })}
+              displayValue={String(y || 0)}
+              onCommit={v => onValueChange({ x, y: parseInt(v) || 0 })}
               autoComplete="off"
               name="octane-number-input-31"
             />
@@ -673,11 +688,11 @@ function ParameterControlComponent({
     case AttrType.AT_STRING: {
       const stringValue = typeof value === 'string' ? value : '';
       controlHtml = (
-        <input
+        <DeferredInput
           type="text"
           className="text-input parameter-control"
-          value={stringValue}
-          onChange={e => onValueChange(e.target.value)}
+          displayValue={stringValue}
+          onCommit={v => onValueChange(v)}
           autoComplete="off"
           name="octane-text-input-32"
         />
@@ -689,11 +704,11 @@ function ParameterControlComponent({
       // For unknown types, render as text input
       const stringValue = typeof value === 'string' ? value : '';
       controlHtml = (
-        <input
+        <DeferredInput
           type="text"
           className="text-input parameter-control"
-          value={stringValue}
-          onChange={e => onValueChange(e.target.value)}
+          displayValue={stringValue}
+          onCommit={v => onValueChange(v)}
           autoComplete="off"
           name="octane-text-input-33"
         />

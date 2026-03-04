@@ -1,11 +1,11 @@
 /**
  * GPUStatisticsDialog.tsx
- * Displays comprehensive GPU resource statistics
+ * Displays GPU resource statistics in Octane SE style
  * Invoked by right-clicking on render progress indicator or GPU quick information bar
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 
 interface DeviceStatistics {
@@ -55,32 +55,38 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
   const { client, connected } = useOctane();
   const [devices, setDevices] = useState<DeviceStatistics[]>([]);
   const [loading, setLoading] = useState(true);
-  const [octaneVersion, setOctaneVersion] = useState<string>('');
+  const [sceneSize, setSceneSize] = useState<number>(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !connected) return;
+    let cancelled = false;
 
     const fetchStatistics = async () => {
       setLoading(true);
 
       try {
-        // Get Octane version
-        const version = await client.getOctaneVersion();
-        setOctaneVersion(version);
-
-        // Get device count
         const deviceCount = await client.getDeviceCount();
+        if (cancelled) return;
         Logger.debug(`Found ${deviceCount} GPU device(s)`);
 
-        // Fetch statistics for each device
         const deviceStats: DeviceStatistics[] = [];
 
         for (let i = 0; i < deviceCount; i++) {
           const name = await client.getDeviceName(i);
+          if (cancelled) return;
           const memory = await client.getMemoryUsage(i);
+          if (cancelled) return;
           const resources = await client.getResourceStatistics(i);
+          if (cancelled) return;
           const geometry = await client.getGeometryStatistics(i);
+          if (cancelled) return;
           const textures = await client.getTexturesStatistics(i);
+          if (cancelled) return;
 
           deviceStats.push({
             index: i,
@@ -129,27 +135,35 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
         }
 
         setDevices(deviceStats);
+
+        if (deviceStats.length > 0 && deviceStats[0].resources) {
+          const r = deviceStats[0].resources;
+          setSceneSize(
+            r.runtime + r.film + r.geometry + r.nodeSystem + r.images + r.compositor + r.denoiser
+          );
+        }
       } catch (error) {
+        if (cancelled) return;
         Logger.error(
           'Failed to fetch GPU statistics:',
           error instanceof Error ? error.message : String(error)
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchStatistics();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, connected, client]);
 
   if (!isOpen) return null;
 
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+  const formatGB = (bytes: number): string => {
+    if (bytes <= 0) return '0';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2);
   };
 
   const formatNumber = (num: number): string => {
@@ -161,199 +175,104 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
       {/* Backdrop */}
       <div className="gpu-statistics-backdrop" role="presentation" onClick={onClose} />
 
-      {/* Dialog */}
+      {/* Dialog — Octane SE style compact info panel */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="gpu-statistics-dialog"
-        style={position ? { top: position.y, left: position.x } : undefined}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gpu-statistics-title"
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
+        tabIndex={-1}
+        style={position ? { top: position.y, left: position.x, transform: 'none' } : undefined}
       >
-        <div className="gpu-statistics-header">
-          <h2>GPU Resource Statistics</h2>
-          <button className="gpu-statistics-close" onClick={onClose}>
-            ×
-          </button>
-        </div>
+        <span id="gpu-statistics-title" className="sr-only">
+          GPU Statistics
+        </span>
 
         <div className="gpu-statistics-content">
-          {/* Octane Version */}
-          <div className="gpu-statistics-section">
-            <h3>Octane Version</h3>
-            <div className="gpu-statistics-value">{octaneVersion}</div>
-          </div>
-
           {loading ? (
             <div className="gpu-statistics-loading">Loading GPU statistics...</div>
           ) : devices.length === 0 ? (
             <div className="gpu-statistics-empty">No GPU devices found</div>
           ) : (
-            devices.map(device => (
-              <div key={device.index} className="gpu-statistics-device">
-                <h3>
-                  Device {device.index}: {device.name}
-                </h3>
+            <>
+              {/* Geometry statistics */}
+              {devices[0].geometry && (
+                <div className="gpu-stats-section">
+                  <div className="gpu-stats-label">Geometry statistics:</div>
+                  <ul className="gpu-stats-list">
+                    <li>Triangles: {formatNumber(devices[0].geometry.triangles)}</li>
+                    {devices[0].geometry.dispTriangles > 0 && (
+                      <li>
+                        Displaced triangles: {formatNumber(devices[0].geometry.dispTriangles)}
+                      </li>
+                    )}
+                    {devices[0].geometry.hairSegments > 0 && (
+                      <li>Hair segments: {formatNumber(devices[0].geometry.hairSegments)}</li>
+                    )}
+                    {devices[0].geometry.voxels > 0 && (
+                      <li>Voxels: {formatNumber(devices[0].geometry.voxels)}</li>
+                    )}
+                    {devices[0].geometry.gaussianSplats > 0 && (
+                      <li>Gaussian splats: {formatNumber(devices[0].geometry.gaussianSplats)}</li>
+                    )}
+                    {devices[0].geometry.spheres > 0 && (
+                      <li>Spheres: {formatNumber(devices[0].geometry.spheres)}</li>
+                    )}
+                    <li>Meshes: {formatNumber(devices[0].geometry.instances)}</li>
+                  </ul>
+                </div>
+              )}
 
-                {/* Memory Usage */}
-                {device.memory && (
-                  <div className="gpu-statistics-section">
-                    <h4>Memory Usage</h4>
-                    <table className="gpu-statistics-table">
-                      <tbody>
-                        <tr>
-                          <td>Used Memory:</td>
-                          <td>{formatBytes(device.memory.used)}</td>
-                        </tr>
-                        <tr>
-                          <td>Free Memory:</td>
-                          <td>{formatBytes(device.memory.free)}</td>
-                        </tr>
-                        <tr>
-                          <td>Total Memory:</td>
-                          <td>{formatBytes(device.memory.total)}</td>
-                        </tr>
-                        <tr>
-                          <td>Usage:</td>
-                          <td>
-                            {device.memory.total > 0
-                              ? ((device.memory.used / device.memory.total) * 100).toFixed(1) + '%'
-                              : 'N/A'}
-                          </td>
-                        </tr>
-                        {device.memory.outOfCore > 0 && (
-                          <tr>
-                            <td>Out-of-Core:</td>
-                            <td>{formatBytes(device.memory.outOfCore)}</td>
-                          </tr>
-                        )}
-                        {device.memory.peerToPeer > 0 && (
-                          <tr>
-                            <td>Peer-to-Peer:</td>
-                            <td>{formatBytes(device.memory.peerToPeer)}</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              {/* Textures used */}
+              {devices[0].textures && (
+                <div className="gpu-stats-section">
+                  <div className="gpu-stats-label">Textures used:</div>
+                  <ul className="gpu-stats-list">
+                    <li>LDR RGB: {formatNumber(devices[0].textures.rgba32)}</li>
+                    <li>HDR RGB: {formatNumber(devices[0].textures.rgba64)}</li>
+                    <li>LDR grayscale: {formatNumber(devices[0].textures.y8)}</li>
+                    <li>HDR grayscale: {formatNumber(devices[0].textures.y16)}</li>
+                  </ul>
+                </div>
+              )}
 
-                {/* Resource Statistics */}
-                {device.resources && (
-                  <div className="gpu-statistics-section">
-                    <h4>Resource Breakdown</h4>
-                    <table className="gpu-statistics-table">
-                      <tbody>
-                        <tr>
-                          <td>Runtime Data:</td>
-                          <td>{formatBytes(device.resources.runtime)}</td>
-                        </tr>
-                        <tr>
-                          <td>Film Data:</td>
-                          <td>{formatBytes(device.resources.film)}</td>
-                        </tr>
-                        <tr>
-                          <td>Geometry Data:</td>
-                          <td>{formatBytes(device.resources.geometry)}</td>
-                        </tr>
-                        <tr>
-                          <td>Node System Data:</td>
-                          <td>{formatBytes(device.resources.nodeSystem)}</td>
-                        </tr>
-                        <tr>
-                          <td>Images Data:</td>
-                          <td>{formatBytes(device.resources.images)}</td>
-                        </tr>
-                        <tr>
-                          <td>Compositor Data:</td>
-                          <td>{formatBytes(device.resources.compositor)}</td>
-                        </tr>
-                        <tr>
-                          <td>Denoiser Data:</td>
-                          <td>{formatBytes(device.resources.denoiser)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              {/* Scene size */}
+              <div className="gpu-stats-line">Scene size: {formatGB(sceneSize)} GB</div>
 
-                {/* Geometry Statistics */}
-                {device.geometry && (
-                  <div className="gpu-statistics-section">
-                    <h4>Geometry Statistics</h4>
-                    <table className="gpu-statistics-table">
-                      <tbody>
-                        <tr>
-                          <td>Triangles:</td>
-                          <td>{formatNumber(device.geometry.triangles)}</td>
-                        </tr>
-                        {device.geometry.dispTriangles > 0 && (
-                          <tr>
-                            <td>Displaced Triangles:</td>
-                            <td>{formatNumber(device.geometry.dispTriangles)}</td>
-                          </tr>
-                        )}
-                        {device.geometry.hairSegments > 0 && (
-                          <tr>
-                            <td>Hair Segments:</td>
-                            <td>{formatNumber(device.geometry.hairSegments)}</td>
-                          </tr>
-                        )}
-                        {device.geometry.voxels > 0 && (
-                          <tr>
-                            <td>Voxels:</td>
-                            <td>{formatNumber(device.geometry.voxels)}</td>
-                          </tr>
-                        )}
-                        {device.geometry.gaussianSplats > 0 && (
-                          <tr>
-                            <td>Gaussian Splats:</td>
-                            <td>{formatNumber(device.geometry.gaussianSplats)}</td>
-                          </tr>
-                        )}
-                        {device.geometry.spheres > 0 && (
-                          <tr>
-                            <td>Spheres:</td>
-                            <td>{formatNumber(device.geometry.spheres)}</td>
-                          </tr>
-                        )}
-                        <tr>
-                          <td>Instances:</td>
-                          <td>{formatNumber(device.geometry.instances)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              {/* Per-device info */}
+              {devices.map(device => (
+                <div key={device.index} className="gpu-stats-section">
+                  <div className="gpu-stats-label">{device.name}:</div>
+                  {device.memory && (
+                    <ul className="gpu-stats-list">
+                      <li>
+                        Used: {formatGB(device.memory.used)} GB
+                        {' \u2022 '}
+                        Available: {formatGB(device.memory.free)} GB
+                      </li>
+                      <li>Total: {formatGB(device.memory.total)} GB</li>
+                      <li>HW ray-tracing: On</li>
+                    </ul>
+                  )}
+                </div>
+              ))}
 
-                {/* Texture Statistics */}
-                {device.textures && (
-                  <div className="gpu-statistics-section">
-                    <h4>Texture Statistics</h4>
-                    <table className="gpu-statistics-table">
-                      <tbody>
-                        <tr>
-                          <td>RGBA32 Textures:</td>
-                          <td>{formatNumber(device.textures.rgba32)}</td>
-                        </tr>
-                        <tr>
-                          <td>RGBA64 Textures:</td>
-                          <td>{formatNumber(device.textures.rgba64)}</td>
-                        </tr>
-                        <tr>
-                          <td>Y8 Textures:</td>
-                          <td>{formatNumber(device.textures.y8)}</td>
-                        </tr>
-                        <tr>
-                          <td>Y16 Textures:</td>
-                          <td>{formatNumber(device.textures.y16)}</td>
-                        </tr>
-                        <tr>
-                          <td>Virtual Textures:</td>
-                          <td>{formatNumber(device.textures.virtual)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            ))
+              {/* Out-of-core memory */}
+              {devices[0].memory && (
+                <div className="gpu-stats-line">
+                  Out-of-core memory used: {formatGB(devices[0].memory.outOfCore)}/
+                  {formatGB(4 * 1024 * 1024 * 1024)} GB
+                </div>
+              )}
+
+              {/* Display color profile */}
+              <div className="gpu-stats-line">Display color profile: sRGB</div>
+            </>
           )}
         </div>
       </div>

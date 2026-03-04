@@ -31,6 +31,17 @@ export function useSceneTree({
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Stable refs for callback props — prevents event listener re-registration
+  // when parent re-renders with new callback references
+  const onSceneTreeChangeRef = useRef(onSceneTreeChange);
+  onSceneTreeChangeRef.current = onSceneTreeChange;
+  const onSyncStateChangeRef = useRef(onSyncStateChange);
+  onSyncStateChangeRef.current = onSyncStateChange;
+  const onNodeSelectRef = useRef(onNodeSelect);
+  onNodeSelectRef.current = onNodeSelect;
+  const initializeExpansionRef = useRef(initializeExpansion);
+  initializeExpansionRef.current = initializeExpansion;
+
   // Propagate scene tree changes to parent after render completes.
   // This replaces all setTimeout(0) workarounds — useEffect runs after
   // React commits, so calling parent setState here is safe.
@@ -38,9 +49,9 @@ export function useSceneTree({
   useEffect(() => {
     if (sceneTree !== prevTreeRef.current) {
       prevTreeRef.current = sceneTree;
-      onSceneTreeChange?.(sceneTree);
+      onSceneTreeChangeRef.current?.(sceneTree);
     }
-  }, [sceneTree, onSceneTreeChange]);
+  }, [sceneTree]);
 
   // Load scene tree from Octane
   const loadSceneTree = useCallback(async () => {
@@ -50,7 +61,7 @@ export function useSceneTree({
 
     Logger.debug('Loading scene tree from Octane...');
     setLoading(true);
-    onSyncStateChange?.(true);
+    onSyncStateChangeRef.current?.(true);
 
     try {
       const tree = await client.buildSceneTree();
@@ -58,7 +69,7 @@ export function useSceneTree({
       // Progressive — tree was already populated via events.
       // Just ensure expansion map is initialized with final tree.
       if (tree.length > 0) {
-        initializeExpansion(tree);
+        initializeExpansionRef.current(tree);
       }
 
       Logger.debug(`Loaded ${tree.length} top-level items`);
@@ -66,9 +77,9 @@ export function useSceneTree({
       Logger.error('Failed to load scene tree:', error);
     } finally {
       setLoading(false);
-      onSyncStateChange?.(false);
+      onSyncStateChangeRef.current?.(false);
     }
-  }, [connected, client, onSyncStateChange, initializeExpansion]);
+  }, [connected, client]);
 
   // Auto-load on connect
   useEffect(() => {
@@ -105,7 +116,7 @@ export function useSceneTree({
         // Select the first RenderTarget as soon as it arrives
         if (!hasSelectedRenderTarget && node.type === 'PT_RENDERTARGET') {
           hasSelectedRenderTarget = true;
-          onNodeSelect?.(node);
+          onNodeSelectRef.current?.(node);
 
           // Activate in render engine (fire-and-forget)
           if (node.handle && node.handle !== -1 && client) {
@@ -132,7 +143,7 @@ export function useSceneTree({
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
       setSceneTree(nodes);
-      if (nodes.length > 0) initializeExpansion(nodes);
+      if (nodes.length > 0) initializeExpansionRef.current(nodes);
     };
 
     /**
@@ -175,7 +186,7 @@ export function useSceneTree({
       // Re-select the render target so NodeInspector refreshes with the
       // newly-loaded children/pins.
       if (hasSelectedRenderTarget && parent.type === 'PT_RENDERTARGET') {
-        onNodeSelect?.(parent);
+        onNodeSelectRef.current?.(parent);
       }
     };
 
@@ -272,7 +283,7 @@ export function useSceneTree({
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
     };
-  }, [client, onSceneTreeChange, onNodeSelect, initializeExpansion]);
+  }, [client]);
 
   return {
     sceneTree,

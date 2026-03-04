@@ -39,6 +39,12 @@ const CORE_PROTO_FILES = [
 
 export class OctaneGrpcClient extends EventEmitter {
   private base: OctaneGrpcClientBase;
+  private isReconnecting = false;
+  private reconnectAttempts = 0;
+  private callbackStream: any = null;
+  private static readonly MAX_RECONNECT_ATTEMPTS = 10;
+  private static readonly BASE_RECONNECT_DELAY = 2000; // ms
+  private static readonly MAX_RECONNECT_DELAY = 60000; // ms
 
   constructor(octaneHost?: string, octanePort?: number) {
     super();
@@ -89,6 +95,14 @@ export class OctaneGrpcClient extends EventEmitter {
   }
 
   close(): void {
+    if (this.callbackStream) {
+      try {
+        this.callbackStream.cancel();
+      } catch {
+        /* already closed */
+      }
+      this.callbackStream = null;
+    }
     this.base.close();
   }
 
@@ -205,7 +219,17 @@ export class OctaneGrpcClient extends EventEmitter {
         throw new Error('StreamCallbackService.callbackChannel not found');
       }
 
+      // Cancel previous stream to prevent leaked listeners
+      if (this.callbackStream) {
+        try {
+          this.callbackStream.cancel();
+        } catch {
+          /* already closed */
+        }
+      }
+
       const stream = streamService.callbackChannel({});
+      this.callbackStream = stream;
 
       stream.on('data', (response: any) => {
         try {
@@ -216,23 +240,77 @@ export class OctaneGrpcClient extends EventEmitter {
       });
 
       stream.on('end', () => {
-        console.log('Callback stream ended');
+        console.log('Callback stream ended cleanly');
+        this.callbackStream = null;
+        this.scheduleReconnect();
       });
 
       stream.on('error', (error: any) => {
         console.error(`${RED}Callback stream error: ${error.message}${RESET}`);
-        setTimeout(() => {
-          this.startCallbackStreaming().catch(e => {
-            console.error(`${RED}Reconnection failed: ${e.message}${RESET}`);
-          });
-        }, 5000);
+        this.callbackStream = null;
+        this.scheduleReconnect();
       });
 
+      // Reset on successful connection
+      this.reconnectAttempts = 0;
+      this.isReconnecting = false;
       console.log('Callback streaming started');
     } catch (error: any) {
       console.error(`${RED}Failed to start callback streaming: ${error.message}${RESET}`);
       throw error;
     }
+  }
+
+  private lastReconnectTime = 0;
+
+  private scheduleReconnect(): void {
+    if (this.isReconnecting) return; // Prevent concurrent reconnect loops
+
+    // Reset counter after a cooldown period so callbacks can recover
+    // if Octane restarts long after max attempts were exhausted
+    const RECONNECT_COOLDOWN = 60_000; // 60s
+    if (
+      this.reconnectAttempts >= OctaneGrpcClient.MAX_RECONNECT_ATTEMPTS &&
+      Date.now() - this.lastReconnectTime > RECONNECT_COOLDOWN
+    ) {
+      console.log('Reconnect cooldown elapsed — resetting attempt counter');
+      this.reconnectAttempts = 0;
+    }
+
+    if (this.reconnectAttempts >= OctaneGrpcClient.MAX_RECONNECT_ATTEMPTS) {
+      console.error(
+        `${RED}Callback stream: max reconnect attempts (${OctaneGrpcClient.MAX_RECONNECT_ATTEMPTS}) reached, giving up${RESET}`
+      );
+      return;
+    }
+
+    this.lastReconnectTime = Date.now();
+
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+
+    // Exponential backoff: 2s, 4s, 8s, 16s, ... capped at 60s
+    const delay = Math.min(
+      OctaneGrpcClient.BASE_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts - 1),
+      OctaneGrpcClient.MAX_RECONNECT_DELAY
+    );
+
+    console.log(
+      `Callback stream reconnect attempt ${this.reconnectAttempts}/${OctaneGrpcClient.MAX_RECONNECT_ATTEMPTS} in ${(delay / 1000).toFixed(0)}s`
+    );
+
+    const timer = setTimeout(() => {
+      this.startCallbackStreaming()
+        .then(() => {
+          this.isReconnecting = false;
+        })
+        .catch(e => {
+          console.error(`${RED}Reconnection failed: ${e.message}${RESET}`);
+          this.isReconnecting = false;
+          this.scheduleReconnect();
+        });
+    }, delay);
+    timer.unref(); // Don't keep process alive during shutdown
   }
 
   // ========== Scene & Device Info APIs ==========

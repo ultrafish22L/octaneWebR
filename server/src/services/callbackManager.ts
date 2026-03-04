@@ -13,6 +13,7 @@ export class CallbackManager extends EventEmitter {
   private grpcClient: OctaneGrpcClient;
   private callbackId: number = 0;
   private isRegistered: boolean = false;
+  private boundListeners: { event: string; handler: (...args: any[]) => void }[] = [];
 
   constructor(grpcClient: OctaneGrpcClient) {
     super();
@@ -29,27 +30,32 @@ export class CallbackManager extends EventEmitter {
       this.callbackId = Math.floor(Math.random() * 1000000);
       console.log('Setting up callback streaming...');
 
-      this.grpcClient.on('OnNewImage', (data: any) => {
-        this.handleOnNewImage(data);
-      });
+      const onImage = (data: any) => this.handleOnNewImage(data);
+      const onStats = (data: any) => this.handleOnNewStatistics(data);
+      const onFailure = (data: any) => this.handleOnRenderFailure(data);
+      const onProject = (data: any) => this.handleOnProjectManagerChanged(data);
 
-      this.grpcClient.on('OnNewStatistics', (data: any) => {
-        this.handleOnNewStatistics(data);
-      });
+      this.boundListeners = [
+        { event: 'OnNewImage', handler: onImage },
+        { event: 'OnNewStatistics', handler: onStats },
+        { event: 'OnRenderFailure', handler: onFailure },
+        { event: 'OnProjectManagerChanged', handler: onProject },
+      ];
 
-      this.grpcClient.on('OnRenderFailure', (data: any) => {
-        this.handleOnRenderFailure(data);
-      });
-
-      this.grpcClient.on('OnProjectManagerChanged', (data: any) => {
-        this.handleOnProjectManagerChanged(data);
-      });
+      for (const { event, handler } of this.boundListeners) {
+        this.grpcClient.on(event, handler);
+      }
 
       await this.grpcClient.startCallbackStreaming();
 
       this.isRegistered = true;
       console.log('Callback streaming initialized');
     } catch (error: any) {
+      // Remove listeners added before startCallbackStreaming failed
+      for (const { event, handler } of this.boundListeners) {
+        this.grpcClient.off(event, handler);
+      }
+      this.boundListeners = [];
       console.error(`${RED}Failed to register callback: ${error.message}${RESET}`);
       throw error;
     }
@@ -134,14 +140,22 @@ export class CallbackManager extends EventEmitter {
 
     try {
       console.log('Unregistering callbacks');
-      this.isRegistered = false;
+
+      // Remove listeners from grpcClient to prevent duplicates on re-register
+      for (const { event, handler } of this.boundListeners) {
+        this.grpcClient.off(event, handler);
+      }
+      this.boundListeners = [];
 
       await this.grpcClient.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
+        callback: null,
         userData: 0,
       });
 
+      this.isRegistered = false;
       console.log('Callbacks unregistered');
     } catch (error: any) {
+      this.isRegistered = false; // Allow re-registration even if gRPC unregister failed
       console.error(`${RED}Failed to unregister callbacks: ${error.message}${RESET}`);
     }
   }

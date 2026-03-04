@@ -30,7 +30,6 @@ export interface GrpcCallOptions {
 }
 
 export class OctaneGrpcClientBase {
-  protected channel: grpc.Channel;
   protected services: Map<string, any> = new Map();
   protected packageDefinition: protoLoader.PackageDefinition | null = null;
   protected protoDescriptor: grpc.GrpcObject | null = null;
@@ -47,14 +46,11 @@ export class OctaneGrpcClientBase {
    */
   constructor(
     octaneHost: string = process.env.OCTANE_HOST || OctaneGrpcClientBase.detectDefaultHost(),
-    octanePort: number = parseInt(process.env.OCTANE_PORT || '51022'),
+    octanePort: number = parseInt(process.env.OCTANE_PORT || '51022') || 51022,
     protoBasePath?: string
   ) {
     this.octaneHost = octaneHost;
     this.octanePort = octanePort;
-
-    const address = `${octaneHost}:${octanePort}`;
-    this.channel = new grpc.Channel(address, grpc.credentials.createInsecure(), {});
 
     // Default proto base path: two levels up from this file → server/
     this.protoBasePath = protoBasePath ?? path.resolve(__dirname, '../..');
@@ -113,7 +109,8 @@ export class OctaneGrpcClientBase {
         includeDirs: [PROTO_PATH],
       });
       this.protoDescriptor = grpc.loadPackageDefinition(this.packageDefinition);
-    } catch {
+    } catch (error: any) {
+      console.error('Failed to load proto files:', error.message);
       this.protoDescriptor = null;
     }
   }
@@ -259,10 +256,16 @@ export class OctaneGrpcClientBase {
   }
 
   /**
-   * Close the gRPC channel and clear cached services.
+   * Close all gRPC service stub channels and clear cache.
    */
   close(): void {
-    this.channel.close();
+    for (const [, service] of this.services) {
+      try {
+        service.close?.();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    }
     this.services.clear();
   }
 }

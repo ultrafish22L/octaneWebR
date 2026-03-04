@@ -71,6 +71,15 @@ export function MenuDropdown({
     });
   }, [anchorElement, isSubmenu]);
 
+  // Clean up submenu timer on unmount
+  useEffect(() => {
+    return () => {
+      if (submenuTimer.current) {
+        clearTimeout(submenuTimer.current);
+      }
+    };
+  }, []);
+
   const handleItemClick = useCallback(
     (item: MenuItem) => {
       if (item.enabled === false) return;

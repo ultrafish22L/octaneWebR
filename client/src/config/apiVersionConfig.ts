@@ -50,7 +50,9 @@
  * The __USE_ALPHA5_API__ constant is injected by vite.config.mts at build time.
  */
 declare const __USE_ALPHA5_API__: boolean;
+declare const __APP_VERSION__: string;
 export const USE_ALPHA5_API = __USE_ALPHA5_API__;
+export const APP_VERSION = __APP_VERSION__;
 
 // ============================================================================
 // METHOD NAME MAPPINGS

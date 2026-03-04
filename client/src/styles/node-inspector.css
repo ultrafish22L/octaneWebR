@@ -10,7 +10,7 @@
   justify-content: space-between;
   padding: 6px 8px;
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--bg-header);
+  border-bottom: 1px solid var(--border);
   font-size: var(--font-size-small);
   color: var(--text-primary);
 }
@@ -109,17 +109,8 @@
   user-select: none;
 }
 
-.parameter-spinner-btn:first-child {
-  border-right: none;
-  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
-}
-
-.parameter-spinner-btn:last-of-type {
-  border-left: none;
-  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-}
-
-.parameter-spinner-btn:hover {
+.parameter-spinner-btn:hover,
+.parameter-spinner-btn:focus-visible {
   background: var(--text-disabled);
   color: var(--text-primary);
 }
@@ -200,7 +191,7 @@
 }
 
 .inspector-target-select.no-node-selected {
-  color: var(--text-muted, #666);
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -252,15 +243,6 @@
   gap: var(--spacing-xxs);
 }
 
-/* Parameter Number Inputs (matching reference screenshot exactly) */
-/* Duplicate .parameter-number-input removed - see line 144 */
-
-.parameter-number-input:focus {
-  outline: none;
-  border-color: var(--accent-blue);
-  background-color: var(--border-dark);
-}
-
 /* Parameter Color Bars (matching reference screenshot) */
 
 /* Parameter Checkboxes (matching reference screenshot) */
@@ -278,7 +260,8 @@
   position: relative;
 }
 
-.parameter-checkbox:hover {
+.parameter-checkbox:hover,
+.parameter-checkbox:focus-visible {
   border-color: var(--accent-blue);
 }
 
@@ -307,12 +290,6 @@
   z-index: var(--z-low);
 }
 
-/* Duplicate .parameter-spinner-btn removed - see line 88 for definition */
-
-.parameter-spinner-btn:hover {
-  color: var(--text-muted);
-}
-
 /* Parameter Sliders */
 
 .parameter-slider {
@@ -331,13 +308,6 @@
   display: flex;
   align-items: center;
   cursor: pointer;
-}
-
-/* Parameter Dropdowns - see line 119 for .parameter-dropdown definition */
-
-.parameter-dropdown:focus {
-  outline: none;
-  border-color: var(--accent-blue);
 }
 
 /* Color Parameter Controls (matching reference screenshot) */
@@ -388,7 +358,8 @@
   position: relative;
 }
 
-.quick-btn:hover {
+.quick-btn:hover,
+.quick-btn:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--accent-blue);
@@ -432,9 +403,9 @@
   align-items: center;
 }
 
-/* Duplicate .inspector-title removed - see line 219 */
+/* Duplicate .inspector-title removed - consolidated in .section-title */
 
-/* Duplicate .inspector-dropdown removed - see line 181 */
+/* Duplicate .inspector-dropdown removed - consolidated in .inspector-target-select */
 
 .section-header {
   padding: 4px 8px;
@@ -448,7 +419,8 @@
   border-bottom: 1px solid var(--border);
 }
 
-.section-header:hover {
+.section-header:hover,
+.section-header:focus-visible {
   background: var(--bg-hover);
 }
 
@@ -481,7 +453,8 @@
   justify-content: center;
 }
 
-.grid-button:hover {
+.grid-button:hover,
+.grid-button:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
@@ -564,7 +537,7 @@
 
 /* Numeric Slider Controls */
 
-/* Duplicate .parameter-slider removed - see line 337 */
+/* Duplicate .parameter-slider removed - consolidated above */
 
 .parameter-slider::-webkit-slider-thumb {
   appearance: none;
@@ -585,20 +558,10 @@
   border: 1px solid var(--border);
 }
 
-/* Numeric Input Controls */
-
-.param-increment,
-
-
-
-.param-increment:hover,
-
-.param-increment:active,
-
-
 /* Dropdown Controls - see line 119 for .parameter-dropdown definition */
 
-.parameter-dropdown:focus {
+.parameter-dropdown:focus,
+.parameter-dropdown:focus-visible {
   outline: none;
   border-color: var(--accent);
   background: var(--bg-primary);
@@ -607,11 +570,11 @@
 /* Parameter Animation Effects */
 /* .parameter-row consolidated in layout.css:223 */
 
-.parameter-number-input,
-/* Duplicate .parameter-dropdown removed - transition already in main definition at line 119 */
-
 /* Parameter Value Indicators */
-.parameter-row[data-type="checkbox"] .parameter-checkbox:checked ~ .parameter-label .parameter-name {
+.parameter-row[data-type='checkbox']
+  .parameter-checkbox:checked
+  ~ .parameter-label
+  .parameter-name {
   color: var(--accent);
 }
 
@@ -697,7 +660,8 @@
   padding: 0 4px 0 0;
 }
 
-.node-box:hover {
+.node-box:hover,
+.node-box:focus-visible {
   background: var(--bg-hover);
   border-color: var(--border-hover);
 }
@@ -788,7 +752,8 @@
   gap: 22px;
 }
 
-.node-inspector .node-label:hover {
+.node-inspector .node-label:hover,
+.node-inspector .node-label:focus-visible {
   background: var(--bg-hover);
 }
 
@@ -809,7 +774,7 @@
 .node-inspector .node-label-text {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -849,10 +814,8 @@
   transition: border-color 0.2s ease;
 }
 
-.node-inspector .node-parameter-controls .parameter-dropdown:hover {
-}
-
-.node-inspector .node-parameter-controls .parameter-dropdown:focus {
+.node-inspector .node-parameter-controls .parameter-dropdown:focus,
+.node-inspector .node-parameter-controls .parameter-dropdown:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--warning-bg-alpha);
@@ -907,9 +870,9 @@
   min-width: 36px;
   height: 18px;
   background: var(--bg-primary);
-  border: 1px solid var(--bg-header);
+  border: 1px solid var(--border);
   border-radius: var(--border-radius-base);
-  color: var(--bg-header);
+  color: var(--text-primary);
   font-size: var(--font-size-small);
   padding: 0 8px;
   font-family: var(--font-family-mono);
@@ -960,8 +923,6 @@
   border-radius: 0 0 var(--border-radius-base) 0;
 }
 
-/* .parameter-spinner-btn:hover - see line 354 */
-
 .parameter-spinner-btn:active {
   background: var(--border-light);
 }
@@ -970,9 +931,9 @@
   width: 80px;
   height: 18px;
   background: var(--bg-primary);
-  border: 1px solid var(--bg-header);
+  border: 1px solid var(--border);
   border-radius: var(--border-radius-sm);
-  color: var(--bg-header);
+  color: var(--text-primary);
   font-size: var(--font-size-small);
   padding: 1px 4px;
   text-align: right;
@@ -995,7 +956,7 @@
   flex: 1; /* Responsive - fill available space */
   min-width: 60px;
   height: 20px;
-  border: 1px solid var(--bg-header);
+  border: 1px solid var(--border);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   padding: 0;
@@ -1024,16 +985,15 @@
 .dropdown {
   height: 18px;
   background: var(--bg-primary);
-  border: 1px solid var(--bg-header);
+  border: 1px solid var(--border);
   border-radius: var(--border-radius-sm);
-  color: var(--bg-header);
+  color: var(--text-primary);
   font-size: var(--font-size-small);
   padding: 0 4px;
   width: 160px; /* Consistent width matching Octane */
   min-width: 160px;
   max-width: 160px;
   cursor: pointer;
-  display: grid;
   text-align: right;
   box-shadow: inset 0 1px 3px var(--shadow-heavy);
   appearance: none;
@@ -1138,11 +1098,13 @@
   transition: all 0.2s ease;
 }
 
-.parameter-checkbox:hover + .parameter-checkbox-custom {
+.parameter-checkbox:hover + .parameter-checkbox-custom,
+.parameter-checkbox:focus-visible + .parameter-checkbox-custom {
   border-color: var(--accent);
 }
 
-.parameter-checkbox-container:hover .parameter-checkbox-custom {
+.parameter-checkbox-container:hover .parameter-checkbox-custom,
+.parameter-checkbox-container:focus-within .parameter-checkbox-custom {
   border-color: var(--accent);
 }
 
@@ -1167,7 +1129,7 @@
   background-color: var(--bg-primary); /* Professional dark background */
   border-left: none; /* No border - splitter acts as boundary */
   border-right: none;
-  overflow-y: visible; /* Allow scrolling if content is tall */
+  overflow-y: visible; /* Default — inner .inspector-content handles scrolling */
   display: flex;
   flex-direction: column;
   position: relative; /* Ensure proper stacking context */
@@ -1223,7 +1185,8 @@
   transition: background-color 0.2s;
 }
 
-.filenode-toolbar-btn:hover:not(:disabled) {
+.filenode-toolbar-btn:hover:not(:disabled),
+.filenode-toolbar-btn:focus-visible:not(:disabled) {
   background-color: var(--bg-hover);
   border-color: var(--accent-blue);
 }
@@ -1242,7 +1205,8 @@
   opacity: 0.9;
 }
 
-.filenode-toolbar-btn:hover:not(:disabled) img {
+.filenode-toolbar-btn:hover:not(:disabled) img,
+.filenode-toolbar-btn:focus-visible:not(:disabled) img {
   opacity: 1;
 }
 
@@ -1259,7 +1223,7 @@
 
 .geometry-polygon-count {
   padding: 2px 4px;
-  font-size: 11px;
+  font-size: var(--font-size-small);
   color: var(--text-primary);
   text-align: left;
 }

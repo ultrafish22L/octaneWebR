@@ -51,16 +51,17 @@
   --text-secondary: #cccccc; /* Secondary text */
   --text-tertiary: #b0b0b0; /* Tertiary text (between secondary and muted) */
   --text-muted: #999999; /* Muted text */
-  --text-disabled: #666666; /* Disabled text */
+  --text-disabled: #808080; /* Disabled text */
 
   /* Octane Accent Colors */
   --accent: #ff8c00; /* Primary accent - Octane orange */
   --accent-yellow: #ffc107; /* Selection yellow/gold - matches Octane */
-  --accent-yellow-hover: #ffcd38; /* Yellow hover state */
   --accent-green: #5cb85c; /* Success green */
   --accent-red: #d9534f; /* Error red */
   --accent-blue: #3a9bd9; /* Info/link blue */
   --accent-blue-dim: #2a6a9a; /* Dimmed blue for subtle highlights */
+  --accent-blue-subtle: rgba(64, 128, 255, 0.1); /* Very subtle blue tint for backgrounds */
+  --accent-dim: #cc7000; /* Dimmed orange for hover states */
   --selection-highlight: #9a6000; /* Subtle dark orange for scene outliner selection - matches Octane SE */
 
   /* Octane UI Elements */
@@ -129,8 +130,6 @@
   /* Typography */
   --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   --font-family-mono: 'Segoe UI Symbol', 'Segoe UI', monospace;
-  --font-size-nano: 6px; /* Ultra-small text/icons */
-  --font-size-micro: 7px; /* Micro text */
   --font-size-tiny: 8px; /* Tiny text */
   --font-size-xs: 9px; /* Extra small */
   --font-size-xxs: 10px; /* For arrows and small icons */
@@ -140,14 +139,11 @@
   --font-size-large: 14px; /* Large UI text */
   --font-size-xl: 16px; /* Extra large */
   --font-size-xxl: 18px; /* Double extra large */
-  --font-size-xlarge: 20px; /* Very large text */
   --font-size-icon: 24px; /* Standard icon size */
   --font-size-xxlarge: 26px; /* Extra extra large */
-  --font-size-header: 28px; /* Header text */
   --font-size-title: 32px; /* Title text */
   --font-size-huge: 48px; /* Huge text */
   --font-weight-light: 300;
-  --font-weight-label: 300;
   --font-weight-normal: 400;
   --font-weight-bold: 600;
   --font-weight-bold7: 700;
@@ -183,7 +179,6 @@
   /* Z-Index Layering System */
   --z-base: 0; /* Base layer (default) */
   --z-low: 1; /* Low layer (basic stacking, tabs, panels) */
-  --z-tab-active: 2; /* Active tab above others */
   --z-background: 5; /* Background elements above base */
   --z-panel: 10; /* Panels and sections */
   --z-dropdown: 100; /* Dropdown menus and selects */

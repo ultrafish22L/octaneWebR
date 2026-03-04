@@ -70,10 +70,16 @@ export class SceneService extends BaseService {
       Logger.debug('Building new node metadata:', newNodeHandle);
       try {
         const tempArray: SceneNode[] = [];
-        const newNode = await this.addSceneItem(tempArray, { handle: newNodeHandle }, null, 1);
+        const newNode = await this.addSceneItem(
+          tempArray,
+          { handle: newNodeHandle },
+          null,
+          1,
+          signal
+        );
         if (newNode) {
           Logger.debug(`Building children for new node: ${newNode.name}`);
-          await this.addItemChildren(newNode);
+          await this.addItemChildren(newNode, signal);
           Logger.debug('Node metadata built:', newNode.name);
         } else {
           Logger.error('Failed to create new scene node');
@@ -90,7 +96,12 @@ export class SceneService extends BaseService {
     Logger.info('Building scene tree...');
     this.emit('scene:buildStart');
 
-    this.scene = { tree: [], map: new Map(), connections: new Map() };
+    // Save reference to old scene for rollback on abort.
+    // Build into a new scene object and only assign to this.scene on success,
+    // so in-flight operations from a cancelled build can't pollute the new scene.
+    const previousScene = this.scene;
+    const newScene: Scene = { tree: [], map: new Map(), connections: new Map() };
+    this.scene = newScene;
 
     const startTime = performance.now();
 
@@ -120,7 +131,7 @@ export class SceneService extends BaseService {
       }
 
       Logger.debug('Step 3: Building tree...');
-      this.scene.tree = await this.syncSceneSequential(rootHandle, null, rootIsGraph, 0);
+      this.scene.tree = await this.syncSceneSequential(rootHandle, null, rootIsGraph, 0, signal);
 
       const elapsedTime = ((performance.now() - startTime) / 1000).toFixed(2);
 
@@ -151,12 +162,14 @@ export class SceneService extends BaseService {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('abort') || message.includes('cancelled')) {
-        Logger.debug('Scene tree build cancelled');
+        Logger.debug('Scene tree build cancelled — restoring previous tree');
+        this.scene = previousScene;
       } else {
         Logger.error('Failed to build scene tree:', message);
         if (error instanceof Error && error.stack) {
           Logger.error('Error stack:', error.stack);
         }
+        this.emitUserError('Failed to load scene tree');
       }
       return this.scene.tree;
     }
@@ -168,7 +181,8 @@ export class SceneService extends BaseService {
     itemHandle: number | null,
     sceneItems: SceneNode[] | null,
     isGraph: boolean,
-    level: number
+    level: number,
+    signal?: AbortSignal
   ): Promise<SceneNode[]> {
     if (sceneItems === null) {
       sceneItems = [];
@@ -212,6 +226,7 @@ export class SceneService extends BaseService {
         Logger.debug(`Level ${level}: Found ${size} owned items`);
 
         for (let i = 0; i < size; i++) {
+          if (signal?.aborted) throw new Error('Scene tree build was cancelled');
           const itemResponse = await this.apiService.callApi(
             'ApiItemArray',
             'get',
@@ -224,7 +239,8 @@ export class SceneService extends BaseService {
               sceneItems,
               asObject(itemResponse.result) as Record<string, unknown>,
               null,
-              level
+              level,
+              signal
             );
 
             // Progressive: notify UI about each level-1 node as it's created
@@ -243,7 +259,8 @@ export class SceneService extends BaseService {
           Logger.debug(`Building children for ${sceneItems.length} level 1 items`);
 
           for (const item of sceneItems) {
-            await this.addItemChildren(item);
+            if (signal?.aborted) throw new Error('Scene tree build was cancelled');
+            await this.addItemChildren(item, signal);
 
             if (this.progressiveEvents) {
               // Notify UI that this subtree is complete (non-blocking)
@@ -267,6 +284,7 @@ export class SceneService extends BaseService {
           Logger.debug(`  Found ${pinCount} pins`);
 
           for (let i = 0; i < pinCount; i++) {
+            if (signal?.aborted) throw new Error('Scene tree build was cancelled');
             try {
               const connectedResponse = await this.apiService.callApi(
                 'ApiNode',
@@ -299,7 +317,7 @@ export class SceneService extends BaseService {
                   pinInfo.ix = i;
                   pinInfo.pinId = i;
                   pinInfo.pinOwner = { handle: itemHandle };
-                  await this.addSceneItem(sceneItems, connectedNode, pinInfo, level);
+                  await this.addSceneItem(sceneItems, connectedNode, pinInfo, level, signal);
                 }
               }
             } catch (pinError) {
@@ -332,8 +350,10 @@ export class SceneService extends BaseService {
     sceneItems: SceneNode[],
     item: Record<string, unknown> | null,
     pinInfo: Record<string, unknown> | null,
-    level: number
+    level: number,
+    signal?: AbortSignal
   ): Promise<SceneNode | undefined> {
+    if (signal?.aborted) throw new Error('Scene tree build was cancelled');
     let itemName = String(item?.name || pinInfo?.staticLabel || 'Unnamed');
     let outType: string | number = String(pinInfo?.outType || pinInfo?.type || '');
     let graphInfo: import('./types').GraphInfo | undefined;
@@ -346,7 +366,11 @@ export class SceneService extends BaseService {
     if (item != null && handleNum !== 0) {
       const existing = this.scene.map.get(handleNum);
       if (existing && existing.handle) {
-        existing.pinInfo = pinInfo as import('./types').PinInfo | undefined;
+        // Only set pinInfo if it hasn't been set yet to avoid overwriting
+        // with the last-visited pin when the same node is encountered multiple times
+        if (!existing.pinInfo && pinInfo) {
+          existing.pinInfo = pinInfo as import('./types').PinInfo | undefined;
+        }
         if (level > 1) {
           sceneItems.push(existing);
         }
@@ -426,13 +450,15 @@ export class SceneService extends BaseService {
     sceneItems.push(entry);
 
     if (item != null && handleNum !== 0) {
+      // Re-check abort before writing to prevent stale data from cancelled builds
+      if (signal?.aborted) throw new Error('Scene tree build was cancelled');
       this.scene.map.set(handleNum, entry);
       Logger.debug(
         `Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`
       );
 
       if (level > 1) {
-        await this.addItemChildren(entry);
+        await this.addItemChildren(entry, signal);
       }
     }
 
@@ -441,13 +467,20 @@ export class SceneService extends BaseService {
 
   // ─── Recursive child loading ───────────────────────────────────────
 
-  private async addItemChildren(item: SceneNode): Promise<void> {
+  private async addItemChildren(item: SceneNode, signal?: AbortSignal): Promise<void> {
     if (!item || !item.handle) return;
+    if (signal?.aborted) throw new Error('Scene tree build was cancelled');
 
     const isGraph = item.graphInfo != null;
 
     try {
-      const children = await this.syncSceneSequential(item.handle, null, isGraph, item.level || 1);
+      const children = await this.syncSceneSequential(
+        item.handle,
+        null,
+        isGraph,
+        item.level || 1,
+        signal
+      );
       item.children = children;
 
       const attrInfoResponse = await this.apiService.callApi('ApiItem', 'attrInfo', item.handle, {
@@ -463,8 +496,17 @@ export class SceneService extends BaseService {
           expected_type: AttrType.AT_STRING,
         });
         if (response) {
-          const valueField = Object.keys(response)[1];
-          item.filePath = Object(response)[Object(response)[valueField]] as string;
+          const responseMap = response as Record<string, unknown>;
+          // Check for known oneof field names rather than relying on Object.keys() order
+          const valueField =
+            (responseMap.value as string) ||
+            (responseMap.string_value !== undefined ? 'string_value' : undefined) ||
+            (responseMap.float_value !== undefined ? 'float_value' : undefined) ||
+            (responseMap.int_value !== undefined ? 'int_value' : undefined) ||
+            (responseMap.bool_value !== undefined ? 'bool_value' : undefined);
+          if (valueField) {
+            item.filePath = responseMap[valueField] as string;
+          }
         }
         this.emit('scene:buildProgress', { step: `adding node ${item.name}` });
       }

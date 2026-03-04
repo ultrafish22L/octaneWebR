@@ -1,4 +1,3 @@
-/* eslint-disable no-alert */
 /**
  * useLocalDB - LocalDB management
  * Handles loading and management of local material database
@@ -7,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 
 export interface LocalDBCategory {
   handle: number;
@@ -27,22 +27,24 @@ interface UseLocalDBProps {
 
 export function useLocalDB({ activeTab }: UseLocalDBProps) {
   const { client } = useOctane();
+  const { setTemporaryStatus } = useStatusMessage();
   const [localDBRoot, setLocalDBRoot] = useState<LocalDBCategory | null>(null);
   const [localDBLoading, setLocalDBLoading] = useState(false);
 
-  // Load children (subcategories and packages) for a category
+  // Load children (subcategories and packages) for a category, returning an updated copy
   const loadCategoryChildren = useCallback(
-    async (category: LocalDBCategory) => {
-      if (!client || category.loaded) return;
+    async (category: LocalDBCategory): Promise<LocalDBCategory> => {
+      if (!client || category.loaded) return category;
 
       try {
         // Load subcategories
+        const subcategories: LocalDBCategory[] = [];
         const subCatCount = await client.getSubCategoryCount(category.handle);
         for (let i = 0; i < subCatCount; i++) {
           const subCatHandle = await client.getSubCategory(category.handle, i);
           if (subCatHandle) {
             const subCatName = await client.getCategoryName(subCatHandle);
-            category.subcategories.push({
+            subcategories.push({
               handle: subCatHandle,
               name: subCatName,
               subcategories: [],
@@ -53,21 +55,23 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
         }
 
         // Load packages
+        const packages: LocalDBPackage[] = [];
         const pkgCount = await client.getPackageCount(category.handle);
         for (let i = 0; i < pkgCount; i++) {
           const pkgHandle = await client.getPackage(category.handle, i);
           if (pkgHandle) {
             const pkgName = await client.getPackageName(pkgHandle);
-            category.packages.push({
+            packages.push({
               handle: pkgHandle,
               name: pkgName,
             });
           }
         }
 
-        category.loaded = true;
+        return { ...category, subcategories, packages, loaded: true };
       } catch (error) {
         Logger.error('Failed to load category children:', error);
+        return category;
       }
     },
     [client]
@@ -96,8 +100,8 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
       };
 
       // Load root level categories and packages
-      await loadCategoryChildren(root);
-      setLocalDBRoot(root);
+      const loadedRoot = await loadCategoryChildren(root);
+      setLocalDBRoot(loadedRoot);
       Logger.debug('LocalDB loaded:', root);
     } catch (error) {
       Logger.error('Failed to load LocalDB:', error);
@@ -116,18 +120,16 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
         Logger.debug(`Loading package: ${pkg.name}`);
         const success = await client.loadPackage(pkg.handle);
         if (success) {
-          alert(
-            ` Package "${pkg.name}" loaded successfully!\n\nCheck the Node Graph to see the loaded nodes.`
-          );
+          setTemporaryStatus(`Package "${pkg.name}" loaded — see Node Graph`, 4000);
         } else {
-          alert(` Failed to load package "${pkg.name}"`);
+          setTemporaryStatus(`Failed to load package "${pkg.name}"`, 4000);
         }
       } catch (error) {
         Logger.error('Failed to load package:', error);
-        alert(` Error loading package: ${error}`);
+        setTemporaryStatus(`Error loading package: ${error}`, 4000);
       }
     },
-    [client]
+    [client, setTemporaryStatus]
   );
 
   // Load LocalDB when Local DB tab becomes active
@@ -135,8 +137,7 @@ export function useLocalDB({ activeTab }: UseLocalDBProps) {
     if (activeTab === 'localdb' && !localDBRoot && !localDBLoading && client) {
       loadLocalDB();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, client]);
+  }, [activeTab, client, localDBRoot, localDBLoading, loadLocalDB]);
 
   return {
     localDBRoot,

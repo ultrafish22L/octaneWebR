@@ -1,12 +1,12 @@
-/* eslint-disable no-alert */
 /**
  * useLiveDB - LiveDB management
  * Handles loading and management of online material database
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
+import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 
 export interface LiveDBCategory {
   id: number;
@@ -32,8 +32,12 @@ interface UseLiveDBProps {
 
 export function useLiveDB({ activeTab }: UseLiveDBProps) {
   const { client } = useOctane();
+  const { setTemporaryStatus } = useStatusMessage();
   const [liveDBCategories, setLiveDBCategories] = useState<LiveDBCategory[]>([]);
   const [liveDBLoading, setLiveDBLoading] = useState(false);
+
+  // Track in-flight category fetches to prevent duplicate requests
+  const loadingCategoriesRef = useRef(new Set<number>());
 
   // Load LiveDB categories
   const loadLiveDB = useCallback(async () => {
@@ -78,8 +82,13 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
     async (category: LiveDBCategory) => {
       if (!client) return;
 
+      let loadedMaterials: LiveDBMaterial[] | undefined;
+
       // If not loaded yet, load materials for this category
       if (!category.loaded && !category.expanded) {
+        // Skip if already fetching this category (deduplication)
+        if (loadingCategoriesRef.current.has(category.id)) return;
+        loadingCategoriesRef.current.add(category.id);
         try {
           Logger.debug(`Loading materials for category: ${category.name}`);
           const materials = await client.getLiveDBMaterials(category.id);
@@ -92,19 +101,28 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
             })
           );
 
-          // Update the category
-          category.materials = [...materialsWithPreviews, ...materials.slice(10)];
-          category.loaded = true;
+          loadedMaterials = [...materialsWithPreviews, ...materials.slice(10)];
         } catch (error) {
           Logger.error(`Failed to load materials for category ${category.name}:`, error);
+        } finally {
+          loadingCategoriesRef.current.delete(category.id);
         }
       }
 
-      // Toggle expanded state
-      category.expanded = !category.expanded;
-      setLiveDBCategories([...liveDBCategories]); // Force re-render
+      // Toggle expanded state immutably
+      setLiveDBCategories(prev =>
+        prev.map(cat =>
+          cat.id === category.id
+            ? {
+                ...cat,
+                expanded: !cat.expanded,
+                ...(loadedMaterials ? { materials: loadedMaterials, loaded: true } : {}),
+              }
+            : cat
+        )
+      );
     },
-    [client, liveDBCategories]
+    [client]
   );
 
   // Handle LiveDB material download
@@ -116,18 +134,16 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
         Logger.debug(`Downloading material: ${material.name}`);
         const materialHandle = await client.downloadLiveDBMaterial(material.id);
         if (materialHandle) {
-          alert(
-            ` Material "${material.name}" downloaded successfully!\n\nCheck the Node Graph to see the material nodes.`
-          );
+          setTemporaryStatus(`Material "${material.name}" downloaded — see Node Graph`, 4000);
         } else {
-          alert(` Failed to download material "${material.name}"`);
+          setTemporaryStatus(`Failed to download material "${material.name}"`, 4000);
         }
       } catch (error) {
         Logger.error('Failed to download material:', error);
-        alert(` Error downloading material: ${error}`);
+        setTemporaryStatus(`Error downloading material: ${error}`, 4000);
       }
     },
-    [client]
+    [client, setTemporaryStatus]
   );
 
   // Load LiveDB when Live DB tab becomes active
@@ -135,8 +151,7 @@ export function useLiveDB({ activeTab }: UseLiveDBProps) {
     if (activeTab === 'livedb' && liveDBCategories.length === 0 && !liveDBLoading && client) {
       loadLiveDB();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, client]);
+  }, [activeTab, client, liveDBCategories.length, liveDBLoading, loadLiveDB]);
 
   return {
     liveDBCategories,

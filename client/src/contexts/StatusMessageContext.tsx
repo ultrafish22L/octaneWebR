@@ -3,7 +3,16 @@
  * Provides a way to show live status updates in the status bar
  */
 
-import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  useEffect,
+} from 'react';
+import { APP_VERSION } from '../config/apiVersionConfig';
 
 interface StatusMessageContextValue {
   statusMessage: string;
@@ -14,7 +23,7 @@ interface StatusMessageContextValue {
 
 const StatusMessageContext = createContext<StatusMessageContextValue | null>(null);
 
-const DEFAULT_MESSAGE = 'OctaneWebR - React TypeScript + Node.js gRPC';
+const DEFAULT_MESSAGE = `OctaneWebR v${APP_VERSION}`;
 
 export function StatusMessageProvider({ children }: { children: React.ReactNode }) {
   const [statusMessage, setStatusMessageState] = useState<string>(DEFAULT_MESSAGE);
@@ -47,6 +56,14 @@ export function StatusMessageProvider({ children }: { children: React.ReactNode 
       setStatusMessageState(DEFAULT_MESSAGE);
       timeoutRef.current = null;
     }, duration);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   const value = useMemo<StatusMessageContextValue>(

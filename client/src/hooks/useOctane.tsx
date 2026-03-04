@@ -2,7 +2,15 @@
  * React hooks and context for Octane client
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   OctaneClient,
   getOctaneClient,
@@ -34,7 +42,27 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
     resolution: { width: 1920, height: 1080 },
   });
 
+  // Track listeners with a ref so Strict Mode double-mount doesn't accumulate duplicates
+  const listenersRef = useRef<{
+    handleConnected: () => void;
+    handleDisconnected: () => void;
+    handleSceneTreeUpdated: (s: Scene) => void;
+    handleNodeAdded: (e: NodeAddedEvent) => void;
+    handleRenderStateChanged: (s: RenderState) => void;
+  } | null>(null);
+
   useEffect(() => {
+    // Remove any previously attached listeners before adding new ones.
+    // This guards against Strict Mode double-mounting on the same singleton client.
+    if (listenersRef.current) {
+      const prev = listenersRef.current;
+      client.off('connected', prev.handleConnected);
+      client.off('disconnected', prev.handleDisconnected);
+      client.off('sceneTreeUpdated', prev.handleSceneTreeUpdated);
+      client.off('nodeAdded', prev.handleNodeAdded);
+      client.off('renderStateChanged', prev.handleRenderStateChanged);
+    }
+
     // Setup event listeners for Octane client events
     const handleConnected = () => setConnected(true);
     const handleDisconnected = () => setConnected(false);
@@ -47,6 +75,14 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
       });
     };
     const handleRenderStateChanged = (newState: RenderState) => setRenderState(newState);
+
+    listenersRef.current = {
+      handleConnected,
+      handleDisconnected,
+      handleSceneTreeUpdated,
+      handleNodeAdded,
+      handleRenderStateChanged,
+    };
 
     client.on('connected', handleConnected);
     client.on('disconnected', handleDisconnected);
@@ -61,6 +97,7 @@ export function OctaneProvider({ children }: { children: React.ReactNode }) {
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
       client.off('nodeAdded', handleNodeAdded);
       client.off('renderStateChanged', handleRenderStateChanged);
+      listenersRef.current = null;
     };
   }, [client]);
 

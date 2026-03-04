@@ -133,7 +133,7 @@ export function MaterialDatabase({ visible, onClose }: MaterialDatabaseProps) {
       >
         <div className="material-database-header">
           <h2>Material Database</h2>
-          <button className="close-button" onClick={onClose} title="Close"></button>
+          <button className="modal-close-btn" onClick={onClose} title="Close"></button>
         </div>
 
         {/* Tab Buttons: LiveDB / LocalDB */}

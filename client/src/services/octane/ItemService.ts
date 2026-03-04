@@ -48,8 +48,23 @@ export class ItemService extends BaseService {
 
       // Response format: { value: "float_value", float_value: 2 }
       // The "value" field names the oneof variant that is populated.
+      // Check for specific known field names rather than relying on Object.keys() order.
       const responseMap = response as Record<string, unknown>;
-      const valueField = (responseMap.value as string) || Object.keys(responseMap)[0];
+      const valueField =
+        (responseMap.value as string) ||
+        (responseMap.bool_value !== undefined ? 'bool_value' : undefined) ||
+        (responseMap.int_value !== undefined ? 'int_value' : undefined) ||
+        (responseMap.int2_value !== undefined ? 'int2_value' : undefined) ||
+        (responseMap.int3_value !== undefined ? 'int3_value' : undefined) ||
+        (responseMap.int4_value !== undefined ? 'int4_value' : undefined) ||
+        (responseMap.long_value !== undefined ? 'long_value' : undefined) ||
+        (responseMap.long2_value !== undefined ? 'long2_value' : undefined) ||
+        (responseMap.float_value !== undefined ? 'float_value' : undefined) ||
+        (responseMap.float2_value !== undefined ? 'float2_value' : undefined) ||
+        (responseMap.float3_value !== undefined ? 'float3_value' : undefined) ||
+        (responseMap.float4_value !== undefined ? 'float4_value' : undefined) ||
+        (responseMap.string_value !== undefined ? 'string_value' : undefined);
+      if (!valueField) return null;
       const actualValue = responseMap[valueField];
 
       return { value: actualValue, type: expectedType };

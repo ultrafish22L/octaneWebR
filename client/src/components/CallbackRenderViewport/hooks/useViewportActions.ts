@@ -10,7 +10,7 @@
  * Part of CallbackRenderViewport component refactoring (Phase 4)
  */
 
-import { useState, useCallback, RefObject } from 'react';
+import { useState, useCallback, useEffect, useRef, RefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
 
 interface UseViewportActionsProps {
@@ -37,6 +37,16 @@ export function useViewportActions({
   onSetBackgroundImage,
   onToggleLockViewport,
 }: UseViewportActionsProps) {
+  // Track pending revokeObjectURL timeout and URL so both are cleaned up on unmount
+  const revokeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingBlobUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (revokeTimerRef.current) clearTimeout(revokeTimerRef.current);
+      if (pendingBlobUrlRef.current) URL.revokeObjectURL(pendingBlobUrlRef.current);
+    };
+  }, []);
+
   // Context menu state (for right-click menu)
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 });
@@ -118,7 +128,13 @@ export function useViewportActions({
       link.click();
       document.body.removeChild(link);
 
-      URL.revokeObjectURL(url);
+      // Delay revoke to ensure browser starts the download
+      pendingBlobUrlRef.current = url;
+      revokeTimerRef.current = setTimeout(() => {
+        URL.revokeObjectURL(url);
+        revokeTimerRef.current = null;
+        pendingBlobUrlRef.current = null;
+      }, 1000);
 
       Logger.info('Render saved to disk');
     } catch (error) {

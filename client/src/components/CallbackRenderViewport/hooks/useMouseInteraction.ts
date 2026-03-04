@@ -142,6 +142,37 @@ export function useMouseInteraction({
   const hasRightDraggedRef = useRef(false); // Track if right-click involved dragging
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
+  // Mirror frequently-changing props into refs so event handlers stay stable
+  // This prevents tearing down and re-adding all 6 listeners on every state change
+  const viewportLockedRef = useRef(viewportLocked);
+  const pickingModeRef = useRef(pickingMode);
+  const isSelectingRegionRef = useRef(isSelectingRegion);
+  const regionStartRef = useRef(regionStart);
+  const regionEndRef = useRef(regionEnd);
+
+  // Mirror callback props into refs to prevent stale closures in event handlers
+  // Without this, handlers capture old versions of these callbacks at registration time
+  const updateCameraThrottledRef = useRef(updateCameraThrottled);
+  const updateCameraImmediateRef = useRef(updateCameraImmediate);
+
+  useEffect(() => {
+    viewportLockedRef.current = viewportLocked;
+    pickingModeRef.current = pickingMode;
+    isSelectingRegionRef.current = isSelectingRegion;
+    regionStartRef.current = regionStart;
+    regionEndRef.current = regionEnd;
+    updateCameraThrottledRef.current = updateCameraThrottled;
+    updateCameraImmediateRef.current = updateCameraImmediate;
+  }, [
+    viewportLocked,
+    pickingMode,
+    isSelectingRegion,
+    regionStart,
+    regionEnd,
+    updateCameraThrottled,
+    updateCameraImmediate,
+  ]);
+
   useEffect(() => {
     Logger.debug('[VIEWPORT] Mouse interaction hook mounted');
     Logger.debug('[VIEWPORT] Connected:', connected);
@@ -161,7 +192,7 @@ export function useMouseInteraction({
         y: e.clientY,
       });
 
-      if (viewportLocked) {
+      if (viewportLockedRef.current) {
         Logger.info('[VIEWPORT] Viewport locked, ignoring mouse input');
         return;
       }
@@ -183,12 +214,12 @@ export function useMouseInteraction({
           e.preventDefault();
         }
         // REGION SELECTION MODE: Start region picking
-        else if (pickingMode === 'renderRegion') {
+        else if (pickingModeRef.current === 'renderRegion') {
           setIsSelectingRegion(true);
           setRegionStart({ x: canvasX, y: canvasY });
           setRegionEnd({ x: canvasX, y: canvasY });
           canvas.style.cursor = 'crosshair';
-        } else if (pickingMode !== 'none') {
+        } else if (pickingModeRef.current !== 'none') {
           // PICKING MODES: Store last mouse position for click detection
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
           canvas.style.cursor = 'crosshair';
@@ -217,7 +248,7 @@ export function useMouseInteraction({
       const canvasY = e.clientY - rect.top;
 
       // REGION SELECTION MODE: Update region end point
-      if (isSelectingRegion) {
+      if (isSelectingRegionRef.current) {
         setRegionEnd({ x: canvasX, y: canvasY });
         return;
       }
@@ -271,7 +302,7 @@ export function useMouseInteraction({
       }
 
       // Update Octane camera with throttling (10 Hz rate limit)
-      updateCameraThrottled();
+      updateCameraThrottledRef.current();
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
@@ -281,18 +312,18 @@ export function useMouseInteraction({
       }
 
       // REGION SELECTION MODE: Complete region and apply to Octane
-      if (isSelectingRegion && regionStart && regionEnd) {
+      if (isSelectingRegionRef.current && regionStartRef.current && regionEndRef.current) {
         setIsSelectingRegion(false);
-        canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
 
         // Calculate normalized coordinates (0.0 to 1.0)
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
 
-        const minX = Math.min(regionStart.x, regionEnd.x) / canvasWidth;
-        const minY = Math.min(regionStart.y, regionEnd.y) / canvasHeight;
-        const maxX = Math.max(regionStart.x, regionEnd.x) / canvasWidth;
-        const maxY = Math.max(regionStart.y, regionEnd.y) / canvasHeight;
+        const minX = Math.min(regionStartRef.current.x, regionEndRef.current.x) / canvasWidth;
+        const minY = Math.min(regionStartRef.current.y, regionEndRef.current.y) / canvasHeight;
+        const maxX = Math.max(regionStartRef.current.x, regionEndRef.current.x) / canvasWidth;
+        const maxY = Math.max(regionStartRef.current.y, regionEndRef.current.y) / canvasHeight;
 
         // Clamp to valid range [0, 1]
         const clampedMinX = Math.max(0, Math.min(1, minX));
@@ -338,8 +369,8 @@ export function useMouseInteraction({
       if (
         !isDraggingRef.current &&
         !isPanningRef.current &&
-        pickingMode !== 'renderRegion' &&
-        pickingMode !== 'none'
+        pickingModeRef.current !== 'renderRegion' &&
+        pickingModeRef.current !== 'none'
       ) {
         const rect = canvas.getBoundingClientRect();
         const canvasX = Math.floor(
@@ -349,10 +380,11 @@ export function useMouseInteraction({
           ((lastMousePosRef.current.y - rect.top) / rect.height) * canvas.height
         );
 
-        Logger.debug(`${pickingMode} picker activated at (${canvasX}, ${canvasY})`);
+        const currentPickingMode = pickingModeRef.current;
+        Logger.debug(`${currentPickingMode} picker activated at (${canvasX}, ${canvasY})`);
 
         try {
-          if (pickingMode === 'whiteBalance') {
+          if (currentPickingMode === 'whiteBalance') {
             // White Balance Picker - Calculate white point from picked location
             const whitePoint = await client.pickWhitePoint(canvasX, canvasY);
             if (whitePoint) {
@@ -364,7 +396,7 @@ export function useMouseInteraction({
               // TODO: Apply white point to camera/renderer settings
               // Would need to set this on the camera imager node or post-processing
             }
-          } else if (pickingMode === 'cameraTarget') {
+          } else if (currentPickingMode === 'cameraTarget') {
             // Camera Target Picker - Set camera rotation center to picked position
             const intersections = await client.pick(canvasX, canvasY);
             if (intersections.length > 0) {
@@ -378,12 +410,12 @@ export function useMouseInteraction({
                   `Camera target set to: [${x.toFixed(3)}, ${y.toFixed(3)}, ${z.toFixed(3)}]`
                 );
                 cameraRef.current.center = [x, y, z];
-                await updateCameraImmediate();
+                await updateCameraImmediateRef.current();
               }
             } else {
               Logger.debug(' Camera target pick: No intersection found');
             }
-          } else if (pickingMode === 'focus') {
+          } else if (currentPickingMode === 'focus') {
             // Auto Focus Picker - Set camera focus distance to picked depth
             const intersections = await client.pick(canvasX, canvasY);
             if (intersections.length > 0) {
@@ -397,7 +429,7 @@ export function useMouseInteraction({
             } else {
               Logger.debug(' Focus pick: No intersection found');
             }
-          } else if (pickingMode === 'material') {
+          } else if (currentPickingMode === 'material') {
             // Material Picker - Select and inspect material at picked location
             const intersections = await client.pick(canvasX, canvasY);
             if (intersections.length > 0) {
@@ -446,7 +478,7 @@ export function useMouseInteraction({
             } else {
               Logger.debug(' Material pick: No intersection found');
             }
-          } else if (pickingMode === 'object') {
+          } else if (currentPickingMode === 'object') {
             // Object Picker - Select and inspect object (geometry node) at picked location
             const intersections = await client.pick(canvasX, canvasY);
             if (intersections.length > 0) {
@@ -478,10 +510,10 @@ export function useMouseInteraction({
           }
         } catch (error) {
           Logger.error(
-            `Picking failed (${pickingMode}):`,
+            `Picking failed (${currentPickingMode}):`,
             error instanceof Error ? error.message : String(error)
           );
-          setTemporaryStatus(`Picking failed (${pickingMode})`, 3000);
+          setTemporaryStatus(`Picking failed (${currentPickingMode})`, 3000);
         }
         return;
       }
@@ -490,7 +522,7 @@ export function useMouseInteraction({
       if (is2DPanningRef.current) {
         is2DPanningRef.current = false;
         setIsDragging(false); // Phase 3: End drag throttling
-        canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
         return;
       }
 
@@ -500,7 +532,7 @@ export function useMouseInteraction({
         isDraggingRef.current = false;
         isPanningRef.current = false;
         setIsDragging(false); // Phase 3: End drag throttling
-        canvas.style.cursor = pickingMode !== 'none' ? 'crosshair' : 'grab';
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
 
         // Show context menu if right-click without drag (Octane SE behavior)
         if (wasPanning && !hasRightDraggedRef.current) {
@@ -512,7 +544,7 @@ export function useMouseInteraction({
         }
 
         // Send final camera position immediately to ensure accuracy
-        updateCameraImmediate();
+        updateCameraImmediateRef.current();
       }
     };
 
@@ -523,7 +555,7 @@ export function useMouseInteraction({
 
     const handleWheel = async (e: WheelEvent) => {
       e.preventDefault();
-      if (viewportLocked) return; // Viewport locked - ignore wheel input
+      if (viewportLockedRef.current) return; // Viewport locked - ignore wheel input
 
       // CTRL+WHEEL: 2D Canvas Zoom (Octane SE Manual: Control key + mouse wheel zooms the rendered display)
       if (e.ctrlKey || e.metaKey) {
@@ -542,48 +574,51 @@ export function useMouseInteraction({
       cameraRef.current.radius += e.deltaY * zoomSpeed;
       cameraRef.current.radius = Math.max(1.0, Math.min(100.0, cameraRef.current.radius));
 
-      await updateCameraThrottled();
+      await updateCameraThrottledRef.current();
+    };
+
+    // Lightweight drag-cancel on mouse leave — no API calls
+    const handleMouseLeave = () => {
+      if (isDraggingRef.current || isPanningRef.current) {
+        isDraggingRef.current = false;
+        isPanningRef.current = false;
+        setIsDragging(false);
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
+        updateCameraImmediateRef.current();
+      }
+      if (is2DPanningRef.current) {
+        is2DPanningRef.current = false;
+        setIsDragging(false);
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
+      }
+      if (isSelectingRegionRef.current) {
+        setIsSelectingRegion(false);
+        setRegionStart(null);
+        setRegionEnd(null);
+        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
+      }
     };
 
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('contextmenu', handleContextMenu);
     Logger.debug('[VIEWPORT] All mouse event listeners attached');
-
-    // Set cursor based on viewport lock state and picking mode
-    if (viewportLocked) {
-      canvas.style.cursor = 'not-allowed';
-    } else if (pickingMode !== 'none') {
-      canvas.style.cursor = 'crosshair'; // All picking modes use crosshair cursor
-    } else {
-      canvas.style.cursor = 'grab';
-    }
-    Logger.debug('[VIEWPORT] Cursor style set to:', canvas.style.cursor);
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseUp);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [
     connected,
-    updateCameraThrottled,
-    updateCameraImmediate,
-    viewportLocked,
-    pickingMode,
-    isSelectingRegion,
-    regionStart,
-    regionEnd,
     client,
     triggerOctaneUpdate,
-    canvasRef,
-    cameraRef,
     setIsSelectingRegion,
     setRegionStart,
     setRegionEnd,
@@ -591,7 +626,23 @@ export function useMouseInteraction({
     setContextMenuPos,
     setContextMenuVisible,
     setTemporaryStatus,
+    canvasRef,
+    cameraRef,
   ]);
+
+  // Update cursor when viewport lock or picking mode changes (lightweight, no listener churn)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !connected) return;
+
+    if (viewportLocked) {
+      canvas.style.cursor = 'not-allowed';
+    } else if (pickingMode !== 'none') {
+      canvas.style.cursor = 'crosshair';
+    } else {
+      canvas.style.cursor = 'grab';
+    }
+  }, [connected, viewportLocked, pickingMode, canvasRef]);
 
   // Phase 3: Return drag state for viewport throttling
   return { isDragging };

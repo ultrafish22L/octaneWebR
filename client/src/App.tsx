@@ -139,8 +139,10 @@ function AppContent() {
 
     try {
       await viewportRef.current.copyToClipboard();
+      setTemporaryStatus('Render copied to clipboard', 2000);
     } catch (error) {
       Logger.error('Failed to copy to clipboard:', error);
+      setTemporaryStatus('Failed to copy render to clipboard', 3000);
     }
   };
 
@@ -162,8 +164,10 @@ function AppContent() {
 
   // Toggle viewport lock handler (for context menu)
   const handleToggleLockViewport = () => {
-    setViewportLocked(prev => !prev);
-    Logger.debug(`App.tsx: Viewport lock toggled to ${!viewportLocked ? 'enabled' : 'disabled'}`);
+    setViewportLocked(prev => {
+      Logger.debug(`App.tsx: Viewport lock toggled to ${!prev ? 'enabled' : 'disabled'}`);
+      return !prev;
+    });
   };
 
   // Set background image handler (for context menu)
@@ -284,10 +288,7 @@ function AppContent() {
 
     const handleRenderFailure = (data: unknown) => {
       Logger.error('Render failure detected:', data);
-      // TODO: Show user-facing error notification
-      Logger.error(
-        'Render Failed: Octane encountered an error during rendering. Check console for details.'
-      );
+      setTemporaryStatus('Render failed — check Octane console', 5000);
     };
 
     const handleProjectManagerChanged = (data: unknown) => {
@@ -313,7 +314,7 @@ function AppContent() {
       client.off('OnProjectManagerChanged', handleProjectManagerChanged);
       Logger.debug('Stopped listening for callback events');
     };
-  }, [client]); // Only re-register when client changes, not on every selection
+  }, [client, setTemporaryStatus]);
 
   // Listen for scene build events and update status bar
   useEffect(() => {
@@ -369,6 +370,12 @@ function AppContent() {
     };
     client.on('scene:level0Complete', handleLevel0Complete);
 
+    // Surface service-layer errors in the status bar
+    const handleUserError = (message: string) => {
+      setTemporaryStatus(message, 5000);
+    };
+    client.on('status:error', handleUserError);
+
     return () => {
       client.off('scene:buildStart', handleBuildStart);
       client.off('scene:buildProgress', handleBuildProgress);
@@ -377,6 +384,7 @@ function AppContent() {
       client.off('nodeDeleted', handleNodeDeletedStatus);
       client.off('connection:changed', handleConnectionChanged);
       client.off('scene:level0Complete', handleLevel0Complete);
+      client.off('status:error', handleUserError);
     };
   }, [client, setStatusMessage, setTemporaryStatus]);
 

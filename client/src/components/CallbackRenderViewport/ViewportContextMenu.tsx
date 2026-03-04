@@ -13,7 +13,7 @@
  * - Lock Viewport
  */
 
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { getGeneralUIIcon, getWindowControlIcon } from '../../constants/UIIconMapping';
 
 interface ViewportContextMenuProps {
@@ -41,12 +41,46 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
   onToggleLockViewport,
   viewportLocked,
 }) => {
-  if (!visible) return null;
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Focus the menu when it becomes visible
+  useEffect(() => {
+    if (visible && menuRef.current) {
+      menuRef.current.focus();
+    }
+  }, [visible]);
 
   const handleMenuClick = (action: () => void) => {
     action();
     onClose();
   };
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const menu = menuRef.current;
+        if (!menu) return;
+        const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+        if (items.length === 0) return;
+        const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+        let nextIndex: number;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        }
+        items[nextIndex].focus();
+      }
+    },
+    [onClose]
+  );
+
+  if (!visible) return null;
 
   return (
     <>
@@ -70,6 +104,7 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
 
       {/* Context Menu */}
       <div
+        ref={menuRef}
         className="context-menu"
         style={{
           position: 'fixed',
@@ -77,11 +112,15 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
           top: `${y}px`,
           zIndex: 1000,
         }}
-        role="presentation"
+        role="menu"
+        aria-label="Viewport context menu"
+        tabIndex={-1}
         onClick={e => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => handleMenuClick(onCopyToClipboard)}
         >
@@ -94,6 +133,7 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
         </button>
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => handleMenuClick(onSaveRender)}
         >
@@ -106,6 +146,7 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
         </button>
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => handleMenuClick(onExportPasses)}
         >
@@ -116,9 +157,10 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
           />
           Export Render Passes
         </button>
-        <div className="context-menu-separator" />
+        <div className="context-menu-separator" role="separator" />
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => handleMenuClick(onSetBackgroundImage)}
         >
@@ -129,9 +171,10 @@ export const ViewportContextMenu: React.FC<ViewportContextMenuProps> = ({
           />
           Set Background Image
         </button>
-        <div className="context-menu-separator" />
+        <div className="context-menu-separator" role="separator" />
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => handleMenuClick(onToggleLockViewport)}
         >

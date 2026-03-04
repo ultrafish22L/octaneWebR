@@ -412,7 +412,14 @@ export class MaterialDatabaseService extends BaseService {
         null,
         { dbType: dbType === 'livedb' ? 0 : 1 }
       );
-      return (response?.categories as unknown as MaterialCategory[]) ?? [];
+      const raw = response?.categories;
+      if (!Array.isArray(raw)) return [];
+      return (raw as Record<string, unknown>[]).map(cat => ({
+        id: typeof cat.id === 'number' ? cat.id : 0,
+        name: typeof cat.name === 'string' ? cat.name : 'Unknown',
+        parentID: typeof cat.parentID === 'number' ? cat.parentID : 0,
+        typeID: typeof cat.typeID === 'number' ? cat.typeID : 0,
+      }));
     } catch (error) {
       Logger.error('getMaterialCategoriesForDbType failed:', error);
       return [];
@@ -431,7 +438,14 @@ export class MaterialDatabaseService extends BaseService {
         categoryId,
         dbType: dbType === 'livedb' ? 0 : 1,
       });
-      return (response?.materials as unknown as Material[]) ?? [];
+      const raw = response?.materials;
+      if (!Array.isArray(raw)) return [];
+      return (raw as Record<string, unknown>[]).map(mat => ({
+        id: typeof mat.id === 'number' ? mat.id : 0,
+        name: typeof mat.name === 'string' ? mat.name : 'Unknown',
+        nickname: typeof mat.nickname === 'string' ? mat.nickname : '',
+        copyright: typeof mat.copyright === 'string' ? mat.copyright : '',
+      }));
     } catch (error) {
       Logger.error('getMaterialsForDbType failed:', error);
       return [];

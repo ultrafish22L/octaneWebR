@@ -12,6 +12,7 @@ __pycache__/
 dist/
 .vite/
 *.tsbuildinfo
+vite.config.mts.timestamp-*
 
 # Environment
 .env

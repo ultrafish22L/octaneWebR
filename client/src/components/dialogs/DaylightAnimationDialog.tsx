@@ -6,7 +6,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface DaylightAnimationDialogProps {
   isOpen: boolean;
@@ -23,6 +23,11 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
   const [outputPath, setOutputPath] = useState('');
   const [startFileNumbering, setStartFileNumbering] = useState(1);
   const [skipExisting, setSkipExisting] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,23 +64,21 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="daylight-animation-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="daylight-animation-title"
         tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         <div className="modal-header">
           <h2 id="daylight-animation-title">Daylight Animation</h2>
           <button
-            className="modal-close-button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close daylight animation"
           ></button>
@@ -158,7 +161,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
                   max="120"
                   value={frameRate}
                   onChange={e => {
-                    const fps = parseInt(e.target.value);
+                    const fps = parseInt(e.target.value, 10) || 24;
                     setFrameRate(fps);
                     setFrames(Math.round(duration * fps));
                   }}
@@ -176,7 +179,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
                 min="1"
                 value={frames}
                 onChange={e => {
-                  const newFrames = parseInt(e.target.value);
+                  const newFrames = parseInt(e.target.value, 10) || 1;
                   setFrames(newFrames);
                   setDuration(newFrames / frameRate);
                 }}
@@ -201,7 +204,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
                 min="1"
                 max="100000"
                 value={samplesPerPixel}
-                onChange={e => setSamplesPerPixel(parseInt(e.target.value))}
+                onChange={e => setSamplesPerPixel(parseInt(e.target.value, 10) || 1)}
                 autoComplete="off"
                 name="number-5"
               />
@@ -238,7 +241,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
                   type="number"
                   min="0"
                   value={startFileNumbering}
-                  onChange={e => setStartFileNumbering(parseInt(e.target.value))}
+                  onChange={e => setStartFileNumbering(parseInt(e.target.value, 10) || 0)}
                   autoComplete="off"
                   name="number-7"
                 />

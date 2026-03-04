@@ -12,22 +12,22 @@
   padding: 32px;
   background: var(--bg-secondary);
   border: 2px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 
 .error-content h2 {
   color: var(--accent-red);
   margin: 0 0 16px 0;
-  font-size: 20px;
+  font-size: var(--font-size-xxl);
   font-weight: 600;
 }
 
-.error-message {
+.error-boundary-fallback .error-message {
   color: var(--text-primary);
   margin: 0 0 16px 0;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--font-size-large);
+  line-height: var(--line-height-normal);
 }
 
 .error-details {
@@ -35,18 +35,19 @@
   padding: 12px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--border-radius-base);
   cursor: pointer;
 }
 
 .error-details summary {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-medium);
   font-weight: 500;
   user-select: none;
 }
 
-.error-details summary:hover {
+.error-details summary:hover,
+.error-details summary:focus-visible {
   color: var(--text-primary);
 }
 
@@ -54,14 +55,14 @@
   margin: 12px 0 0 0;
   padding: 8px;
   background: var(--bg-primary);
-  border-radius: 4px;
-  font-size: 11px;
-  line-height: 1.4;
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-snug);
   overflow-x: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
   color: var(--text-secondary);
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: var(--font-family-mono);
 }
 
 .error-reset-button {
@@ -70,14 +71,15 @@
   background: var(--accent-blue);
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-large);
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.error-reset-button:hover {
+.error-reset-button:hover,
+.error-reset-button:focus-visible {
   background: var(--accent-blue-dim);
 }
 

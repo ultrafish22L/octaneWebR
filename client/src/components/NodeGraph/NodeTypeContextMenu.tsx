@@ -5,7 +5,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   getCategoriesInOrder,
@@ -57,17 +57,35 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
     return () => document.removeEventListener('click', handleClickOutside);
   }, [onClose]);
 
-  // Close menu on Escape key
+  // Focus menu when mounted
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    menuRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
       }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const menu = menuRef.current;
+        if (!menu) return;
+        const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+        if (items.length === 0) return;
+        const currentIndex = items.indexOf(document.activeElement as HTMLElement);
+        let nextIndex: number;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        }
+        items[nextIndex].focus();
+      }
+    },
+    [onClose]
+  );
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -188,6 +206,10 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
       <div
         ref={menuRef}
         className="node-context-menu"
+        role="menu"
+        aria-label="Node type context menu"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
         style={{
           position: 'fixed',
           left: x,
@@ -208,6 +230,8 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
             <div
               key={category}
               className="context-menu-category"
+              role="menuitem"
+              tabIndex={-1}
               onMouseEnter={e => handleCategoryMouseEnter(category, e)}
               onMouseLeave={handleCategoryMouseLeave}
             >
@@ -222,6 +246,8 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
         {/* Special menu items */}
         <div
           className="context-menu-category"
+          role="menuitem"
+          tabIndex={-1}
           onMouseEnter={e => handleCategoryMouseEnter('__ALL_ITEMS__', e)}
           onMouseLeave={handleCategoryMouseLeave}
         >
@@ -229,15 +255,23 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
         </div>
         <button
           type="button"
+          role="menuitem"
           className="context-menu-item"
           onClick={() => Logger.debug('Find type')}
         >
           Find type...
         </button>
-        <button type="button" className="context-menu-item" onClick={() => Logger.debug('Import')}>
+        <button
+          type="button"
+          role="menuitem"
+          className="context-menu-item"
+          onClick={() => Logger.debug('Import')}
+        >
           Import...
         </button>
-        <div className="context-menu-item disabled">Paste</div>
+        <div className="context-menu-item disabled" role="menuitem" aria-disabled="true">
+          Paste
+        </div>
       </div>
 
       {/* Render active submenu separately (not nested inside category div) */}
@@ -277,6 +311,7 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
                 <button
                   key={nodeType}
                   type="button"
+                  role="menuitem"
                   className="context-menu-item"
                   onClick={() => handleNodeTypeClick(nodeType)}
                   title={nodeType}

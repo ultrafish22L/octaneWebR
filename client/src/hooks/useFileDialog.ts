@@ -3,7 +3,7 @@
  * React hook for native browser file dialogs (open/save)
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 export interface FileDialogOptions {
   accept?: string;
@@ -18,6 +18,31 @@ export interface SaveFileOptions {
 }
 
 export function useFileDialog() {
+  // Track the active input element and resolve function so we can clean up on unmount
+  const activeInputRef = useRef<HTMLInputElement | null>(null);
+  const activeResolveRef = useRef<((value: FileList | null) => void) | null>(null);
+  // Track pending blob URL revoke timer for saveFile cleanup
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveBlobUrlRef = useRef<string | null>(null);
+
+  // Clean up on unmount: remove orphaned input, settle pending Promise, revoke blob URLs
+  useEffect(() => {
+    return () => {
+      if (activeInputRef.current) {
+        if (document.body.contains(activeInputRef.current)) {
+          document.body.removeChild(activeInputRef.current);
+        }
+        activeInputRef.current = null;
+      }
+      if (activeResolveRef.current) {
+        activeResolveRef.current(null);
+        activeResolveRef.current = null;
+      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (saveBlobUrlRef.current) URL.revokeObjectURL(saveBlobUrlRef.current);
+    };
+  }, []);
+
   /**
    * Show native file open dialog
    */
@@ -39,15 +64,27 @@ export function useFileDialog() {
         input.style.display = 'none';
         document.body.appendChild(input);
 
+        // Track for cleanup on unmount
+        activeInputRef.current = input;
+        activeResolveRef.current = resolve;
+
+        const cleanup = () => {
+          activeInputRef.current = null;
+          activeResolveRef.current = null;
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+        };
+
         input.onchange = () => {
           const files = input.files;
-          document.body.removeChild(input);
+          cleanup();
           resolve(files && files.length > 0 ? files : null);
         };
 
         // Handle cancel
         input.oncancel = () => {
-          document.body.removeChild(input);
+          cleanup();
           resolve(null);
         };
 
@@ -76,8 +113,13 @@ export function useFileDialog() {
     a.click();
     document.body.removeChild(a);
 
-    // Clean up
-    URL.revokeObjectURL(url);
+    // Delay revoke to ensure browser starts the download (async on some browsers)
+    saveBlobUrlRef.current = url;
+    saveTimerRef.current = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      saveTimerRef.current = null;
+      saveBlobUrlRef.current = null;
+    }, 1000);
   }, []);
 
   /**

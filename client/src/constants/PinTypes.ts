@@ -144,167 +144,105 @@ export const OCTANE_PIN_TYPES: Record<string, PinTypeInfo> = {
  * Mapping of PT_ pin types to compatible NT_ node types
  * Used for dropdown menus in node inspector to show which node types can connect to a pin
  */
-export const pinTypeToNodeTypes: Record<string, string[]> = {
+export interface CompatibleNodeType {
+  key: string;
+  id: number;
+}
+
+export const pinTypeToNodeTypes: Record<string, CompatibleNodeType[]> = {
   // Texture pin accepts all texture node types
   PT_TEXTURE: [
-    'NT_TEX_IMAGE',
-    'NT_TEX_ALPHA_IMAGE',
-    'NT_TEX_GREYSCALE_IMAGE',
-    'NT_TEX_IMAGE_TILES',
-    'NT_TEX_ANIMATED_IMAGE',
-    'NT_TEX_CHECKS',
-    'NT_TEX_NOISE',
-    'NT_TEX_FBM',
-    'NT_TEX_TURBULENCE',
-    'NT_TEX_MARBLE',
-    'NT_TEX_GRADIENT',
-    'NT_TEX_SPECTRUM',
-    'NT_TEX_MIX',
-    'NT_TEX_ADD',
-    'NT_TEX_SUBTRACT',
-    'NT_TEX_MULTIPLY',
-    'NT_TEX_INVERT',
-    'NT_TEX_CLAMP',
-    // ... add more texture types as needed
+    { key: 'NT_TEX_IMAGE', id: 34 },
+    { key: 'NT_TEX_ALPHAIMAGE', id: 35 },
+    { key: 'NT_TEX_FLOATIMAGE', id: 36 },
+    { key: 'NT_TEX_CHECKS', id: 45 },
+    { key: 'NT_TEX_NOISE', id: 87 },
+    { key: 'NT_TEX_TURBULENCE', id: 22 },
+    { key: 'NT_TEX_MARBLE', id: 47 },
+    { key: 'NT_TEX_GRADIENT', id: 49 },
+    { key: 'NT_TEX_MIX', id: 38 },
+    { key: 'NT_TEX_ADD', id: 106 },
+    { key: 'NT_TEX_SUBTRACT', id: 108 },
+    { key: 'NT_TEX_MULTIPLY', id: 39 },
+    { key: 'NT_TEX_FALLOFF', id: 50 },
+    { key: 'NT_TEX_RGB', id: 33 },
+    { key: 'NT_TEX_FLOAT', id: 31 },
   ],
 
   // Material pin accepts all material node types
   PT_MATERIAL: [
-    'NT_MAT_DIFFUSE',
-    'NT_MAT_GLOSSY',
-    'NT_MAT_SPECULAR',
-    'NT_MAT_METALLIC',
-    'NT_MAT_UNIVERSAL',
-    'NT_MAT_MIX',
-    'NT_MAT_LAYERED',
-    'NT_MAT_COMPOSITE',
-    'NT_MAT_PORTAL',
-    'NT_MAT_SHADOW_CATCHER',
-    'NT_MAT_TOON',
-    'NT_MAT_HAIR',
-    'NT_MAT_NULL',
-    'NT_MAT_CLIPPING',
-    // ... add more material types
+    { key: 'NT_MAT_DIFFUSE', id: 17 },
+    { key: 'NT_MAT_GLOSSY', id: 16 },
+    { key: 'NT_MAT_SPECULAR', id: 18 },
+    { key: 'NT_MAT_UNIVERSAL', id: 130 },
+    { key: 'NT_MAT_MIX', id: 19 },
+    { key: 'NT_MAT_PORTAL', id: 20 },
+    { key: 'NT_MAT_METAL', id: 120 },
+    { key: 'NT_MAT_TOON', id: 121 },
   ],
 
   // Geometry pin accepts geometry node types
   PT_GEOMETRY: [
-    'NT_GEO_MESH',
-    'NT_GEO_PLANE',
-    'NT_GEO_SCATTER',
-    'NT_GEO_GROUP',
-    'NT_GEO_PLACEMENT',
-    'NT_GEO_OBJECT',
-    'NT_GEO_VOLUME',
-    'NT_GEO_VOLUME_SDF',
-    'NT_GEO_MESH_VOLUME',
-    'NT_GEO_MESH_VOLUME_SDF',
-    'NT_GEO_UNIT_VOLUME',
-    'NT_GEO_DECAL',
-    'NT_GEO_GAUSSIAN_SPLAT',
-    'NT_SCATTER_SURFACE',
-    'NT_SCATTER_VOLUME',
-    // ... add more geometry types
+    { key: 'NT_GEO_MESH', id: 1 },
+    { key: 'NT_GEO_PLANE', id: 110 },
+    { key: 'NT_GEO_SCATTER', id: 5 },
+    { key: 'NT_GEO_GROUP', id: 3 },
+    { key: 'NT_GEO_PLACEMENT', id: 4 },
+    { key: 'NT_GEO_OBJECT', id: 153 },
+    { key: 'NT_GEO_VOLUME', id: 91 },
   ],
 
   // Camera pin accepts camera node types
   PT_CAMERA: [
-    'NT_CAM_THINLENS',
-    'NT_CAM_PANORAMIC',
-    'NT_CAM_BAKING',
-    'NT_CAM_UNIVERSAL',
-    'NT_CAM_SIMULATED_LENS',
-    'NT_CAM_OSL',
-    'NT_CAM_OSL_BAKING',
+    { key: 'NT_CAM_THINLENS', id: 13 },
+    { key: 'NT_CAM_PANORAMIC', id: 62 },
+    { key: 'NT_CAM_BAKING', id: 94 },
+    { key: 'NT_CAM_UNIVERSAL', id: 157 },
+    { key: 'NT_CAM_SIMULATED_LENS', id: 301 },
+    { key: 'NT_CAM_OSL', id: 126 },
+    { key: 'NT_CAM_OSL_BAKING', id: 128 },
   ],
 
   // Environment pin accepts environment node types
-  PT_ENVIRONMENT: ['NT_ENV_TEXTURE', 'NT_ENV_DAYLIGHT', 'NT_ENV_PLANETARY'],
+  PT_ENVIRONMENT: [
+    { key: 'NT_ENV_TEXTURE', id: 37 },
+    { key: 'NT_ENV_DAYLIGHT', id: 14 },
+    { key: 'NT_ENV_PLANETARY', id: 129 },
+  ],
 
   // Kernel pin accepts kernel node types
   PT_KERNEL: [
-    'NT_KERN_PATHTRACING',
-    'NT_KERN_DIRECT_LIGHT',
-    'NT_KERN_PMC',
-    'NT_KERN_INFO_CHANNEL',
-    'NT_KERN_PHOTON_TRACING',
+    { key: 'NT_KERN_PATHTRACING', id: 25 },
+    { key: 'NT_KERN_DIRECTLIGHTING', id: 24 },
+    { key: 'NT_KERN_PMC', id: 23 },
+    { key: 'NT_KERN_INFO', id: 26 },
   ],
 
   // Emission pin accepts emission node types
-  PT_EMISSION: ['NT_EMIS_TEXTURE', 'NT_EMIS_BLACKBODY'],
+  PT_EMISSION: [
+    { key: 'NT_EMIS_TEXTURE', id: 54 },
+    { key: 'NT_EMIS_BLACKBODY', id: 53 },
+  ],
 
   // Medium pin accepts medium node types
   PT_MEDIUM: [
-    'NT_MED_ABSORPTION',
-    'NT_MED_SCATTERING',
-    'NT_MED_RANDOM_WALK',
-    'NT_MED_STANDARD_VOLUME',
+    { key: 'NT_MED_ABSORPTION', id: 58 },
+    { key: 'NT_MED_SCATTERING', id: 59 },
+    { key: 'NT_MED_RANDOMWALK', id: 146 },
+    { key: 'NT_MED_VOLUME', id: 98 },
   ],
 
   // Displacement pin accepts displacement node types
-  PT_DISPLACEMENT: ['NT_DISPLACEMENT', 'NT_VERTEX_DISPLACEMENT', 'NT_VERTEX_DISPLACEMENT_MIXER'],
-
-  // Projection pin accepts projection node types
-  PT_PROJECTION: [
-    'NT_PROJ_MESH_UV',
-    'NT_PROJ_BOX',
-    'NT_PROJ_CYLINDRICAL',
-    'NT_PROJ_PERSPECTIVE',
-    'NT_PROJ_SPHERICAL',
-    'NT_PROJ_TRIPLANAR',
-    'NT_PROJ_XYZ_TO_UVW',
-    'NT_PROJ_OSL',
-    // ... add more projection types
-  ],
-
-  // Transform pin accepts transform node types
-  PT_TRANSFORM: [
-    'NT_TRANSFORM_2D',
-    'NT_TRANSFORM_3D',
-    'NT_TRANSFORM_ROTATION_3D',
-    'NT_TRANSFORM_SCALE_3D',
-    'NT_TRANSFORM_VALUE',
-    'NT_TRANSFORM_LOOKAT',
-  ],
-
-  // Value types accept value node types
-  PT_BOOL: ['NT_BOOL', 'NT_BOOL_LOGIC_OPERATOR'],
-  PT_FLOAT: [
-    'NT_FLOAT',
-    'NT_FLOAT_COMPONENT_MERGER',
-    'NT_FLOAT_VECTOR_EXTRACTOR',
-    'NT_VALUE_OPERATOR',
-  ],
-  PT_INT: ['NT_INT', 'NT_INT_VECTOR_EXTRACTOR'],
-  PT_STRING: ['NT_STRING'],
-  PT_ENUM: ['NT_ENUM'],
-
-  // Imager pin
-  PT_IMAGER: ['NT_IMAGER'],
-
-  // Post processing pin
-  PT_POSTPROCESSING: ['NT_POSTPROC'],
-
-  // Film settings pin
-  PT_FILM_SETTINGS: ['NT_FILM_SETTINGS'],
+  PT_DISPLACEMENT: [{ key: 'NT_DISPLACEMENT', id: 80 }],
 
   // Render target pin
-  PT_RENDERTARGET: ['NT_RENDERTARGET'],
+  PT_RENDERTARGET: [{ key: 'NT_RENDERTARGET', id: 56 }],
 
-  // Object layer pin
-  PT_OBJECTLAYER: ['NT_OBJECTLAYER'],
-
-  // Material layer pin
-  PT_MATERIAL_LAYER: [
-    'NT_MAT_LAYER_DIFFUSE',
-    'NT_MAT_LAYER_SPECULAR',
-    'NT_MAT_LAYER_METALLIC',
-    'NT_MAT_LAYER_SHEEN',
-    'NT_MAT_LAYER_GROUP',
-  ],
-
-  // Round edges pin
-  PT_ROUND_EDGES: ['NT_ROUND_EDGES'],
+  // Value types accept value node types
+  PT_BOOL: [{ key: 'NT_BOOL', id: 11 }],
+  PT_FLOAT: [{ key: 'NT_FLOAT', id: 6 }],
+  PT_INT: [{ key: 'NT_INT', id: 9 }],
+  PT_ENUM: [{ key: 'NT_ENUM', id: 57 }],
 };
 
 /**
@@ -317,7 +255,7 @@ export function getPinIconInfo(pinType: string): PinIconInfo {
 /**
  * Get compatible node types for a pin type
  */
-export function getCompatibleNodeTypes(pinType: string): string[] {
+export function getCompatibleNodeTypes(pinType: string): CompatibleNodeType[] {
   return pinTypeToNodeTypes[pinType] || [];
 }
 
@@ -327,7 +265,7 @@ export function getCompatibleNodeTypes(pinType: string): string[] {
 export function isNodeTypeCompatible(nodeType: string, pinType: string): boolean {
   const compatibleTypes = pinTypeToNodeTypes[pinType];
   if (!compatibleTypes) return false;
-  return compatibleTypes.includes(nodeType);
+  return compatibleTypes.some(t => t.key === nodeType);
 }
 
 /**

@@ -10,7 +10,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family);
   background: var(--border-primary);
   color: var(--text-primary);
   overflow: hidden;
@@ -67,14 +67,14 @@ body {
 .sync-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-lg);
   padding: 4px 10px;
   background: var(--bg-primary);
   border-radius: var(--border-radius-base);
 }
 
 .sync-spinner {
-  color: var(--accent-yellow, #ffc107);
+  color: var(--accent-yellow);
   display: block;
   animation: sync-spin 1s linear infinite;
   transform-origin: center;
@@ -82,7 +82,7 @@ body {
 
 .sync-text {
   font-size: var(--font-size-medium);
-  color: var(--accent-yellow, #ffc107);
+  color: var(--accent-yellow);
 }
 
 @keyframes sync-spin {
@@ -120,7 +120,7 @@ body {
 /* Resizable Panel System */
 
 .panel-splitter {
-  background-color: var(--border, #3a3a3a);
+  background-color: var(--border);
   cursor: col-resize;
   z-index: var(--z-dropdown);
   transition: background-color 0.2s ease;
@@ -129,7 +129,7 @@ body {
 }
 
 .panel-splitter:hover {
-  background-color: var(--accent-yellow, #ffc107);
+  background-color: var(--accent-yellow);
 }
 
 .panel-splitter.vertical {
@@ -220,10 +220,6 @@ body.resizing .panel-splitter {
   .app-layout {
     grid-template-columns: 140px 1fr 220px;
   }
-
-  .node-graph-section {
-    height: 150px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -241,10 +237,6 @@ body.resizing .panel-splitter {
 
   .panel-splitter.vertical {
     display: none;
-  }
-
-  .node-graph-section {
-    height: 120px;
   }
 }
 
@@ -340,10 +332,6 @@ body.resizing .react-flow__edge-interaction {
     0 1px 2px var(--shadow-medium),
     0 0 4px var(--highlight-medium); /* Subtle outer glow */
 }
-/*
-          background: linear-gradient(to bottom, #4CAF50 0%, #45a049 100%), 
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2), 
-        */
 /* Octane Node Body Styling - Match Reference 3D Button Effect */
 .node {
   /* 3D gradient overlay - use background-image to layer over inline backgroundColor */
@@ -457,60 +445,6 @@ body.drag-over * {
   flex-direction: column;
 }
 
-.modal-title {
-  font-size: var(--font-size-small);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: var(--font-size-xl);
-  padding: 4px;
-  border-radius: var(--border-radius);
-  transition: all 0.15s ease;
-}
-
-.modal-close:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.modal-content {
-  padding: 16px;
-  flex: 1;
-  overflow: auto;
-  color: var(--text-primary);
-}
-
-.modal-button {
-  background-color: var(--bg-header);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  padding: 6px 12px;
-  font-size: var(--font-size-small);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.modal-button:hover {
-  background-color: var(--bg-hover);
-}
-
-.modal-button.primary {
-  background-color: var(--accent-blue);
-  border-color: var(--accent-blue);
-  color: white;
-}
-
-.modal-button.primary:hover {
-  background-color: var(--accent-blue);
-}
-
 /* Tooltip Components */
 .tooltip {
   position: absolute;
@@ -523,7 +457,6 @@ body.drag-over * {
   box-shadow: 0 2px 4px var(--shadow);
   z-index: var(--z-dropdown-content);
   pointer-events: none;
-  white-space: nowrap;
   max-width: 200px;
   word-wrap: break-word;
   white-space: normal;
@@ -630,7 +563,6 @@ body.drag-over * {
 }
 
 /* Application Container */
-/* Application Container */
 .app-container {
   display: grid;
   grid-template-rows: var(--menu-height) 1fr var(--status-bar-height);
@@ -655,7 +587,7 @@ body.drag-over * {
 
 .header-indicators {
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-3xl);
   align-items: center;
 }
 
@@ -677,7 +609,8 @@ body.drag-over * {
   line-height: inherit;
 }
 
-.menu-item:hover {
+.menu-item:hover,
+.menu-item:focus-visible {
   background-color: var(--bg-hover);
 }
 
@@ -777,7 +710,8 @@ body.drag-over * {
   transition: all 0.15s ease;
 }
 
-.panel-btn:hover {
+.panel-btn:hover,
+.panel-btn:focus-visible {
   background-color: var(--bg-hover);
   color: var(--text-primary);
 }
@@ -787,7 +721,6 @@ body.drag-over * {
   overflow: auto;
 }
 
-/* Status Bar */
 /* Status Bar */
 .status-bar {
   background-color: var(--bg-primary);
@@ -822,7 +755,22 @@ body.drag-over * {
   gap: var(--spacing-md);
 }
 
-/* Scrollbars */
+/* Accessibility - reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .status-led,
+  .sync-spinner,
+  .loading-spinner {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .panel-splitter,
+  .status-dot,
+  .progress-bar-fill {
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 10px; /* Reduced from 12px for more refined appearance matching Octane SE */
@@ -886,7 +834,7 @@ input[type='number'] {
 select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e"); /* matches --text-muted */
   background-repeat: no-repeat;
   background-position: right 8px center;
   background-size: 12px;

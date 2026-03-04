@@ -164,7 +164,7 @@ export class ApiService extends BaseService {
       Logger.debugV('Added params:', transformedParams);
     }
 
-    Logger.debug('Request body:', JSON.stringify(body));
+    Logger.debugV('Request body:', JSON.stringify(body));
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);

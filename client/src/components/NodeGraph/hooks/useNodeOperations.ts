@@ -12,7 +12,7 @@
  * Extracted from NodeGraph.tsx (Phase 3/3 refactoring)
  */
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Node } from '@xyflow/react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
@@ -28,6 +28,7 @@ interface UseNodeOperationsParams {
   nodes: Node<OctaneNodeData>[];
   setNodes: React.Dispatch<React.SetStateAction<Node<OctaneNodeData>[]>>;
   sceneTree: SceneNode[];
+  containerRef: React.RefObject<HTMLDivElement | null>;
 
   onNodeSelect?: (node: SceneNode | null) => void;
   editActions: EditActionsContextType;
@@ -81,10 +82,21 @@ export function useNodeOperations({
   nodes,
   setNodes,
   sceneTree,
+  containerRef,
   onNodeSelect,
   editActions,
 }: UseNodeOperationsParams): NodeOperationsHandlers {
   const { setTemporaryStatus } = useStatusMessage();
+
+  // Stable refs for values that change frequently but shouldn't cause handler churn
+  const sceneTreeRef = useRef(sceneTree);
+  useEffect(() => {
+    sceneTreeRef.current = sceneTree;
+  }, [sceneTree]);
+  const onNodeSelectRef = useRef(onNodeSelect);
+  useEffect(() => {
+    onNodeSelectRef.current = onNodeSelect;
+  }, [onNodeSelect]);
 
   // Context menu state
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -130,9 +142,9 @@ export function useNodeOperations({
       );
 
       // Select the node app-wide (Scene Outliner, Node Inspector, etc.)
-      const sceneNode = sceneTree.find(item => String(item.handle) === nodeId);
-      if (sceneNode && onNodeSelect) {
-        onNodeSelect(sceneNode);
+      const sceneNode = sceneTreeRef.current.find(item => String(item.handle) === nodeId);
+      if (sceneNode && onNodeSelectRef.current) {
+        onNodeSelectRef.current(sceneNode);
         Logger.debug('Node selected app-wide:', sceneNode.name);
       }
 
@@ -141,7 +153,7 @@ export function useNodeOperations({
       setContextMenuNodeId(nodeId);
       setContextMenuVisible(true);
     },
-    [sceneTree, onNodeSelect, setNodes]
+    [setNodes]
   );
 
   const handleSelectNodeType = useCallback(
@@ -194,14 +206,14 @@ export function useNodeOperations({
       selectedNodes: sceneNodes,
       onSelectionClear: () => {
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
-        onNodeSelect?.(null);
+        onNodeSelectRef.current?.(null);
       },
       onComplete: () => {
         Logger.debug('Cut operation completed from NodeGraph');
       },
       onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client, setNodes, onNodeSelect, setTemporaryStatus]);
+  }, [nodes, client, setNodes, setTemporaryStatus]);
 
   const handleCopy = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -219,8 +231,6 @@ export function useNodeOperations({
   }, [nodes, client, setTemporaryStatus]);
 
   const handlePaste = useCallback(async () => {
-    Logger.debug('Paste at position:', contextMenuPosition);
-
     // Use unified EditCommands
     await EditCommands.pasteNodes({
       client,
@@ -230,7 +240,7 @@ export function useNodeOperations({
       },
       onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [client, contextMenuPosition, setTemporaryStatus]);
+  }, [client, setTemporaryStatus]);
 
   const handleDeleteSelected = useCallback(async () => {
     const selectedNodes = nodes.filter(n => n.selected);
@@ -251,14 +261,14 @@ export function useNodeOperations({
         // Clear selection in ReactFlow (use functional updater to avoid stale closure)
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         // Clear selection in parent (Node Inspector)
-        onNodeSelect?.(null);
+        onNodeSelectRef.current?.(null);
       },
       onComplete: () => {
         Logger.debug('Delete operation completed from NodeGraph');
       },
       onError: msg => setTemporaryStatus(msg, 3000),
     });
-  }, [nodes, client, setNodes, onNodeSelect, setTemporaryStatus]);
+  }, [nodes, client, setNodes, setTemporaryStatus]);
 
   /**
    * Node manipulation handlers (Collapse/Expand/Group)
@@ -373,13 +383,13 @@ export function useNodeOperations({
     const reactFlowNode = nodes.find(n => n.id === contextMenuNodeId);
     if (reactFlowNode) {
       // Trigger selection in Scene Outliner
-      const sceneNode = sceneTree.find(item => String(item.handle) === reactFlowNode.id);
-      if (sceneNode && onNodeSelect) {
-        onNodeSelect(sceneNode);
+      const sceneNode = sceneTreeRef.current.find(item => String(item.handle) === reactFlowNode.id);
+      if (sceneNode && onNodeSelectRef.current) {
+        onNodeSelectRef.current(sceneNode);
         Logger.debug('Node selected in outliner:', sceneNode.name);
       }
     }
-  }, [contextMenuNodeId, nodes, sceneTree, onNodeSelect]);
+  }, [contextMenuNodeId, nodes]);
 
   const handleShowInLuaBrowser = useCallback(() => {
     Logger.warn('Lua API browser not yet implemented');
@@ -409,15 +419,15 @@ export function useNodeOperations({
       );
 
       // Also notify parent component if callback provided
-      if (nodeIds.length > 0 && onNodeSelect) {
+      if (nodeIds.length > 0 && onNodeSelectRef.current) {
         const selectedNode = nodes.find(n => n.id === nodeIds[0]);
-        if (selectedNode) {
+        if (selectedNode?.data) {
           const data = selectedNode.data as OctaneNodeData;
-          onNodeSelect(data.sceneNode);
+          if (data.sceneNode) onNodeSelectRef.current(data.sceneNode);
         }
       }
     },
-    [setNodes, nodes, onNodeSelect]
+    [setNodes, nodes]
   );
 
   /**
@@ -425,6 +435,11 @@ export function useNodeOperations({
    */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when focus is inside the Node Graph
+      if (!containerRef.current?.contains(event.target as HTMLElement)) {
+        return;
+      }
+
       // Ignore if typing in input field
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
@@ -456,7 +471,7 @@ export function useNodeOperations({
         handleDeleteSelected();
       } else if (event.key === 'Escape') {
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
-        onNodeSelect?.(null);
+        onNodeSelectRef.current?.(null);
       }
     };
 
@@ -465,6 +480,7 @@ export function useNodeOperations({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [
+    containerRef,
     handleCopy,
     handlePaste,
     handleDuplicate,
@@ -472,7 +488,6 @@ export function useNodeOperations({
     handleGroupItems,
     handleDeleteSelected,
     setNodes,
-    onNodeSelect,
   ]);
 
   /**

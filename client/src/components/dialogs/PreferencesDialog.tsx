@@ -4,7 +4,7 @@
  * Matches Octane SE: File > Preferences (Ctrl+,)
  */
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface PreferencesDialogProps {
   isOpen: boolean;
@@ -15,6 +15,11 @@ type PreferencesTab = 'application' | 'shortcuts' | 'devices';
 
 export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
   const [activeTab, setActiveTab] = useState<PreferencesTab>('application');
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -31,23 +36,21 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="preferences-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="preferences-title"
         tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         <div className="preferences-header">
           <h2 id="preferences-title">Preferences</h2>
           <button
-            className="preferences-close-button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close preferences"
           ></button>

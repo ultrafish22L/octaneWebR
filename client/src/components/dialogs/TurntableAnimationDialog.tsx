@@ -6,7 +6,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface TurntableAnimationDialogProps {
   isOpen: boolean;
@@ -22,6 +22,11 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
   const [outputPath, setOutputPath] = useState('');
   const [startFileNumbering, setStartFileNumbering] = useState(1);
   const [skipExisting, setSkipExisting] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,23 +62,21 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="turntable-animation-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="turntable-animation-title"
         tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         <div className="modal-header">
           <h2 id="turntable-animation-title">Turntable Animation</h2>
           <button
-            className="modal-close-button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close turntable animation"
           ></button>
@@ -116,7 +119,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
                   max="120"
                   value={frameRate}
                   onChange={e => {
-                    const fps = parseInt(e.target.value);
+                    const fps = parseInt(e.target.value, 10) || 24;
                     setFrameRate(fps);
                     setFrames(Math.round(duration * fps));
                   }}
@@ -134,7 +137,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
                 min="1"
                 value={frames}
                 onChange={e => {
-                  const newFrames = parseInt(e.target.value);
+                  const newFrames = parseInt(e.target.value, 10) || 1;
                   setFrames(newFrames);
                   setDuration(newFrames / frameRate);
                 }}
@@ -181,7 +184,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
                 min="1"
                 max="100000"
                 value={samplesPerPixel}
-                onChange={e => setSamplesPerPixel(parseInt(e.target.value))}
+                onChange={e => setSamplesPerPixel(parseInt(e.target.value, 10) || 1)}
                 autoComplete="off"
                 name="number-4"
               />
@@ -218,7 +221,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
                   type="number"
                   min="0"
                   value={startFileNumbering}
-                  onChange={e => setStartFileNumbering(parseInt(e.target.value))}
+                  onChange={e => setStartFileNumbering(parseInt(e.target.value, 10) || 0)}
                   autoComplete="off"
                   name="number-6"
                 />

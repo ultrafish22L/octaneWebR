@@ -79,11 +79,24 @@ export function formatColorValue(value: ColorValue): string {
  */
 export function parseColorValue(hexColor: string): RGBColor {
   if (typeof hexColor === 'string' && hexColor.startsWith('#')) {
-    return {
-      x: parseInt(hexColor.substring(1, 3), 16) / 255,
-      y: parseInt(hexColor.substring(3, 5), 16) / 255,
-      z: parseInt(hexColor.substring(5, 7), 16) / 255,
-    };
+    let hex = hexColor.substring(1);
+
+    // Expand 3-digit shorthand (#RGB -> RRGGBB)
+    if (hex.length === 3) {
+      hex = hex
+        .split('')
+        .map(c => c + c)
+        .join('');
+    }
+
+    if (hex.length >= 6) {
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+        return { x: r / 255, y: g / 255, z: b / 255 };
+      }
+    }
   }
 
   // Default white
@@ -150,11 +163,16 @@ export function hexToRGB(hex: string): RGBColor {
       .join('');
   }
 
-  const r = parseInt(hex.substring(0, 2), 16) / 255;
-  const g = parseInt(hex.substring(2, 4), 16) / 255;
-  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
 
-  return { x: r, y: g, z: b };
+  // Guard against malformed hex producing NaN
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return { x: 1, y: 1, z: 1 }; // Default white
+  }
+
+  return { x: r / 255, y: g / 255, z: b / 255 };
 }
 
 /**

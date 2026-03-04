@@ -40,12 +40,9 @@ export class ConnectionService extends BaseService {
         throw new Error('Server unhealthy');
       }
 
-      // Setup WebSocket for callbacks
-      this.connectWebSocket();
+      // Setup WebSocket for callbacks — connected state is set when WebSocket opens
+      await this.connectWebSocket();
 
-      this.connected = true;
-      Logger.debug('Setting connected = true, emitting connected event');
-      this.emit('connected', undefined);
       Logger.info('Connected to OctaneWebR server');
 
       return true;
@@ -62,89 +59,100 @@ export class ConnectionService extends BaseService {
   /**
    * Establish WebSocket connection for real-time callbacks
    * Handles automatic reconnection on disconnect
+   * Returns a Promise that resolves when the WebSocket is open
    */
-  private connectWebSocket(): void {
+  private connectWebSocket(): Promise<void> {
     const wsUrl = this.serverUrl.replace('http', 'ws') + '/api/callbacks';
     Logger.network('Connecting WebSocket:', wsUrl);
 
-    try {
-      // Close any existing WebSocket before opening a new one.
-      // Prevents duplicate connections and memory leaks (e.g., React StrictMode
-      // double-invocation calls connect() twice rapidly).
-      if (this.ws) {
-        this.ws.onclose = null; // Prevent reconnect loop from old socket's onclose
-        this.ws.close();
-        this.ws = null;
-      }
-
-      const ws = new WebSocket(wsUrl);
-      this.ws = ws;
-
-      ws.onopen = () => {
-        Logger.info('WebSocket connected');
-        Logger.debug(`WebSocket readyState on open: ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
-
-        /**
-         * Race condition mitigation: Some browsers fire onopen before the WebSocket
-         * is truly ready to send. A 50ms delay ensures the OPEN state is stable.
-         * Without this, early send() calls may fail silently or throw exceptions.
-         */
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'subscribe' }));
-            Logger.debug('Sent subscribe message to WebSocket');
-          } else {
-            Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws.readyState})`);
-          }
-        }, 50);
-      };
-
-      ws.onmessage = (event: MessageEvent) => {
-        try {
-          const message = JSON.parse(event.data as string);
-
-          if (message.type === 'newImage') {
-            this.emit('OnNewImage', message.data);
-          } else if (message.type === 'newStatistics') {
-            this.emit('OnNewStatistics', message.data);
-          } else if (message.type === 'renderFailure') {
-            Logger.error('WebSocket: renderFailure callback received');
-            this.emit('OnRenderFailure', message.data);
-          } else if (message.type === 'projectManagerChanged') {
-            Logger.debug('WebSocket: projectManagerChanged callback received');
-            this.emit('OnProjectManagerChanged', message.data);
-          } else {
-            Logger.warn('WebSocket: Unknown message type:', message.type);
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          Logger.error('WebSocket message parse error:', errorMessage);
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Close any existing WebSocket before opening a new one.
+        // Prevents duplicate connections and memory leaks (e.g., React StrictMode
+        // double-invocation calls connect() twice rapidly).
+        if (this.ws) {
+          this.ws.onclose = null; // Prevent reconnect loop from old socket's onclose
+          this.ws.close();
+          this.ws = null;
         }
-      };
 
-      ws.onerror = () => {
-        // The WebSocket onerror event intentionally carries no error details (browser security).
-        // Useful diagnostics arrive in onclose via CloseEvent.code and .reason.
-        Logger.error(`WebSocket error (readyState: ${ws.readyState})`);
-      };
+        const ws = new WebSocket(wsUrl);
+        this.ws = ws;
 
-      ws.onclose = (event: CloseEvent) => {
-        const reason = event.reason ? ` reason="${event.reason}"` : '';
-        Logger.debug(
-          `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`
-        );
-        // Attempt reconnection after configured delay
-        setTimeout(() => {
-          if (this.connected) {
-            Logger.debug('Reconnecting WebSocket...');
-            this.connectWebSocket();
+        ws.onopen = () => {
+          Logger.info('WebSocket connected');
+          Logger.debug(`WebSocket readyState on open: ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
+
+          this.connected = true;
+          Logger.debug('Setting connected = true, emitting connected event');
+          this.emit('connected', undefined);
+
+          /**
+           * Race condition mitigation: Some browsers fire onopen before the WebSocket
+           * is truly ready to send. A 50ms delay ensures the OPEN state is stable.
+           * Without this, early send() calls may fail silently or throw exceptions.
+           */
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'subscribe' }));
+              Logger.debug('Sent subscribe message to WebSocket');
+            } else {
+              Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws.readyState})`);
+            }
+          }, 50);
+
+          resolve();
+        };
+
+        ws.onmessage = (event: MessageEvent) => {
+          try {
+            const message = JSON.parse(event.data as string);
+
+            if (message.type === 'newImage') {
+              this.emit('OnNewImage', message.data);
+            } else if (message.type === 'newStatistics') {
+              this.emit('OnNewStatistics', message.data);
+            } else if (message.type === 'renderFailure') {
+              Logger.error('WebSocket: renderFailure callback received');
+              this.emit('OnRenderFailure', message.data);
+            } else if (message.type === 'projectManagerChanged') {
+              Logger.debug('WebSocket: projectManagerChanged callback received');
+              this.emit('OnProjectManagerChanged', message.data);
+            } else {
+              Logger.warn('WebSocket: Unknown message type:', message.type);
+            }
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Logger.error('WebSocket message parse error:', errorMessage);
           }
-        }, RECONNECT_DELAY_MS);
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Logger.error('WebSocket connection failed:', errorMessage);
-    }
+        };
+
+        ws.onerror = () => {
+          // The WebSocket onerror event intentionally carries no error details (browser security).
+          // Useful diagnostics arrive in onclose via CloseEvent.code and .reason.
+          Logger.error(`WebSocket error (readyState: ${ws.readyState})`);
+          reject(new Error('WebSocket connection error'));
+        };
+
+        ws.onclose = (event: CloseEvent) => {
+          const reason = event.reason ? ` reason="${event.reason}"` : '';
+          Logger.debug(
+            `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`
+          );
+          // Attempt reconnection after configured delay
+          setTimeout(() => {
+            if (this.connected) {
+              Logger.debug('Reconnecting WebSocket...');
+              this.connectWebSocket();
+            }
+          }, RECONNECT_DELAY_MS);
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        Logger.error('WebSocket connection failed:', errorMessage);
+        reject(error);
+      }
+    });
   }
 
   /**
@@ -154,6 +162,8 @@ export class ConnectionService extends BaseService {
     this.connected = false;
 
     if (this.ws) {
+      // Prevent onclose handler from scheduling a zombie reconnect
+      this.ws.onclose = null;
       this.ws.close();
       this.ws = null;
     }

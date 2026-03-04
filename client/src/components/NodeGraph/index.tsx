@@ -38,7 +38,6 @@ import { getPinColor } from '../../utils/PinColorUtils';
 import { computeDAGLayout } from '../../utils/NodeLayoutUtils';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
-import { useConnectionCutter } from './hooks/useConnectionCutter';
 
 interface NodeGraphEditorProps {
   sceneTree: SceneNode[];
@@ -200,6 +199,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     [onNodesChangeBase, client, connected]
   );
 
+  // Container ref for scoping keyboard shortcuts
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Multi-connect state (Ctrl+connect to connect multiple selected nodes)
   const isMultiConnectingRef = useRef(false);
   const multiConnectSourcesRef = useRef<string[]>([]); // Selected node IDs to connect
@@ -238,17 +240,10 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     nodes,
     setNodes,
     sceneTree,
+    containerRef,
     onNodeSelect,
     editActions,
   });
-
-  /**
-   * Connection cutter hook - handles Ctrl+drag to cut multiple connections
-   */
-  const {
-    state: { isCuttingConnections, cutterPath },
-    handlers: { handlePaneMouseDown, handlePaneMouseMove, handlePaneMouseUp },
-  } = useConnectionCutter(nodes, edges, client);
 
   /**
    * Convert scene tree to ReactFlow nodes and edges
@@ -401,34 +396,15 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       return;
     }
 
-    // During progressive loading, skip this effect — we rebuild on explicit events
-    if (progressiveLoadingRef.current) {
-      Logger.debug('NodeGraphEditor: Progressive loading active, skipping sceneTree effect');
-      return;
-    }
+    // Always rebuild the full graph when sceneTree changes.
+    // This is the single source of truth for nodes and edges.
+    const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
+    Logger.debug(
+      `NodeGraphEditor: rebuild → ${graphNodes.length} nodes, ${graphEdges.length} edges`
+    );
 
-    setNodes(currentNodes => {
-      // Skip if nodeAdded/nodeDeleted event handlers are managing incremental updates
-      if (currentNodes.length < sceneTree.length && currentNodes.length > 0) {
-        return currentNodes;
-      }
-      if (currentNodes.length > sceneTree.length && currentNodes.length > 0) {
-        return currentNodes;
-      }
-
-      Logger.debug('NodeGraphEditor: Full graph rebuild triggered');
-      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
-      setEdges(graphEdges);
-
-      // Preserve selection state from previous nodes across rebuild
-      const selectedId = currentNodes.find(n => n.selected)?.id;
-      if (selectedId) {
-        const target = graphNodes.find(n => n.id === selectedId);
-        if (target) target.selected = true;
-      }
-
-      return graphNodes;
-    });
+    setNodes(graphNodes);
+    setEdges(graphEdges);
   }, [sceneTree, convertSceneToGraph, setEdges, setNodes]);
 
   /**
@@ -660,7 +636,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   useEffect(() => {
     if (nodes.length > 0 && !hasInitialFitView.current) {
       // Use setTimeout to ensure ReactFlow has finished rendering
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         fitView({
           padding: 0.2, // 20% padding around nodes
           includeHiddenNodes: false,
@@ -670,6 +646,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         });
         hasInitialFitView.current = true;
       }, 100);
+      return () => clearTimeout(timer);
     }
   }, [nodes, fitView]);
 
@@ -766,7 +743,11 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div
+      ref={containerRef}
+      tabIndex={-1}
+      style={{ width: '100%', height: '100%', position: 'relative', outline: 'none' }}
+    >
       {/* Context Menus */}
       {contextMenuVisible && contextMenuType === 'add' && (
         <NodeTypeContextMenu
@@ -805,121 +786,90 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         onSelectNodes={handleSearchSelectNodes}
       />
 
-      {/* Connection Cutter Visual */}
-      {isCuttingConnections && cutterPath.length > 0 && (
-        <svg
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 1000,
-          }}
-        >
-          <polyline
-            points={cutterPath.map(p => `${p.x},${p.y}`).join(' ')}
-            fill="none"
-            stroke="#ff0000"
-            strokeWidth="2"
-            strokeDasharray="5,5"
-          />
-        </svg>
-      )}
-
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-      <div
-        onMouseDown={handlePaneMouseDown}
-        onMouseMove={handlePaneMouseMove}
-        onMouseUp={handlePaneMouseUp}
-        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+      {/* Node Graph Toolbar moved to App.tsx - always visible in node-graph-header */}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
+        isValidConnection={isValidConnection}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
+        onPaneContextMenu={handlePaneContextMenu}
+        elementsSelectable={true}
+        nodesConnectable={true}
+        nodesDraggable={true}
+        edgesFocusable={true}
+        edgesReconnectable={true} // Enable edge reconnection by dragging
+        reconnectRadius={50} // Allow clicking within 50px of edge to start reconnect (larger area)
+        panOnDrag={[1, 2]} // Only pan with middle/right mouse button, not left button
+        selectionOnDrag={true} // Enable box selection by dragging in empty space (Octane SE manual)
+        selectNodesOnDrag={false} // Don't interfere with box selection - let selectionOnDrag handle it
+        selectionMode={SelectionMode.Partial} // Select nodes when box overlaps them (partial or full)
+        multiSelectionKeyCode="Shift" // Shift key adds to selection (Octane SE manual)
+        nodeTypes={nodeTypes}
+        minZoom={0.1}
+        maxZoom={4}
+        defaultEdgeOptions={{
+          type: 'default', // Use default edges - custom component blocks reconnection
+          animated: false,
+          selectable: true,
+          focusable: true,
+          interactionWidth: 20, // ReactFlow v12: wider click area for easier selection
+          style: { stroke: '#ffc107', strokeWidth: 3 },
+        }}
+        connectionLineStyle={{
+          stroke: connectionLineColor,
+          strokeWidth: 3,
+        }}
+        className="node-graph-reactflow"
+        style={{ width: '100%', height: '100%', background: '#454545' }}
+        snapToGrid={snapToGrid}
+        snapGrid={[20, 20]}
       >
-        {/* Node Graph Toolbar moved to App.tsx - always visible in node-graph-header */}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onConnectStart={onConnectStart}
-          onConnectEnd={onConnectEnd}
-          onReconnect={onReconnect}
-          onReconnectEnd={onReconnectEnd}
-          isValidConnection={isValidConnection}
-          onNodesDelete={onNodesDelete}
-          onEdgesDelete={onEdgesDelete}
-          onNodeClick={onNodeClick}
-          onEdgeClick={onEdgeClick}
-          onPaneContextMenu={handlePaneContextMenu}
-          elementsSelectable={true}
-          nodesConnectable={true}
-          nodesDraggable={true}
-          edgesFocusable={true}
-          edgesReconnectable={true} // Enable edge reconnection by dragging
-          reconnectRadius={50} // Allow clicking within 50px of edge to start reconnect (larger area)
-          panOnDrag={[1, 2]} // Only pan with middle/right mouse button, not left button
-          selectionOnDrag={true} // Enable box selection by dragging in empty space (Octane SE manual)
-          selectNodesOnDrag={false} // Don't interfere with box selection - let selectionOnDrag handle it
-          selectionMode={SelectionMode.Partial} // Select nodes when box overlaps them (partial or full)
-          multiSelectionKeyCode="Shift" // Shift key adds to selection (Octane SE manual)
-          nodeTypes={nodeTypes}
-          minZoom={0.1}
-          maxZoom={4}
-          defaultEdgeOptions={{
-            type: 'default', // Use default edges - custom component blocks reconnection
-            animated: false,
-            selectable: true,
-            focusable: true,
-            interactionWidth: 20, // ReactFlow v12: wider click area for easier selection
-            style: { stroke: '#ffc107', strokeWidth: 3 },
-          }}
-          connectionLineStyle={{
-            stroke: connectionLineColor,
-            strokeWidth: 3,
-          }}
-          className="node-graph-reactflow"
-          style={{ width: '100%', height: '100%', background: '#454545' }}
-          snapToGrid={snapToGrid}
-          snapGrid={[20, 20]}
-        >
-          {/* Grid background matching Octane style - toggleable via toolbar */}
-          <Background
-            variant={BackgroundVariant.Lines}
-            gap={gridVisible ? 60 : 0}
-            size={gridVisible ? 1 : 0}
-            color="#454545"
-          />
+        {/* Grid background matching Octane style - toggleable via toolbar */}
+        <Background
+          variant={BackgroundVariant.Lines}
+          gap={gridVisible ? 60 : 0}
+          size={gridVisible ? 1 : 0}
+          color="#454545"
+        />
 
-          {/* Minimap for navigation - top-left flush with yellow tint matching Octane SE */}
-          <MiniMap
-            position="top-left"
-            nodeColor={node => {
-              const data = node.data as OctaneNodeData;
-              return data.sceneNode.nodeInfo?.nodeColor
-                ? formatColorValue(data.sceneNode.nodeInfo.nodeColor)
-                : '#666';
-            }}
-            style={{
-              width: 160,
-              height: 120,
-              background: 'rgba(70, 68, 50, 0.95)',
-              border: '2px solid rgba(200, 180, 80, 0.8)',
-              borderRadius: 4,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-              margin: 0,
-              padding: 0,
-            }}
-            maskColor="rgba(70, 68, 50, 0.6)"
-            maskStrokeColor="transparent"
-            maskStrokeWidth={0}
-            pannable={true}
-            zoomable={false}
-            nodeStrokeWidth={3}
-            offsetScale={0}
-          />
-        </ReactFlow>
-      </div>
+        {/* Minimap for navigation - top-left flush with yellow tint matching Octane SE */}
+        <MiniMap
+          position="top-left"
+          nodeColor={node => {
+            const data = node.data as OctaneNodeData;
+            return data.sceneNode.nodeInfo?.nodeColor
+              ? formatColorValue(data.sceneNode.nodeInfo.nodeColor)
+              : '#666';
+          }}
+          style={{
+            width: 160,
+            height: 120,
+            background: 'rgba(70, 68, 50, 0.95)',
+            border: '2px solid rgba(200, 180, 80, 0.8)',
+            borderRadius: 4,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+            margin: 0,
+            padding: 0,
+          }}
+          maskColor="rgba(70, 68, 50, 0.6)"
+          maskStrokeColor="transparent"
+          maskStrokeWidth={0}
+          pannable={true}
+          zoomable={false}
+          nodeStrokeWidth={3}
+          offsetScale={0}
+        />
+      </ReactFlow>
     </div>
   );
 });

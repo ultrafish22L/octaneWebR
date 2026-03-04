@@ -10,9 +10,10 @@
  * Part of RenderToolbar component refactoring (Phase 1)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { OctaneClient } from '../../../services/OctaneClient';
 import { Logger } from '../../../utils/Logger';
+import { useEmitterEvent } from '../../../hooks/useEmitterEvent';
 
 export interface RenderStats {
   currentSamples: number; // 1304
@@ -61,23 +62,26 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
   // Fetch live GPU data on connection
   useEffect(() => {
     if (!connected) return;
+    let cancelled = false;
 
     const fetchGPUData = async () => {
       try {
-        // Get Octane version
         const version = await client.getOctaneVersion();
+        if (cancelled) return;
 
-        // Get primary GPU device info
         const deviceCount = await client.getDeviceCount();
+        if (cancelled) return;
+
         let gpuName = 'Unknown GPU';
         let totalMemory = '0 GB';
 
         if (deviceCount > 0) {
-          // Get first device (primary GPU)
           gpuName = await client.getDeviceName(0);
+          if (cancelled) return;
 
-          // Get memory info
           const memoryUsage = await client.getMemoryUsage(0);
+          if (cancelled) return;
+
           if (memoryUsage) {
             const totalGB = (memoryUsage.totalDeviceMemory / (1024 * 1024 * 1024)).toFixed(1);
             totalMemory = `${totalGB} GB`;
@@ -93,137 +97,105 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
 
         Logger.info('GPU data loaded:', { gpu: gpuName, version, memory: totalMemory });
       } catch (error) {
+        if (cancelled) return;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         Logger.error('Failed to fetch GPU data:', errorMessage);
       }
     };
 
     fetchGPUData();
+    return () => {
+      cancelled = true;
+    };
   }, [connected, client]);
 
   // Listen for real-time render statistics from WebSocket callbacks
-  useEffect(() => {
-    if (!connected) return;
+  useEmitterEvent(
+    connected ? client : null,
+    'OnNewStatistics',
+    useCallback(
+      (data: {
+        statistics?: {
+          beautySamplesPerPixel?: number;
+          denoisedSamplesPerPixel?: number;
+          beautyMaxSamplesPerPixel?: number;
+          beautySamplesPerSecond?: number;
+          renderTime?: number;
+          estimatedRenderTime?: number;
+          state?: number;
+        };
+      }) => {
+        try {
+          const stats = data.statistics;
+          if (!stats) return;
 
-    const handleStatistics = (data: {
-      statistics?: {
-        beautySamplesPerPixel?: number;
-        denoisedSamplesPerPixel?: number;
-        beautyMaxSamplesPerPixel?: number;
-        beautySamplesPerSecond?: number;
-        renderTime?: number;
-        estimatedRenderTime?: number;
-        state?: number;
-      };
-    }) => {
-      try {
-        // Parse the statistics object from Octane callback
-        // RenderResultStatistics proto fields:
-        // - beautySamplesPerPixel (uint32) - current samples
-        // - denoisedSamplesPerPixel (uint32) - denoised samples
-        // - beautyMaxSamplesPerPixel (uint32) - max target samples
-        // - beautySamplesPerSecond (double) - samples per second
-        // - renderTime (double) - seconds elapsed
-        // - estimatedRenderTime (double) - estimated total seconds
-        // - state (RenderState enum) - 0=stopped, 1=waiting, 2=rendering, 3=paused, 4=finished
-        const stats = data.statistics;
-        if (stats) {
-          // Parse samples (current/denoised/max)
-          const currentSamples =
-            stats.beautySamplesPerPixel !== undefined
-              ? stats.beautySamplesPerPixel
-              : renderStats.currentSamples;
-          const denoisedSamples =
-            stats.denoisedSamplesPerPixel !== undefined
-              ? stats.denoisedSamplesPerPixel
-              : renderStats.denoisedSamples;
-          const maxSamples =
-            stats.beautyMaxSamplesPerPixel !== undefined
-              ? stats.beautyMaxSamplesPerPixel
-              : renderStats.maxSamples;
+          setRenderStats(prev => {
+            const currentSamples = stats.beautySamplesPerPixel ?? prev.currentSamples;
+            const denoisedSamples = stats.denoisedSamplesPerPixel ?? prev.denoisedSamples;
+            const maxSamples = stats.beautyMaxSamplesPerPixel ?? prev.maxSamples;
+            const progressPercent =
+              maxSamples > 0 ? Math.min(100, (currentSamples / maxSamples) * 100) : 0;
 
-          // Calculate progress percentage
-          const progressPercent =
-            maxSamples > 0 ? Math.min(100, (currentSamples / maxSamples) * 100) : 0;
+            const samplesPerSecond = stats.beautySamplesPerSecond ?? 0;
+            const megaSamplesPerSec = samplesPerSecond / 1000000;
 
-          // Parse samples per second and convert to mega-samples/sec
-          const samplesPerSecond =
-            stats.beautySamplesPerSecond !== undefined ? stats.beautySamplesPerSecond : 0;
-          const megaSamplesPerSec = samplesPerSecond / 1000000;
-
-          // Format current time (renderTime in seconds) as HH:MM:SS
-          let currentTime = renderStats.currentTime;
-          if (stats.renderTime !== undefined) {
-            const totalSeconds = Math.floor(stats.renderTime);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-          }
-
-          // Format estimated time (estimatedRenderTime in seconds) as HH:MM:SS
-          let estimatedTime = renderStats.estimatedTime;
-          if (stats.estimatedRenderTime !== undefined) {
-            const totalSeconds = Math.floor(stats.estimatedRenderTime);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            estimatedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-          }
-
-          // Parse render state (state enum)
-          // RSTATE_STOPPED=0, RSTATE_WAITING_FOR_DATA=1, RSTATE_RENDERING=2, RSTATE_PAUSED=3, RSTATE_FINISHED=4
-          let status: 'rendering' | 'finished' | 'paused' | 'stopped' | 'waiting' | 'error' =
-            renderStats.status;
-          if (stats.state !== undefined) {
-            switch (stats.state) {
-              case 0:
-                status = 'stopped';
-                break;
-              case 1:
-                status = 'waiting';
-                break;
-              case 2:
-                status = 'rendering';
-                break;
-              case 3:
-                status = 'paused';
-                break;
-              case 4:
-                status = 'finished';
-                break;
-              default:
-                status = 'error';
-                break;
+            let currentTime = prev.currentTime;
+            if (stats.renderTime !== undefined) {
+              const t = Math.floor(stats.renderTime);
+              currentTime = `${Math.floor(t / 3600)
+                .toString()
+                .padStart(2, '0')}:${Math.floor((t % 3600) / 60)
+                .toString()
+                .padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`;
             }
-          }
 
-          // Update render stats with real data from callback
-          setRenderStats(prev => ({
-            ...prev,
-            currentSamples,
-            denoisedSamples,
-            maxSamples,
-            megaSamplesPerSec,
-            currentTime,
-            estimatedTime,
-            progressPercent,
-            status,
-          }));
+            let estimatedTime = prev.estimatedTime;
+            if (stats.estimatedRenderTime !== undefined) {
+              const t = Math.floor(stats.estimatedRenderTime);
+              estimatedTime = `${Math.floor(t / 3600)
+                .toString()
+                .padStart(2, '0')}:${Math.floor((t % 3600) / 60)
+                .toString()
+                .padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`;
+            }
+
+            let status = prev.status;
+            if (stats.state !== undefined) {
+              // Proto enums may arrive as integers or string names (e.g. "RSTATE_RENDERING")
+              const stateMap: Record<string | number, typeof status> = {
+                0: 'stopped',
+                1: 'waiting',
+                2: 'rendering',
+                3: 'paused',
+                4: 'finished',
+                RSTATE_STOPPED: 'stopped',
+                RSTATE_WAITING_FOR_DATA: 'waiting',
+                RSTATE_RENDERING: 'rendering',
+                RSTATE_PAUSED: 'paused',
+                RSTATE_FINISHED: 'finished',
+              };
+              status = stateMap[stats.state] ?? 'error';
+            }
+
+            return {
+              ...prev,
+              currentSamples,
+              denoisedSamples,
+              maxSamples,
+              megaSamplesPerSec,
+              currentTime,
+              estimatedTime,
+              progressPercent,
+              status,
+            };
+          });
+        } catch (error) {
+          Logger.error('Failed to process render statistics:', error);
         }
-      } catch (error) {
-        Logger.error('Failed to process render statistics:', error);
-      }
-    };
-
-    // Subscribe to OnNewStatistics callback
-    client.on('OnNewStatistics', handleStatistics);
-
-    return () => {
-      client.off('OnNewStatistics', handleStatistics);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected, client]);
+      },
+      []
+    )
+  );
 
   return {
     renderStats,

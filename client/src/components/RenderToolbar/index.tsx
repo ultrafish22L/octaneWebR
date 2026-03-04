@@ -303,17 +303,16 @@ export const RenderToolbar = React.memo(function RenderToolbar({
           >
             <span id="render-samples-display" style={{ fontWeight: 500 }}>
               {renderStats.currentSamples}/{renderStats.denoisedSamples}/{renderStats.maxSamples}{' '}
-              s/px
+              s/px{Math.round(renderStats.megaSamplesPerSec) > 0 ? ',' : ''}
             </span>
-            <span className="stats-separator">, </span>
-            <span id="render-speed-display">
-              {Math.round(renderStats.megaSamplesPerSec)} Ms/sec
-            </span>
-            <span className="stats-separator">, </span>
+            {Math.round(renderStats.megaSamplesPerSec) > 0 && (
+              <span id="render-speed-display">
+                {Math.round(renderStats.megaSamplesPerSec)} Ms/sec,
+              </span>
+            )}
             <span id="render-time-display">
               {renderStats.currentTime}/{renderStats.estimatedTime}
             </span>
-            <span> </span>
             <span id="render-status-display" className={`render-status-${renderStats.status}`}>
               ({renderStats.status === 'rendering' ? 'rendering...' : renderStats.status})
             </span>
@@ -325,12 +324,9 @@ export const RenderToolbar = React.memo(function RenderToolbar({
           style={{ cursor: 'context-menu' }}
           title="Right-click for GPU resource statistics"
         >
-          <span id="render-primitive-count">{renderStats.primitiveCount} pri</span>
-          <span className="stats-separator">, </span>
-          <span id="render-mesh-count">{renderStats.meshCount} mesh</span>
-          <span className="stats-separator">, </span>
-          <span id="render-gpu-info">{renderStats.gpu}</span>
-          <span className="stats-separator">, </span>
+          <span id="render-primitive-count">{renderStats.primitiveCount} pri,</span>
+          <span id="render-mesh-count">{renderStats.meshCount} mesh,</span>
+          <span id="render-gpu-info">{renderStats.gpu},</span>
           <span id="render-memory-combined">
             {renderStats.version}/{renderStats.memory}
           </span>

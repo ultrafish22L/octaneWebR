@@ -173,7 +173,8 @@ input:checked + .slider:before {
   transition: all 0.15s ease;
 }
 
-.outliner-btn:hover {
+.outliner-btn:hover,
+.outliner-btn:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--accent-blue);
@@ -229,36 +230,37 @@ input:checked + .slider:before {
   position: relative;
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
   margin-right: -10px;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 1px var(--overlay-semi));
 }
 
 /* Z-index stacking: left tabs on top, right tabs underneath */
 .scene-tab:nth-child(1) {
-  z-index: 3;
+  z-index: calc(var(--z-low) + 2);
 }
 .scene-tab:nth-child(2) {
-  z-index: 2;
+  z-index: calc(var(--z-low) + 1);
 }
 .scene-tab:nth-child(3) {
-  z-index: 1;
+  z-index: var(--z-low);
 }
 
 .scene-tab:last-child {
   margin-right: 0;
 }
 
-.scene-tab:hover {
+.scene-tab:hover,
+.scene-tab:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
-  z-index: 10 !important;
+  z-index: var(--z-panel) !important;
 }
 
 .scene-tab.active {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  z-index: 20 !important;
+  z-index: calc(var(--z-panel) * 2) !important;
   font-weight: var(--font-weight-header);
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 0 1px var(--overlay-medium-dark));
 }
 
 .refresh-btn {
@@ -278,7 +280,8 @@ input:checked + .slider:before {
   margin-left: 4px;
 }
 
-.refresh-btn:hover {
+.refresh-btn:hover,
+.refresh-btn:focus-visible {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--accent-blue);
@@ -332,7 +335,8 @@ input:checked + .slider:before {
   color: var(--text-primary);
 }
 
-.scene-tab-content .tree-node:hover {
+.scene-tab-content .tree-node:hover,
+.scene-tab-content .tree-node:focus-visible {
   background-color: var(--bg-hover);
 }
 
@@ -346,7 +350,8 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 
-.scene-tab-content .tree-node.package-item:hover {
+.scene-tab-content .tree-node.package-item:hover,
+.scene-tab-content .tree-node.package-item:focus-visible {
   background-color: var(--accent-blue-dim);
 }
 
@@ -402,7 +407,7 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3xl);
 }
 
 .scene-loading-text {
@@ -530,15 +535,7 @@ input:checked + .slider:before {
   margin-right: 2px;
 }
 
-.node-toggle.expanded::before {
-  content: '−';
-  font-weight: var(--font-weight-bold7);
-}
-
-.node-toggle.collapsed::before {
-  content: '+';
-  font-weight: var(--font-weight-bold7);
-}
+/* Toggle symbols rendered by JSX text content in VirtualTreeRow.tsx */
 
 .node-toggle:hover {
   border-radius: var(--border-radius);
@@ -621,7 +618,8 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 
-.tree-toggle.has-children:hover {
+.tree-toggle.has-children:hover,
+.tree-toggle.has-children:focus-visible {
   color: var(--text-primary);
 }
 

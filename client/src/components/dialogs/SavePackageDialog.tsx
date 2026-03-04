@@ -6,7 +6,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 
 interface SavePackageDialogProps {
@@ -97,6 +97,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
     }
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
+
   const updateSetting = <K extends keyof PackageSettings>(key: K, value: PackageSettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -105,34 +111,40 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
 
   return (
     <div
-      className="dialog-overlay"
+      className="modal-overlay"
       role="presentation"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="dialog save-package-dialog"
         role="dialog"
         aria-modal="true"
         aria-label="Save as Package"
+        tabIndex={-1}
+        onKeyDown={e => {
+          if (e.key === 'Escape') onClose();
+        }}
       >
-        <div className="dialog-header">
+        <div className="modal-header">
           <h2>💾 Save as Package (ORBX)</h2>
-          <button className="dialog-close" onClick={onClose} disabled={isProcessing}>
+          <button className="modal-close-btn" onClick={onClose} disabled={isProcessing}>
             ×
           </button>
         </div>
 
-        <div className="dialog-body">
+        <div className="modal-body">
           {/* Filename Section */}
           <div className="dialog-section">
             <h3>Package File</h3>
             <div className="form-group">
-              <label htmlFor="filename">Filename:</label>
+              <label htmlFor="save-package-filename">Filename:</label>
               <input
                 type="text"
-                id="filename"
+                id="save-package-filename"
                 value={filename}
                 onChange={e => setFilename(e.target.value)}
                 placeholder="scene.orbx"
@@ -367,7 +379,7 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
           </div>
         </div>
 
-        <div className="dialog-footer">
+        <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose} disabled={isProcessing}>
             Cancel
           </button>

@@ -71,6 +71,7 @@ const DEFAULT_CACHE_CONFIGS: Record<string, CacheConfig> = {
 export class CacheManager {
   private cleanupTimerId: ReturnType<typeof setInterval> | null = null;
   private memoryCache: Map<string, CacheEntry<unknown>> = new Map();
+  private inflight: Map<string, Promise<unknown>> = new Map(); // Stampede protection
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
@@ -112,17 +113,32 @@ export class CacheManager {
       return sessionCached;
     }
 
+    // Stampede protection: if another caller is already fetching this key, piggyback
+    const existing = this.inflight.get(key);
+    if (existing) {
+      Logger.debugV(`Cache COALESCE: ${key}`);
+      return existing as Promise<T>;
+    }
+
     // L3: Fetch from API
     this.stats.misses++;
     this.updateHitRate();
     Logger.debugV(`Cache MISS: ${key}`);
 
-    const data = await fetcher();
+    const promise = fetcher().then(
+      data => {
+        this.inflight.delete(key);
+        this.set(key, data, customTtl);
+        return data;
+      },
+      err => {
+        this.inflight.delete(key);
+        throw err;
+      }
+    );
 
-    // Store in both caches
-    this.set(key, data, customTtl);
-
-    return data;
+    this.inflight.set(key, promise);
+    return promise;
   }
 
   /**
@@ -158,7 +174,7 @@ export class CacheManager {
     const sessionKeysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
-      if (key && key.startsWith('octane:cache:') && regex.test(key)) {
+      if (key && key.startsWith('octane:cache:') && regex.test(key.slice('octane:cache:'.length))) {
         sessionKeysToRemove.push(key);
       }
     }
@@ -492,9 +508,25 @@ export class CacheManager {
     const total = this.stats.hits + this.stats.misses;
     this.stats.hitRate = total > 0 ? this.stats.hits / total : 0;
   }
+  /**
+   * Clean up resources (interval timer)
+   */
+  destroy(): void {
+    if (this.cleanupTimerId) {
+      clearInterval(this.cleanupTimerId);
+      this.cleanupTimerId = null;
+    }
+  }
 }
 
 /**
  * Global cache manager instance
  */
 export const cacheManager = new CacheManager();
+
+// Clean up interval on HMR to prevent stacking
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    cacheManager.destroy();
+  });
+}

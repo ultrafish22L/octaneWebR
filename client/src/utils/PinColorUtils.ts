@@ -29,16 +29,9 @@ export function getPinColor(pinInfo: PinColorInfo | null | undefined): string {
 
   // Fall back to local color mapping by type (from PinTypes.ts - C++ source colors)
   if (pinInfo?.type) {
-    try {
-      const info = getPinTypeInfo(pinInfo.type);
-
-      if (info) {
-        return info.color;
-      }
-    } catch {
-      // Type not found in mapping, continue to default
-      // Final fallback to amber
-      return '#ffc107';
+    const info = getPinTypeInfo(pinInfo.type);
+    if (info) {
+      return info.color;
     }
   }
   // Final fallback to amber

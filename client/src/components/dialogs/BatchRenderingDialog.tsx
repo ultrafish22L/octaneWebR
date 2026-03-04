@@ -5,7 +5,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface BatchRenderingDialogProps {
   isOpen: boolean;
@@ -29,6 +29,11 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
   const [saveDenoisedMain, setSaveDenoisedMain] = useState(false);
   const [saveLayeredEXR, setSaveLayeredEXR] = useState(false);
   const [premultipliedAlpha, setPremultipliedAlpha] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -60,23 +65,21 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        ref={dialogRef}
         className="batch-rendering-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-rendering-title"
         tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         <div className="modal-header">
           <h2 id="batch-rendering-title">Batch Rendering</h2>
           <button
-            className="modal-close-button"
+            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close batch rendering"
           ></button>
@@ -158,7 +161,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   min="1"
                   max="120"
                   value={frameRate}
-                  onChange={e => setFrameRate(parseInt(e.target.value))}
+                  onChange={e => setFrameRate(parseInt(e.target.value, 10) || 24)}
                   autoComplete="off"
                   name="number-3"
                 />
@@ -170,7 +173,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   type="number"
                   min="0"
                   value={startFrame}
-                  onChange={e => setStartFrame(parseInt(e.target.value))}
+                  onChange={e => setStartFrame(parseInt(e.target.value, 10) || 1)}
                   autoComplete="off"
                   name="number-4"
                 />
@@ -182,7 +185,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   type="number"
                   min="0"
                   value={endFrame}
-                  onChange={e => setEndFrame(parseInt(e.target.value))}
+                  onChange={e => setEndFrame(parseInt(e.target.value, 10) || 100)}
                   autoComplete="off"
                   name="number-5"
                 />
@@ -196,7 +199,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   type="number"
                   min="1"
                   value={subFrame}
-                  onChange={e => setSubFrame(parseInt(e.target.value))}
+                  onChange={e => setSubFrame(parseInt(e.target.value, 10) || 1)}
                   autoComplete="off"
                   name="number-6"
                 />
@@ -208,7 +211,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   type="number"
                   min="0"
                   value={fileNumbering}
-                  onChange={e => setFileNumbering(parseInt(e.target.value))}
+                  onChange={e => setFileNumbering(parseInt(e.target.value, 10) || 1)}
                   autoComplete="off"
                   name="number-7"
                 />
@@ -236,7 +239,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
                   min="1"
                   max="100000"
                   value={maxSamples}
-                  onChange={e => setMaxSamples(parseInt(e.target.value))}
+                  onChange={e => setMaxSamples(parseInt(e.target.value, 10) || 1)}
                   style={{ marginLeft: '20px', width: '100px' }}
                   autoComplete="off"
                   name="number-9"

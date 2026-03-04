@@ -27,12 +27,13 @@ export class CommandHistory {
    * Result:  [Create, Delete, Copy] (Move is gone)
    */
   async executeCommand(command: Command): Promise<void> {
-    // Clear redo stack: executing a new command after undo discards future states
+    await command.execute();
+
+    // Clear redo stack AFTER successful execute — if execute() throws,
+    // the redo stack is preserved so the user doesn't lose history
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);
     }
-
-    await command.execute();
 
     this.history.push(command);
     this.currentIndex++;

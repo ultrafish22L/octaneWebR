@@ -21,7 +21,11 @@ export class CameraService extends BaseService {
   async getCamera(): Promise<CameraState> {
     // LiveLink.GetCamera returns CameraState with position, target, up vectors
     const response = await this.apiService.callApi('LiveLink', 'GetCamera', {});
-    return response as unknown as CameraState;
+    const state = response as Record<string, unknown>;
+    if (!state || typeof state !== 'object' || !('position' in state || 'target' in state)) {
+      throw new Error('GetCamera returned unexpected shape');
+    }
+    return state as unknown as CameraState;
   }
 
   async setCameraPosition(x: number, y: number, z: number): Promise<void> {

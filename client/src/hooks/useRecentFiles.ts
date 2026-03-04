@@ -85,16 +85,18 @@ export function useRecentFiles() {
   /**
    * Remove a file from recent files list
    */
-  const removeRecentFile = useCallback(
-    (path: string) => {
-      setRecentFiles(currentFiles => {
-        const updated = currentFiles.filter(f => f.path !== path);
-        saveToStorage(updated);
-        return updated;
-      });
-    },
-    [saveToStorage]
-  );
+  const removeRecentFile = useCallback((path: string) => {
+    setRecentFiles(currentFiles => {
+      const updated = currentFiles.filter(f => f.path !== path);
+      // Save directly to localStorage (avoid nested setState via saveToStorage)
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (error) {
+        Logger.error('Failed to save recent files:', error);
+      }
+      return updated;
+    });
+  }, []);
 
   /**
    * Clear all recent files
@@ -105,10 +107,11 @@ export function useRecentFiles() {
 
   /**
    * Get recent files as simple string array (for compatibility)
+   * Not wrapped in useCallback — recentFiles changes on every update anyway
    */
-  const getRecentFilePaths = useCallback((): string[] => {
+  const getRecentFilePaths = (): string[] => {
     return recentFiles.map(f => f.path);
-  }, [recentFiles]);
+  };
 
   return {
     recentFiles,

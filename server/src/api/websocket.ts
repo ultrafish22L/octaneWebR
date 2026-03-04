@@ -8,18 +8,16 @@ const RED = '\x1b[31m';
 const RESET = '\x1b[0m';
 
 // Dev mode: only accept localhost connections
-const ALLOWED_ORIGINS = ['http://localhost', 'http://127.0.0.1'];
-
 function isLocalOrigin(req: IncomingMessage): boolean {
   const origin = req.headers.origin || '';
-  return ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
 
 export function setupCallbackStreaming(
   server: Server,
   grpcClient: OctaneGrpcClient,
   callbackManager: CallbackManager
-): void {
+): WebSocketServer {
   const wss = new WebSocketServer({
     server,
     path: '/api/callbacks',
@@ -28,11 +26,14 @@ export function setupCallbackStreaming(
 
   console.log('WebSocket server initialized at /api/callbacks');
 
+  const MAX_WS_BUFFER = 10 * 1024 * 1024; // 10 MB backpressure limit
+
   wss.on('connection', (ws: WebSocket) => {
     console.log('Callback client connected');
 
     const forwardNewImage = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
+        if (ws.bufferedAmount > MAX_WS_BUFFER) return; // backpressure: drop frame
         try {
           ws.send(JSON.stringify({ type: 'newImage', data, timestamp: Date.now() }));
         } catch (error: any) {
@@ -43,6 +44,7 @@ export function setupCallbackStreaming(
 
     const forwardNewStatistics = (data: any) => {
       if (ws.readyState === WebSocket.OPEN) {
+        if (ws.bufferedAmount > MAX_WS_BUFFER) return;
         try {
           ws.send(JSON.stringify({ type: 'newStatistics', data, timestamp: Date.now() }));
         } catch (error: any) {
@@ -99,8 +101,14 @@ export function setupCallbackStreaming(
 
     ws.on('error', error => {
       console.error(`${RED}WebSocket error: ${error.message}${RESET}`);
+      // Clean up listeners — error may not be followed by close
+      callbackManager.off('OnNewImage', forwardNewImage);
+      callbackManager.off('OnNewStatistics', forwardNewStatistics);
+      callbackManager.off('OnRenderFailure', forwardRenderFailure);
+      callbackManager.off('OnProjectManagerChanged', forwardProjectManagerChanged);
     });
   });
 
   console.log('WebSocket callback streaming ready');
+  return wss;
 }
