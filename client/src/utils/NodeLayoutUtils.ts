@@ -38,12 +38,12 @@ const BASE_MAX_WIDTH = 320;
 const BASE_PIN_SPACING = 30;
 const BASE_WIDTH_PAD = 40;
 const BASE_BORDER_RADIUS = 8;
-const BASE_PADDING_RIGHT = 10;
-const BASE_PADDING_LEFT = 32;
+const BASE_PADDING_RIGHT = 13;
+const BASE_PADDING_LEFT = 39;
 const BASE_ICON_BOX = 26;
 const BASE_ICON_RADIUS = 7;
 const BASE_ICON_SIZE = 20;
-const BASE_FONT_SIZE = 11;
+const BASE_FONT_SIZE = 13;
 const BASE_PIN_SIZE = 12;
 const BASE_PIN_BORDER = 2;
 const BASE_PIN_OFFSET = 2;
@@ -65,25 +65,38 @@ export const NODE_PIN_SIZE = Math.round(BASE_PIN_SIZE * NODE_SCALE);
 export const NODE_PIN_BORDER = +(BASE_PIN_BORDER * NODE_SCALE).toFixed(1);
 export const NODE_PIN_OFFSET = Math.round(BASE_PIN_OFFSET * NODE_SCALE);
 
-/** Average character width as a fraction of font size (Arial). */
-const CHAR_WIDTH_FACTOR = 0.62;
+/** Lazily created canvas context for measuring text width. */
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+/** Measure the pixel width of a label string at NODE_FONT_SIZE. */
+function measureTextWidth(text: string): number {
+  if (!measureCtx) {
+    const canvas = document.createElement('canvas');
+    measureCtx = canvas.getContext('2d');
+  }
+  if (measureCtx) {
+    measureCtx.font = `${NODE_FONT_SIZE}px Arial, sans-serif`;
+    return measureCtx.measureText(text).width;
+  }
+  // Fallback for non-browser environments
+  return text.length * NODE_FONT_SIZE * 0.48;
+}
 
 /**
- * Estimate the rendered pixel width of a node based on its input count
- * and optional label text, clamped to [NODE_MIN_WIDTH, NODE_MAX_WIDTH].
+ * Estimate the rendered pixel width of a node based on pin count and label.
+ * Padding around the label is fixed (NODE_PADDING_LEFT / NODE_PADDING_RIGHT),
+ * so every node has the same gap on both sides of its name.
  */
 export function estimateNodeWidth(inputCount: number, label?: string): number {
   const pinWidth = inputCount * NODE_PIN_SPACING + NODE_WIDTH_PAD;
   const labelWidth = label
-    ? label.length * NODE_FONT_SIZE * CHAR_WIDTH_FACTOR + NODE_PADDING_LEFT + NODE_PADDING_RIGHT
+    ? Math.ceil(measureTextWidth(label)) + 4 + NODE_PADDING_LEFT + NODE_PADDING_RIGHT
     : 0;
   return Math.min(NODE_MAX_WIDTH, Math.max(NODE_MIN_WIDTH, pinWidth, labelWidth));
 }
 
 /**
  * Convert Octane center-based position to ReactFlow top-left position.
- * Octane stores node position as the center of the node box;
- * ReactFlow expects the top-left corner.
  */
 export function octaneToReactFlow(
   pos: { x: number; y: number },
@@ -96,8 +109,6 @@ export function octaneToReactFlow(
 
 /**
  * Convert ReactFlow top-left position to Octane center-based position.
- * ReactFlow stores node position as the top-left corner;
- * Octane expects the center of the node box.
  */
 export function reactFlowToOctane(
   pos: { x: number; y: number },
