@@ -35,7 +35,11 @@ import { SearchDialog } from './SearchDialog';
 import { EditCommands } from '../../commands/EditCommands';
 import { Logger } from '../../utils/Logger';
 import { getPinColor } from '../../utils/PinColorUtils';
-import { computeDAGLayout } from '../../utils/NodeLayoutUtils';
+import {
+  computeDAGLayout,
+  octaneToReactFlow,
+  reactFlowToOctane,
+} from '../../utils/NodeLayoutUtils';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
 
@@ -157,13 +161,19 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         setTimeout(() => fitView({ padding: 0.2, duration: FIT_VIEW_DURATION }), 50);
 
         // Persist positions to Octane so they survive a scene reload
+        // Convert ReactFlow top-left positions to Octane center-based positions
         const cl = clientRef.current;
         const conn = connectedRef.current;
         if (cl && conn) {
           for (const [nodeId, pos] of positions) {
             const handle = Number(nodeId);
             if (handle) {
-              cl.setNodePosition(handle, pos.x, pos.y).catch(err => {
+              const node = currentNodes.find(n => n.id === nodeId);
+              const nodeData = node?.data as OctaneNodeData | undefined;
+              const inputCount = nodeData?.inputs?.length ?? 0;
+              const nodeName = nodeData?.sceneNode?.name || nodeData?.sceneNode?.type;
+              const octanePos = reactFlowToOctane(pos, inputCount, nodeName);
+              cl.setNodePosition(handle, octanePos.x, octanePos.y).catch(err => {
                 Logger.error('Failed to save layout position:', err);
               });
             }
@@ -185,11 +195,18 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           // Only save when drag is complete (dragging=false)
           const nodeId = change.id;
           const nodeHandle = Number(nodeId);
-          const { x, y } = change.position;
 
           if (client && connected && nodeHandle) {
-            Logger.debug(`Saving node position: handle=${nodeHandle}, x=${x}, y=${y}`);
-            client.setNodePosition(nodeHandle, x, y).catch(error => {
+            // Convert ReactFlow top-left position to Octane center-based position
+            const node = nodesRef.current.find(n => n.id === nodeId);
+            const nodeData = node?.data as OctaneNodeData | undefined;
+            const inputCount = nodeData?.inputs?.length ?? 0;
+            const nodeName = nodeData?.sceneNode?.name || nodeData?.sceneNode?.type;
+            const octanePos = reactFlowToOctane(change.position, inputCount, nodeName);
+            Logger.debug(
+              `Saving node position: handle=${nodeHandle}, x=${octanePos.x}, y=${octanePos.y}`
+            );
+            client.setNodePosition(nodeHandle, octanePos.x, octanePos.y).catch(error => {
               Logger.error('Failed to save node position:', error);
             });
           }
@@ -207,7 +224,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   const multiConnectSourcesRef = useRef<string[]>([]); // Selected node IDs to connect
 
   // Track connection line color during drag (matches source pin color)
-  const [connectionLineColor, setConnectionLineColor] = useState('#ffc107');
+  const [connectionLineColor, setConnectionLineColor] = useState('#9a7b20');
   const connectingEdgeRef = useRef<Edge | null>(null); // Track if creating new connection vs reconnecting
 
   /**
@@ -301,8 +318,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         };
 
         // Use position from Octane if available, otherwise calculate default position
+        // Octane stores center-based positions; ReactFlow uses top-left corner
         const nodePosition = item.position
-          ? { x: item.position.x, y: item.position.y }
+          ? octaneToReactFlow(item.position, inputs.length, item.name || item.type)
           : { x: 100 + index * nodeSpacing, y: yCenter + index * 20 };
 
         const node: Node<OctaneNodeData> = {
@@ -442,8 +460,13 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       const newReactFlowNode: Node<OctaneNodeData> = {
         id: handleStr,
         type: 'octane',
+        // Octane stores center-based positions; ReactFlow uses top-left corner
         position: event.node.position
-          ? { x: event.node.position.x, y: event.node.position.y }
+          ? octaneToReactFlow(
+              event.node.position,
+              inputHandles.length,
+              event.node.name || event.node.type
+            )
           : { x: nodeIndex * nodeSpacing, y: yCenter },
         data: {
           sceneNode: event.node,
@@ -545,7 +568,10 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
       const newReactFlowNode: Node<OctaneNodeData> = {
         id: handleStr,
         type: 'octane',
-        position: node.position ? { x: node.position.x, y: node.position.y } : { x: 100, y: 300 },
+        // Octane stores center-based positions; ReactFlow uses top-left corner
+        position: node.position
+          ? octaneToReactFlow(node.position, inputHandles.length, node.name || node.type)
+          : { x: 100, y: 300 },
         data: {
           sceneNode: node,
           inputs: inputHandles,
@@ -823,7 +849,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           selectable: true,
           focusable: true,
           interactionWidth: 20, // ReactFlow v12: wider click area for easier selection
-          style: { stroke: '#ffc107', strokeWidth: 3 },
+          style: { stroke: '#9a7b20', strokeWidth: 3 },
         }}
         connectionLineStyle={{
           stroke: connectionLineColor,
@@ -854,14 +880,15 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           style={{
             width: 160,
             height: 120,
-            background: 'rgba(70, 68, 50, 0.95)',
-            border: '2px solid rgba(200, 180, 80, 0.8)',
+            background: 'rgba(62, 61, 49, 0.95)',
+            border: '2px solid rgba(180, 162, 75, 0.75)',
             borderRadius: 4,
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
             margin: 0,
             padding: 0,
+            overflow: 'hidden',
           }}
-          maskColor="rgba(70, 68, 50, 0.6)"
+          maskColor="rgba(62, 61, 49, 0.6)"
           maskStrokeColor="transparent"
           maskStrokeWidth={0}
           pannable={true}

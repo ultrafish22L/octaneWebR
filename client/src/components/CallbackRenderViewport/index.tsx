@@ -369,68 +369,57 @@ export const CallbackRenderViewport = React.memo(
             )}
             <canvas ref={canvasRef} className="render-canvas" style={canvasStyle} />
 
-            {/* World Coordinate Axis Overlay - Octane SE Manual: Display World Coordinate */}
-            {showWorldCoord && frameCount > 0 && (
-              <div
-                className="world-coord-axis"
-                style={{
-                  position: 'absolute',
-                  top: '16px',
-                  left: '16px',
-                  width: '60px',
-                  height: '60px',
-                  pointerEvents: 'none',
-                  zIndex: 10,
-                }}
-              >
-                <svg width="60" height="60" viewBox="0 0 60 60">
-                  {/* X Axis - Red */}
-                  <line
-                    x1="30"
-                    y1="30"
-                    x2="54"
-                    y2="30"
-                    stroke="#ff3333"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <text x="56" y="34" fill="#ff3333" fontSize="12" fontWeight="bold">
-                    X
-                  </text>
-
-                  {/* Y Axis - Green */}
-                  <line
-                    x1="30"
-                    y1="30"
-                    x2="30"
-                    y2="6"
-                    stroke="#33ff33"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <text x="26" y="4" fill="#33ff33" fontSize="12" fontWeight="bold">
-                    Y
-                  </text>
-
-                  {/* Z Axis - Blue */}
-                  <line
-                    x1="30"
-                    y1="30"
-                    x2="14"
-                    y2="44"
-                    stroke="#3333ff"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <text x="8" y="52" fill="#3333ff" fontSize="12" fontWeight="bold">
-                    Z
-                  </text>
-
-                  {/* Origin Circle */}
-                  <circle cx="30" cy="30" r="3" fill="#ffffff" stroke="#888" strokeWidth="1" />
-                </svg>
-              </div>
-            )}
+            {/* World Coordinate Axis Overlay - Rotates with camera like Octane SE */}
+            {showWorldCoord &&
+              frameCount > 0 &&
+              (() => {
+                // Project 3D world axes to 2D using camera orientation
+                const { theta, phi } = cameraRef.current;
+                const cosT = Math.cos(theta),
+                  sinT = Math.sin(theta);
+                const cosP = Math.cos(phi),
+                  sinP = Math.sin(phi);
+                // Project world axes using real Octane coordinates
+                // (internal camera convention swaps X/Z, so swap sinT/cosT)
+                const axisLen = 22;
+                const cx = 30,
+                  cy = 30;
+                const axes = [
+                  { dx: sinT, dy: cosT * sinP, color: '#ff3333' }, // X = (1,0,0)
+                  { dx: 0, dy: -cosP, color: '#33ff33' }, // Y = (0,1,0)
+                  { dx: -cosT, dy: sinT * sinP, color: '#3333ff' }, // Z = (0,0,1)
+                ];
+                return (
+                  <div
+                    className="world-coord-axis"
+                    style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      width: '60px',
+                      height: '60px',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                    }}
+                  >
+                    <svg width="60" height="60" viewBox="0 0 60 60">
+                      {axes.map((a, i) => (
+                        <line
+                          key={i}
+                          x1={cx}
+                          y1={cy}
+                          x2={cx + a.dx * axisLen}
+                          y2={cy + a.dy * axisLen}
+                          stroke={a.color}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      ))}
+                      <circle cx={cx} cy={cy} r="2" fill="#ffffff" stroke="#888" strokeWidth="1" />
+                    </svg>
+                  </div>
+                );
+              })()}
 
             {/* Render Region Selection Overlay - Octane SE Manual: Render Region */}
             {isSelectingRegion && regionStart && regionEnd && (

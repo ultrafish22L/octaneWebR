@@ -34,6 +34,6 @@ export function getPinColor(pinInfo: PinColorInfo | null | undefined): string {
       return info.color;
     }
   }
-  // Final fallback to amber
-  return '#ffc107';
+  // Final fallback to muted amber
+  return '#9a7b20';
 }

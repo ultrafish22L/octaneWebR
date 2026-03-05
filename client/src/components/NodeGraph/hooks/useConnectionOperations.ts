@@ -84,7 +84,7 @@ export function useConnectionOperations({
       const nodeData = sourceNode.data as OctaneNodeData;
 
       // Get handle color based on type (source = output, target = input)
-      let handleColor = '#ffc107'; // Default color
+      let handleColor = '#9a7b20'; // Default color
 
       // Get color with proper fallback (Octane → local mapping → default)
       if (handleType === 'source' && nodeData.output?.pinInfo) {
@@ -140,7 +140,7 @@ export function useConnectionOperations({
     Logger.debug('Connection drag ended');
 
     // Reset state
-    setConnectionLineColor('#ffc107'); // Reset to default
+    setConnectionLineColor('#9a7b20'); // Reset to default
     connectingEdgeRef.current = null;
 
     // Reset multi-connect state

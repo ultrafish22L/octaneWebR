@@ -157,52 +157,12 @@ input:checked + .slider:before {
   justify-content: flex-start;
 }
 
+/* .outliner-btn base styles defined in render-viewport.css (shared icon button) */
+/* Size override for outliner buttons */
 .outliner-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 3px 6px;
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-small);
   width: 24px;
   height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.outliner-btn:hover,
-.outliner-btn:focus-visible {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent-blue);
-}
-
-.outliner-btn:active {
-  background: var(--accent-blue);
-  color: white;
-}
-
-.outliner-btn.active {
-  background: var(--accent-red);
-  color: white;
-  border-color: var(--accent-red);
-}
-
-.outliner-btn.disabled {
-  background: var(--bg-secondary);
-  color: var(--text-disabled);
-  border-color: var(--border);
-  cursor: not-allowed;
-  opacity: var(--opacity-medium);
-}
-
-.outliner-btn.disabled:hover {
-  background: var(--bg-secondary);
-  color: var(--text-disabled);
-  border-color: var(--border);
+  padding: 3px 6px;
 }
 
 /* Scene Outliner Tabs - Official OTOY Three-Tab System */
@@ -341,7 +301,7 @@ input:checked + .slider:before {
 }
 
 .scene-tab-content .tree-node.selected {
-  background-color: var(--accent-blue);
+  background-color: transparent;
   color: white;
 }
 
@@ -368,9 +328,10 @@ input:checked + .slider:before {
 }
 
 .scene-tab-content .node-toggle {
-  width: 12px;
+  width: 14px;
+  height: 14px;
   text-align: center;
-  font-size: var(--font-size-small);
+  font-size: 9px;
   cursor: pointer;
   color: var(--text-secondary);
 }
@@ -509,10 +470,17 @@ input:checked + .slider:before {
 }
 
 .tree-node.selected {
-  background-color: var(
-    --selection-highlight
-  ) !important; /* Subtle dark orange matching Octane SE */
-  color: var(--text-primary) !important; /* Keep text white for readability */
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+/* Selection highlight only on icon + name, not full row — Octane gold 3D */
+.tree-node.selected .node-label-area {
+  background: linear-gradient(to bottom, #b89a00 0%, #9a8200 40%, #7a6800 100%);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* Scene node content layout */
@@ -524,21 +492,32 @@ input:checked + .slider:before {
 }
 
 .node-toggle {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-tiny);
-  color: var(--connection-line);
+  font-size: 9px;
+  color: var(--text-muted);
   cursor: pointer;
-  margin-right: 2px;
+  margin-right: 4px;
+  border: 1px solid #555;
+  background-color: #3a3a3a;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 /* Toggle symbols rendered by JSX text content in VirtualTreeRow.tsx */
 
 .node-toggle:hover {
-  border-radius: var(--border-radius);
+  border-color: var(--text-muted);
+}
+
+/* Spacer matches toggle width for icon alignment */
+.node-spacer {
+  width: 14px;
+  margin-right: 4px;
+  flex-shrink: 0;
 }
 
 .node-icon {
@@ -548,12 +527,20 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-large); /* 14px */
+  margin-right: 4px;
 }
 
 .node-name {
   flex: 1;
   font-size: var(--font-size-small);
   color: inherit;
+}
+
+/* Label area wrapper for selection highlight (icon + name only) */
+.node-label-area {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 2px;
 }
 
 .node-handle {
@@ -574,37 +561,104 @@ input:checked + .slider:before {
   margin-left: auto;
 }
 
-.node-spacer {
-  width: 14px;
+/* Scene tree nodes: remove vertical padding so guides fill full row height */
+.scene-tree .tree-node {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-/* Tree indentation levels */
-.tree-node.level-0 .node-content {
+/* Tree indentation — base padding, guides provide depth */
+/* gap:0 overrides .scene-tab-content gap so vertical guide lines align between rows */
+.tree-node .node-content {
   padding-left: 4px;
+  gap: 0;
+  height: 100%;
 }
 
-.tree-node.level-1 .node-content {
-  padding-left: 18px;
+/* ── Tree connector guide elements (ancestor through-lines only) ── */
+.tree-guide {
+  width: 20px;
+  align-self: stretch;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.tree-node.level-2 .node-content {
-  padding-left: 32px;
+/* Vertical through-line (ancestor still has siblings below) */
+.tree-guide.guide-through::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #333;
 }
 
-.tree-node.level-3 .node-content {
-  padding-left: 46px;
+/* Empty guide — ancestor was last child, no vertical line */
+.tree-guide.guide-empty {
+  /* intentionally blank */
 }
 
-.tree-node.level-4 .node-content {
-  padding-left: 60px;
+/* ── Own-level connector: vertical line drawn on tree-node, behind the toggle ── */
+/* First child & mid-sibling: vertical line from top to bottom (continues from parent) */
+.tree-node.child-first::before,
+.tree-node.child-mid::before {
+  content: '';
+  position: absolute;
+  left: var(--connector-x);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #333;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.tree-node.level-5 .node-content {
-  padding-left: 74px;
+/* Last child or only child: vertical line from top to center */
+.tree-node.child-last::before,
+.tree-node.child-only::before {
+  content: '';
+  position: absolute;
+  left: var(--connector-x);
+  top: 0;
+  height: 50%;
+  width: 2px;
+  background-color: #333;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.tree-node.level-6 .node-content {
-  padding-left: 88px;
+/* ── Horizontal stub: connects own-level vertical line to this node's icon ── */
+.tree-node.child-first::after,
+.tree-node.child-mid::after,
+.tree-node.child-last::after,
+.tree-node.child-only::after {
+  content: '';
+  position: absolute;
+  left: var(--connector-x);
+  top: 50%;
+  width: 16px;
+  height: 2px;
+  background-color: #333;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Expanded parent connector: vertical line from center to bottom at children's X ── */
+.connector-to-children {
+  position: absolute;
+  top: 50%;
+  bottom: 0;
+  width: 2px;
+  background-color: #333;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Node content sits above the connector line */
+.tree-node .node-content {
+  position: relative;
+  z-index: 1;
 }
 
 .tree-toggle {

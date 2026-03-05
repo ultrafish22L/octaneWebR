@@ -341,41 +341,7 @@
   min-width: 80px;
 }
 
-.quick-btn {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 3px 2px 3px 2px;
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-small);
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  position: relative;
-}
-
-.quick-btn:hover,
-.quick-btn:focus-visible {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent-blue);
-  z-index: var(--z-low);
-}
-
-.quick-btn:active {
-  background: var(--accent-blue);
-  color: white;
-}
-
-.quick-btn.active {
-  background: var(--accent-red);
-  color: white;
-  border-color: var(--accent-red);
-}
+/* .quick-btn base styles defined in render-viewport.css (shared icon button) */
 
 .controls-spacer {
   width: 4px;
@@ -645,6 +611,12 @@
 .node-box {
   position: relative;
   background: var(--bg-secondary);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 35%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
@@ -720,7 +692,11 @@
   border: 1px solid var(--highlight-medium); /* More visible border */
   background: var(--overlay-subtle); /* Subtle background for better contrast */
   box-shadow: 0 1px 2px var(--overlay-subtle); /* Subtle shadow for depth */
+  filter: brightness(0.7); /* Darken colored caps to match Octane */
+  overflow: hidden;
 }
+
+/* 3D bevel on icon box inherits from parent .node-box gradient */
 
 /* Node content area with improved spacing - ONLY for Node Inspector */
 .node-inspector .node-content {
@@ -1171,33 +1147,11 @@
   padding: 2px 0;
 }
 
+/* .filenode-toolbar-btn base styles defined in render-viewport.css (shared icon button) */
+/* Size override for file node toolbar buttons */
 .filenode-toolbar-btn {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  padding: 3px 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-width: 24px;
-  height: 22px;
-  transition: background-color 0.2s;
-}
-
-.filenode-toolbar-btn:hover:not(:disabled),
-.filenode-toolbar-btn:focus-visible:not(:disabled) {
-  background-color: var(--bg-hover);
-  border-color: var(--accent-blue);
-}
-
-.filenode-toolbar-btn:active:not(:disabled) {
-  background-color: var(--bg-active);
-}
-
-.filenode-toolbar-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  padding: 3px 6px;
 }
 
 .filenode-toolbar-btn img {

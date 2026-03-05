@@ -55,7 +55,7 @@
 
   /* Octane Accent Colors */
   --accent: #ff8c00; /* Primary accent - Octane orange */
-  --accent-yellow: #9a7b20; /* Selection yellow/gold - muted to match Octane */
+  --accent-yellow: #ffc107; /* Selection yellow/gold - matches Octane */
   --accent-green: #5cb85c; /* Success green */
   --accent-red: #d9534f; /* Error red */
   --accent-blue: #3a9bd9; /* Info/link blue */
@@ -199,4 +199,8 @@
   --border-radius-2xl: 18px; /* Very large radius (special elements) */
   --border-radius-3xl: 20px; /* Huge radius (rare usage) */
   --border-radius-circle: 50%; /* Perfect circle */
+
+  /* Vibe theme overrides (active when this theme replaces theme-octane) */
+  --vibe-status-rendering: #3a9bd9; /* Blue rendering text (Octane uses white) */
+  --vibe-status-finished: #3a9bd9; /* Blue finished text (Octane uses white) */
 }

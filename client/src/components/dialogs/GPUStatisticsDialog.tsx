@@ -175,7 +175,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
       {/* Backdrop */}
       <div className="gpu-statistics-backdrop" role="presentation" onClick={onClose} />
 
-      {/* Dialog — Octane SE style compact info panel */}
+      {/* Dialog — Octane SE style compact tooltip panel */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
@@ -204,27 +204,32 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
               {devices[0].geometry && (
                 <div className="gpu-stats-section">
                   <div className="gpu-stats-label">Geometry statistics:</div>
-                  <ul className="gpu-stats-list">
-                    <li>Triangles: {formatNumber(devices[0].geometry.triangles)}</li>
+                  <div className="gpu-stats-bullets">
+                    <div>&#8226; Triangles: {formatNumber(devices[0].geometry.triangles)}</div>
                     {devices[0].geometry.dispTriangles > 0 && (
-                      <li>
-                        Displaced triangles: {formatNumber(devices[0].geometry.dispTriangles)}
-                      </li>
+                      <div>
+                        &#8226; Displaced triangles:{' '}
+                        {formatNumber(devices[0].geometry.dispTriangles)}
+                      </div>
                     )}
                     {devices[0].geometry.hairSegments > 0 && (
-                      <li>Hair segments: {formatNumber(devices[0].geometry.hairSegments)}</li>
+                      <div>
+                        &#8226; Hair segments: {formatNumber(devices[0].geometry.hairSegments)}
+                      </div>
                     )}
                     {devices[0].geometry.voxels > 0 && (
-                      <li>Voxels: {formatNumber(devices[0].geometry.voxels)}</li>
+                      <div>&#8226; Voxels: {formatNumber(devices[0].geometry.voxels)}</div>
                     )}
                     {devices[0].geometry.gaussianSplats > 0 && (
-                      <li>Gaussian splats: {formatNumber(devices[0].geometry.gaussianSplats)}</li>
+                      <div>
+                        &#8226; Gaussian splats: {formatNumber(devices[0].geometry.gaussianSplats)}
+                      </div>
                     )}
                     {devices[0].geometry.spheres > 0 && (
-                      <li>Spheres: {formatNumber(devices[0].geometry.spheres)}</li>
+                      <div>&#8226; Spheres: {formatNumber(devices[0].geometry.spheres)}</div>
                     )}
-                    <li>Meshes: {formatNumber(devices[0].geometry.instances)}</li>
-                  </ul>
+                    <div>&#8226; Meshes: {formatNumber(devices[0].geometry.instances)}</div>
+                  </div>
                 </div>
               )}
 
@@ -232,46 +237,52 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
               {devices[0].textures && (
                 <div className="gpu-stats-section">
                   <div className="gpu-stats-label">Textures used:</div>
-                  <ul className="gpu-stats-list">
-                    <li>LDR RGB: {formatNumber(devices[0].textures.rgba32)}</li>
-                    <li>HDR RGB: {formatNumber(devices[0].textures.rgba64)}</li>
-                    <li>LDR grayscale: {formatNumber(devices[0].textures.y8)}</li>
-                    <li>HDR grayscale: {formatNumber(devices[0].textures.y16)}</li>
-                  </ul>
+                  <div className="gpu-stats-bullets">
+                    <div>&#8226; LDR RGB: {formatNumber(devices[0].textures.rgba32)}</div>
+                    <div>&#8226; HDR RGB: {formatNumber(devices[0].textures.rgba64)}</div>
+                    <div>&#8226; LDR grayscale: {formatNumber(devices[0].textures.y8)}</div>
+                    <div>&#8226; HDR grayscale: {formatNumber(devices[0].textures.y16)}</div>
+                  </div>
                 </div>
               )}
 
               {/* Scene size */}
-              <div className="gpu-stats-line">Scene size: {formatGB(sceneSize)} GB</div>
+              <div className="gpu-stats-section">
+                <div>Scene size: {formatGB(sceneSize)} GB</div>
+              </div>
 
               {/* Per-device info */}
               {devices.map(device => (
                 <div key={device.index} className="gpu-stats-section">
                   <div className="gpu-stats-label">{device.name}:</div>
                   {device.memory && (
-                    <ul className="gpu-stats-list">
-                      <li>
-                        Used: {formatGB(device.memory.used)} GB
+                    <div className="gpu-stats-bullets">
+                      <div>
+                        &#8226; Used: {formatGB(device.memory.used)} GB
                         {' \u2022 '}
                         Available: {formatGB(device.memory.free)} GB
-                      </li>
-                      <li>Total: {formatGB(device.memory.total)} GB</li>
-                      <li>HW ray-tracing: On</li>
-                    </ul>
+                      </div>
+                      <div>&#8226; Total: {formatGB(device.memory.total)} GB</div>
+                      <div>&#8226; HW ray-tracing: On</div>
+                    </div>
                   )}
                 </div>
               ))}
 
               {/* Out-of-core memory */}
               {devices[0].memory && (
-                <div className="gpu-stats-line">
-                  Out-of-core memory used: {formatGB(devices[0].memory.outOfCore)}/
-                  {formatGB(4 * 1024 * 1024 * 1024)} GB
+                <div className="gpu-stats-section">
+                  <div>
+                    Out-of-core memory used: {formatGB(devices[0].memory.outOfCore)}/
+                    {formatGB(4 * 1024 * 1024 * 1024)} GB
+                  </div>
                 </div>
               )}
 
               {/* Display color profile */}
-              <div className="gpu-stats-line">Display color profile: sRGB</div>
+              <div className="gpu-stats-section">
+                <div>Display color profile: sRGB</div>
+              </div>
             </>
           )}
         </div>

@@ -12,7 +12,6 @@ import React, {
   useMemo,
   useEffect,
 } from 'react';
-import { APP_VERSION } from '../config/apiVersionConfig';
 
 interface StatusMessageContextValue {
   statusMessage: string;
@@ -23,7 +22,7 @@ interface StatusMessageContextValue {
 
 const StatusMessageContext = createContext<StatusMessageContextValue | null>(null);
 
-const DEFAULT_MESSAGE = `OctaneWebR v${APP_VERSION}`;
+const DEFAULT_MESSAGE = 'Ready';
 
 export function StatusMessageProvider({ children }: { children: React.ReactNode }) {
   const [statusMessage, setStatusMessageState] = useState<string>(DEFAULT_MESSAGE);
@@ -45,7 +44,7 @@ export function StatusMessageProvider({ children }: { children: React.ReactNode 
     setStatusMessageState(DEFAULT_MESSAGE);
   }, []);
 
-  const setTemporaryStatus = useCallback((message: string, duration: number = 3000) => {
+  const setTemporaryStatus = useCallback((message: string, duration: number = 6000) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }

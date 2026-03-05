@@ -592,41 +592,7 @@
   position: relative;
 }
 
-.toolbar-button {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 3px 2px 3px 2px;
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-small);
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  position: relative;
-}
-
-.toolbar-button:hover,
-.toolbar-button:focus-visible {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent-blue);
-  z-index: var(--z-low);
-}
-
-.toolbar-button:active {
-  background: var(--accent-blue);
-  color: white;
-}
-
-.toolbar-button.active {
-  background: var(--accent-red);
-  color: white;
-  border-color: var(--accent-red);
-}
+/* .toolbar-button base styles defined in render-viewport.css (shared icon button) */
 
 .toolbar-button svg {
   pointer-events: none;
@@ -642,7 +608,7 @@
  * Matches Octane SE dark theme - Uses CSS variables for theme support
  */
 
-/* GPU Statistics — Octane SE style compact info panel */
+/* GPU Statistics — Octane SE style compact tooltip panel */
 .gpu-statistics-backdrop {
   position: fixed;
   top: 0;
@@ -658,58 +624,59 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  max-width: 90vw;
+  max-width: 420px;
   max-height: 80vh;
-  background-color: var(--viewport-bg);
-  border: 1px solid var(--border);
+  background-color: #404040;
+  border: 1px solid #222;
   z-index: var(--z-dialog);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-size: var(--font-size-medium);
-  color: var(--text-secondary);
-  line-height: var(--line-height-normal);
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+  color: #ccc;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .gpu-statistics-content {
-  padding: 10px 14px;
+  padding: 8px 12px;
   overflow-y: auto;
   flex: 1;
 }
 
 .gpu-stats-section {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.gpu-stats-section:last-child {
+  margin-bottom: 0;
 }
 
 .gpu-stats-label {
-  color: var(--text-primary);
+  color: #eee;
+  font-weight: normal;
 }
 
-.gpu-stats-list {
-  margin: 0;
-  padding: 0 0 0 16px;
-  list-style: disc;
+.gpu-stats-bullets {
+  padding-left: 4px;
 }
 
-.gpu-stats-list li {
+.gpu-stats-bullets > div {
   padding: 0;
   margin: 0;
 }
 
-.gpu-stats-line {
-  margin-bottom: 4px;
-}
-
 .gpu-statistics-loading {
   text-align: center;
-  padding: 20px;
-  color: var(--text-secondary);
+  padding: 16px;
+  color: #ccc;
 }
 
 .gpu-statistics-empty {
   text-align: center;
-  padding: 20px;
-  color: var(--text-secondary);
+  padding: 16px;
+  color: #ccc;
 }
 
 /* ====================================================================== */

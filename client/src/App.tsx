@@ -21,6 +21,7 @@ import { OctaneProvider, useOctane } from './hooks/useOctane';
 import { useResizablePanels } from './hooks/useResizablePanels';
 import { EditActionsProvider } from './contexts/EditActionsContext';
 import { StatusMessageProvider, useStatusMessage } from './contexts/StatusMessageContext';
+import { APP_VERSION } from './config/apiVersionConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
 import { MenuBar } from './components/MenuBar';
@@ -542,20 +543,6 @@ function AppContent() {
           <section className="center-panel" style={{ gridColumn: '3 / 4', gridRow: '1 / 2' }}>
             <div className="viewport-header">
               <div className="viewport-title">Render viewport - Render target @ 100%</div>
-              <div className="viewport-controls">
-                <button className="viewport-btn" title="Fit to Window">
-                  ⊞
-                </button>
-                <button className="viewport-btn" title="Actual Size">
-                  1:1
-                </button>
-                <button className="viewport-btn" title="Zoom In">
-                  +
-                </button>
-                <button className="viewport-btn" title="Zoom Out">
-                  -
-                </button>
-              </div>
             </div>
 
             <div className="viewport-container">
@@ -692,7 +679,9 @@ function AppContent() {
           <span className="status-item">{statusMessage}</span>
         </div>
         <div className="status-center"></div>
-        <div className="status-right"></div>
+        <div className="status-right">
+          <span className="status-item">OctaneWebR v{APP_VERSION}</span>
+        </div>
       </footer>
 
       {/* Material Database Modal */}

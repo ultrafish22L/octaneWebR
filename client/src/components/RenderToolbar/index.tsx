@@ -74,6 +74,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     client,
     state,
     setState,
+    renderStats,
     setRenderStats,
     onRecenterView,
     onCopyToClipboard,
@@ -209,7 +210,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     // Object Manipulation
     {
       id: 'object-control-alignment',
-      tooltip: 'Object Control Alignment - World or local coordinate system.',
+      tooltip: 'Toggle the current gizmo mode',
     },
     { id: 'translate-gizmo', tooltip: 'Placement Translation Tool - Move objects along axes.' },
     { id: 'rotate-gizmo', tooltip: 'Placement Rotation Tool - Rotate objects around axes.' },
@@ -250,6 +251,14 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     [applyRenderPriority]
   );
 
+  // Gizmo mode handlers
+  const handleLocalModeClick = useCallback(() => {
+    setState(prev => ({ ...prev, objectControlMode: 'local', showGizmoModeMenu: false }));
+  }, [setState]);
+  const handleWorldModeClick = useCallback(() => {
+    setState(prev => ({ ...prev, objectControlMode: 'world', showGizmoModeMenu: false }));
+  }, [setState]);
+
   // Handle right-click on render progress indicator or GPU info bar
   const handleStatsContextMenu = useCallback(
     (event: React.MouseEvent) => {
@@ -267,55 +276,41 @@ export const RenderToolbar = React.memo(function RenderToolbar({
         <div
           className="render-stats-left"
           onContextMenu={handleStatsContextMenu}
-          style={{
-            cursor: 'context-menu',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
+          style={{ cursor: 'context-menu' }}
           title="Right-click for GPU resource statistics"
         >
-          {/* Progress Bar */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: `${renderStats.progressPercent}%`,
-              backgroundColor: 'rgba(0, 150, 255, 0.15)',
-              transition: 'width 0.3s ease',
-              pointerEvents: 'none',
-              zIndex: 0,
-            }}
-          />
+          {/* Sample Progress Bar - fixed-width container with fill */}
+          <div className="stats-progress-track">
+            <div
+              className="stats-progress-fill"
+              style={{ width: `${Math.max(renderStats.progressPercent, 0)}%` }}
+            />
+          </div>
 
-          {/* Stats Text (above progress bar) */}
+          {/* Stats Text */}
+          <span id="render-samples-display">
+            {renderStats.currentSamples}/{renderStats.denoisedSamples}/{renderStats.maxSamples} s/px
+            {Math.round(renderStats.megaSamplesPerSec) > 0 ? ',' : ''}
+          </span>
+          {Math.round(renderStats.megaSamplesPerSec) > 0 && (
+            <span id="render-speed-display">
+              {Math.round(renderStats.megaSamplesPerSec)} Ms/sec,
+            </span>
+          )}
+          <span id="render-time-display">
+            {renderStats.currentTime}/{renderStats.estimatedTime}
+          </span>
           <span
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
+            id="render-status-display"
+            className={`render-status-${renderStats.maxSamples > 0 && renderStats.currentSamples >= renderStats.maxSamples ? 'finished' : renderStats.status}`}
           >
-            <span id="render-samples-display" style={{ fontWeight: 500 }}>
-              {renderStats.currentSamples}/{renderStats.denoisedSamples}/{renderStats.maxSamples}{' '}
-              s/px{Math.round(renderStats.megaSamplesPerSec) > 0 ? ',' : ''}
-            </span>
-            {Math.round(renderStats.megaSamplesPerSec) > 0 && (
-              <span id="render-speed-display">
-                {Math.round(renderStats.megaSamplesPerSec)} Ms/sec,
-              </span>
-            )}
-            <span id="render-time-display">
-              {renderStats.currentTime}/{renderStats.estimatedTime}
-            </span>
-            <span id="render-status-display" className={`render-status-${renderStats.status}`}>
-              ({renderStats.status === 'rendering' ? 'rendering...' : renderStats.status})
-            </span>
+            (
+            {renderStats.maxSamples > 0 && renderStats.currentSamples >= renderStats.maxSamples
+              ? 'finished'
+              : renderStats.status === 'rendering'
+                ? 'rendering...'
+                : renderStats.status}
+            )
           </span>
         </div>
         <div
@@ -327,9 +322,16 @@ export const RenderToolbar = React.memo(function RenderToolbar({
           <span id="render-primitive-count">{renderStats.primitiveCount} pri,</span>
           <span id="render-mesh-count">{renderStats.meshCount} mesh,</span>
           <span id="render-gpu-info">{renderStats.gpu},</span>
-          <span id="render-memory-combined">
-            {renderStats.version}/{renderStats.memory}
-          </span>
+          <span id="render-memory-combined">{renderStats.memory}</span>
+          {/* GPU Memory Progress Bar - matches left side style */}
+          <div className="stats-progress-track">
+            <div
+              className="stats-progress-fill"
+              style={{
+                width: `${renderStats.totalMemoryGB > 0 ? Math.min(100, (renderStats.usedMemoryGB / renderStats.totalMemoryGB) * 100) : 0}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -347,7 +349,16 @@ export const RenderToolbar = React.memo(function RenderToolbar({
               important?: boolean;
             };
 
-            const iconPath = getToolbarIconPath(id);
+            // Dynamic icons: gizmo alignment and lock switch based on state
+            const iconKey =
+              id === 'object-control-alignment'
+                ? `object-control-alignment-${state.objectControlMode}`
+                : id === 'lock-viewport'
+                  ? state.viewportLocked
+                    ? 'lock-viewport'
+                    : 'unlock-viewport'
+                  : id;
+            const iconPath = getToolbarIconPath(iconKey);
 
             return (
               <button
@@ -414,6 +425,38 @@ export const RenderToolbar = React.memo(function RenderToolbar({
                 className={`render-priority-item ${state.renderPriority === 'high' ? 'active' : ''}`}
               >
                 High Priority
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Gizmo Mode Menu - Dropdown for world/local coordinate mode */}
+        {state.showGizmoModeMenu && (
+          <div className="gizmo-mode-menu">
+            <div className="gizmo-mode-menu-items">
+              <button
+                onClick={handleLocalModeClick}
+                className={`gizmo-mode-item ${state.objectControlMode === 'local' ? 'active' : ''}`}
+              >
+                <img
+                  src={getToolbarIconPath('object-control-alignment-local')}
+                  alt=""
+                  className="gizmo-mode-icon"
+                  draggable={false}
+                />
+                Local mode
+              </button>
+              <button
+                onClick={handleWorldModeClick}
+                className={`gizmo-mode-item ${state.objectControlMode === 'world' ? 'active' : ''}`}
+              >
+                <img
+                  src={getToolbarIconPath('object-control-alignment-world')}
+                  alt=""
+                  className="gizmo-mode-icon"
+                  draggable={false}
+                />
+                World mode
               </button>
             </div>
           </div>

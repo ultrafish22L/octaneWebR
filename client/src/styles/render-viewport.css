@@ -724,23 +724,40 @@
   gap: var(--spacing-md);
 }
 
+/* Sample progress bar - Octane-style fixed-width track with fill */
+.stats-progress-track {
+  width: 100px;
+  height: 10px;
+  background-color: #1a1a1a;
+  border-top: 1px solid #000;
+  border-left: 1px solid #000;
+  border-bottom: 1px solid #aaa;
+  border-right: 1px solid #aaa;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.stats-progress-fill {
+  height: 100%;
+  background-color: #707070;
+  transition: width 0.3s ease;
+}
+
 .stats-separator {
   color: var(--text-muted);
   margin: 0 2px;
 }
 
 #render-samples-display {
-  color: var(--text-primary);
-  font-weight: var(--font-weight-header);
+  color: var(--text-secondary);
 }
 
 #render-time-display {
-  color: var(--text-primary);
-  font-weight: var(--font-weight-header);
+  color: var(--text-secondary);
 }
 
 .render-status-rendering {
-  color: var(--accent-blue) !important;
+  color: var(--text-secondary);
 }
 
 .render-status-finished {
@@ -779,14 +796,16 @@
   display: none; /* Chrome/Safari */
 }
 
-.toolbar-icon-btn {
+/* Shared icon button base — used by all toolbars app-wide */
+.toolbar-icon-btn,
+.toolbar-button,
+.quick-btn,
+.outliner-btn,
+.filenode-toolbar-btn {
   background: none;
   border: 1px solid transparent;
   color: var(--text-secondary);
   padding: 3px;
-  font-size: var(--font-size-large);
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-normal);
   cursor: pointer;
   border-radius: var(--border-radius);
   transition: all 0.15s ease;
@@ -796,19 +815,78 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  line-height: var(--line-height-none);
+  font-size: var(--font-size-small);
+  position: relative;
 }
 
 .toolbar-icon-btn:hover,
-.toolbar-icon-btn:focus-visible {
+.toolbar-icon-btn:focus-visible,
+.toolbar-button:hover,
+.toolbar-button:focus-visible,
+.quick-btn:hover,
+.quick-btn:focus-visible,
+.outliner-btn:hover,
+.outliner-btn:focus-visible,
+.filenode-toolbar-btn:hover:not(:disabled),
+.filenode-toolbar-btn:focus-visible:not(:disabled) {
   background-color: var(--bg-hover);
   border-color: var(--border);
   color: var(--text-primary);
 }
 
-.toolbar-icon-btn:active {
+.toolbar-icon-btn:active,
+.toolbar-button:active,
+.quick-btn:active,
+.outliner-btn:active,
+.filenode-toolbar-btn:active:not(:disabled) {
   background-color: var(--bg-active);
-  border-color: var(--accent-blue);
+}
+
+/* Yellow highlight for toggled-on / active mode buttons */
+.toolbar-icon-btn.active,
+.toolbar-button.active,
+.quick-btn.active,
+.outliner-btn.active,
+.filenode-toolbar-btn.active {
+  background-color: rgba(180, 140, 20, 0.25);
+  border-color: rgba(180, 140, 20, 0.5);
+}
+
+.toolbar-icon-btn.active:hover,
+.toolbar-icon-btn.active:focus-visible,
+.toolbar-button.active:hover,
+.toolbar-button.active:focus-visible,
+.quick-btn.active:hover,
+.quick-btn.active:focus-visible,
+.outliner-btn.active:hover,
+.outliner-btn.active:focus-visible,
+.filenode-toolbar-btn.active:hover,
+.filenode-toolbar-btn.active:focus-visible {
+  background-color: rgba(180, 140, 20, 0.35);
+  border-color: rgba(180, 140, 20, 0.6);
+}
+
+/* Disabled state */
+.outliner-btn.disabled,
+.filenode-toolbar-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  opacity: var(--opacity-medium);
+}
+
+.outliner-btn.disabled:hover,
+.filenode-toolbar-btn:disabled:hover {
+  background: none;
+  border-color: transparent;
+  color: var(--text-disabled);
+}
+
+/* Renderbar-specific overrides */
+.toolbar-icon-btn {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-large);
+  line-height: var(--line-height-none);
 }
 
 .toolbar-icon-btn.important {
@@ -966,6 +1044,62 @@
   position: absolute;
   right: 12px;
   color: var(--accent-blue);
+}
+
+/* Gizmo Mode Menu */
+.gizmo-mode-menu {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 12px var(--shadow-heavy);
+  z-index: var(--z-modal-bg);
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.gizmo-mode-menu-items {
+  padding: 4px 0;
+}
+
+.gizmo-mode-item {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  text-align: left;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.gizmo-mode-item:hover,
+.gizmo-mode-item:focus-visible {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.gizmo-mode-item:active {
+  background-color: var(--bg-active);
+}
+
+.gizmo-mode-item.active {
+  background-color: var(--accent-blue-subtle);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.gizmo-mode-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 /* Legacy render controls (keep for compatibility) */

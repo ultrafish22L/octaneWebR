@@ -26,16 +26,87 @@ export interface LayoutPosition {
   y: number;
 }
 
+// ── Single scale factor for all node dimensions ────────────────────────────
+// Change this one value to resize nodes + pins uniformly.
+// 1.0 = original size, 0.75 = 75% etc.
+export const NODE_SCALE = 0.75;
+
+// Base (unscaled) dimensions — these define the 1.0× reference size
+const BASE_HEIGHT = 32;
+const BASE_MIN_WIDTH = 60;
+const BASE_MAX_WIDTH = 320;
+const BASE_PIN_SPACING = 30;
+const BASE_WIDTH_PAD = 40;
+const BASE_BORDER_RADIUS = 8;
+const BASE_PADDING_RIGHT = 10;
+const BASE_PADDING_LEFT = 32;
+const BASE_ICON_BOX = 26;
+const BASE_ICON_RADIUS = 7;
+const BASE_ICON_SIZE = 20;
+const BASE_FONT_SIZE = 11;
+const BASE_PIN_SIZE = 12;
+const BASE_PIN_BORDER = 2;
+const BASE_PIN_OFFSET = 2;
+
+// Scaled dimensions — imported by OctaneNode.tsx
+export const NODE_HEIGHT = Math.round(BASE_HEIGHT * NODE_SCALE);
+export const NODE_MIN_WIDTH = Math.round(BASE_MIN_WIDTH * NODE_SCALE);
+export const NODE_MAX_WIDTH = Math.round(BASE_MAX_WIDTH * NODE_SCALE);
+export const NODE_PIN_SPACING = Math.round(BASE_PIN_SPACING * NODE_SCALE);
+export const NODE_WIDTH_PAD = Math.round(BASE_WIDTH_PAD * NODE_SCALE);
+export const NODE_BORDER_RADIUS = Math.round(BASE_BORDER_RADIUS * NODE_SCALE);
+export const NODE_PADDING_RIGHT = Math.round(BASE_PADDING_RIGHT * NODE_SCALE);
+export const NODE_PADDING_LEFT = Math.round(BASE_PADDING_LEFT * NODE_SCALE);
+export const NODE_ICON_BOX = Math.round(BASE_ICON_BOX * NODE_SCALE);
+export const NODE_ICON_RADIUS = Math.round(BASE_ICON_RADIUS * NODE_SCALE);
+export const NODE_ICON_SIZE = Math.round(BASE_ICON_SIZE * NODE_SCALE);
+export const NODE_FONT_SIZE = Math.round(BASE_FONT_SIZE * NODE_SCALE);
+export const NODE_PIN_SIZE = Math.round(BASE_PIN_SIZE * NODE_SCALE);
+export const NODE_PIN_BORDER = +(BASE_PIN_BORDER * NODE_SCALE).toFixed(1);
+export const NODE_PIN_OFFSET = Math.round(BASE_PIN_OFFSET * NODE_SCALE);
+
+/** Average character width as a fraction of font size (Arial). */
+const CHAR_WIDTH_FACTOR = 0.62;
+
 /**
- * Estimate the rendered pixel width of a node based on its input count.
- * Must match OctaneNode.tsx: Math.max(180, inputCount * 30 + 40)
+ * Estimate the rendered pixel width of a node based on its input count
+ * and optional label text, clamped to [NODE_MIN_WIDTH, NODE_MAX_WIDTH].
  */
-function estimateNodeWidth(inputCount: number): number {
-  return Math.max(180, inputCount * 30 + 40);
+export function estimateNodeWidth(inputCount: number, label?: string): number {
+  const pinWidth = inputCount * NODE_PIN_SPACING + NODE_WIDTH_PAD;
+  const labelWidth = label
+    ? label.length * NODE_FONT_SIZE * CHAR_WIDTH_FACTOR + NODE_PADDING_LEFT + NODE_PADDING_RIGHT
+    : 0;
+  return Math.min(NODE_MAX_WIDTH, Math.max(NODE_MIN_WIDTH, pinWidth, labelWidth));
 }
 
-/** Fixed node height — OctaneNode renders at height:32 in its container div. */
-const NODE_HEIGHT = 32;
+/**
+ * Convert Octane center-based position to ReactFlow top-left position.
+ * Octane stores node position as the center of the node box;
+ * ReactFlow expects the top-left corner.
+ */
+export function octaneToReactFlow(
+  pos: { x: number; y: number },
+  inputCount: number,
+  label?: string
+): { x: number; y: number } {
+  const w = estimateNodeWidth(inputCount, label);
+  return { x: pos.x + w / 2, y: pos.y + NODE_HEIGHT / 2 };
+}
+
+/**
+ * Convert ReactFlow top-left position to Octane center-based position.
+ * ReactFlow stores node position as the top-left corner;
+ * Octane expects the center of the node box.
+ */
+export function reactFlowToOctane(
+  pos: { x: number; y: number },
+  inputCount: number,
+  label?: string
+): { x: number; y: number } {
+  const w = estimateNodeWidth(inputCount, label);
+  return { x: pos.x - w / 2, y: pos.y - NODE_HEIGHT / 2 };
+}
 
 /** Horizontal gap between columns (pixels). */
 const COL_GAP = 80;

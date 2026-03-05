@@ -19,7 +19,7 @@ import { FlattenedNode } from '../../utils/TreeFlattener';
 export const getNodeIcon = (node: SceneNode): string => {
   // Special case: Scene root
   if (node.type === 'SceneRoot' || node.name === 'Scene') {
-    return '/icons/SCENE node.png';
+    return '/icons/scene_node.png';
   }
 
   // Use getIconForType for consistent icon mapping
@@ -58,13 +58,28 @@ function VirtualTreeRowComponent(
 
   if (!flatNode) return null;
 
-  const { node, depth, hasChildren, isExpanded, uniqueKey } = flatNode;
+  const {
+    node,
+    depth,
+    hasChildren,
+    isExpanded,
+    uniqueKey,
+    isFirstChild,
+    isLastChild,
+    ancestorIsLast,
+  } = flatNode;
   const isSelected = selectedHandle === node.handle;
+
+  // Connector X position: tree-node padding (6) + content padding (4) + guides (d*20) + toggle center (7)
+  const connectorStyle =
+    depth > 0
+      ? ({ ...style, '--connector-x': `${10 + depth * 20 + 7}px` } as React.CSSProperties)
+      : style;
 
   return (
     <div
-      style={style}
-      className={`tree-node level-${depth} ${isSelected ? 'selected' : ''}`}
+      style={connectorStyle}
+      className={`tree-node ${isSelected ? 'selected' : ''} ${depth > 0 ? (isFirstChild && isLastChild ? 'child-only' : isFirstChild ? 'child-first' : isLastChild ? 'child-last' : 'child-mid') : ''}`}
       data-handle={node.handle}
       role="button"
       tabIndex={0}
@@ -88,6 +103,15 @@ function VirtualTreeRowComponent(
       }}
     >
       <div className="node-content">
+        {/* Ancestor through-line guides (depth columns for indentation) */}
+        {depth > 0 &&
+          Array.from({ length: depth }, (_, d) => (
+            <span
+              key={d}
+              className={`tree-guide ${ancestorIsLast[d] ? 'guide-empty' : 'guide-through'}`}
+            />
+          ))}
+
         {hasChildren ? (
           <span
             className={`node-toggle ${isExpanded ? 'expanded' : 'collapsed'}`}
@@ -111,19 +135,27 @@ function VirtualTreeRowComponent(
           <span className="node-spacer"></span>
         )}
 
-        <img
-          src={getNodeIcon(node)}
-          alt=""
-          className="node-icon"
-          width={16}
-          height={16}
-          onError={e => {
-            // Fallback to category icon if specific icon not found
-            (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
-          }}
-        />
-        <span className="node-name">{node.name}</span>
+        <span className="node-label-area">
+          <img
+            src={getNodeIcon(node)}
+            alt=""
+            className="node-icon"
+            width={16}
+            height={16}
+            onError={e => {
+              (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
+            }}
+          />
+          <span className="node-name">{node.name}</span>
+        </span>
       </div>
+      {/* Vertical connector from expanded parent to its children */}
+      {isExpanded && hasChildren && (
+        <span
+          className="connector-to-children"
+          style={{ left: `${10 + (depth + 1) * 20 + 7}px` }}
+        />
+      )}
     </div>
   );
 }
@@ -167,6 +199,7 @@ function arePropsEqual(
     prevNode.depth !== nextNode.depth ||
     prevNode.hasChildren !== nextNode.hasChildren ||
     prevNode.isExpanded !== nextNode.isExpanded ||
+    prevNode.isLastChild !== nextNode.isLastChild ||
     prevNode.node.name !== nextNode.node.name
   ) {
     return false;

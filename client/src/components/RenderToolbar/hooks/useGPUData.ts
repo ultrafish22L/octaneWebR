@@ -29,6 +29,9 @@ export interface RenderStats {
   gpu: string; // GPU name
   version: string; // Version string
   memory: string; // Memory string
+  usedMemoryGB: number; // Used GPU memory in GB
+  freeMemoryGB: number; // Free GPU memory in GB
+  totalMemoryGB: number; // Total GPU memory in GB
 }
 
 interface UseGPUDataProps {
@@ -51,6 +54,9 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
     gpu: 'NVIDIA GeForce RTX 4090 (RT)',
     version: '1:48.21.2',
     memory: '24.0 GB',
+    usedMemoryGB: 0,
+    freeMemoryGB: 0,
+    totalMemoryGB: 24.0,
   });
 
   // GPU Statistics Dialog state
@@ -74,17 +80,24 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
 
         let gpuName = 'Unknown GPU';
         let totalMemory = '0 GB';
+        let usedMemoryGB = 0;
+        let freeMemoryGB = 0;
+        let totalMemoryGB = 0;
 
         if (deviceCount > 0) {
-          gpuName = await client.getDeviceName(0);
+          const rawName = await client.getDeviceName(0);
           if (cancelled) return;
+          // Append (RT) for HW ray-tracing capable GPUs, matching Octane SE display
+          gpuName = rawName.includes('(RT)') ? rawName : `${rawName} (RT)`;
 
           const memoryUsage = await client.getMemoryUsage(0);
           if (cancelled) return;
 
           if (memoryUsage) {
-            const totalGB = (memoryUsage.totalDeviceMemory / (1024 * 1024 * 1024)).toFixed(1);
-            totalMemory = `${totalGB} GB`;
+            usedMemoryGB = memoryUsage.usedDeviceMemory / (1024 * 1024 * 1024);
+            freeMemoryGB = memoryUsage.freeDeviceMemory / (1024 * 1024 * 1024);
+            totalMemoryGB = memoryUsage.totalDeviceMemory / (1024 * 1024 * 1024);
+            totalMemory = `${usedMemoryGB.toFixed(2)}/${freeMemoryGB.toFixed(1)}/${totalMemoryGB.toFixed(1)} GB`;
           }
         }
 
@@ -93,6 +106,9 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
           gpu: gpuName,
           version: version,
           memory: totalMemory,
+          usedMemoryGB,
+          freeMemoryGB,
+          totalMemoryGB,
         }));
 
         Logger.info('GPU data loaded:', { gpu: gpuName, version, memory: totalMemory });

@@ -35,6 +35,7 @@ export interface ToolbarState {
   viewportResolutionLock: boolean;
   showCameraPresetsMenu: boolean;
   showRenderPriorityMenu: boolean;
+  showGizmoModeMenu: boolean;
 }
 
 interface UseRenderSettingsProps {
@@ -60,6 +61,7 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
     viewportResolutionLock: false,
     showCameraPresetsMenu: false,
     showRenderPriorityMenu: false,
+    showGizmoModeMenu: false,
   });
 
   // Initialize rendering settings from Octane on connect

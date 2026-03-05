@@ -38,7 +38,7 @@ export function NodeGraphToolbar({
   onAutoLayout,
 }: NodeGraphToolbarProps) {
   // Toggle states for preview scenes (managed locally)
-  const [renderTargetPreview, setRenderTargetPreview] = useState(false);
+  const [renderTargetPreview, setRenderTargetPreview] = useState(true);
   const [meshPreview, setMeshPreview] = useState(false);
   const [materialPreview, setMaterialPreview] = useState(false);
   const [texturePreview, setTexturePreview] = useState(false);
@@ -121,17 +121,13 @@ export function NodeGraphToolbar({
 
   return (
     <div className="node-graph-toolbar">
-      {/* 1. Recenter View */}
+      {/* Layout / Arrange group */}
       <button className="toolbar-button" onClick={handleRecenterView} title="Recenter View">
         <img src={getWindowControlIcon('RECENTER')} alt="Recenter" />
       </button>
-
-      {/* 2. Re-arrange Graph */}
       <button className="toolbar-button" onClick={handleRearrangeGraph} title="Re-arrange Graph">
         <img src={getWindowControlIcon('UNFOLD_GRAPH')} alt="Re-arrange graph" />
       </button>
-
-      {/* 3. Re-arrange Graph with Sub-graph */}
       <button
         className="toolbar-button"
         onClick={handleRearrangeWithSubgraph}
@@ -143,7 +139,9 @@ export function NodeGraphToolbar({
         />
       </button>
 
-      {/* 4. View/Hide Render Target Preview Scene */}
+      <div className="controls-spacer-vertical" />
+
+      {/* Preview toggles group */}
       <button
         className={`toolbar-button ${renderTargetPreview ? 'active' : ''}`}
         onClick={handleToggleRenderTargetPreview}
@@ -151,8 +149,6 @@ export function NodeGraphToolbar({
       >
         <img src={getPreviewModeIcon('RENDER_TARGET_PREVIEW')} alt="Render target preview" />
       </button>
-
-      {/* 5. View/Hide Mesh Preview Scene */}
       <button
         className={`toolbar-button ${meshPreview ? 'active' : ''}`}
         onClick={handleToggleMeshPreview}
@@ -160,8 +156,6 @@ export function NodeGraphToolbar({
       >
         <img src={getPreviewModeIcon('MESH_PREVIEW')} alt="Mesh preview" />
       </button>
-
-      {/* 6. View/Hide Material Preview Scene */}
       <button
         className={`toolbar-button ${materialPreview ? 'active' : ''}`}
         onClick={handleToggleMaterialPreview}
@@ -169,8 +163,6 @@ export function NodeGraphToolbar({
       >
         <img src={getPreviewModeIcon('MATERIAL_PREVIEW')} alt="Material preview" />
       </button>
-
-      {/* 7. View/Hide Texture Preview Scene */}
       <button
         className={`toolbar-button ${texturePreview ? 'active' : ''}`}
         onClick={handleToggleTexturePreview}
@@ -179,7 +171,9 @@ export function NodeGraphToolbar({
         <img src={getPreviewModeIcon('TEXTURE_PREVIEW')} alt="Texture preview" />
       </button>
 
-      {/* 8. Snap Items To Grid */}
+      <div className="controls-spacer-vertical" />
+
+      {/* Grid group */}
       <button
         className={`toolbar-button ${snapToGrid ? 'active' : ''}`}
         onClick={handleToggleGridSnap}
@@ -187,8 +181,6 @@ export function NodeGraphToolbar({
       >
         <img src={getWindowControlIcon('SNAP_TO_GRID')} alt="Snap to grid" />
       </button>
-
-      {/* 9. View/Hide Graph Editor Grid */}
       <button
         className={`toolbar-button ${gridVisible ? 'active' : ''}`}
         onClick={handleToggleGrid}

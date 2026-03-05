@@ -25,6 +25,7 @@ interface UseToolbarActionsProps {
   client: OctaneClient;
   state: ToolbarState;
   setState: Dispatch<SetStateAction<ToolbarState>>;
+  renderStats: RenderStats;
   setRenderStats: Dispatch<SetStateAction<RenderStats>>;
   onRecenterView?: () => void;
   onCopyToClipboard?: () => void;
@@ -49,6 +50,7 @@ export function useToolbarActions({
   client,
   state,
   setState,
+  renderStats,
   setRenderStats,
   onRecenterView,
   onCopyToClipboard,
@@ -100,6 +102,10 @@ export function useToolbarActions({
   const getButtonActiveClass = useCallback(
     (buttonId: string): string => {
       switch (buttonId) {
+        case 'start-render':
+          return renderStats.status === 'rendering' ? 'active' : '';
+        case 'pause-render':
+          return renderStats.status === 'paused' ? 'active' : '';
         case 'real-time-render':
           return state.realTimeMode ? 'active' : '';
         case 'lock-viewport':
@@ -115,7 +121,7 @@ export function useToolbarActions({
         case 'viewport-resolution-lock':
           return state.viewportResolutionLock ? 'active' : '';
         case 'object-control-alignment':
-          return state.objectControlMode === 'world' ? 'active' : '';
+          return '';
         case 'translate-gizmo':
           return state.activeGizmo === 'translate' ? 'active' : '';
         case 'rotate-gizmo':
@@ -142,7 +148,7 @@ export function useToolbarActions({
           return '';
       }
     },
-    [state]
+    [state, renderStats.status]
   );
 
   // ========================================
@@ -406,14 +412,8 @@ export function useToolbarActions({
 
         // Object Manipulation
         case 'object-control-alignment':
-          setState(prev => ({
-            ...prev,
-            objectControlMode: prev.objectControlMode === 'world' ? 'local' : 'world',
-          }));
-          Logger.debug(
-            `Object control alignment: ${state.objectControlMode === 'world' ? 'local' : 'world'}`
-          );
-          // TODO: API call to set object control alignment
+          setState(prev => ({ ...prev, showGizmoModeMenu: !prev.showGizmoModeMenu }));
+          Logger.debug('Gizmo mode menu:', !state.showGizmoModeMenu ? 'OPEN' : 'CLOSED');
           break;
         case 'translate-gizmo':
           toggleGizmo('translate');

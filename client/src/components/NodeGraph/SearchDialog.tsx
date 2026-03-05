@@ -149,7 +149,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
             fontSize: '16px',
             fontWeight: 'bold',
             marginBottom: '15px',
-            color: '#ffc107',
+            color: '#9a7b20',
           }}
         >
           Search Nodes and Pins
@@ -263,7 +263,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                   <div style={{ fontSize: '11px', color: '#888', marginBottom: '3px' }}>
                     {data.sceneNode.nodeInfo?.nodeTypeName || 'Unknown type'}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#ffc107', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '10px', color: '#9a7b20', fontStyle: 'italic' }}>
                     {matchContext}
                   </div>
                 </button>
@@ -306,8 +306,8 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
               style={{
                 padding: '6px 16px',
                 fontSize: '13px',
-                backgroundColor: '#ffc107',
-                border: '1px solid #ffc107',
+                backgroundColor: '#9a7b20',
+                border: '1px solid #9a7b20',
                 borderRadius: '3px',
                 color: '#000',
                 cursor: 'pointer',
@@ -317,7 +317,7 @@ export function SearchDialog({ visible, nodes, onClose, onSelectNodes }: SearchD
                 e.currentTarget.style.backgroundColor = '#ffcd38';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = '#ffc107';
+                e.currentTarget.style.backgroundColor = '#9a7b20';
               }}
             >
               Select All ({results.length})
