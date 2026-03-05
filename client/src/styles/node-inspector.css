@@ -696,6 +696,18 @@
   overflow: hidden;
 }
 
+.node-inspector .node-icon-box.expanded-parent {
+  border-radius: var(--border-radius-lg);
+}
+
+.node-inspector .node-icon-box .node-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  display: block;
+  object-fit: contain;
+}
+
 /* 3D bevel on icon box inherits from parent .node-box gradient */
 
 /* Node content area with improved spacing - ONLY for Node Inspector */

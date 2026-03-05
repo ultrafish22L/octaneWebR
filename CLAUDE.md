@@ -13,3 +13,7 @@ When testing the app after code changes:
 ## Code Review Status
 
 8 review passes completed (2026-03-04). Pass 8 found only 3 items. Codebase is clean.
+
+## Version
+
+Current version: **1.4.1** (set in `package.json`)

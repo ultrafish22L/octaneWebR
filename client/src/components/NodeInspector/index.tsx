@@ -177,7 +177,10 @@ const NodeParameter = React.memo(function NodeParameter({
     return (
       <div className={indentClass} style={{ display: 'block' }}>
         <div className="node-box-parameter" data-node-handle={node.handle} data-node-id={nodeId}>
-          <div className="node-icon-box" style={{ backgroundColor: color }}>
+          <div
+            className={`node-icon-box${hasChildren && expanded ? ' expanded-parent' : ''}`}
+            style={{ backgroundColor: color }}
+          >
             <img
               src={icon}
               alt=""
@@ -238,7 +241,10 @@ const NodeParameter = React.memo(function NodeParameter({
   return (
     <div className={indentClass} style={{ display: 'block' }}>
       <div className="node-box" data-node-handle={node.handle} data-node-id={nodeId}>
-        <div className="node-icon-box" style={{ backgroundColor: color }}>
+        <div
+          className={`node-icon-box${hasChildren && expanded ? ' expanded-parent' : ''}`}
+          style={{ backgroundColor: color }}
+        >
           <img
             src={icon}
             alt=""
