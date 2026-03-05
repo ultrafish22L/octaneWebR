@@ -19,7 +19,8 @@ import { MaterialCategory, Material } from './types';
 /** Helper to safely extract a handle from a nested response result */
 function extractHandle(value: unknown): number | undefined {
   if (value !== null && typeof value === 'object' && 'handle' in value) {
-    return (value as { handle: number }).handle;
+    const h = (value as Record<string, unknown>).handle;
+    if (typeof h === 'number') return h;
   }
   return undefined;
 }

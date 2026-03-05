@@ -50,7 +50,7 @@ export class EventEmitter {
         try {
           (handler as (...a: unknown[]) => void)(...args);
         } catch (error) {
-          console.error(`EventEmitter: handler error for "${event}":`, error);
+          Logger.error(`EventEmitter: handler error for "${event}":`, error);
         }
       }
     }

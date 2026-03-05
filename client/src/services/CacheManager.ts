@@ -367,22 +367,22 @@ export class CacheManager {
    * with insertion time as a tiebreaker for entries with the same hit count).
    */
   private evictLeastAccessed(): void {
-    let lruKey: string | null = null;
-    let lruHits = Infinity;
-    let lruTimestamp = Infinity;
+    let lfuKey: string | null = null;
+    let lfuHits = Infinity;
+    let lfuTimestamp = Infinity;
 
     for (const [key, entry] of this.memoryCache) {
-      if (entry.hits < lruHits || (entry.hits === lruHits && entry.timestamp < lruTimestamp)) {
-        lruKey = key;
-        lruHits = entry.hits;
-        lruTimestamp = entry.timestamp;
+      if (entry.hits < lfuHits || (entry.hits === lfuHits && entry.timestamp < lfuTimestamp)) {
+        lfuKey = key;
+        lfuHits = entry.hits;
+        lfuTimestamp = entry.timestamp;
       }
     }
 
-    if (lruKey) {
-      this.memoryCache.delete(lruKey);
+    if (lfuKey) {
+      this.memoryCache.delete(lfuKey);
       this.stats.evictions++;
-      Logger.debug(`Evicted least-accessed entry: ${lruKey}`);
+      Logger.debug(`Evicted least-accessed entry: ${lfuKey}`);
     }
   }
 

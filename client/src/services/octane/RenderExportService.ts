@@ -142,6 +142,13 @@ export class RenderExportService extends BaseService {
         return false;
       }
 
+      const expectedSize = width * height * 4;
+      if (bytes.length !== expectedSize) {
+        Logger.error(`Buffer size mismatch: got ${bytes.length}, expected ${expectedSize}`);
+        this.emitUserError('Render data corrupted');
+        return false;
+      }
+
       const imageData = new ImageData(new Uint8ClampedArray(bytes.buffer), width, height);
       ctx.putImageData(imageData, 0, 0);
 

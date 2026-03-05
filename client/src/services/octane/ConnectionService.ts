@@ -94,11 +94,18 @@ export class ConnectionService extends BaseService {
            * Without this, early send() calls may fail silently or throw exceptions.
            */
           setTimeout(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'subscribe' }));
-              Logger.debug('Sent subscribe message to WebSocket');
-            } else {
-              Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws.readyState})`);
+            try {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'subscribe' }));
+                Logger.debug('Sent subscribe message to WebSocket');
+              } else {
+                Logger.warn(`WebSocket not in OPEN state after onopen (state: ${ws.readyState})`);
+              }
+            } catch (error) {
+              Logger.warn(
+                'Failed to send subscribe:',
+                error instanceof Error ? error.message : String(error)
+              );
             }
           }, 50);
 
