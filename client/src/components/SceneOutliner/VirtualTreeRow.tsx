@@ -81,7 +81,9 @@ function VirtualTreeRowComponent(
       style={connectorStyle}
       className={`tree-node ${isSelected ? 'selected' : ''} ${depth > 0 ? (isFirstChild && isLastChild ? 'child-only' : isFirstChild ? 'child-first' : isLastChild ? 'child-last' : 'child-mid') : ''}`}
       data-handle={node.handle}
-      role="button"
+      role="treeitem"
+      aria-selected={isSelected}
+      aria-expanded={hasChildren ? isExpanded : undefined}
       tabIndex={0}
       onClick={() => {
         // Don't select the synthetic Scene root

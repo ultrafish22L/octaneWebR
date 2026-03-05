@@ -48,7 +48,7 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
     currentTime: '00:00:00',
     estimatedTime: '00:00:00',
     progressPercent: 0,
-    status: 'finished',
+    status: 'rendering',
     primitiveCount: 0,
     meshCount: 1,
     gpu: 'NVIDIA GeForce RTX 4090 (RT)',

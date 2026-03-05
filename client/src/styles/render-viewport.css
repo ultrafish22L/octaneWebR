@@ -16,7 +16,7 @@
   background: var(--bg-header);
   padding: 4px 8px;
   font-size: var(--font-size-small);
-  font-weight: var(--font-weight-bold7);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border);
 }

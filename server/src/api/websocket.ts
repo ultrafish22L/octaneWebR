@@ -26,7 +26,8 @@ export function setupCallbackStreaming(
 
   console.log('WebSocket server initialized at /api/callbacks');
 
-  const MAX_WS_BUFFER = 10 * 1024 * 1024; // 10 MB backpressure limit
+  // 10 MB backpressure limit (keep in sync with vite-plugin-octane-grpc.ts)
+  const MAX_WS_BUFFER = 10 * 1024 * 1024;
 
   wss.on('connection', (ws: WebSocket) => {
     console.log('Callback client connected');

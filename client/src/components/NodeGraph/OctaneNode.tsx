@@ -191,9 +191,8 @@ export const OctaneNode = memo((props: OctaneNodeProps) => {
   const { sceneNode, inputs = [], output, onContextMenu } = data;
 
   // Get node color from nodeInfo - darken and desaturate for Octane SE's muted look
-  const rawNodeColor = sceneNode.nodeInfo?.nodeColor
-    ? formatColorValue(sceneNode.nodeInfo.nodeColor)
-    : '#666';
+  const rawNodeColor =
+    sceneNode.nodeInfo?.nodeColor != null ? formatColorValue(sceneNode.nodeInfo.nodeColor) : '#666';
   const nodeColor = muteNodeColor(rawNodeColor);
 
   // Calculate dynamic width based on inputs and label length (driven by NODE_SCALE in NodeLayoutUtils)

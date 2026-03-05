@@ -19,6 +19,7 @@ const RECONNECT_DELAY_MS = 5000;
 export class ConnectionService extends BaseService {
   private ws: WebSocket | null = null;
   private connected: boolean = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private apiService: ApiService;
 
   constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
@@ -140,7 +141,8 @@ export class ConnectionService extends BaseService {
             `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`
           );
           // Attempt reconnection after configured delay
-          setTimeout(() => {
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
             if (this.connected) {
               Logger.debug('Reconnecting WebSocket...');
               this.connectWebSocket();
@@ -160,6 +162,11 @@ export class ConnectionService extends BaseService {
    */
   async disconnect(): Promise<void> {
     this.connected = false;
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     if (this.ws) {
       // Prevent onclose handler from scheduling a zombie reconnect

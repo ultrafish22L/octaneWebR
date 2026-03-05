@@ -1,6 +1,6 @@
 {
   "name": "octaneweb-react",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "OctaneWeb ported to React TypeScript with Node.js gRPC",
   "scripts": {
     "generate:proto": "bash scripts/generate-proto.sh",
@@ -69,7 +69,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
     "*.{css,json,md}": [

@@ -103,7 +103,9 @@ export function useToolbarActions({
     (buttonId: string): string => {
       switch (buttonId) {
         case 'start-render':
-          return renderStats.status === 'rendering' ? 'active' : '';
+          return renderStats.status !== 'paused' && renderStats.status !== 'stopped'
+            ? 'active'
+            : '';
         case 'pause-render':
           return renderStats.status === 'paused' ? 'active' : '';
         case 'real-time-render':

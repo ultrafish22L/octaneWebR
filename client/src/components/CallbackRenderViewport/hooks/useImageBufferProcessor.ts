@@ -41,6 +41,12 @@ export function useImageBufferProcessor({
   onStatusUpdate,
   isDragging = false, // Phase 3: Drag state for input-side throttling
 }: UseImageBufferProcessorParams) {
+  // Stable ref for onStatusUpdate to avoid re-creating displayImage callback
+  const onStatusUpdateRef = useRef(onStatusUpdate);
+  useEffect(() => {
+    onStatusUpdateRef.current = onStatusUpdate;
+  }, [onStatusUpdate]);
+
   // Phase 3: Input-side throttling during camera drag
   // Track last accepted image time to throttle to 30 FPS during drag
   const lastAcceptedTimeRef = useRef(0);
@@ -265,6 +271,7 @@ export function useImageBufferProcessor({
       } catch (error) {
         Logger.error('[VIEWPORT] Error scheduling render:', error);
         Logger.error('[VIEWPORT] Stack:', error instanceof Error ? error.stack : undefined);
+        onStatusUpdateRef.current?.('Render error — check console');
       }
     },
     [canvasRef, scheduleRender]

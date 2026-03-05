@@ -368,7 +368,7 @@ body.resizing .react-flow__edge-interaction {
 /* Context Menu Components */
 .context-menu {
   position: absolute;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--border-radius);
   box-shadow: 0 4px 8px var(--shadow);
@@ -617,9 +617,6 @@ body.drag-over * {
 .menu-item.active {
   background-color: var(--accent-blue);
 }
-
-/* Connection Status */
-/* Duplicate .connection-status removed - see line 28 for definition */
 
 .status-indicator {
   display: flex;

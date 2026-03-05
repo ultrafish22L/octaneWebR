@@ -137,6 +137,7 @@ export class CacheManager {
       }
     );
 
+    // Set inflight immediately after creating the promise (before any microtask can resolve it)
     this.inflight.set(key, promise);
     return promise;
   }

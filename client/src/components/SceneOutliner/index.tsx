@@ -87,9 +87,12 @@ export const SceneOutliner = React.memo(function SceneOutliner({
     const lastKey = len > 0 ? flattenedNodes[len - 1].uniqueKey : '';
     const prev = prevFlatSnapshotRef.current;
 
-    // Structural change: first key changed, length decreased, or went from empty to non-empty
+    // Structural change: first/last key changed, length decreased, or went from empty to non-empty
     const isStructuralChange =
-      firstKey !== prev.firstKey || len < prev.len || (prev.len === 0 && len > 0);
+      firstKey !== prev.firstKey ||
+      lastKey !== prev.lastKey ||
+      len < prev.len ||
+      (prev.len === 0 && len > 0);
 
     prevFlatSnapshotRef.current = { len, firstKey, lastKey };
 

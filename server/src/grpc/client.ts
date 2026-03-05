@@ -15,8 +15,8 @@ const YELLOW = '\x1b[33m';
 const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
-// Set true to enable verbose gRPC debug logging (proto resolution, call params, responses)
-const VERBOSE = false;
+// Verbose gRPC debug logging (proto resolution, call params, responses)
+const VERBOSE = process.env.OCTANE_GRPC_VERBOSE === 'true';
 const debugV = (...args: any[]) => {
   if (VERBOSE) console.log(DIM, ...args, RESET);
 };

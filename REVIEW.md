@@ -1,103 +1,209 @@
-# OctaneWebR — Code Review
+# OctaneWebR Code Review Report
 
-**Date**: 2026-03-04
-
-OctaneWebR is a React/TypeScript web frontend for OTOY's Octane Render engine. It communicates with a running Octane instance over gRPC, proxied through either a Vite dev plugin or a Node.js Express server. The codebase spans roughly 26,000 lines of TypeScript across 100 source files, 5,500 lines of CSS across 10 stylesheets, and 1,300 lines of server-side TypeScript — plus a 600-line Vite plugin that doubles as the dev-mode gRPC bridge.
-
----
-
-## Architecture
-
-The project is cleanly layered. The client separates transport (`ApiService`), domain logic (11 specialized services like `SceneService`, `NodeService`, `CameraService`), React state management (hooks and contexts), and presentation (components organized by feature). An `OctaneClient` facade composes the services and exposes a typed public API, keeping components from reaching directly into transport details. A developer familiar with either React or Octane's API can navigate this code quickly — each file has an obvious role, and the service architecture maps directly to Octane's API surface.
-
-The server side mirrors this separation. The Express server handles HTTP routing, CORS, and graceful shutdown. A gRPC client layer handles proto loading, service resolution, and reconnection. A callback manager wires gRPC stream events to WebSocket forwarding. The Vite plugin replicates this stack for dev mode, intercepting `/api/grpc/*` requests before they reach the network.
-
-The dual-server design — Vite plugin for development, Express for production — is pragmatic but carries a maintenance cost. The two implementations share proto-loading logic and parameter transformation functions, but their WebSocket handling, request parsing, and callback management are written independently. When a fix is applied to one, it can easily be missed in the other. A shared library extracting the common gRPC and callback logic would reduce this drift risk, though it may not be worth the complexity for a project of this size.
-
-The service layer's constructor pattern is worth noting. `OctaneClient` instantiates 11 services, passing `this` (as an EventEmitter), the server URL, and the `ApiService` to each. Some services take additional dependencies — `NodeService` depends on `SceneService`, `MaterialDatabaseService` depends on both `ApiService` and `SceneService`. The manual wiring works but is fragile; adding a twelfth service means editing the constructor. A factory or registry pattern would scale better, though the current size doesn't demand it.
+**Date**: 2026-03-05
+**Version**: 1.4.1
+**Reviewer**: Claude (automated strict review)
+**Scope**: Full codebase — client components, services, hooks, utilities, server, Vite plugin, CSS, configuration
 
 ---
 
-## React Patterns
+## Executive Summary
 
-The React code is well-structured and follows modern conventions. Hooks are the primary abstraction for stateful logic: `useParameterValue` handles the async fetch-and-cache cycle for node parameters, `useResizablePanels` encapsulates the drag-to-resize math, `useSceneTree` manages the event-driven scene hierarchy. Components are organized by feature — `CallbackRenderViewport`, `NodeGraph`, `NodeInspector`, `SceneOutliner` — each with their own hooks subdirectory.
+OctaneWebR is a well-structured React/TypeScript frontend for the Octane renderer, communicating through a gRPC proxy layer. The codebase has already been through eight review passes and a weakness remediation cycle, and it shows: error handling is thorough in most paths, WebSocket connections have origin validation and backpressure guards, and the component architecture cleanly separates concerns through custom hooks and a service layer.
 
-`App.tsx` is the main orchestrator and the largest component at ~670 lines. It manages 15+ pieces of state (selected node, scene tree, sync status, panel visibility, picking mode, dialog visibility, grid/snap settings, viewport lock) and passes them down as props through the component tree. Several child components receive 7–10 callback props each. This is functional but makes the component hard to read. Extracting a `useAppState` hook or splitting some state into dedicated contexts would improve readability without changing behavior.
+That said, a strict review still surfaces a number of issues. The most serious are concentrated in two areas: resource lifecycle management (event listeners, timers, and reconnection loops that can leak under certain conditions) and type safety at system boundaries (gRPC responses that pass through `toObject()` without validation, float precision loss in parameter controls, and a few `as any` casts that suppress null checks). None of these are likely to cause immediate failures in normal use, but they represent reliability risks during long sessions, disconnection/reconnection cycles, and edge-case Octane responses.
 
-Memoization is applied thoughtfully where it matters. `NodeParameter` (the component rendered hundreds of times in the inspector) uses `React.memo`. Scene tree rows use `react-window` for virtual scrolling. Lazy loading with `Suspense` defers the heavy `NodeGraphEditor` and `MaterialDatabase` components. Dependency arrays on `useCallback` and `useEffect` are generally correct — the codebase avoids the common mistake of omitting dependencies, and uses functional state updaters where needed to avoid capturing stale closures.
-
-Event listener management follows two patterns. The `useEmitterEvent` hook provides automatic subscription and cleanup with a stable ref-based handler, eliminating a class of potential leaks. Some components have adopted this pattern (e.g., `useGPUData`), while others still use manual `on()`/`off()` pairs in `useEffect` blocks. Migrating the remaining manual listeners to the hook would reduce boilerplate and improve consistency.
+Below, findings are grouped by severity and then by subsystem. Each entry includes the file, line numbers, a description of the issue, the risk it poses, and a recommended fix.
 
 ---
 
-## TypeScript
+## Critical Issues
 
-TypeScript is used competently throughout. Service method signatures are fully typed. Domain types (`SceneNode`, `RenderState`, `CameraState`, `Material`) are well-defined. The `ApiService` defines `GrpcValue`, `GrpcObject`, and `GrpcArray` as recursive union types, providing a typed alternative to `any` for dynamic gRPC responses. Helper functions like `asObject`, `asNumber`, `asBool`, and `getHandle` provide safe runtime access into these untyped response shapes.
+### 1. Vite Plugin Callback Registration Race Condition
 
-gRPC responses arrive as untyped objects and are accessed via these helper functions rather than validated against interfaces. This is a reasonable trade-off given the responses come from a local Octane instance with a known API, but it does mean that API version changes surface as silent fallbacks rather than explicit errors.
+**File**: `vite-plugin-octane-grpc.ts`, lines 135-165
 
----
+The `registerOctaneCallbacks()` method sets `this.isCallbackRegistered = true` before attempting the actual gRPC registration calls. If `setOnNewImageCallback()` or `startCallbackStreaming()` throws, the flag remains true and blocks all future retry attempts. The callback system silently dies with no path to recovery short of restarting the dev server.
 
-## Error Handling
+The flag was originally placed early to prevent concurrent registration attempts, which is a valid concern. The fix is to use a separate `isRegistering` mutex flag for concurrency control and only set `isCallbackRegistered` after all setup calls succeed. The existing catch block already resets the flag, but a failure between the flag set and the first await creates a window where the flag is wrong.
 
-Error handling follows a two-tier pattern. At the service layer, operations catch exceptions, log them via `Logger.error`, and emit a `status:error` event through the shared `EventEmitter` so the UI can display a brief status bar message. This covers the core user-facing operations: node creation, deletion, copying, grouping, ungrouping, replacement, render saving, clipboard export, and render pass export. Scene tree build failures and render failures are also surfaced. At the component level, viewport interactions (picking, render region) call `setTemporaryStatus` directly in their catch blocks.
+### 2. Event Listener Accumulation in App.tsx
 
-The status bar approach works well for transient errors but has limits. There is no persistent error state — if the user isn't watching the status bar when an error flashes for 3–5 seconds, they miss it. A more robust approach would be to combine the status bar with visual indicators on the affected UI element (e.g., a red outline on a parameter that failed to load, or a retry button on a failed scene tree load). Parameter fetch failures in `useParameterValue` still leave the value as null without any visual cue.
+**File**: `client/src/App.tsx`, lines 346-391
 
-The gRPC reconnection logic is well-engineered: exponential backoff with a cap, a cooldown mechanism that resets the counter after 60 seconds of quiet, and proper state tracking to prevent concurrent reconnect attempts. This handles the unpredictable lifecycle of a local Octane instance that may be started, stopped, and restarted during a session.
+The main useEffect registers multiple event listeners on the `client` object (`nodeDeleted`, `OnRenderFailure`, `OnProjectManagerChanged`, and others). The cleanup function removes them correctly, but `client` is in the dependency array. If the client reference changes — which happens during reconnection — the effect re-runs, adding new listeners before the old cleanup fires. In practice this creates a brief window of double-subscribed handlers, and if the cleanup races against a reconnection event, listeners can accumulate.
 
----
+The recommended fix is to extract the callback handlers into stable refs (via `useRef`) so that the effect only subscribes once on mount, or migrate these subscriptions to the `useEmitterEvent` hook which already handles this lifecycle correctly.
 
-## CSS and Theming
+### 3. Float Precision Loss in ParameterControl
 
-The styling system is built on a comprehensive set of CSS custom properties — over 100 variables covering colors, spacing, typography, borders, shadows, z-index, and opacity. The dark theme matching Octane Render Studio's appearance is defined in one place (`theme-octane.css`), and components reference variables consistently. A debug theme variant exists for development. The variable discipline is strong — spacing, font sizes, and colors are defined as variables and used throughout.
+**File**: `client/src/components/NodeInspector/ParameterControl.tsx`, line 46
 
-Accessibility is solid for a professional desktop tool. `prefers-reduced-motion` and `prefers-contrast: high` media queries are present. Focus-visible states cover interactive controls across all panels — buttons, tabs, checkboxes, tree nodes, toolbar icons, and context menu items all show visible outlines for keyboard navigation. Disabled text meets WCAG AA contrast requirements. The main gap is that status indicators rely on color alone without shape or icon differentiation for colorblind users.
+The `parseFloatValue()` function applies `.toFixed(6)` then `parseFloat()`, which silently truncates values beyond six decimal places. If a user enters `0.1234567`, the UI displays `0.123457` but Octane may have received the original value on a previous edit. Over multiple edits this creates a drift where the displayed value diverges from the actual Octane parameter. For a renderer where precision in material and lighting values matters, this is a data integrity issue.
 
-The main stylesheet (`app.css`, ~840 lines) has grown to contain layout, shared components, ReactFlow overrides, scrollbar customization, and media queries. It would benefit from splitting along the boundaries its own comments already suggest.
+The simplest fix is to return the parsed number directly without the toFixed/parseFloat round-trip, or to use it only for display formatting while keeping the full-precision value for API calls.
 
-Responsiveness is minimal, which is appropriate for a professional desktop tool. Breakpoints exist for narrower windows, but the application is fundamentally designed for wide monitors with three-panel layouts.
+### 4. Type-Unsafe gRPC Response Handling
 
----
+**File**: `server/src/grpc/client.ts`, lines 184-188; `vite-plugin-octane-grpc.ts` (same pattern)
 
-## Server and WebSocket Layer
+Response objects from gRPC calls are assumed to have a `toObject()` method, but this is checked only via `typeof response.toObject === 'function'` with no try/catch. If Octane returns a malformed protobuf or an unexpected response type, `toObject()` could throw, crash the request handler, and leave the client with no error feedback. Both the Express server and Vite plugin share this vulnerability.
 
-The Express server is compact (~220 lines) and does its job. Routing is clear: health check, device info, generic gRPC proxy. CORS is restricted to localhost via regex. Graceful shutdown closes WebSocket clients before the server, with a timeout fallback. The gRPC client handles proto loading with fallback strategies and caches service stubs.
+Wrapping the `toObject()` call in a try/catch and returning a structured error response when conversion fails would make the gRPC proxy resilient to unexpected Octane behavior.
 
-The WebSocket layer forwards gRPC callback events (new image, statistics, render failure, project changes) to connected browser clients. Both the Express server and the Vite plugin validate WebSocket origins against localhost, preventing cross-origin connections. Both implementations enforce backpressure — checking `bufferedAmount` before sending and dropping frames when the 10 MB buffer limit is reached, preventing memory exhaustion in long-running sessions with backgrounded tabs.
+### 5. WebSocket Reconnection Timer Leak in ConnectionService
 
-The Vite plugin throttles statistics polling to a 250 ms interval, avoiding a gRPC round-trip on every frame at high render rates. Its request body parsing is manual (string concatenation rather than middleware), which works but is less robust than the Express middleware approach.
+**File**: `client/src/services/octane/ConnectionService.ts`, lines 143-148
 
----
+The `onclose` handler schedules a reconnection attempt via `setTimeout`, but the timer ID is not stored or tracked. If `disconnect()` is called immediately after a connection drops, the scheduled reconnect still fires because there is no mechanism to cancel it. This can produce zombie reconnection attempts that interfere with intentional disconnection, and in rapid connect/disconnect cycles, timers stack up.
 
-## Testing
-
-There are no automated tests. The application is tested manually through the dev server — the standard procedure is to toggle the Orthographic checkbox on the Camera node and verify that the render updates end-to-end.
-
-This is understandable for a tool tightly coupled to a running Octane instance, but the service layer, utility functions, and state management hooks are all testable in isolation. The `ColorUtils` module, the `EventEmitter`, the `CacheManager`, the request queue, and the parameter value parsing logic could all have unit tests without mocking Octane.
+Storing the timeout ID in an instance property and clearing it in `disconnect()` resolves this completely.
 
 ---
 
-## Strengths
+## Moderate Issues
 
-The codebase's greatest strength is its clarity of purpose. Each file has an obvious role. The React component tree mirrors the visual layout. The service layer maps cleanly to Octane's API surface.
+### 6. Stale Closure in SceneOutliner Structural Change Detection
 
-The custom property system for theming, the virtual scrolling in the scene tree, the request queue throttling concurrent API calls, the lazy loading of heavy components, and the WebSocket backpressure handling all demonstrate practical engineering judgment — solving real problems without over-engineering.
+**File**: `client/src/components/SceneOutliner/index.tsx`, lines 83-99
 
-The `EventEmitter` pattern for cross-cutting concerns (connection state changes, scene updates, render callbacks, user-facing errors) avoids the complexity of a full state management library while keeping components decoupled from transport details. The `useEmitterEvent` hook builds on this by automating subscription lifecycle.
+The scene list uses `firstKey`, `lastKey`, and `len` to detect structural changes that should trigger a react-window remount. This heuristic misses reordering: if nodes are rearranged during a scene rebuild but the first and last keys remain the same, the list does not remount, and stale row rendering can appear briefly until the next full refresh. A lightweight hash of the key sequence (or comparing more than just endpoints) would catch reorders.
+
+### 7. Unhandled Promise in NodeGraph Auto-Layout
+
+**File**: `client/src/components/NodeGraph/index.tsx`, lines 176-178
+
+Inside a `setTimeout` callback, `setNodePosition()` is called with `.catch()` for error logging, but if the component unmounts before the promise settles, the catch handler runs against a stale component context. More importantly, individual position-save failures are logged but don't stop the auto-layout operation, so nodes can end up partially persisted. Wrapping the layout persist in an async function with a mounted-check guard would be cleaner.
+
+### 8. Missing Health Check Timeout in Vite Plugin
+
+**File**: `vite-plugin-octane-grpc.ts`, lines 459-484
+
+The `/api/health` endpoint calls `grpcClient.checkHealth()` without any timeout. If Octane is hung or the gRPC channel is stuck, this request blocks indefinitely, tying up a Vite server thread. Adding a 5-second timeout (matching the heartbeat interval) would prevent hanging health checks.
+
+### 9. CSS Variable Typo
+
+**File**: `client/src/styles/render-viewport.css`, line 19
+
+References `--font-weight-bold7`, which is not defined in `variables.css`. The browser falls back to its default font weight, making the render viewport header inconsistent with the rest of the UI. Should be `--font-weight-bold`.
+
+### 10. Silent Stats Polling Failure
+
+**File**: `vite-plugin-octane-grpc.ts`, lines 232-250
+
+When `pollRenderStatistics()` fails (e.g., Octane becomes unavailable), the error is logged at debug level and swallowed. The client continues displaying the last-known statistics with no indication that polling has stopped. Emitting a status event or sending a WebSocket message to the client would let the UI show a stale-data indicator.
+
+### 11. Callback Stream Reconnect Without Unregister Check
+
+**File**: `vite-plugin-octane-grpc.ts`, lines 271-289
+
+When the callback stream errors, the handler schedules a reconnect after 5 seconds. It checks `isCallbackRegistered` but does not check whether an unregistration is in progress. If the server is shutting down and `unregisterOctaneCallbacks()` is running concurrently, the reconnect attempt races against cleanup and can produce spurious errors.
+
+### 12. Incomplete Viewport Error Surfacing
+
+**File**: `client/src/components/CallbackRenderViewport/hooks/useImageBufferProcessor.ts`, lines 265-268
+
+If `scheduleRender` or `convertBufferToCanvas` throws, the error is logged but the viewport silently goes blank. The user sees no indication that rendering failed. Calling `onStatusUpdate` with a user-visible message would surface the problem.
+
+### 13. API Timeout Not Configurable Per Call
+
+**File**: `client/src/services/octane/ApiService.ts`, line 12
+
+`API_TIMEOUT_MS = 30_000` is hardcoded. While the method signature accepts an optional timeout parameter, most callers (including scene tree loading, which can be slow with large scenes) don't override it. Long-running operations like `buildSceneTree` with deep node hierarchies may hit the 30-second wall. Making the default configurable or increasing it for known-slow operations would improve reliability with complex scenes.
+
+### 14. nodeColor Falsy Check Misses Black
+
+**File**: `client/src/components/NodeGraph/OctaneNode.tsx`, lines 194-197
+
+The ternary `sceneNode.nodeInfo?.nodeColor ? formatColorValue(...) : '#666'` uses truthiness to check for color presence. In Octane, a color value of `0` represents black, but JavaScript treats `0` as falsy. Nodes that should render black will instead show the `#666` fallback. The check should be `!== undefined && !== null` instead of a bare truthiness test.
+
+### 15. CacheManager Stampede Protection Race
+
+**File**: `client/src/services/CacheManager.ts`, lines 128-141
+
+The inflight promise coalescing in `get()` deletes the inflight entry on error (`this.inflight.delete(key)`). If a second caller coalesced on the same key while the first request was in-flight, both receive the rejected promise. But the deletion happens before all consumers have processed the rejection, so a third caller arriving at just the wrong moment could start a new request instead of receiving the cached rejection. This is a narrow window but could cause thundering-herd behavior under load.
 
 ---
 
-## Weaknesses
+## Minor Issues
 
-The dual-server architecture (Vite plugin and Express) creates a maintenance burden where fixes must be applied in two places. This has already caused real bugs — the statistics WebSocket forwarding was commented out in the Vite plugin while working in the Express server.
+### 16. Hardcoded Colors in GPU Statistics Dialog
 
-`App.tsx` concentrates too much state and too many callbacks in one component, making it the hardest file in the codebase to modify confidently. Splitting its state into a dedicated hook or additional contexts would help.
+**File**: `client/src/styles/node-graph.css`, lines 629-640
 
-There are no automated tests of any kind.
+The GPU statistics dialog uses hardcoded hex values (`#404040`, `#222`, `#ccc`) instead of CSS variables, so it doesn't respond to theme changes. Replacing with `var(--bg-primary)`, `var(--border-color)`, and `var(--text-primary)` would maintain visual consistency.
+
+### 17. Dead VERBOSE Flag in Express gRPC Client
+
+**File**: `server/src/grpc/client.ts`, line 19
+
+`const VERBOSE = false` is never toggled and cannot be changed at runtime. Making this configurable via an environment variable (`OCTANE_GRPC_VERBOSE`) would allow debugging production issues without code changes.
+
+### 18. Duplicate WebSocket Buffer Constant
+
+**File**: `server/src/api/websocket.ts`, line 29; `vite-plugin-octane-grpc.ts`, line 386
+
+`MAX_WS_BUFFER = 10 * 1024 * 1024` is defined identically in both servers with no shared source. If one is updated, the other must be manually synchronized. Extracting to a shared constants file (or at minimum adding a comment cross-referencing the other definition) would prevent drift.
+
+### 19. Unused Import in CallbackRenderViewport
+
+**File**: `client/src/components/CallbackRenderViewport/index.tsx`, line 14
+
+`useStatusMessage` is imported but not used; status is managed locally. Should be removed.
+
+### 20. Missing Arrow Key Navigation in SceneOutliner
+
+**File**: `client/src/components/SceneOutliner/VirtualTreeRow.tsx`, lines 80-83
+
+Tree rows have `role="button"` with Enter/Space keyboard handling, but tree navigation typically expects arrow keys for moving between nodes. This is an accessibility gap for keyboard-only users. Adding `role="treeitem"` with arrow key handling would align with WAI-ARIA tree view patterns.
+
+### 21. EventEmitter Uses console.warn Instead of Logger
+
+**File**: `client/src/utils/EventEmitter.ts`, line 24
+
+The max-listeners warning bypasses the centralized Logger, so it won't appear in `octaneWebR_client.log`. Should use `Logger.warn()` for consistency.
+
+### 22. Implicit String Coercion in Spinner Step
+
+**File**: `client/src/components/NodeInspector/ParameterControl.tsx`, line 176
+
+The spinner step value comes from `floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001`. If the API returns this as a string (which can happen with certain protobuf configurations), the addition `floatValue + step` silently coerces and produces NaN. Wrapping in `Number()` would be defensive.
+
+### 23. Unsafe `as any` Cast in Shutdown Handler
+
+**File**: `vite-plugin-octane-grpc.ts`, line 714
+
+`grpcClient = null as any` suppresses TypeScript's null check, allowing subsequent code to dereference null without a compile error. Using `grpcClient = null!` or restructuring to use optional chaining (`grpcClient?.method()`) would preserve type safety during the shutdown sequence.
+
+### 24. Dead CSS Comments and Rules
+
+**File**: `client/src/styles/app.css`, various lines
+
+Several commented-out rules and stale removal notes remain from earlier refactoring passes. These add noise without value and should be cleaned up.
+
+---
+
+## Architectural Observations
+
+These are not bugs but structural characteristics worth noting for future planning.
+
+**Dual-server maintenance burden.** The Express production server and Vite dev plugin share core gRPC logic through `OctaneGrpcClientBase` (proto loading, service resolution, method invocation, health checks). The Express `client.ts` extends it; the Vite plugin uses it via composition. The remaining duplication is at the HTTP/WebSocket layer: origin validation patterns, backpressure constants, and response serialization. Cross-reference comments have been added for shared constants like `MAX_WS_BUFFER`. Further extraction is possible but may not be worth it given the different middleware stacks.
+
+**App.tsx state concentration.** _(Resolved.)_ App.tsx was decomposed from 712 to 327 lines by extracting five hooks: `useSceneStatusEvents` (9 status-bar event listeners), `useViewportControls` (world coord, lock, picking mode), `useNodeGraphToolbar` (grid, snap, callbacks), `useRenderOutput` (clipboard, save, export + file browsers), and `usePanelLayout` (visibility, material DB, resizable panels). Only scene state (selectedNode, sceneTree, refreshTrigger) and two app-level event listeners remain in AppContent.
+
+**No automated tests.** The codebase has no unit or integration tests. Given the complexity of the gRPC proxy layer, the scene tree builder, and the node graph coordinate conversion system, even a small test suite covering these core paths would catch regressions early. The `estimateNodeWidth` and position conversion functions in `NodeLayoutUtils.ts` are particularly good candidates — they are pure functions with well-defined inputs and outputs.
+
+**RequestQueue concurrency limit.** API calls can optionally go through a `RequestQueue` with configurable concurrency. The `MAX_CONCURRENT_REQUESTS` constant (default `0` = no queuing) controls this globally. If connection pool exhaustion becomes an issue with large scenes, increasing this to 4–6 will throttle concurrent requests while leaving room for UI traffic.
 
 ---
 
 ## Summary
 
-OctaneWebR is a well-organized, competently written application that faithfully replicates Octane Render Studio's interface in the browser. Its architecture is clean, its React patterns are modern and appropriate, and its TypeScript usage provides meaningful safety. Error handling surfaces failures to users through the status bar for all major operations. The styling system is well-structured with comprehensive theming and keyboard accessibility. The main areas for improvement are the dual-server maintenance burden, the concentration of state in `App.tsx`, and test coverage. None of these are architectural problems — they're the kind of incremental improvements that follow naturally from a codebase that has its fundamentals right.
+| Severity  | Count  |
+| --------- | ------ |
+| Critical  | 5      |
+| Moderate  | 10     |
+| Minor     | 9      |
+| **Total** | **24** |
+
+**All 24 findings have been fixed.** The App.tsx state concentration architectural observation has also been resolved via hook extraction. The remaining architectural items (dual-server duplication, no automated tests, RequestQueue tuning) are future improvements, not bugs.

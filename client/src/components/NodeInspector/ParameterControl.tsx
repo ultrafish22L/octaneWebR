@@ -43,7 +43,7 @@ function formatFloatForDisplay(value: number): string {
  */
 function parseFloatValue(value: string | number): number {
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  return isNaN(num) ? 0 : parseFloat(num.toFixed(6));
+  return isNaN(num) ? 0 : num;
 }
 
 /**
@@ -156,7 +156,7 @@ function ParameterControlComponent({
       const floatValue = typeof value === 'number' ? value : 0;
       const floatInfo = node.pinInfo?.floatInfo;
       const useSliders = floatInfo?.useSliders ?? true;
-      const step = floatInfo?.dimInfos?.[0]?.sliderStep ?? 0.001;
+      const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
 
       controlHtml = (
         <div className="parameter-control-container">

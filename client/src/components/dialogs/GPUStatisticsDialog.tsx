@@ -6,6 +6,7 @@
 
 import { Logger } from '../../utils/Logger';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useOctane } from '../../hooks/useOctane';
 
 interface DeviceStatistics {
@@ -159,7 +160,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
     };
   }, [isOpen, connected, client]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !document.body) return null;
 
   const formatGB = (bytes: number): string => {
     if (bytes <= 0) return '0';
@@ -170,7 +171,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
     return num.toLocaleString();
   };
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div className="gpu-statistics-backdrop" role="presentation" onClick={onClose} />
@@ -287,7 +288,8 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 

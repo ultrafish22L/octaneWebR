@@ -31,6 +31,9 @@ class RequestQueue {
    * Returns a promise that resolves when the request completes
    */
   async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    // 0 = no queuing, execute immediately
+    if (this.maxConcurrent === 0) return fn();
+
     return new Promise<T>((resolve, reject) => {
       this.queue.push({
         fn: fn as () => Promise<unknown>,
@@ -87,5 +90,8 @@ class RequestQueue {
   }
 }
 
+/** Max concurrent API requests. 0 = no queuing (unlimited). */
+const MAX_CONCURRENT_REQUESTS = 0;
+
 // Global singleton instance
-export const requestQueue = new RequestQueue(4);
+export const requestQueue = new RequestQueue(MAX_CONCURRENT_REQUESTS);

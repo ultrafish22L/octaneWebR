@@ -132,9 +132,11 @@ class OctaneGrpcClient {
 
   // ========== Callback Management ==========
 
+  private isRegistering = false;
+
   async registerOctaneCallbacks(): Promise<void> {
-    if (this.isCallbackRegistered) return;
-    this.isCallbackRegistered = true; // Set immediately to prevent concurrent calls
+    if (this.isCallbackRegistered || this.isRegistering) return;
+    this.isRegistering = true;
 
     try {
       this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
@@ -157,10 +159,12 @@ class OctaneGrpcClient {
       }
 
       this.startCallbackStreaming();
+      this.isCallbackRegistered = true;
       slog.info('Callback registration complete');
     } catch (error: any) {
-      this.isCallbackRegistered = false; // Reset on failure
       slog.error(`Failed to register callbacks: ${error.message}`);
+    } finally {
+      this.isRegistering = false;
     }
   }
 
@@ -242,7 +246,7 @@ class OctaneGrpcClient {
         }
       })
       .catch((err: any) => {
-        slog.debug('Failed to poll render statistics:', err.message);
+        slog.warn('Failed to poll render statistics:', err.message);
       })
       .finally(() => {
         this.isPollingStatistics = false;
@@ -383,7 +387,8 @@ export function octaneGrpcPlugin(): Plugin {
       wss.on('connection', (ws: WebSocket) => {
         slog.info('WebSocket client connected');
 
-        const MAX_WS_BUFFER = 10 * 1024 * 1024; // 10 MB backpressure limit
+        // 10 MB backpressure limit (keep in sync with server/src/api/websocket.ts)
+        const MAX_WS_BUFFER = 10 * 1024 * 1024;
 
         const callbackHandler = (data: any) => {
           try {
@@ -454,10 +459,12 @@ export function octaneGrpcPlugin(): Plugin {
       server.middlewares.use((req, res, next) => {
         const url = req.url;
 
-        // Health check endpoint
+        // Health check endpoint (5s timeout to prevent hanging if Octane is stuck)
         if (url === '/api/health') {
-          grpcClient
-            ?.checkHealth()
+          const healthTimeout = new Promise<boolean>((_, reject) =>
+            setTimeout(() => reject(new Error('Health check timed out')), 5000)
+          );
+          Promise.race([grpcClient?.checkHealth() ?? Promise.resolve(false), healthTimeout])
             .then(isHealthy => {
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
@@ -711,11 +718,11 @@ export function octaneGrpcPlugin(): Plugin {
         if (grpcClient) {
           grpcClient.unregisterOctaneCallbacks().catch(() => {});
           grpcClient.close();
-          grpcClient = null as any;
+          grpcClient = null!;
         }
         if (wss) {
           wss.close();
-          wss = null as any;
+          wss = null!;
         }
       });
 

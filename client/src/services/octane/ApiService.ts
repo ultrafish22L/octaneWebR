@@ -8,8 +8,9 @@ import { BaseService } from './BaseService';
 import { Logger } from '../../utils/Logger';
 import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
 
-/** Default timeout for API calls (ms). Prevents zombie requests from accumulating. */
-const API_TIMEOUT_MS = 30_000;
+/** Default timeout for API calls (ms). Prevents zombie requests from accumulating.
+ *  60s allows for slow scene tree operations on large scenes. */
+const API_TIMEOUT_MS = 60_000;
 
 /**
  * Loosely typed API response value. A recursive union that covers all JSON

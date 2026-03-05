@@ -7,6 +7,8 @@
  * intentional for a generic event-emitter pattern.
  */
 
+import { Logger } from './Logger';
+
 type EventHandler = Function;
 
 export class EventEmitter {
@@ -21,7 +23,7 @@ export class EventEmitter {
     handlers.push(handler);
 
     if (handlers.length > this.maxListeners) {
-      console.warn(
+      Logger.warn(
         `EventEmitter: "${event}" has ${handlers.length} listeners (max ${this.maxListeners}). Possible memory leak.`
       );
     }

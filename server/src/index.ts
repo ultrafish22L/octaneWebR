@@ -182,7 +182,14 @@ app.post('/api/grpc/:service/:method', async (req, res) => {
     // Convert response to plain object if needed
     let jsonResponse = response;
     if (response && typeof response.toObject === 'function') {
-      jsonResponse = response.toObject();
+      try {
+        jsonResponse = response.toObject();
+      } catch (conversionError: any) {
+        console.error(
+          `${RED}toObject() failed for ${service}.${method}: ${conversionError.message}${RESET}`
+        );
+        jsonResponse = response;
+      }
     } else if (response && typeof response === 'object') {
       // Already a plain object
       jsonResponse = response;
