@@ -66,7 +66,7 @@ export function TurntableAnimationDialog({ isOpen, onClose }: TurntableAnimation
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="turntable-animation-dialog"
+        className="modal-dialog turntable-animation-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="turntable-animation-title"

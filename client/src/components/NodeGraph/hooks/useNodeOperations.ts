@@ -510,6 +510,9 @@ export function useNodeOperations({
       } else if (modifier && event.key === 'c') {
         event.preventDefault();
         handleCopy();
+      } else if (modifier && event.key === 'x') {
+        event.preventDefault();
+        handleCut();
       } else if (modifier && event.key === 'v') {
         event.preventDefault();
         handlePaste();
@@ -538,6 +541,7 @@ export function useNodeOperations({
   }, [
     containerRef,
     handleCopy,
+    handleCut,
     handlePaste,
     handleDuplicate,
     handleUngroup,

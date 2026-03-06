@@ -104,12 +104,12 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
     let adjustedX = x;
     let adjustedY = y;
 
-    // Keep menu on screen
+    // Keep menu fully on screen (clamp to viewport edges)
     if (rect.right > window.innerWidth) {
-      adjustedX = x - rect.width;
+      adjustedX = Math.max(0, window.innerWidth - rect.width);
     }
     if (rect.bottom > window.innerHeight) {
-      adjustedY = y - rect.height;
+      adjustedY = Math.max(0, window.innerHeight - rect.height);
     }
 
     if (adjustedX !== x || adjustedY !== y) {
@@ -175,12 +175,12 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
       // If submenu goes off right edge, show on left side instead
       if (submenuRect.right > window.innerWidth) {
         const categoryRect = categoryElementRef.current.getBoundingClientRect();
-        adjustedLeft = categoryRect.left - submenuRect.width - 2;
+        adjustedLeft = Math.max(0, categoryRect.left - submenuRect.width - 2);
       }
 
       // If submenu goes off bottom edge, adjust top position
       if (submenuRect.bottom > window.innerHeight) {
-        adjustedTop = window.innerHeight - submenuRect.height;
+        adjustedTop = Math.max(0, window.innerHeight - submenuRect.height);
       }
 
       if (adjustedLeft !== submenuPosition.left || adjustedTop !== submenuPosition.top) {

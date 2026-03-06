@@ -171,16 +171,19 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
     return num.toLocaleString();
   };
 
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div className="gpu-statistics-backdrop" role="presentation" onClick={onClose} />
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
+  return createPortal(
+    <div className="modal-overlay" role="presentation" onClick={handleOverlayClick}>
       {/* Dialog — Octane SE style compact tooltip panel */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="gpu-statistics-dialog"
+        className="modal-dialog gpu-statistics-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="gpu-statistics-title"
@@ -288,7 +291,7 @@ function GPUStatisticsDialog({ isOpen, onClose, position }: GPUStatisticsDialogP
           )}
         </div>
       </div>
-    </>,
+    </div>,
     document.body
   );
 }

@@ -68,7 +68,7 @@ export function DaylightAnimationDialog({ isOpen, onClose }: DaylightAnimationDi
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="daylight-animation-dialog"
+        className="modal-dialog daylight-animation-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="daylight-animation-title"

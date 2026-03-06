@@ -122,7 +122,7 @@ body {
 .panel-splitter {
   background-color: var(--border);
   cursor: col-resize;
-  z-index: var(--z-dropdown);
+  z-index: var(--z-low);
   transition: background-color 0.2s ease;
   pointer-events: auto;
   user-select: none;

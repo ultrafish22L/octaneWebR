@@ -609,16 +609,6 @@
  */
 
 /* GPU Statistics — Octane SE style compact tooltip panel */
-.gpu-statistics-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: transparent;
-  z-index: var(--z-dialog-overlay);
-}
-
 .gpu-statistics-dialog {
   position: fixed;
   top: 50%;

@@ -292,7 +292,13 @@ function MenuBar({
             return;
           }
           try {
-            const response = await client.callApi('ApiProjectManager', 'resetProject', {});
+            const response = await client.callApi(
+              'ApiProjectManager',
+              'resetProject',
+              {},
+              {},
+              120_000
+            );
             if (response) {
               showNotification('New scene created', 'success');
               onSceneRefresh?.();

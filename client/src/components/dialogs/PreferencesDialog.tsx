@@ -40,7 +40,7 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="preferences-dialog"
+        className="modal-dialog preferences-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="preferences-title"

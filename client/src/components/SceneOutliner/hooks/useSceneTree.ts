@@ -56,7 +56,7 @@ export function useSceneTree({
     }
   }, [sceneTree]);
 
-  // Load scene tree from Octane
+  // Load scene tree from Octane (retries if server protos aren't ready yet)
   const loadSceneTree = useCallback(async () => {
     if (!connected || !client) {
       return;
@@ -67,7 +67,17 @@ export function useSceneTree({
     onSyncStateChangeRef.current?.(true);
 
     try {
-      const tree = await client.buildSceneTree();
+      let tree = await client.buildSceneTree();
+
+      // Retry if empty — server protos may not be ready after page reload
+      if (tree.length === 0) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          Logger.debug(`Scene tree empty, retry ${attempt}/2 after 500ms...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          tree = await client.buildSceneTree();
+          if (tree.length > 0) break;
+        }
+      }
 
       // Progressive — tree was already populated via events.
       // Just ensure expansion map is initialized with final tree.

@@ -1,7 +1,7 @@
 # OctaneWebR Code Review Report
 
 **Date**: 2026-03-05
-**Version**: 1.4.1
+**Version**: 1.4.2
 **Reviewer**: Claude (automated strict review)
 **Scope**: Full codebase — client components, services, hooks, utilities, server, Vite plugin, CSS, configuration
 

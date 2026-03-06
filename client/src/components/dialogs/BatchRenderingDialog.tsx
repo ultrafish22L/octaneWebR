@@ -69,7 +69,7 @@ function BatchRenderingDialog({ isOpen, onClose }: BatchRenderingDialogProps) {
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="batch-rendering-dialog"
+        className="modal-dialog batch-rendering-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-rendering-title"

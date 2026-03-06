@@ -39,11 +39,12 @@ If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_afte
 
 ### Before Testing
 
-1. **Set log level to DEBUG**: In `client/src/utils/Logger.ts`, ensure the dev default is `LogLevel.DEBUG` (not INFO).
-2. **Enable server-side file logging**: In `vite-plugin-octane-grpc.ts`, set `DEBUG_FILE_LOG = true` so gRPC request/response pairs are written to `grpc-debug.log`.
-3. **Verify Octane is running**: Status bar should show "Connected". If not, wait for Octane to start before proceeding.
+1. **Ask the user to start Octane** with the test scene (e.g. "Please start Octane with teapot.orbx and let me know when it's ready"). **Wait for explicit go-ahead** before proceeding.
+2. **Set log level to DEBUG**: In `client/src/utils/Logger.ts`, ensure the dev default is `LogLevel.DEBUG` (not INFO).
+3. **Enable server-side file logging**: In `vite-plugin-octane-grpc.ts`, set `DEBUG_FILE_LOG = true` so gRPC request/response pairs are written to `grpc-debug.log`.
 4. **Start the dev server**: `npm run dev` (or use `preview_start`). Confirm the app loads and renders.
-5. **Take a baseline screenshot** before starting each pass.
+5. **Verify Octane is connected**: Status bar should show "Connected". If not, wait and ask the user.
+6. **Take a baseline screenshot** before starting each pass.
 
 ### During Testing
 
@@ -51,6 +52,33 @@ If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_afte
 - **Check console for errors** after each category block (use `preview_console_logs` or browser console). Zero errors expected unless specifically testing error scenarios.
 - **Test incrementally** — don't accumulate many tests before checking for regressions.
 - **Run destructive tests last** within each pass (delete, create, change type). Reload `teapot.orbx` after each one.
+- **Don't rush** — teapot scene should respond OK, but large scenes may take time for syncing.
+
+### Debugging Lessons (R3)
+
+1. **Always check and note the logs for EVERY test.** Not just when things look wrong. Read `grpc-debug.log` after every test that fires a gRPC call. The log entry is the evidence — reference it in the test result.
+
+2. **Check logs BEFORE declaring pass/fail.** Logs first, judgment second. Never mark a test result without having read what the log showed.
+
+3. **Don't rationalize away failures.** When the user says "nothing changed," the test FAILED. Don't explain it away as "the scene renders too fast" or "the callback overwrote it." If the user sees no change, it didn't work. A gRPC call returning `{}` does NOT mean it worked — confirm the visible effect in both the app AND Octane.
+
+4. **Don't rush.** Moving fast through tests means missing failures. Each test deserves full verification — UI state, gRPC log, and visual result.
+
+5. **Don't be afraid to restart from scratch.** If the app or Octane gets into a bad state (stale connection, missing nodes, invisible nodes, broken sync, weird UI), stop testing, capture all the info you can from the bad state (logs, screenshots, console errors), then restart the dev server fresh (`preview_stop` + `preview_start` + F5). Continuing with a bad state wastes time and produces unreliable results. This applies to any scenario — crashes, post-File→Open weirdness, invisible graph nodes, stale connections — not just crashes.
+
+6. **After File→Open, the scene tree may be incomplete.** `loadProject` is async — the app can query the tree too early (BUG-R3-6). F5 can recover. Watch for partial tree state.
+
+7. **Button highlighting is part of the test.** If Pause should highlight and Start should unhighlight, and they don't, that's a FAIL — not just a cosmetic note. Same for any toggle state that should visually reflect the action.
+
+8. **Check console errors after creating nodes.** "Unknown node type" errors mean the type mapping is missing. Not all node types in the context menu have NT\_ mappings.
+
+9. **LiveLink.SetCamera works but ApiRenderEngine calls may not.** Different API surfaces have different levels of Octane support in standalone/LiveLink mode. Don't assume one working API means another works.
+
+10. **Synthetic keyboard events need complete event objects.** Include `stopPropagation`, `preventDefault`, `bubbles`, `cancelable` — missing methods crash the handler chain.
+
+11. **React fiber traversal depth matters.** Wrong depth = wrong handler. Document the correct depth for each element type when discovered.
+
+12. **Use visual checks to verify UI actions actually worked.** Never assume a hover, click, menu open, or submenu expansion succeeded — always take a screenshot or read the DOM to confirm the action produced the expected visual result. Synthetic events and fiber calls can silently fail.
 
 ### Scene Restoration
 
@@ -64,12 +92,15 @@ The scene can always be restored by reloading `teapot.orbx`:
 ### If Octane Crashes
 
 1. **Stop testing immediately** — do not continue clicking or sending gRPC calls.
-2. **Log the crash**: note which test was running, what action triggered it, and take a screenshot if the app is still visible.
-3. **Wait for Octane to restart** — the user will restart it manually.
-4. **Refresh the page** (F5 or reload) after Octane is back up.
-5. **Verify connection**: status bar shows "Connected", render image appears.
-6. **Re-run the test that caused the crash** to confirm whether it's reproducible.
-7. If reproducible, file as a bug with severity **High** and mark the test as **FAIL**.
+2. **Investigate the crash cause in logs** — Octane crashes are high priority. Read `grpc-debug.log` to find the exact transition point: the last successful `RES` line and the first `ERR` line. The API call that was in-flight or immediately preceded the crash is likely the trigger. Note the timestamp gap between last success and first error.
+3. **Log the crash in `TEST_BUGS.md`** with severity **High**, including: the test that was running, the exact sequence of actions, the last successful gRPC call (method + handle + timestamp), the first error (method + error type + timestamp), and any relevant log excerpts. Without this evidence the bug report is incomplete.
+4. **Take a screenshot** if the app is still visible.
+5. **Wait for Octane to restart** — the user will restart it manually.
+6. **Restart the dev server** (`preview_stop` + `preview_start`) — the gRPC connection on the server side is stale after a crash. This is mandatory, not optional. A stale server connection causes invisible nodes, missing edges, and other subtle graph corruption.
+7. **Refresh the page** (F5 or reload) after the new dev server is up.
+8. **Verify connection**: status bar shows "Connected", **render image shows the teapot**. On a fresh connection the teapot must always appear on the first render — if it doesn't, something is still wrong (stale connection, Octane not fully loaded, etc.). Do not proceed until the teapot is visible.
+9. **Re-run the test that caused the crash** to confirm whether it's reproducible.
+10. If reproducible, mark the test as **FAIL**.
 
 ### If the App (Web UI) Crashes or Freezes
 
@@ -83,9 +114,10 @@ The scene can always be restored by reloading `teapot.orbx`:
 1. **Take a screenshot** immediately showing the failure state.
 2. **Check console logs** for errors — copy relevant output.
 3. **Check `grpc-debug.log`** if the failure involves a missing or wrong gRPC call.
-4. **Log the failure** in `TEST_RESULTS.md` with result **FAIL** and a clear description of what went wrong.
-5. **File a bug** in `TEST_BUGS.md` with a new ID (e.g. `BUG-R3-1`).
-6. **Continue testing** — don't stop the pass for a single failure unless it blocks subsequent tests.
+4. **Save relevant log excerpts** to `TEST_BUGS.md` alongside the bug entry — include gRPC log lines, console errors, and client log output that show what went wrong. Logs are evidence; without them the bug report is incomplete.
+5. **Log the failure** in `TEST_RESULTS.md` with result **FAIL** and a clear description of what went wrong.
+6. **File a bug** in `TEST_BUGS.md` with a new ID (e.g. `BUG-R3-1`), including: steps to reproduce, expected vs actual, and the log excerpts from step 4.
+7. **Continue testing** — don't stop the pass for a single failure unless it blocks subsequent tests.
 
 ### If a Test Is Blocked
 
@@ -100,7 +132,7 @@ If a test cannot run because of a prerequisite failure (e.g. can't test delete i
 If you discover a bug while running an unrelated test:
 
 1. Note it immediately — don't lose the observation.
-2. Add it to `TEST_BUGS.md` with the next available bug ID.
+2. Add it to `TEST_BUGS.md` with the next available bug ID, including relevant log excerpts (gRPC log, console errors, client log).
 3. If it doesn't block the current test, continue testing and investigate later.
 
 ### Result Recording
@@ -146,6 +178,192 @@ Before clicking any UI element:
 2. Identify the element's pixel coordinates from the screenshot
 3. Click at the identified coordinates
 4. Don't guess coordinates — always screenshot first
+
+### DOM Patterns for Automated Testing
+
+The Node Inspector uses a consistent DOM structure. Use these patterns instead of guessing selectors:
+
+**Finding a parameter by label:**
+
+```js
+// Every parameter row: .node-content > .node-label > .node-label-text > span.node-title
+// Find by label text, then get the input from the same .node-content container
+const titles = document.querySelectorAll('.node-title');
+for (const t of titles) {
+  if (t.textContent?.trim() === 'Bokeh side count:') {
+    const input = t.closest('.node-content').querySelector('input.number-input');
+    // input.value is the current value
+  }
+}
+```
+
+**Changing a number input (React controlled):**
+
+```js
+input.focus();
+Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '10');
+input.dispatchEvent(new Event('input', { bubbles: true }));
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+```
+
+**Clicking a checkbox:** Direct `.click()` works — `document.querySelector('#checkbox-1000051').click()`
+
+**Changing a dropdown/select (React controlled — must use fiber):**
+
+```js
+const titles = document.querySelectorAll('.node-title');
+for (const t of titles) {
+  if (t.textContent?.trim() === 'Stereo output:') {
+    const select = t.closest('.node-content').querySelector('select');
+    const fiberKey = Object.keys(select).find(k => k.startsWith('__reactFiber'));
+    let fiber = select[fiberKey];
+    while (fiber) {
+      if (fiber.memoizedProps?.onChange) {
+        fiber.memoizedProps.onChange({ target: { value: '1' } }); // value is option index as string
+        break;
+      }
+      fiber = fiber.return;
+    }
+  }
+}
+```
+
+**Triggering context menus on tree items (React fiber):**
+
+```js
+const treeItem = document.querySelectorAll('[role="treeitem"]')[3];
+const fiberKey = Object.keys(treeItem).find(k => k.startsWith('__reactFiber'));
+let fiber = treeItem[fiberKey];
+while (fiber) {
+  if (fiber.memoizedProps?.onContextMenu) {
+    fiber.memoizedProps.onContextMenu({
+      preventDefault() {},
+      stopPropagation() {},
+      clientX: 80,
+      clientY: 100,
+    });
+    break;
+  }
+  fiber = fiber.return;
+}
+```
+
+**Clicking context menu items:**
+
+```js
+const items = document.querySelectorAll('button.context-menu-item');
+for (const el of items) {
+  if (el.textContent?.trim() === 'Delete') {
+    el.click();
+    break;
+  }
+}
+```
+
+**Dragging splitters (React fiber + document events):**
+
+```js
+// 1. Trigger onMouseDown via fiber (sets React drag state)
+const splitter = document.querySelector('.left-splitter');
+const fiberKey = Object.keys(splitter).find(k => k.startsWith('__reactFiber'));
+let fiber = splitter[fiberKey];
+while (fiber) {
+  if (fiber.memoizedProps?.onMouseDown) {
+    fiber.memoizedProps.onMouseDown(new MouseEvent('mousedown'));
+    break;
+  }
+  fiber = fiber.return;
+}
+// 2. Wait a tick for React state, then dispatch mousemove/mouseup on document
+setTimeout(() => {
+  document.dispatchEvent(
+    new MouseEvent('mousemove', { clientX: 200, clientY: 400, bubbles: true })
+  );
+  document.dispatchEvent(new MouseEvent('mouseup', { clientX: 200, clientY: 400, bubbles: true }));
+}, 50);
+```
+
+**Tree item selectors:** `[role="treeitem"]:nth-child(N)` — Camera is typically `:nth-child(4)`, Render target `:nth-child(3)`.
+
+**Graph node selection:** `document.querySelectorAll('.react-flow__node')` — check `.classList.contains('selected')` for selection state.
+
+**Opening menu bar menus (File, Edit, etc.):**
+
+```js
+const btns = document.querySelectorAll('nav button');
+Array.from(btns)
+  .find(b => b.textContent?.trim() === 'File')
+  .click();
+// Wait ~100ms, then find menu items:
+const items = document.querySelectorAll('[class*="menu-item"], [role="menuitem"]');
+for (const item of items) {
+  if (item.textContent?.trim().startsWith('Open')) {
+    item.click();
+    break;
+  }
+}
+```
+
+**Closing menus/dialogs:**
+
+```js
+// Close modal dialogs:
+document.querySelector('.modal-close-btn')?.click();
+// Close dropdown menus — click on the canvas area:
+document.querySelector('canvas')?.click();
+```
+
+**File browser navigation:**
+
+```js
+// Entries are .file-browser-entry-name inside their parent rows
+// Double-click a folder to navigate into it:
+const entries = document.querySelectorAll('.file-browser-entry-name');
+for (const entry of entries) {
+  if (entry.textContent?.trim() === 'ORBX') {
+    entry.parentElement.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    break;
+  }
+}
+// Click a file to select it (populates filename input):
+entry.parentElement.click();
+// Filename input: document.querySelector('input[type="text"]')?.value
+// Click Open: document.querySelector('.btn.btn-primary')?.click()
+// File browser remembers last path between opens.
+```
+
+**Zooming the node graph:**
+
+```js
+// Dispatch WheelEvent on .react-flow__pane. deltaY < 0 = zoom in, > 0 = zoom out.
+const pane = document.querySelector('.react-flow__pane');
+pane.dispatchEvent(
+  new WheelEvent('wheel', { deltaY: -100, clientX: 650, clientY: 750, bubbles: true })
+);
+```
+
+**Keyboard shortcuts (F5, Delete, Escape, Ctrl+F, etc.):**
+
+```js
+// App uses document.addEventListener('keydown') — dispatched events work.
+document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', code: 'F5', bubbles: true }));
+document.dispatchEvent(
+  new KeyboardEvent('keydown', { key: 'Delete', code: 'Delete', bubbles: true })
+);
+document.dispatchEvent(
+  new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', ctrlKey: true, bubbles: true })
+);
+```
+
+**Scene restoration shortcut (File → Open → teapot.orbx → Open):**
+
+```js
+// Open File menu → click Open → wait 500ms for dialog
+// File browser remembers last path — if already in ORBX folder, just:
+//   1. Click teapot.orbx entry → 2. Click Open button
+// Wait 5s for scene to reload (tree should have 15 items).
+// IMPORTANT: Octane shows a confirm dialog the user must click.
+```
 
 ### gRPC Log Verification
 
@@ -321,15 +539,15 @@ Run this smoke test at the start of each session and after any crash/restart.
 
 ### Hard (D18–D24)
 
-| ID  | Test                                 | Pass Criteria                                                        |
-| --- | ------------------------------------ | -------------------------------------------------------------------- |
-| D18 | Edit float3 (vector x, y, z)         | Each component updates independently; gRPC call per change           |
-| D19 | Color parameter                      | Click swatch → color picker → change color → gRPC call               |
-| D20 | String parameter                     | Edit text → Enter commits → gRPC call                                |
-| D21 | Rapid parameter toggling             | 10 toggles in 2 seconds → no dropped updates (all gRPC calls logged) |
-| D22 | Node with 50+ parameters             | All values populate (Kernel node: 42 params)                         |
-| D23 | Right-click parameter → context menu | Menu appears with Reset/Copy/Paste value options                     |
-| D24 | Tab/Shift+Tab navigation             | Focus moves between parameter inputs                                 |
+| ID  | Test                                 | Pass Criteria                                                            |
+| --- | ------------------------------------ | ------------------------------------------------------------------------ |
+| D18 | Edit float3 (vector x, y, z)         | Each component updates independently; gRPC call per change               |
+| D19 | Color parameter                      | Click swatch → color picker → change color → gRPC call                   |
+| D20 | String parameter                     | Create a Note node (Other → Note), edit text → Enter commits → gRPC call |
+| D21 | Rapid parameter toggling             | 10 toggles in 2 seconds → no dropped updates (all gRPC calls logged)     |
+| D22 | Node with 50+ parameters             | All values populate (Kernel node: 42 params)                             |
+| D23 | Right-click parameter → context menu | Menu appears with Reset/Copy/Paste value options                         |
+| D24 | Tab/Shift+Tab navigation             | Focus moves between parameter inputs                                     |
 
 ---
 

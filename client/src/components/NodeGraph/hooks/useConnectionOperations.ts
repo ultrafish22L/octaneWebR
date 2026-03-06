@@ -548,19 +548,28 @@ export function useConnectionOperations({
 
   /**
    * Handle edge deletion (keyboard Delete key or context menu)
-   * NOTE: Currently connections are visual-only in ReactFlow and not synced to Octane backend
-   * When backend sync is implemented, use connectToIx with handle=0 to disconnect pins
+   * Disconnects pins in Octane backend for each deleted edge.
    */
-  const onEdgesDelete = useCallback(async (deletedEdges: Edge[]) => {
-    Logger.debug(`Deleted ${deletedEdges.length} edge(s) from graph (visual only)`);
-    // TODO: When backend connection sync is implemented, add API calls here
-    // For each edge: await client.callApi('ApiNode', 'connectToIx', targetHandle, {
-    //   pinIdx,
-    //   sourceNode: { handle: 0, type: 17 },  // handle=0 means disconnect
-    //   evaluate: true,
-    //   doCycleCheck: true
-    // });
-  }, []);
+  const onEdgesDelete = useCallback(
+    async (deletedEdges: Edge[]) => {
+      Logger.debug(`Deleting ${deletedEdges.length} edge(s) from graph`);
+
+      for (const edge of deletedEdges) {
+        try {
+          const targetHandle = parseInt(edge.target);
+          const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
+
+          Logger.debug(`Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
+          await client.disconnectPin(targetHandle, pinIdx);
+          Logger.debug('Pin disconnected in Octane');
+        } catch (error) {
+          Logger.error('Failed to disconnect edge:', error);
+          setTemporaryStatus('Failed to disconnect pin', 3000);
+        }
+      }
+    },
+    [client, setTemporaryStatus]
+  );
 
   return {
     onConnectStart,

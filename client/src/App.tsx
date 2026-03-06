@@ -137,6 +137,8 @@ function AppContent() {
   };
 
   const handleSceneRefresh = () => {
+    setSelectedNode(null);
+    setSceneTree([]);
     setSceneRefreshTrigger(prev => prev + 1);
   };
 

@@ -122,9 +122,10 @@ export class OctaneClient extends EventEmitter {
     service: string,
     method: string,
     handle?: string | number | Record<string, unknown> | null,
-    params: Record<string, unknown> = {}
+    params: Record<string, unknown> = {},
+    timeoutMs?: number
   ): Promise<import('./octane/ApiService').ApiCallResult> {
-    return this.apiService.callApi(service, method, handle, params);
+    return this.apiService.callApi(service, method, handle, params, timeoutMs);
   }
 
   // ==================== Camera Methods ====================

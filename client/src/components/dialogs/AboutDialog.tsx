@@ -38,7 +38,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
-        className="about-dialog"
+        className="modal-dialog about-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="about-title"

@@ -102,12 +102,12 @@ export function NodeContextMenu({
     let adjustedX = x;
     let adjustedY = y;
 
-    // Keep menu on screen
+    // Keep menu fully on screen (clamp to viewport edges)
     if (rect.right > window.innerWidth) {
-      adjustedX = x - rect.width;
+      adjustedX = Math.max(0, window.innerWidth - rect.width);
     }
     if (rect.bottom > window.innerHeight) {
-      adjustedY = y - rect.height;
+      adjustedY = Math.max(0, window.innerHeight - rect.height);
     }
 
     if (adjustedX !== x || adjustedY !== y) {

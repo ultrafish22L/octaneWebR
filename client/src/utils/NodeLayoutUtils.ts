@@ -92,7 +92,11 @@ export function estimateNodeWidth(inputCount: number, label?: string): number {
   const labelWidth = label
     ? Math.ceil(measureTextWidth(label)) + 4 + NODE_PADDING_LEFT + NODE_PADDING_RIGHT
     : 0;
-  return Math.min(NODE_MAX_WIDTH, Math.max(NODE_MIN_WIDTH, pinWidth, labelWidth));
+  // Pin width is never clamped — high-pin-count nodes (e.g. cameras with 30-63 inputs)
+  // must be wide enough to fit all pins without overlap.
+  // Label width is clamped to NODE_MAX_WIDTH to prevent excessively wide nodes from long names.
+  const clampedLabelWidth = Math.min(NODE_MAX_WIDTH, labelWidth);
+  return Math.max(NODE_MIN_WIDTH, pinWidth, clampedLabelWidth);
 }
 
 /**
