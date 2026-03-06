@@ -440,67 +440,13 @@ export class NodeService extends BaseService {
   /**
    * Ungroup a group node
    */
-  async ungroupNode(groupNodeHandle: number): Promise<number[]> {
-    Logger.debug('Ungrouping node:', groupNodeHandle);
-
-    try {
-      const ungroupResponse = await this.apiService.callApi(
-        'ApiNodeGraph',
-        'ungroup',
-        groupNodeHandle,
-        {}
-      );
-
-      if (!ungroupResponse?.ungroupedItems) {
-        Logger.error('Failed to ungroup node');
-        return [];
-      }
-
-      Logger.debug('Ungroup response:', ungroupResponse);
-
-      const ungroupedHandles: number[] = [];
-      const ungroupedItems = ungroupResponse.ungroupedItems;
-
-      if (Array.isArray(ungroupedItems)) {
-        for (const item of ungroupedItems) {
-          const h = getHandle(item);
-          if (h) ungroupedHandles.push(h);
-        }
-      } else {
-        const ungroupedObj = asObject(ungroupedItems);
-        if (ungroupedObj && Array.isArray(ungroupedObj.items)) {
-          for (const item of ungroupedObj.items) {
-            const h = getHandle(item);
-            if (h) ungroupedHandles.push(h);
-          }
-        }
-      }
-
-      Logger.debug('Extracted ungrouped handles:', ungroupedHandles);
-
-      const scene = this.sceneService.getScene();
-      scene.map.delete(groupNodeHandle);
-      scene.tree = scene.tree.filter(n => n.handle !== groupNodeHandle);
-      this.emit('nodeDeleted', { handle: groupNodeHandle, collapsedChildren: [] });
-
-      for (const handle of ungroupedHandles) {
-        await this.sceneService.buildSceneTree(handle);
-        const newNode = this.sceneService.getNodeByHandle(handle);
-        if (newNode) {
-          this.emit('nodeAdded', { node: newNode, handle });
-        }
-      }
-
-      Logger.debug('Ungrouped into nodes:', ungroupedHandles);
-      return ungroupedHandles;
-    } catch (error) {
-      Logger.error(
-        'Error ungrouping node:',
-        error instanceof Error ? error.message : String(error)
-      );
-      this.emitUserError('Failed to ungroup node');
-      return [];
-    }
+  async ungroupNode(_groupNodeHandle: number): Promise<number[]> {
+    // BUG-R3-9: ApiNodeGraph.ungroup crashes Octane (~5s after the call).
+    // The API itself is broken — Octane's internal ungroup processing triggers
+    // a fatal error. Disabled until Octane fixes the ungroup API.
+    Logger.warn('Ungroup disabled: ApiNodeGraph.ungroup crashes Octane (BUG-R3-9)');
+    this.emitUserError('Ungroup is not available (Octane API limitation)');
+    return [];
   }
 
   /**
@@ -623,8 +569,11 @@ export class NodeService extends BaseService {
       }
 
       try {
+        // Connect new node to the parent pin — this automatically disconnects
+        // the old node. We do NOT destroy the old node because ApiItem.destroy
+        // crashes Octane for recently-disconnected nodes (BUG-R3-4).
+        // The old node remains orphaned but harmless in Octane's scene graph.
         await this.connectPinByIndex(parentHandle, pinIdx, newNodeHandle, true);
-        await this.deleteNodeOptimized(oldNodeHandle);
       } catch (innerError) {
         // Rollback: delete the orphaned new node
         Logger.warn('replaceNode partially failed, rolling back new node:', newNodeHandle);

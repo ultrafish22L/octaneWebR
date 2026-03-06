@@ -80,6 +80,24 @@ If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_afte
 
 12. **Use visual checks to verify UI actions actually worked.** Never assume a hover, click, menu open, or submenu expansion succeeded — always take a screenshot or read the DOM to confirm the action produced the expected visual result. Synthetic events and fiber calls can silently fail.
 
+13. **Test after every fix — no batching.** Fix one bug, start the dev server, verify the fix works, then move to the next bug. This catches regressions early and avoids debugging multiple changes at once.
+
+14. **Test-fix loop.** When a test fails, fix the issue and re-test immediately. Keep iterating until the fix is verified, or stop and ask the user if stuck. Never move on from a failing test.
+
+15. **Fresh state per test.** Restart the dev server and reload the scene before each bug test. Stale state from a previous test can mask or cause false results.
+
+16. **Lint and build before push.** Always run `npm run lint` and `npm run build` before reporting fixes as ready. TypeScript errors (e.g. `undefined` vs `null` mismatches) won't show up until `tsc` runs.
+
+17. **Detect Octane crashes immediately.** After any test action that could crash Octane (destroy, disconnect, replace, ungroup), check `grpc-debug.log` for `ECONNRESET` or `ECONNREFUSED` errors right away. If Octane crashed, stop immediately, report the crash with the relevant log lines, and wait for the user to restart Octane before continuing.
+
+18. **Test as a human would.** Click, drag, type, hover. Don't call internal app functions directly for testing app operation. Synthetic events DO work through preview tools and React fiber props — never assume a "trusted event limitation." See the DOM Patterns section below for proven patterns.
+
+19. **Verify → fix → report cycle.** After a batch of fixes, do a clean verification test run of all items. If any fail, fix and re-test immediately. Then report results and wait for the user to push. Don't push without explicit user go-ahead.
+
+20. **If no bugs remain, delete the bug file.** Don't keep empty tracker files around.
+
+21. **Log files.** Two log files exist: `grpc-debug.log` (server-side gRPC request/response pairs, requires `DEBUG_FILE_LOG = true` in `vite-plugin-octane-grpc.ts`) and `octaneWebR_client.log` (client-side Logger output). Both are essential evidence — always check both when verifying behavior.
+
 ### Scene Restoration
 
 The scene can always be restored by reloading `teapot.orbx`:

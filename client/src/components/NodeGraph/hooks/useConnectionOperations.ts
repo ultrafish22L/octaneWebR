@@ -168,14 +168,44 @@ export function useConnectionOperations({
         return;
       }
 
-      // Update UI using ReactFlow's official reconnectEdge utility
-      setEdges(eds => reconnectEdge(oldEdge, newConnection, eds));
-
-      // Sync with Octane in background (async operations after state update)
+      // Validate pin type compatibility BEFORE modifying anything
       if (!client) {
         Logger.warn('Cannot sync edge reconnection: No Octane client');
         return;
       }
+
+      const newTargetHandle = parseInt(newConnection.target!);
+      const newSourceHandle = parseInt(newConnection.source!);
+      const newPinIdx = newConnection.targetHandle
+        ? parseInt(newConnection.targetHandle.split('-')[1])
+        : 0;
+
+      const targetItem = client.lookupItem(newTargetHandle);
+      const sourceItem = client.lookupItem(newSourceHandle);
+
+      if (!targetItem || !sourceItem) {
+        Logger.error('Reconnection rejected: node not found in scene');
+        return;
+      }
+
+      const targetPin = targetItem.children?.[newPinIdx];
+      if (!targetPin?.pinInfo) {
+        Logger.error('Reconnection rejected: target pin not found');
+        return;
+      }
+
+      if (targetPin.pinInfo.type != sourceItem.outType) {
+        Logger.error(
+          'Reconnection rejected: pin type mismatch',
+          targetPin.pinInfo.type,
+          sourceItem.outType
+        );
+        setTemporaryStatus('Incompatible pin types', 2000);
+        return;
+      }
+
+      // Types match — safe to proceed. Update UI first.
+      setEdges(eds => reconnectEdge(oldEdge, newConnection, eds));
 
       // Sync reconnection with Octane (disconnect old, connect new)
       (async () => {
@@ -188,12 +218,6 @@ export function useConnectionOperations({
           await client.disconnectPin(oldTargetHandle, oldPinIdx);
 
           // Connect new connection
-          const newTargetHandle = parseInt(newConnection.target!);
-          const newSourceHandle = parseInt(newConnection.source!);
-          const newPinIdx = newConnection.targetHandle
-            ? parseInt(newConnection.targetHandle.split('-')[1])
-            : 0;
-
           Logger.debug(
             ` Connecting new: source=${newSourceHandle} → target=${newTargetHandle}, pin=${newPinIdx}`
           );
@@ -239,13 +263,21 @@ export function useConnectionOperations({
         return;
       }
 
+      // Validate pin exists before disconnecting
+      const targetHandle = parseInt(edge.target);
+      const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
+      const targetItem = client.lookupItem(targetHandle);
+
+      if (!targetItem?.children?.[pinIdx]?.pinInfo) {
+        Logger.warn('Skipping disconnect: target pin not found in scene');
+        // Still remove from UI since the reconnect failed
+        setEdges(eds => eds.filter(e => e.id !== edge.id));
+        return;
+      }
+
       // Disconnect in Octane and remove from UI
       (async () => {
         try {
-          // Parse edge info: target node and pin index
-          const targetHandle = parseInt(edge.target);
-          const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
-
           Logger.debug(`Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
           await client.disconnectPin(targetHandle, pinIdx);
           Logger.debug('Pin disconnected in Octane');

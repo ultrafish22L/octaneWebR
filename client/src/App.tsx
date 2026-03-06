@@ -14,6 +14,7 @@
  */
 
 import { Logger } from './utils/Logger';
+import { requestQueue } from './utils/RequestQueue';
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
@@ -137,6 +138,9 @@ function AppContent() {
   };
 
   const handleSceneRefresh = () => {
+    // Cancel pending inspector queries before rebuilding the tree.
+    // Stale getByAttrID calls running concurrently with tree build crash Octane (BUG-R3-2).
+    requestQueue.clear();
     setSelectedNode(null);
     setSceneTree([]);
     setSceneRefreshTrigger(prev => prev + 1);

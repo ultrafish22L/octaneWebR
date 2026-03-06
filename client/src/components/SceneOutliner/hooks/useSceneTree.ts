@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
+import { requestQueue } from '../../../utils/RequestQueue';
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
@@ -65,6 +66,11 @@ export function useSceneTree({
     Logger.debug('Loading scene tree from Octane...');
     setLoading(true);
     onSyncStateChangeRef.current?.(true);
+
+    // Cancel any pending inspector queries from previous selections.
+    // Without this, hundreds of stale getByAttrID calls can run concurrently
+    // with the tree build and overwhelm Octane (BUG-R3-2).
+    requestQueue.clear();
 
     try {
       let tree = await client.buildSceneTree();
@@ -130,14 +136,20 @@ export function useSceneTree({
     // React state updates are async; a flag ensures we select exactly one render target
     // even if multiple PT_RENDERTARGET nodes arrive before the next render cycle.
     let hasSelectedRenderTarget = false;
+    // Deferred render target: activate in render engine immediately (for viewport),
+    // but delay inspector selection until tree build is complete (BUG-R3-2).
+    // This prevents hundreds of getByAttrID calls from firing during tree build.
+    let pendingRenderTarget: SceneNode | null = null;
     const handleProgressiveNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
       if (level === 0) {
         setSceneTree(prev => [...prev, node]);
 
-        // Select the first RenderTarget as soon as it arrives
+        // Activate the first RenderTarget in the render engine immediately
+        // so the viewport shows the render, but DON'T select it in the
+        // inspector yet — that triggers hundreds of getByAttrID calls.
         if (!hasSelectedRenderTarget && node.type === 'PT_RENDERTARGET') {
           hasSelectedRenderTarget = true;
-          onNodeSelectRef.current?.(node);
+          pendingRenderTarget = node;
 
           // Activate in render engine (fire-and-forget)
           if (node.handle && node.handle !== -1 && client) {
@@ -145,9 +157,7 @@ export function useSceneTree({
               .setRenderTargetNode(node.handle)
               .then(success => {
                 if (success) {
-                  Logger.debug(
-                    `RenderTarget auto-selected: "${node.name}" (handle: ${node.handle})`
-                  );
+                  Logger.debug(`RenderTarget activated: "${node.name}" (handle: ${node.handle})`);
                 }
               })
               .catch(err => {
@@ -204,10 +214,10 @@ export function useSceneTree({
 
       setSceneTree(prev => (parent.handle ? clonePathToHandle(prev, parent.handle) : [...prev]));
 
-      // Re-select the render target so NodeInspector refreshes with the
-      // newly-loaded children/pins.
+      // Update pending render target with the fully-loaded version (has children/pins).
+      // Don't select in inspector yet — wait for structureComplete (BUG-R3-2).
       if (hasSelectedRenderTarget && parent.type === 'PT_RENDERTARGET') {
-        onNodeSelectRef.current?.(parent);
+        pendingRenderTarget = parent;
       }
     };
 
@@ -218,6 +228,15 @@ export function useSceneTree({
     const handleStructureComplete = () => {
       Logger.debug('Structure complete');
       setSceneTree(prev => [...prev]);
+
+      // Now that the tree is fully built, select the render target in the
+      // inspector. This is when inspector getByAttrID queries are safe to run
+      // because the tree build is done and Octane is no longer being hammered
+      // with concurrent structure queries (BUG-R3-2).
+      if (pendingRenderTarget) {
+        onNodeSelectRef.current?.(pendingRenderTarget);
+        pendingRenderTarget = null;
+      }
     };
 
     /**

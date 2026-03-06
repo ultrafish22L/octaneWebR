@@ -21,6 +21,7 @@ import { MenuAction, MenuItem, MenuDefinition } from './types';
 import { commandHistory } from '../../services/CommandHistory';
 import { useFileBrowser } from '../../hooks/useFileBrowser';
 import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
+import { requestQueue } from '../../utils/RequestQueue';
 
 interface PanelVisibility {
   renderViewport: boolean;
@@ -248,6 +249,9 @@ function MenuBar({
   const openFileBrowser = useFileBrowser(async path => {
     if (!path) return;
     try {
+      // Cancel pending inspector queries before loading a new scene.
+      // Stale getByAttrID calls running during loadProject crash Octane (BUG-R3-2).
+      requestQueue.clear();
       const response = await client.callApi('ApiProjectManager', 'loadProject', {
         projectPath: path,
       });
