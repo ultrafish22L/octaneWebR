@@ -276,8 +276,33 @@ export const PinId: Record<string, number> = {
  * Expand this list as more file-based types are discovered via API querying.
  */
 export const FILE_NODE_TYPES: Record<string, { extensions: string }> = {
-  NT_GEO_MESH: { extensions: '*.obj' },
+  // Geometry
+  NT_GEO_MESH: { extensions: '*.obj;*.ply;*.stl;*.fbx' },
+  NT_GEO_VOLUME: { extensions: '*.vdb;*.nvdb' },
+  NT_GEO_VOLUME_SDF: { extensions: '*.vdb;*.nvdb' },
+  NT_GEO_MESH_VOLUME_SDF: { extensions: '*.vdb;*.nvdb' },
+  NT_GEO_MESH_VOLUME: { extensions: '*.vdb;*.nvdb' },
+  NT_GEO_GAUSSIAN_SPLAT: { extensions: '*.ply;*.splat' },
+  NT_GEO_OBJECT: { extensions: '*.obj;*.ply;*.stl;*.fbx;*.abc' },
+  // Textures / Images
   NT_TEX_IMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp' },
+  NT_TEX_ALPHAIMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp' },
+  NT_TEX_FLOATIMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr' },
+  NT_TEX_IMAGE_TILES: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr' },
+  NT_TEX_BAKED_IMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr' },
+  NT_TEX_READ_VDB: { extensions: '*.vdb;*.nvdb' },
+  NT_TEX_IMAGE_TILE_SET: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr' },
+  // OSL / Script nodes
+  NT_MAT_OSL: { extensions: '*.osl;*.oso' },
+  NT_TEX_OSL: { extensions: '*.osl;*.oso' },
+  NT_PROJ_OSL: { extensions: '*.osl;*.oso' },
+  NT_CAM_OSL: { extensions: '*.osl;*.oso' },
+  NT_PROJ_OSL_UV: { extensions: '*.osl;*.oso' },
+  NT_CAM_OSL_BAKING: { extensions: '*.osl;*.oso' },
+  NT_GEO_OSL: { extensions: '*.osl;*.oso' },
+  // Alembic / VDB import
+  NT_IMPORT_ALEMBIC_PREFS: { extensions: '*.abc' },
+  NT_IMPORT_VDB_PREFS: { extensions: '*.vdb;*.nvdb' },
 };
 
 /**
