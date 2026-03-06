@@ -45,6 +45,7 @@ If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_afte
 4. **Start the dev server**: `npm run dev` (or use `preview_start`). Confirm the app loads and renders.
 5. **Verify Octane is connected**: Status bar should show "Connected". If not, wait and ask the user.
 6. **Take a baseline screenshot** before starting each pass.
+7. **Fit the app to the preview window**: Always use `preview_resize` with the `desktop` preset (1280x800) so the app renders at native size without scaling. This keeps text crisp and UI elements properly sized and clickable. Do NOT use 1920x1080 — the preview scales it down making everything too small.
 
 ### During Testing
 
@@ -64,39 +65,41 @@ If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_afte
 
 4. **Don't rush.** Moving fast through tests means missing failures. Each test deserves full verification — UI state, gRPC log, and visual result.
 
-5. **Don't be afraid to restart from scratch.** If the app or Octane gets into a bad state (stale connection, missing nodes, invisible nodes, broken sync, weird UI), stop testing, capture all the info you can from the bad state (logs, screenshots, console errors), then restart the dev server fresh (`preview_stop` + `preview_start` + F5). Continuing with a bad state wastes time and produces unreliable results. This applies to any scenario — crashes, post-File→Open weirdness, invisible graph nodes, stale connections — not just crashes.
+5. **Every test result requires visual proof.** Never pass a test based on CSS class names, DOM attributes, or internal state alone. If a test says "grid shows," take a screenshot and confirm the grid is actually visible. If a toggle changes state, screenshot before AND after. If a gRPC call should fire, read the actual log lines and reference them. The screenshot/log IS the evidence — without it the result is unverified. Class names lie; pixels don't.
 
-6. **After File→Open, the scene tree may be incomplete.** `loadProject` is async — the app can query the tree too early (BUG-R3-6). F5 can recover. Watch for partial tree state.
+6. **Don't be afraid to restart from scratch.** If the app or Octane gets into a bad state (stale connection, missing nodes, invisible nodes, broken sync, weird UI), stop testing, capture all the info you can from the bad state (logs, screenshots, console errors), then restart the dev server fresh (`preview_stop` + `preview_start` + F5). Continuing with a bad state wastes time and produces unreliable results. This applies to any scenario — crashes, post-File→Open weirdness, invisible graph nodes, stale connections — not just crashes.
 
-7. **Button highlighting is part of the test.** If Pause should highlight and Start should unhighlight, and they don't, that's a FAIL — not just a cosmetic note. Same for any toggle state that should visually reflect the action.
+7. **After File→Open, the scene tree may be incomplete.** `loadProject` is async — the app can query the tree too early (BUG-R3-6). F5 can recover. Watch for partial tree state.
 
-8. **Check console errors after creating nodes.** "Unknown node type" errors mean the type mapping is missing. Not all node types in the context menu have NT\_ mappings.
+8. **Button highlighting is part of the test.** If Pause should highlight and Start should unhighlight, and they don't, that's a FAIL — not just a cosmetic note. Same for any toggle state that should visually reflect the action.
 
-9. **LiveLink.SetCamera works but ApiRenderEngine calls may not.** Different API surfaces have different levels of Octane support in standalone/LiveLink mode. Don't assume one working API means another works.
+9. **Check console errors after creating nodes.** "Unknown node type" errors mean the type mapping is missing. Not all node types in the context menu have NT\_ mappings.
 
-10. **Synthetic keyboard events need complete event objects.** Include `stopPropagation`, `preventDefault`, `bubbles`, `cancelable` — missing methods crash the handler chain.
+10. **LiveLink.SetCamera works but ApiRenderEngine calls may not.** Different API surfaces have different levels of Octane support in standalone/LiveLink mode. Don't assume one working API means another works.
 
-11. **React fiber traversal depth matters.** Wrong depth = wrong handler. Document the correct depth for each element type when discovered.
+11. **Synthetic keyboard events need complete event objects.** Include `stopPropagation`, `preventDefault`, `bubbles`, `cancelable` — missing methods crash the handler chain.
 
-12. **Use visual checks to verify UI actions actually worked.** Never assume a hover, click, menu open, or submenu expansion succeeded — always take a screenshot or read the DOM to confirm the action produced the expected visual result. Synthetic events and fiber calls can silently fail.
+12. **React fiber traversal depth matters.** Wrong depth = wrong handler. Document the correct depth for each element type when discovered.
 
-13. **Test after every fix — no batching.** Fix one bug, start the dev server, verify the fix works, then move to the next bug. This catches regressions early and avoids debugging multiple changes at once.
+13. **Use visual checks to verify UI actions actually worked.** Never assume a hover, click, menu open, or submenu expansion succeeded — always take a screenshot or read the DOM to confirm the action produced the expected visual result. Synthetic events and fiber calls can silently fail.
 
-14. **Test-fix loop.** When a test fails, fix the issue and re-test immediately. Keep iterating until the fix is verified, or stop and ask the user if stuck. Never move on from a failing test.
+14. **Test after every fix — no batching.** Fix one bug, start the dev server, verify the fix works, then move to the next bug. This catches regressions early and avoids debugging multiple changes at once.
 
-15. **Fresh state per test.** Restart the dev server and reload the scene before each bug test. Stale state from a previous test can mask or cause false results.
+15. **Test-fix loop.** When a test fails, fix the issue and re-test immediately. Keep iterating until the fix is verified, or stop and ask the user if stuck. Never move on from a failing test.
 
-16. **Lint and build before push.** Always run `npm run lint` and `npm run build` before reporting fixes as ready. TypeScript errors (e.g. `undefined` vs `null` mismatches) won't show up until `tsc` runs.
+16. **Fresh state per test.** Restart the dev server and reload the scene before each bug test. Stale state from a previous test can mask or cause false results.
 
-17. **Detect Octane crashes immediately.** After any test action that could crash Octane (destroy, disconnect, replace, ungroup), check `grpc-debug.log` for `ECONNRESET` or `ECONNREFUSED` errors right away. If Octane crashed, stop immediately, report the crash with the relevant log lines, and wait for the user to restart Octane before continuing.
+17. **Lint and build before push.** Always run `npm run lint` and `npm run build` before reporting fixes as ready. TypeScript errors (e.g. `undefined` vs `null` mismatches) won't show up until `tsc` runs.
 
-18. **Test as a human would.** Click, drag, type, hover. Don't call internal app functions directly for testing app operation. Synthetic events DO work through preview tools and React fiber props — never assume a "trusted event limitation." See the DOM Patterns section below for proven patterns.
+18. **Detect Octane crashes immediately.** After any test action that could crash Octane (destroy, disconnect, replace, ungroup), check `grpc-debug.log` for `ECONNRESET` or `ECONNREFUSED` errors right away. If Octane crashed, stop immediately, report the crash with the relevant log lines, and wait for the user to restart Octane before continuing.
 
-19. **Verify → fix → report cycle.** After a batch of fixes, do a clean verification test run of all items. If any fail, fix and re-test immediately. Then report results and wait for the user to push. Don't push without explicit user go-ahead.
+19. **Test as a human would.** Click, drag, type, hover. Don't call internal app functions directly for testing app operation. Synthetic events DO work through preview tools and React fiber props — never assume a "trusted event limitation." See the DOM Patterns section below for proven patterns.
 
-20. **If no bugs remain, delete the bug file.** Don't keep empty tracker files around.
+20. **Verify → fix → report cycle.** After a batch of fixes, do a clean verification test run of all items. If any fail, fix and re-test immediately. Then report results and wait for the user to push. Don't push without explicit user go-ahead.
 
-21. **Log files.** Two log files exist: `grpc-debug.log` (server-side gRPC request/response pairs, requires `DEBUG_FILE_LOG = true` in `vite-plugin-octane-grpc.ts`) and `octaneWebR_client.log` (client-side Logger output). Both are essential evidence — always check both when verifying behavior.
+21. **If no bugs remain, delete the bug file.** Don't keep empty tracker files around.
+
+22. **Log files.** Two log files exist: `grpc-debug.log` (server-side gRPC request/response pairs, requires `DEBUG_FILE_LOG = true` in `vite-plugin-octane-grpc.ts`) and `octaneWebR_client.log` (client-side Logger output). Both are essential evidence — always check both when verifying behavior.
 
 ### Scene Restoration
 

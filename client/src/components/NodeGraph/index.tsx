@@ -870,7 +870,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           variant={BackgroundVariant.Lines}
           gap={gridVisible ? 60 : 0}
           size={gridVisible ? 1 : 0}
-          color="#454545"
+          color="#555555"
         />
 
         {/* Minimap for navigation - top-left flush with yellow tint matching Octane SE */}
