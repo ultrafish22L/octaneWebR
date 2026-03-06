@@ -5,7 +5,7 @@
 - **Dev server**: `npm run dev` (or `preview_start` name "dev")
 - **Test scene**: `teapot.orbx` — load via File→Open in the app (path: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\teapot.orbx`)
 - **Smoke test**: Toggle Orthographic checkbox on Camera node → verify `setByAttrID` in `grpc-debug.log`
-- **Key docs**: `TEST_BUGS.md` (open bugs), `TEST_RESULTS.md` (R2+R3 results), `TEST_PLAN.md` (181 tests), `NOTES.md` (user design notes)
+- **Key docs**: `TEST_BUGS.md` (4 open bugs), `TEST_RESULTS.md` (R1-R3 results), `IMPROVEMENTS.md` (29-item backlog)
 
 ## Testing Rules
 
@@ -22,12 +22,12 @@ When testing the app after code changes:
 9. **Fresh state per test** — restart the dev server and reload the scene before each bug test. Stale state from a previous test can mask or cause false results.
 10. **Verify → fix → report** — after a batch of fixes, do a clean verification test run of all items. If any fail, fix and re-test immediately. Then report results and wait for the user to push.
 11. **Lint and build before push** — always run `npm run lint` and `npm run build` before reporting fixes as ready. TypeScript errors (e.g. `undefined` vs `null` mismatches) won't show up until `tsc` runs.
+12. **If no bugs remain, delete the bug file** — don't keep empty tracker files around.
 
 ## Project Status
 
 - **Version**: 1.4.2 (set in `package.json`)
 - **Code review**: 8 passes completed (2026-03-04). All 24 findings fixed. Codebase is clean.
-- **Testing**: Round 3 complete (2026-03-06). 152 tests, 117 PASS. 14 open bugs in `TEST_BUGS.md` (5 are Octane-side crashes, 0 remaining app-fixable).
-- **4 bug fixes shipped (R2)**: BUG-R2-1, BUG-F5-1b, BUG-EDGE-DEL, BUG-RT-SELECT (all verified in R3).
-- **8 bug fixes verified (R3)**: R3-1, R3-3, R3-5, R3-6, R3-7, R3-8, R3-13, R3-14. All app-fixable bugs resolved.
-- **No remaining app bugs.** Only Octane-side crashes remain (R3-2/4/9/12, R3-10).
+- **Testing**: R1+R2+R3 complete. 152 tests, 117 PASS. 12 app bugs fixed and verified.
+- **4 open bugs** in `TEST_BUGS.md`: R3-2/4/9/12 (improper API call sequences that crash Octane). 2 known Octane API limitations in `TEST_PLAN.md` (R3-10, R3-11).
+- **Backlog**: 29 improvements in `IMPROVEMENTS.md` (features, UI polish, architecture, large-scene UX).

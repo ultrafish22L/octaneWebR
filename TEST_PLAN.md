@@ -93,7 +93,7 @@ The scene can always be restored by reloading `teapot.orbx`:
 
 1. **Stop testing immediately** — do not continue clicking or sending gRPC calls.
 2. **Investigate the crash cause in logs** — Octane crashes are high priority. Read `grpc-debug.log` to find the exact transition point: the last successful `RES` line and the first `ERR` line. The API call that was in-flight or immediately preceded the crash is likely the trigger. Note the timestamp gap between last success and first error.
-3. **Log the crash in `TEST_BUGS.md`** with severity **High**, including: the test that was running, the exact sequence of actions, the last successful gRPC call (method + handle + timestamp), the first error (method + error type + timestamp), and any relevant log excerpts. Without this evidence the bug report is incomplete.
+3. **Log the crash in `TEST_RESULTS.md`** with severity **High**, including: the test that was running, the exact sequence of actions, the last successful gRPC call (method + handle + timestamp), the first error (method + error type + timestamp), and any relevant log excerpts. Without this evidence the bug report is incomplete.
 4. **Take a screenshot** if the app is still visible.
 5. **Wait for Octane to restart** — the user will restart it manually.
 6. **Restart the dev server** (`preview_stop` + `preview_start`) — the gRPC connection on the server side is stale after a crash. This is mandatory, not optional. A stale server connection causes invisible nodes, missing edges, and other subtle graph corruption.
@@ -114,9 +114,9 @@ The scene can always be restored by reloading `teapot.orbx`:
 1. **Take a screenshot** immediately showing the failure state.
 2. **Check console logs** for errors — copy relevant output.
 3. **Check `grpc-debug.log`** if the failure involves a missing or wrong gRPC call.
-4. **Save relevant log excerpts** to `TEST_BUGS.md` alongside the bug entry — include gRPC log lines, console errors, and client log output that show what went wrong. Logs are evidence; without them the bug report is incomplete.
+4. **Save relevant log excerpts** to `TEST_RESULTS.md` alongside the bug entry — include gRPC log lines, console errors, and client log output that show what went wrong. Logs are evidence; without them the bug report is incomplete.
 5. **Log the failure** in `TEST_RESULTS.md` with result **FAIL** and a clear description of what went wrong.
-6. **File a bug** in `TEST_BUGS.md` with a new ID (e.g. `BUG-R3-1`), including: steps to reproduce, expected vs actual, and the log excerpts from step 4.
+6. **File a bug** in `TEST_RESULTS.md` with a new ID (e.g. `BUG-R3-1`), including: steps to reproduce, expected vs actual, and the log excerpts from step 4.
 7. **Continue testing** — don't stop the pass for a single failure unless it blocks subsequent tests.
 
 ### If a Test Is Blocked
@@ -132,7 +132,7 @@ If a test cannot run because of a prerequisite failure (e.g. can't test delete i
 If you discover a bug while running an unrelated test:
 
 1. Note it immediately — don't lose the observation.
-2. Add it to `TEST_BUGS.md` with the next available bug ID, including relevant log excerpts (gRPC log, console errors, client log).
+2. Add it to `TEST_RESULTS.md` with the next available bug ID, including relevant log excerpts (gRPC log, console errors, client log).
 3. If it doesn't block the current test, continue testing and investigate later.
 
 ### Result Recording
@@ -147,8 +147,7 @@ After each pass, update `TEST_RESULTS.md` with:
 
 All test state, results, bugs, and observations **must be written to files** — never kept only in conversation memory. Conversation context can be lost during compaction. The files are the source of truth:
 
-- `TEST_RESULTS.md` — all test results and pass/fail counts
-- `TEST_BUGS.md` — all bugs, gaps, and UX notes
+- `TEST_RESULTS.md` — all test results, pass/fail counts, and bug details
 - `TEST_PLAN.md` — this file, the master test plan
 - `screenshots/` — all screenshots taken during testing
 
@@ -165,7 +164,7 @@ If you discover something important, write it to a file immediately. If it's not
 
 When starting a new conversation or after context compaction:
 
-1. **Read all test files first**: `TEST_PLAN.md`, `TEST_RESULTS.md`, `TEST_BUGS.md`
+1. **Read all test files first**: `TEST_PLAN.md`, `TEST_RESULTS.md`
 2. Check which pass/test was last completed
 3. Resume from where you left off — don't restart from the beginning
 4. Run the smoke test to verify the environment is working
@@ -178,6 +177,14 @@ Before clicking any UI element:
 2. Identify the element's pixel coordinates from the screenshot
 3. Click at the identified coordinates
 4. Don't guess coordinates — always screenshot first
+
+### Known Octane API Limitations
+
+These are known holes in the Octane API that the app cannot work around. They are not app bugs.
+
+**Render engine calls ignored (R3-10):** `pauseRendering`, `stopRendering`, `continueRendering`, `setClayMode`, `setRenderPriority` all return success (`{}`) but produce no visible effect in Octane. Likely a LiveLink/standalone mode limitation.
+
+**Camera position not reset after File→Open (R3-11):** After loading a new scene, the camera retains its previous position/orientation. The LiveLink camera overrides the file's saved camera state.
 
 ### DOM Patterns for Automated Testing
 
@@ -626,7 +633,7 @@ Run this smoke test at the start of each session and after any crash/restart.
 | F13 | FileBrowser → Open .orbx     | Scene loads in app                        |
 | F14 | FileBrowser → Save flow      | File written to disk (verify via re-open) |
 
-> **Note:** F6 (file type filter) removed — feature does not exist (see GAP-F6 in TEST_BUGS.md).
+> **Note:** F6 (file type filter) removed — feature does not exist (see IMPROVEMENTS.md #5).
 
 ---
 
@@ -812,14 +819,9 @@ These tests fill coverage gaps found during plan review. Execute after completin
 
 ---
 
-## Known Bugs Under Test
+## Fixed Bugs (All Verified)
 
-See `TEST_BUGS.md` for full details. These bugs should be actively checked during testing:
+All 12 app bugs found during R1–R3 testing have been fixed and verified. See `TEST_RESULTS.md` for details.
 
-| Bug ID        | Tests          | What to Check                                   |
-| ------------- | -------------- | ----------------------------------------------- |
-| BUG-R2-1      | F3             | Do all dialogs close on Escape AND click-away?  |
-| BUG-F5-1b     | B14, G1        | Does "Click refresh" flash briefly after F5?    |
-| BUG-EDGE-DEL  | I12            | Does deleting an edge sync to Octane backend?   |
-| BUG-RT-SELECT | I11            | Does clicking RT node call setRenderTargetNode? |
-| BUG-TEST-KB   | G2, G3, G5, G6 | Do keyboard shortcuts work properly?            |
+R2 fixes: BUG-R2-1, BUG-F5-1b, BUG-EDGE-DEL, BUG-RT-SELECT.
+R3 fixes: BUG-R3-1, R3-3, R3-5, R3-6, R3-7, R3-8, R3-13, R3-14.
