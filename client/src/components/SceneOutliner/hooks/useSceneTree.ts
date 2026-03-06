@@ -69,13 +69,21 @@ export function useSceneTree({
     try {
       let tree = await client.buildSceneTree();
 
-      // Retry if empty — server protos may not be ready after page reload
-      if (tree.length === 0) {
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          Logger.debug(`Scene tree empty, retry ${attempt}/2 after 500ms...`);
+      // Retry if empty or suspiciously small — server protos may not be ready
+      // after page reload (F5), or Octane may still be loading after loadProject
+      // (which is async, indicated by callbackId in the response).
+      if (tree.length < 3) {
+        const maxRetries = tree.length === 0 ? 2 : 4;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          Logger.debug(
+            `Scene tree has ${tree.length} items, retry ${attempt}/${maxRetries} after 500ms...`
+          );
           await new Promise(resolve => setTimeout(resolve, 500));
-          tree = await client.buildSceneTree();
-          if (tree.length > 0) break;
+          const newTree = await client.buildSceneTree();
+          if (newTree.length > tree.length) {
+            tree = newTree;
+            if (tree.length >= 3) break;
+          }
         }
       }
 

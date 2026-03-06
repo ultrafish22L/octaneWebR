@@ -125,7 +125,7 @@ function AppContent() {
       setSelectedNode(node);
       // Activate render target in the render engine when selected
       if (node && node.type === 'PT_RENDERTARGET') {
-        client.setRenderTargetNode(node.handle);
+        client.setRenderTargetNode(node.handle ?? null);
       }
     },
     [client]

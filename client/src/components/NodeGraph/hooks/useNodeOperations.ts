@@ -142,6 +142,10 @@ export function useNodeOperations({
         evaluate: true,
       });
 
+      // Force Octane to re-evaluate the node and actually import the file.
+      // The evaluate flag in setValueByAttrID alone isn't sufficient for file imports.
+      await client.callApi('ApiItem', 'evaluate', createdHandle);
+
       Logger.debug('File node created and file loaded:', pending.nodeType, path);
     } catch (error) {
       Logger.error('Error creating file node:', error);

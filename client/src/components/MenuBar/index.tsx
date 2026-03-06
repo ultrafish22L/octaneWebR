@@ -254,6 +254,9 @@ function MenuBar({
       if (response) {
         addRecentFile(path);
         showNotification(`Loaded: ${path}`, 'success');
+        // loadProject is async in Octane (returns callbackId) — wait before
+        // querying the scene tree so Octane has time to finish loading.
+        await new Promise(resolve => setTimeout(resolve, 1500));
         onSceneRefresh?.();
       }
     } catch (error) {
@@ -334,6 +337,8 @@ function MenuBar({
               });
               if (response) {
                 showNotification(`Loaded: ${data}`, 'success');
+                // loadProject is async in Octane — wait before querying scene tree
+                await new Promise(resolve => setTimeout(resolve, 1500));
                 onSceneRefresh?.();
               }
             } catch (error) {

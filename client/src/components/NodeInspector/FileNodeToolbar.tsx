@@ -26,6 +26,8 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
         string_value: path,
         evaluate: true,
       });
+      // Force Octane to re-evaluate and actually import the file
+      await client.callApi('ApiItem', 'evaluate', node.handle);
       Logger.debug('File loaded for node:', node.name, path);
     } catch (error) {
       Logger.error('Failed to load file for node:', error);
@@ -40,14 +42,21 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
     });
   };
 
-  const handleReloadFile = () => {
+  const handleReloadFile = async () => {
     Logger.debug('Reload File clicked for node:', node.name);
-    client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
-      attribute_id: AttributeId.A_VALUE,
-      expected_type: AttrType.AT_BOOL,
-      ['bool_value']: true,
-      evaluate: true,
-    });
+    try {
+      // Use A_RELOAD to trigger file reimport, then evaluate to process it
+      await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
+        attribute_id: AttributeId.A_RELOAD,
+        expected_type: AttrType.AT_BOOL,
+        bool_value: true,
+        evaluate: true,
+      });
+      await client.callApi('ApiItem', 'evaluate', node.handle);
+      Logger.debug('File reloaded for node:', node.name);
+    } catch (error) {
+      Logger.error('Failed to reload file for node:', error);
+    }
   };
 
   return (
