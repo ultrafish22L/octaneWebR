@@ -2,7 +2,7 @@
 
 **App:** OctaneWebR v1.4.2
 **Scene:** `teapot.orbx` (reload via File → Open to restore after destructive tests; requires clicking confirm in Octane)
-**Tests:** 162 (Round 2 base) + 21 (Round 3 new) = 183 total
+**Tests:** 161 base + 20 Round 3 new = 181 total
 
 ---
 
@@ -31,7 +31,137 @@ Any test that makes a **visible change** to the UI must take before/after screen
 delete, add, connect, disconnect, change node type, copy/paste, group/ungroup, drag reposition.
 
 **Filename format:** `R<round>_<testID>_<description>_<before|after>.png`
-If verifying a bug fix, include the bug ID: `R3_I13_BUG-RT-SELECT_rt-select_after.png`
+If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_after.png`
+
+---
+
+## Rules & Procedures
+
+### Before Testing
+
+1. **Set log level to DEBUG**: In `client/src/utils/Logger.ts`, ensure the dev default is `LogLevel.DEBUG` (not INFO).
+2. **Enable server-side file logging**: In `vite-plugin-octane-grpc.ts`, set `DEBUG_FILE_LOG = true` so gRPC request/response pairs are written to `grpc-debug.log`.
+3. **Verify Octane is running**: Status bar should show "Connected". If not, wait for Octane to start before proceeding.
+4. **Start the dev server**: `npm run dev` (or use `preview_start`). Confirm the app loads and renders.
+5. **Take a baseline screenshot** before starting each pass.
+
+### During Testing
+
+- **Verify gRPC calls** for any test that changes a value (checkbox, spinner, dropdown, color, etc.): read `grpc-debug.log` to confirm `setPinValueByPinID` or equivalent call appeared.
+- **Check console for errors** after each category block (use `preview_console_logs` or browser console). Zero errors expected unless specifically testing error scenarios.
+- **Test incrementally** — don't accumulate many tests before checking for regressions.
+- **Run destructive tests last** within each pass (delete, create, change type). Reload `teapot.orbx` after each one.
+
+### Scene Restoration
+
+The scene can always be restored by reloading `teapot.orbx`:
+
+1. File → Open → navigate to `teapot.orbx` → Open
+2. Octane shows a confirm dialog — **user must click confirm** (cannot be automated)
+3. Wait for scene to fully load (outliner populates, render image appears)
+4. Continue testing
+
+### If Octane Crashes
+
+1. **Stop testing immediately** — do not continue clicking or sending gRPC calls.
+2. **Log the crash**: note which test was running, what action triggered it, and take a screenshot if the app is still visible.
+3. **Wait for Octane to restart** — the user will restart it manually.
+4. **Refresh the page** (F5 or reload) after Octane is back up.
+5. **Verify connection**: status bar shows "Connected", render image appears.
+6. **Re-run the test that caused the crash** to confirm whether it's reproducible.
+7. If reproducible, file as a bug with severity **High** and mark the test as **FAIL**.
+
+### If the App (Web UI) Crashes or Freezes
+
+1. **Refresh the page** (F5 or hard reload).
+2. If the page won't load, restart the dev server.
+3. **Log what happened**: test ID, action, any console errors before the crash.
+4. Re-run the test. If reproducible, file as a bug.
+
+### If a Test Fails
+
+1. **Take a screenshot** immediately showing the failure state.
+2. **Check console logs** for errors — copy relevant output.
+3. **Check `grpc-debug.log`** if the failure involves a missing or wrong gRPC call.
+4. **Log the failure** in `TEST_RESULTS.md` with result **FAIL** and a clear description of what went wrong.
+5. **File a bug** in `TEST_BUGS.md` with a new ID (e.g. `BUG-R3-1`).
+6. **Continue testing** — don't stop the pass for a single failure unless it blocks subsequent tests.
+
+### If a Test Is Blocked
+
+If a test cannot run because of a prerequisite failure (e.g. can't test delete if node creation failed):
+
+1. Mark the test as **BLOCKED** with the blocking test ID noted.
+2. Move on to the next test.
+3. Revisit blocked tests after the blocker is resolved.
+
+### New Bug Discovery
+
+If you discover a bug while running an unrelated test:
+
+1. Note it immediately — don't lose the observation.
+2. Add it to `TEST_BUGS.md` with the next available bug ID.
+3. If it doesn't block the current test, continue testing and investigate later.
+
+### Result Recording
+
+After each pass, update `TEST_RESULTS.md` with:
+
+- Test ID, result (PASS / FAIL / BLOCKED / N/A), and notes
+- Summary counts at the bottom
+- Any new bugs discovered
+
+### Keep Everything in Files
+
+All test state, results, bugs, and observations **must be written to files** — never kept only in conversation memory. Conversation context can be lost during compaction. The files are the source of truth:
+
+- `TEST_RESULTS.md` — all test results and pass/fail counts
+- `TEST_BUGS.md` — all bugs, gaps, and UX notes
+- `TEST_PLAN.md` — this file, the master test plan
+- `screenshots/` — all screenshots taken during testing
+
+If you discover something important, write it to a file immediately. If it's not in a file, it doesn't exist.
+
+### Clear Logs Between Passes
+
+`grpc-debug.log` and `octaneWebR_client.log` grow large and make it hard to identify which calls belong to the current test. Before each pass:
+
+1. Delete or truncate `grpc-debug.log`
+2. Or note a timestamp marker so you know where to look
+
+### New Session / After Compaction
+
+When starting a new conversation or after context compaction:
+
+1. **Read all test files first**: `TEST_PLAN.md`, `TEST_RESULTS.md`, `TEST_BUGS.md`
+2. Check which pass/test was last completed
+3. Resume from where you left off — don't restart from the beginning
+4. Run the smoke test to verify the environment is working
+
+### Coordinate Workflow
+
+Before clicking any UI element:
+
+1. Take a `screenshot` first to see the current state
+2. Identify the element's pixel coordinates from the screenshot
+3. Click at the identified coordinates
+4. Don't guess coordinates — always screenshot first
+
+### gRPC Log Verification
+
+These tests specifically require checking `grpc-debug.log`:
+D6, D7, D8, D9, D15, D16, D18, D19, D20, D21, I4, I11
+
+### End-to-End Smoke Test
+
+Use the **Orthographic checkbox** on the Camera node as the standard quick check:
+
+1. Select Camera in Scene Outliner
+2. Toggle Orthographic checkbox in Node Inspector
+3. Verify `setPinValueByPinID` appears in `grpc-debug.log`
+4. Verify render image updates
+
+Run this smoke test at the start of each session and after any crash/restart.
 
 ---
 
@@ -112,7 +242,7 @@ If verifying a bug fix, include the bug ID: `R3_I13_BUG-RT-SELECT_rt-select_afte
 
 ---
 
-## Category C: Node Graph (28 tests)
+## Category C: Node Graph (29 tests)
 
 ### Easy (C1–C7a)
 
@@ -376,14 +506,14 @@ Tests are executed in 3 passes by difficulty. Complete each pass fully before st
 | Pass               | Tests                                                                        | Order |
 | ------------------ | ---------------------------------------------------------------------------- | ----- |
 | **1: Easy** (43)   | H1–H3, B1–B7, D1–D5, G1–G3, C1–C7a, A1–A7, F1–F4, E1–E4, I1–I2               |
-| **2: Medium** (68) | H4–H6, B8–B14, D6–D17, G4–G9, C8–C20, A8–A15, F5–F10, E5–E17, I3–I6          |
+| **2: Medium** (71) | H4–H6, B8–B14, D6–D17, G4–G9, C8–C20, A8–A15, F5+F7–F10, E5–E17, I3–I6       |
 | **3: Hard** (47)   | H7–H8, B15–B18, D18–D24, G10–G12, C21–C28, A16–A21, F11–F14, E18–E26, I7–I10 |
 
 > **Destructive tests** (delete, create, change type) should be run last within their pass. Reload `teapot.orbx` via File → Open after each destructive test (requires clicking confirm dialog in Octane).
 
 ---
 
-## Round 3 Additional Tests (21 tests)
+## Round 3 Additional Tests (20 tests)
 
 These tests fill coverage gaps found during plan review. Execute after completing the 3 base passes.
 
@@ -445,14 +575,14 @@ These tests fill coverage gaps found during plan review. Execute after completin
 | ------------------------- | ------- | ------ | ------- |
 | A: Menu Bar               | 21      | —      | 21      |
 | B: Scene Outliner         | 18      | —      | 18      |
-| C: Node Graph             | 28      | 3      | 31      |
+| C: Node Graph             | 29      | 3      | 32      |
 | D: Node Inspector         | 24      | —      | 24      |
 | E: Render Viewport        | 26      | 7      | 33      |
 | F: Dialogs                | 13      | 2      | 15      |
 | G: Keyboard Shortcuts     | 12      | 4      | 16      |
 | H: Layout & Status        | 8       | 2      | 10      |
 | I: Stress & Cross-Cutting | 10      | 2      | 12      |
-| **Total**                 | **160** | **20** | **180** |
+| **Total**                 | **161** | **20** | **181** |
 
 ### Deferred (later round)
 
