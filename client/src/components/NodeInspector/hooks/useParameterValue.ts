@@ -39,6 +39,8 @@ export function useParameterValue(
   const [paramValue, setParamValue] = useState<ParameterValue | null>(null);
 
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
+  // `node` is in the dependency array (not just node.handle/node.attrInfo) so the effect
+  // re-fires after F5 scene rebuild even when handle values are identical.
   useEffect(() => {
     let cancelled = false;
 
@@ -46,6 +48,11 @@ export function useParameterValue(
       if (!node.attrInfo || !node.handle || !isEndNode) {
         return;
       }
+
+      // Clear stale value before fetching — prevents showing old values from a
+      // previous scene after F5 while the new fetch is in flight.
+      setParamValue(null);
+
       try {
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
@@ -85,7 +92,7 @@ export function useParameterValue(
     return () => {
       cancelled = true;
     };
-  }, [isEndNode, node.handle, node.attrInfo, node.name, node.outType, client]);
+  }, [isEndNode, node, node.handle, node.attrInfo, node.name, node.outType, client]);
 
   // Handle parameter value change (memoized with useCallback)
   const handleValueChange = useCallback(

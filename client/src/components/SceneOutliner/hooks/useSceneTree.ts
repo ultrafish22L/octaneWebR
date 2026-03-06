@@ -29,7 +29,10 @@ export function useSceneTree({
 }: UseSceneTreeProps) {
   const { client, connected } = useOctane();
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Start with loading=true so the skeleton shows immediately on mount.
+  // The hook only mounts when connected (component remounts on refresh),
+  // so true is the correct initial state. loadSceneTree() sets it false when done.
+  const [loading, setLoading] = useState(true);
 
   // Stable refs for callback props — prevents event listener re-registration
   // when parent re-renders with new callback references

@@ -17,11 +17,13 @@ import { Node } from '@xyflow/react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { OctaneNodeData } from '../OctaneNode';
-import { NodeType } from '../../../constants/OctaneTypes';
+import { NodeType, FILE_NODE_TYPES, AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { EditCommands } from '../../../commands/EditCommands';
 import { Logger } from '../../../utils/Logger';
 import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 import type { EditActionsContextType } from '../../../contexts/EditActionsContext';
+import { useFileBrowser } from '../../../hooks/useFileBrowser';
+import type { FileBrowserDialogProps } from '../../../components/dialogs/FileBrowserDialog';
 
 interface UseNodeOperationsParams {
   client: OctaneClient;
@@ -75,6 +77,9 @@ export interface NodeOperationsHandlers {
   searchDialogVisible: boolean;
 
   setSearchDialogVisible: (visible: boolean) => void;
+
+  // File browser dialog props (for file-based node creation)
+  fileBrowserDialogProps: FileBrowserDialogProps | null;
 }
 
 export function useNodeOperations({
@@ -106,6 +111,43 @@ export function useNodeOperations({
 
   // Search dialog state
   const [searchDialogVisible, setSearchDialogVisible] = useState(false);
+
+  // File browser for file-based node creation (dialog-before-create pattern)
+  // Stores the pending node type while the file browser is open
+  const pendingFileNodeRef = useRef<{ nodeType: string; nodeTypeId: number } | null>(null);
+
+  const fileBrowser = useFileBrowser(async (path: string | null) => {
+    const pending = pendingFileNodeRef.current;
+    pendingFileNodeRef.current = null;
+
+    if (!path || !pending) {
+      Logger.debug('File node creation cancelled');
+      return;
+    }
+
+    try {
+      // Create the node first
+      const createdHandle = await client.createNode(pending.nodeType, pending.nodeTypeId);
+      if (!createdHandle) {
+        Logger.error('Failed to create file node');
+        setTemporaryStatus('Failed to create node', 3000);
+        return;
+      }
+
+      // Then set the file path on the created node
+      await client.callApi('ApiItem', 'setValueByAttrID', createdHandle, {
+        attribute_id: AttributeId.A_FILENAME,
+        expected_type: AttrType.AT_STRING,
+        string_value: path,
+        evaluate: true,
+      });
+
+      Logger.debug('File node created and file loaded:', pending.nodeType, path);
+    } catch (error) {
+      Logger.error('Error creating file node:', error);
+      setTemporaryStatus('Error creating file node', 3000);
+    }
+  });
 
   /**
    * Context menu event handlers
@@ -165,6 +207,20 @@ export function useNodeOperations({
         return;
       }
 
+      // File-based nodes: open file browser BEFORE creating the node.
+      // If user cancels, no node is created.
+      const fileNodeConfig = FILE_NODE_TYPES[nodeType];
+      if (fileNodeConfig) {
+        pendingFileNodeRef.current = { nodeType, nodeTypeId };
+        fileBrowser.browse({
+          mode: 'open',
+          title: `Select file for ${nodeType.replace('NT_', '').replace(/_/g, ' ')}`,
+          filePatterns: fileNodeConfig.extensions,
+        });
+        return; // Node creation happens in the fileBrowser onResult callback
+      }
+
+      // Non-file nodes: create immediately (existing flow)
       try {
         const createdHandle = await client.createNode(nodeType, nodeTypeId);
         if (createdHandle) {
@@ -179,7 +235,7 @@ export function useNodeOperations({
         setTemporaryStatus('Error creating node', 3000);
       }
     },
-    [client, setTemporaryStatus]
+    [client, setTemporaryStatus, fileBrowser]
   );
 
   const handleCloseContextMenu = useCallback(() => {
@@ -558,5 +614,8 @@ export function useNodeOperations({
     contextMenuNodeId,
     searchDialogVisible,
     setSearchDialogVisible,
+
+    // File browser dialog props (for file-based node creation)
+    fileBrowserDialogProps: fileBrowser.dialogProps,
   };
 }

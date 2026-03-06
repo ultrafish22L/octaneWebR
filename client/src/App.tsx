@@ -120,9 +120,16 @@ function AppContent() {
     });
   }, []);
 
-  const handleNodeSelect = useCallback((node: SceneNode | null) => {
-    setSelectedNode(node);
-  }, []);
+  const handleNodeSelect = useCallback(
+    (node: SceneNode | null) => {
+      setSelectedNode(node);
+      // Activate render target in the render engine when selected
+      if (node && node.type === 'PT_RENDERTARGET') {
+        client.setRenderTargetNode(node.handle);
+      }
+    },
+    [client]
+  );
 
   const handleSyncStateChange = (syncing: boolean) => {
     setIsSyncing(syncing);

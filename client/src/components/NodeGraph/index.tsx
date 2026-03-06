@@ -42,6 +42,7 @@ import {
 } from '../../utils/NodeLayoutUtils';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
+import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
 
 interface NodeGraphEditorProps {
   sceneTree: SceneNode[];
@@ -252,6 +253,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     contextMenuType,
     searchDialogVisible,
     setSearchDialogVisible,
+    fileBrowserDialogProps,
   } = useNodeOperations({
     client,
     nodes,
@@ -811,6 +813,9 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         onClose={() => setSearchDialogVisible(false)}
         onSelectNodes={handleSearchSelectNodes}
       />
+
+      {/* File Browser Dialog - for file-based node creation (dialog-before-create) */}
+      {fileBrowserDialogProps && <FileBrowserDialog {...fileBrowserDialogProps} />}
 
       {/* Node Graph Toolbar moved to App.tsx - always visible in node-graph-header */}
       <ReactFlow

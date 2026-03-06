@@ -90,8 +90,10 @@ class RequestQueue {
   }
 }
 
-/** Max concurrent API requests. 0 = no queuing (unlimited). */
-const MAX_CONCURRENT_REQUESTS = 0;
+/** Max concurrent API requests. 0 = no queuing (unlimited).
+ * Set to 4 to stay within browser's ~6 connection limit per domain,
+ * leaving headroom for other UI requests (callbacks, scene tree, etc.). */
+const MAX_CONCURRENT_REQUESTS = 4;
 
 // Global singleton instance
 export const requestQueue = new RequestQueue(MAX_CONCURRENT_REQUESTS);

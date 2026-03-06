@@ -17,6 +17,7 @@ import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { useStatusMessage } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
+import { FILE_NODE_TYPES } from '../../constants/OctaneTypes';
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
 import { formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
@@ -234,8 +235,9 @@ const NodeParameter = React.memo(function NodeParameter({
     );
   }
 
-  // Show file toolbar for any node that carries a file path (geometry, textures, etc.)
-  const hasFilePath = !!node.filePath;
+  // Show file toolbar for file-based nodes (even without a file loaded yet) or nodes with a file path
+  const isFileNode = !!(node.nodeInfo?.type && node.nodeInfo.type in FILE_NODE_TYPES);
+  const showFileToolbar = isFileNode || !!node.filePath;
 
   // Render as node group (non-parameter nodes)
   return (
@@ -311,8 +313,8 @@ const NodeParameter = React.memo(function NodeParameter({
         </div>
       </div>
 
-      {/* File Node Toolbar - Show for any node with a file path */}
-      {hasFilePath && <FileNodeToolbar node={node} />}
+      {/* File Node Toolbar - Show for file-based node types and nodes with a file path */}
+      {showFileToolbar && <FileNodeToolbar node={node} />}
 
       {hasChildren && (
         <div

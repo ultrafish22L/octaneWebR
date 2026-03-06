@@ -268,6 +268,19 @@ export const PinId: Record<string, number> = {
 } as const;
 
 /**
+ * File-based node types that require a file path.
+ * Maps node type key → { extensions: file filter pattern for the file browser }.
+ * Used to:
+ *  1. Show FileNodeToolbar even when no file is loaded yet (Bug R1-2)
+ *  2. Open the file browser BEFORE creating the node (Bug R1-1)
+ * Expand this list as more file-based types are discovered via API querying.
+ */
+export const FILE_NODE_TYPES: Record<string, { extensions: string }> = {
+  NT_GEO_MESH: { extensions: '*.obj' },
+  NT_TEX_IMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp' },
+};
+
+/**
  * Pin Type IDs for type validation
  * These match the PinTypeId enum values from common.proto
  * Used with getPinValue/setPinValue methods for type validation
