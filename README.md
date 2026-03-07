@@ -4,6 +4,8 @@
 
 A React/TypeScript application that provides a browser-based interface for Octane Render, communicating with Octane via the gRPC LiveLink API.
 
+![octaneWebR — Octane Theme](docs/screenshots/theme-octane.png)
+
 ---
 
 ## 🎯 Overview
@@ -235,25 +237,38 @@ octaneWebR communicates with Octane via gRPC-Web with a custom Vite plugin:
 
 ### Styling & Theming
 
-octaneWebR uses a pure CSS variable-based theme system:
+octaneWebR uses a pure CSS variable-based theme system. Three themes are included:
+
+**Octane** (default) — Neutral dark grays with warm orange/gold accents, matching the official Octane SE dark theme.
+
+![Octane Theme](docs/screenshots/theme-octane.png)
+
+**Vibe** — Muted pastel purple palette with lavender accents, sage greens, and dusty roses.
+
+![Vibe Theme](docs/screenshots/theme-vibe.png)
+
+**Debug** — Each background variable uses a distinct hue with bright orange borders, making layout and variable mismatches immediately obvious.
+
+![Debug Theme](docs/screenshots/theme-debug.png)
 
 ```
 client/src/styles/
-├── octane-theme.css      # Theme variables only (:root)
-├── app.css               # App-level UI (menu, panels, status bar)
-├── scene-outliner.css    # Scene outliner and tree view
-├── viewport.css          # Viewport, canvas, render toolbar
-├── node-graph.css        # Node graph editor and context menus
-└── node-inspector.css    # Node inspector and parameter controls
+├── theme-octane.css        # Octane theme variables (:root)
+├── theme-vibe.css          # Vibe theme variables (:root)
+├── theme-octane-debug.css  # Debug theme variables (:root)
+├── app.css                 # App-level UI (menu, panels, status bar)
+├── scene-outliner.css      # Scene outliner and tree view
+├── render-viewport.css     # Viewport, canvas, render toolbar
+├── node-graph.css          # Node graph editor and context menus
+└── node-inspector.css      # Node inspector and parameter controls
 ```
 
 **Theme System**:
 
-- `octane-theme.css` contains **only** CSS custom properties (134 variables)
-- All colors, spacing, typography defined as `--octane-*` variables
-- Matches official Octane SE dark theme
-- Component CSS files use `var(--octane-*)` references
-- Alternative themes can be created by copying and modifying theme variables
+- Theme files contain **only** CSS custom properties on `:root`
+- All colors, spacing, typography defined as `--variable-name` variables
+- Component CSS files use `var(--variable-name)` references
+- Switch themes by changing the import in `client/src/main.tsx`
 
 ---
 

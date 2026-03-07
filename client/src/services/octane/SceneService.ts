@@ -33,6 +33,8 @@ export class SceneService extends BaseService {
   private apiService: ApiService;
   private scene: Scene;
   private abortController: AbortController | null = null;
+  private buildPromise: Promise<SceneNode[]> | null = null;
+  private buildBlocked = false;
   private readonly progressiveEvents: boolean;
 
   constructor(
@@ -57,6 +59,13 @@ export class SceneService extends BaseService {
    *                        If omitted, performs full scene tree rebuild.
    */
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {
+    // If builds are blocked (loadProject in progress), return current tree immediately.
+    // This prevents the useSceneTree retry loop from starting new builds.
+    if (this.buildBlocked) {
+      Logger.debug('Scene build blocked (project load in progress) — skipping');
+      return this.scene.tree;
+    }
+
     // Abort any previous build
     if (this.abortController) {
       Logger.debug('Cancelling previous scene tree build');
@@ -65,6 +74,23 @@ export class SceneService extends BaseService {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
+    // Track this build so callers can await completion via waitForIdle()
+    const promise = this._doBuildSceneTree(newNodeHandle, signal);
+    this.buildPromise = promise;
+    try {
+      return await promise;
+    } finally {
+      // Only clear if this is still the active build (not replaced by a newer one)
+      if (this.buildPromise === promise) {
+        this.buildPromise = null;
+      }
+    }
+  }
+
+  private async _doBuildSceneTree(
+    newNodeHandle: number | undefined,
+    signal: AbortSignal
+  ): Promise<SceneNode[]> {
     // Incremental: single node update
     if (newNodeHandle !== undefined) {
       Logger.debug('Building new node metadata:', newNodeHandle);
@@ -246,6 +272,9 @@ export class SceneService extends BaseService {
             // Progressive: notify UI about each level-1 node as it's created
             if (this.progressiveEvents && level === 1 && node) {
               this.emitAsync('scene:nodeAdded', { node, level: 0 });
+              this.emitAsync('scene:buildProgress', {
+                step: `Node ${i + 1}/${size} — ${node.name}`,
+              });
             }
           }
         }
@@ -543,10 +572,32 @@ export class SceneService extends BaseService {
   // ─── Public API ────────────────────────────────────────────────────
 
   abort(): void {
+    this.buildBlocked = true;
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
     }
+  }
+
+  /**
+   * Wait for the current buildSceneTree to fully complete (including in-flight gRPC calls).
+   * Call after abort() to ensure no gRPC calls are in-flight before sending loadProject.
+   */
+  async waitForIdle(): Promise<void> {
+    if (this.buildPromise) {
+      try {
+        await this.buildPromise;
+      } catch {
+        // Build was cancelled or failed — that's fine, we just need it done
+      }
+    }
+  }
+
+  /**
+   * Unblock scene builds after loadProject completes.
+   */
+  unblock(): void {
+    this.buildBlocked = false;
   }
 
   lookupItem(handle: number): SceneNode | null {

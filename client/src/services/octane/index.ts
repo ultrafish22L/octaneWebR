@@ -17,7 +17,6 @@ export { RenderExportService } from './RenderExportService';
 export { ItemService } from './ItemService';
 export { ProjectService } from './ProjectService';
 export { FileChooserService } from './FileChooserService';
-export type { ISceneService } from './ISceneService';
 export type { ParameterRawValue, ParameterValue } from './ItemService';
 export type { ReferencePackageSettings } from './ProjectService';
 export type { FileEntry, DirectoryListing } from './FileChooserService';

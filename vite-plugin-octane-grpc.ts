@@ -42,7 +42,7 @@ const SERVER_LOG_LEVEL: ServerLogLevel = ServerLogLevel.DEBUG;
 // FILE LOGGING CONFIGURATION
 // ============================================================================
 // Set to true to log all gRPC request/response pairs to a file
-const DEBUG_FILE_LOG = true;
+const DEBUG_FILE_LOG = process.env.DEBUG_FILE_LOG !== 'false';
 const LOG_FILE_PATH = path.resolve(__dirname, 'grpc-debug.log');
 
 // Truncate log file on startup
@@ -94,6 +94,8 @@ class OctaneGrpcClient {
   private base: OctaneGrpcClientBase;
   private callbacks: Set<(data: any) => void> = new Set();
   private statisticsCallbacks: Set<(data: any) => void> = new Set();
+  private renderFailureCallbacks: Set<(data: any) => void> = new Set();
+  private projectManagerCallbacks: Set<(data: any) => void> = new Set();
   private callbackId: number = 0;
   private isCallbackRegistered: boolean = false;
   private callbackStream: any = null;
@@ -212,12 +214,29 @@ class OctaneGrpcClient {
       this.pollRenderStatistics();
     } else if (callbackRequest.renderFailure) {
       slog.error('Render failure callback received');
+      this.renderFailureCallbacks.forEach(cb => {
+        try {
+          cb({ user_data: callbackRequest.renderFailure?.user_data, timestamp: Date.now() });
+        } catch (e) {
+          slog.error('Error in renderFailure callback:', e);
+        }
+      });
     } else if (callbackRequest.newStatistics) {
       // Note: Octane never sends newStatistics stream events in practice (see known-issues.md).
       // Kept for forward-compatibility; the newImage handler above is the real stats trigger.
       this.pollRenderStatistics();
     } else if (callbackRequest.projectManagerChanged) {
       slog.debug('Project manager changed callback received');
+      this.projectManagerCallbacks.forEach(cb => {
+        try {
+          cb({
+            user_data: callbackRequest.projectManagerChanged?.user_data,
+            timestamp: Date.now(),
+          });
+        } catch (e) {
+          slog.error('Error in projectManagerChanged callback:', e);
+        }
+      });
     }
   }
 
@@ -322,6 +341,22 @@ class OctaneGrpcClient {
     this.statisticsCallbacks.delete(callback);
   }
 
+  addRenderFailureCallback(cb: (data: any) => void): void {
+    this.renderFailureCallbacks.add(cb);
+  }
+
+  removeRenderFailureCallback(cb: (data: any) => void): void {
+    this.renderFailureCallbacks.delete(cb);
+  }
+
+  addProjectManagerCallback(cb: (data: any) => void): void {
+    this.projectManagerCallbacks.add(cb);
+  }
+
+  removeProjectManagerCallback(cb: (data: any) => void): void {
+    this.projectManagerCallbacks.delete(cb);
+  }
+
   private notifyCallbacks(data: any): void {
     this.callbacks.forEach(callback => {
       try {
@@ -412,19 +447,47 @@ export function octaneGrpcPlugin(): Plugin {
           }
         };
 
+        const renderFailureHandler = (data: any) => {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              if (ws.bufferedAmount > MAX_WS_BUFFER) return;
+              ws.send(JSON.stringify({ type: 'renderFailure', data }));
+            }
+          } catch (error) {
+            slog.error('Error sending renderFailure message:', error);
+          }
+        };
+
+        const projectManagerHandler = (data: any) => {
+          try {
+            if (ws.readyState === WebSocket.OPEN) {
+              if (ws.bufferedAmount > MAX_WS_BUFFER) return;
+              ws.send(JSON.stringify({ type: 'projectManagerChanged', data }));
+            }
+          } catch (error) {
+            slog.error('Error sending projectManagerChanged message:', error);
+          }
+        };
+
         grpcClient?.registerCallback(callbackHandler);
         grpcClient?.addStatisticsCallback(statisticsHandler);
+        grpcClient?.addRenderFailureCallback(renderFailureHandler);
+        grpcClient?.addProjectManagerCallback(projectManagerHandler);
 
         ws.on('close', () => {
           slog.info('WebSocket client disconnected');
           grpcClient?.unregisterCallback(callbackHandler);
           grpcClient?.removeStatisticsCallback(statisticsHandler);
+          grpcClient?.removeRenderFailureCallback(renderFailureHandler);
+          grpcClient?.removeProjectManagerCallback(projectManagerHandler);
         });
 
         ws.on('error', error => {
           slog.error('WebSocket error:', error);
           grpcClient?.unregisterCallback(callbackHandler);
           grpcClient?.removeStatisticsCallback(statisticsHandler);
+          grpcClient?.removeRenderFailureCallback(renderFailureHandler);
+          grpcClient?.removeProjectManagerCallback(projectManagerHandler);
         });
 
         ws.on('message', (message: string) => {

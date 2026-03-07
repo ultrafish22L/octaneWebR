@@ -44,7 +44,7 @@
   background: var(--accent-blue); /* Blue background like official Octane */
   border: 1px solid var(--accent-blue);
   border-radius: var(--border-radius-base); /* Slightly smaller rounded blue background */
-  color: white;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,7 +427,7 @@
 
 .grid-button.active {
   background: var(--accent);
-  color: white;
+  color: var(--text-primary);
   border-color: var(--accent);
 }
 
@@ -613,9 +613,9 @@
   background: var(--bg-secondary);
   background-image: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.06) 0%,
+    var(--highlight-soft) 0%,
     transparent 35%,
-    rgba(0, 0, 0, 0.12) 100%
+    var(--overlay-very-subtle) 100%
   );
   display: flex;
   align-items: center;

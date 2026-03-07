@@ -9,9 +9,13 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { Logger } from '../../utils/Logger';
 
 /**
- * WebSocket reconnection configuration
+ * WebSocket reconnection configuration — exponential backoff
  */
-const RECONNECT_DELAY_MS = 5000;
+const BASE_RECONNECT_DELAY = 2000;
+const MAX_RECONNECT_DELAY = 60000;
+const RECONNECT_MULTIPLIER = 2;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const COOLDOWN_RESET_MS = 60000;
 
 /**
  * Connection Service manages server connections and WebSocket communication
@@ -21,6 +25,10 @@ export class ConnectionService extends BaseService {
   private connected: boolean = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private apiService: ApiService;
+  private reconnectDelay: number = BASE_RECONNECT_DELAY;
+  private reconnectAttempts: number = 0;
+  private isReconnecting: boolean = false;
+  private lastDisconnectTime: number = 0;
 
   constructor(emitter: EventEmitter, serverUrl: string, apiService: ApiService) {
     super(emitter, serverUrl);
@@ -147,14 +155,8 @@ export class ConnectionService extends BaseService {
           Logger.debug(
             `WebSocket disconnected — code=${event.code}${reason} clean=${event.wasClean}`
           );
-          // Attempt reconnection after configured delay
-          this.reconnectTimer = setTimeout(() => {
-            this.reconnectTimer = null;
-            if (this.connected) {
-              Logger.debug('Reconnecting WebSocket...');
-              this.connectWebSocket();
-            }
-          }, RECONNECT_DELAY_MS);
+          this.lastDisconnectTime = Date.now();
+          this.scheduleReconnect();
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -165,10 +167,62 @@ export class ConnectionService extends BaseService {
   }
 
   /**
+   * Schedule a reconnection attempt with exponential backoff.
+   * Resets attempt counter if enough time has elapsed since the last disconnect (cooldown).
+   */
+  private scheduleReconnect(): void {
+    if (!this.connected || this.isReconnecting) return;
+
+    // Reset attempts if we've been stable long enough (cooldown)
+    if (this.lastDisconnectTime > 0 && Date.now() - this.lastDisconnectTime > COOLDOWN_RESET_MS) {
+      this.reconnectDelay = BASE_RECONNECT_DELAY;
+      this.reconnectAttempts = 0;
+    }
+
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      Logger.error(
+        `WebSocket: max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`
+      );
+      this.connected = false;
+      this.emit('connectionError', new Error('Max reconnect attempts reached'));
+      return;
+    }
+
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+
+    Logger.debug(
+      `WebSocket: reconnect attempt ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${this.reconnectDelay}ms`
+    );
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.isReconnecting = false;
+      if (this.connected) {
+        this.connectWebSocket()
+          .then(() => {
+            // Reset backoff on successful reconnection
+            this.reconnectDelay = BASE_RECONNECT_DELAY;
+            this.reconnectAttempts = 0;
+          })
+          .catch(() => {
+            // connectWebSocket rejection triggers another onclose → scheduleReconnect
+          });
+      }
+    }, this.reconnectDelay);
+
+    // Increase delay for next attempt (exponential backoff with cap)
+    this.reconnectDelay = Math.min(this.reconnectDelay * RECONNECT_MULTIPLIER, MAX_RECONNECT_DELAY);
+  }
+
+  /**
    * Disconnect from the server and close WebSocket
    */
   async disconnect(): Promise<void> {
     this.connected = false;
+    this.isReconnecting = false;
+    this.reconnectDelay = BASE_RECONNECT_DELAY;
+    this.reconnectAttempts = 0;
 
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

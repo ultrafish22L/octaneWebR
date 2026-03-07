@@ -30,7 +30,7 @@ import { StatusMessageProvider, useStatusMessage } from './contexts/StatusMessag
 import { APP_VERSION } from './config/apiVersionConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
-import { MenuBar } from './components/MenuBar';
+import { MenuBarMemoized as MenuBar } from './components/MenuBar';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { SyncIndicator } from './components/SyncIndicator';
 import {
@@ -65,8 +65,14 @@ function AppContent() {
   const [sceneTree, setSceneTree] = useState<SceneNode[]>([]);
   const [sceneRefreshTrigger, setSceneRefreshTrigger] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [octaneInfo, setOctaneInfo] = useState('');
 
   const viewportRef = useRef<CallbackRenderViewportHandle>(null);
+
+  // Guards: suppress auto-refresh from OnProjectManagerChanged during loadProject
+  // or while a sync is already running. Concurrent gRPC calls crash Octane (BUG-R3-2).
+  const isLoadingProjectRef = useRef(false);
+  const isSyncingRef = useRef(false);
 
   // Extracted hooks
   useSceneStatusEvents(client);
@@ -107,6 +113,14 @@ function AppContent() {
     'OnProjectManagerChanged',
     useCallback((data: unknown) => {
       Logger.debug('Project manager changed:', data);
+      if (isLoadingProjectRef.current) {
+        Logger.debug('Suppressing auto-refresh — loadProject in progress');
+        return;
+      }
+      if (isSyncingRef.current) {
+        Logger.debug('Suppressing auto-refresh — sync already in progress');
+        return;
+      }
       setSceneRefreshTrigger(prev => prev + 1);
     }, [])
   );
@@ -132,24 +146,25 @@ function AppContent() {
     [client]
   );
 
-  const handleSyncStateChange = (syncing: boolean) => {
+  const handleSyncStateChange = useCallback((syncing: boolean) => {
+    isSyncingRef.current = syncing;
     setIsSyncing(syncing);
     Logger.debug(syncing ? 'Scene sync started...' : 'Scene sync complete');
-  };
+  }, []);
 
-  const handleSceneRefresh = () => {
+  const handleSceneRefresh = useCallback(() => {
     // Cancel pending inspector queries before rebuilding the tree.
     // Stale getByAttrID calls running concurrently with tree build crash Octane (BUG-R3-2).
     requestQueue.clear();
     setSelectedNode(null);
     setSceneTree([]);
     setSceneRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
-  const handleRecenterView = () => {
+  const handleRecenterView = useCallback(() => {
     Logger.debug(' App.tsx: Recenter view requested');
     viewportRef.current?.recenterView();
-  };
+  }, []);
 
   // Auto-connect on mount
   useEffect(() => {
@@ -167,6 +182,19 @@ function AppContent() {
         Logger.error('App.tsx: connect() threw error:', error);
       });
   }, [connect]);
+
+  // Fetch Octane product info once connected
+  useEffect(() => {
+    if (!connected || !client) return;
+    client.getOctaneInfo().then(info => {
+      const parts: string[] = [];
+      if (info.name) parts.push(info.name);
+      if (info.isDemo) parts.push('Demo');
+      else if (info.isSubscription) parts.push('Subscription');
+      if (info.tier >= 0) parts.push(`Tier ${info.tier}`);
+      setOctaneInfo(parts.join(' | '));
+    });
+  }, [connected, client]);
 
   // Global context menu prevention (safety net)
   useEffect(() => {
@@ -192,6 +220,7 @@ function AppContent() {
             panelVisibility={panelVisibility}
             onTogglePanelVisibility={handleTogglePanelVisibility}
             onResetLayout={handleResetLayout}
+            isLoadingProjectRef={isLoadingProjectRef}
           />
         </ErrorBoundary>
 
@@ -397,9 +426,11 @@ function AppContent() {
         <div className="status-left">
           <span className="status-item">{statusMessage}</span>
         </div>
-        <div className="status-center"></div>
-        <div className="status-right">
+        <div className="status-center">
           <span className="status-item">OctaneWebR v{APP_VERSION}</span>
+        </div>
+        <div className="status-right">
+          {octaneInfo && <span className="status-item">{octaneInfo}</span>}
         </div>
       </footer>
 

@@ -38,7 +38,7 @@ export function MenuDropdown({
     dropdown.style.left = `${rect.left}px`;
     dropdown.style.top = `${rect.bottom}px`;
     dropdown.style.zIndex = '10000';
-    dropdown.style.background = getComputedStyle(document.documentElement)
+    dropdown.style.backgroundColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--bg-primary')
       .trim();
 

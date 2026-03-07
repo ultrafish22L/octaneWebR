@@ -23,7 +23,7 @@ interface NodeInspectorContextMenuProps {
   onClose: () => void;
 }
 
-export function NodeInspectorContextMenu({
+export const NodeInspectorContextMenu = React.memo(function NodeInspectorContextMenu({
   x,
   y,
   onRender,
@@ -225,4 +225,4 @@ export function NodeInspectorContextMenu({
     </div>,
     document.body
   );
-}
+});

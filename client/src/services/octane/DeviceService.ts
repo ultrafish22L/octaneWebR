@@ -195,4 +195,24 @@ export class DeviceService extends BaseService {
       return 'Unknown';
     }
   }
+
+  async getOctaneInfo(): Promise<{
+    name: string;
+    isDemo: boolean;
+    isSubscription: boolean;
+    tier: number;
+  }> {
+    const [nameRes, demoRes, subRes, tierRes] = await Promise.all([
+      this.apiService.callApi('ApiInfo', 'octaneName', {}).catch(() => null),
+      this.apiService.callApi('ApiInfo', 'isDemoVersion', {}).catch(() => null),
+      this.apiService.callApi('ApiInfo', 'isSubscriptionVersion', {}).catch(() => null),
+      this.apiService.callApi('ApiInfo', 'tierIdx', {}).catch(() => null),
+    ]);
+    return {
+      name: (nameRes?.result as string) ?? '',
+      isDemo: (demoRes?.result as boolean) ?? false,
+      isSubscription: (subRes?.result as boolean) ?? false,
+      tier: (tierRes?.result as number) ?? -1,
+    };
+  }
 }

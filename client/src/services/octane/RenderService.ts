@@ -308,7 +308,8 @@ export class RenderService extends BaseService {
     try {
       Logger.debug(`Picking at viewport position (${x}, ${y})...`);
       const response = await this.apiService.callApi('ApiRenderEngine', 'pick', null, {
-        position: { x, y },
+        x,
+        y,
       });
 
       const intersections = response?.intersections;

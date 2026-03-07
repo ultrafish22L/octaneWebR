@@ -373,7 +373,10 @@ export const CallbackRenderViewport = React.memo(
             {showWorldCoord &&
               frameCount > 0 &&
               (() => {
-                // Project 3D world axes to 2D using camera orientation
+                // Project 3D world axes to 2D using camera orientation.
+                // NOTE: cameraRef is a mutable ref — its updates don't trigger re-renders.
+                // The axis orientation refreshes only when frameCount (or another state) changes,
+                // so it may be momentarily stale after a camera move before the next render frame.
                 const { theta, phi } = cameraRef.current;
                 const cosT = Math.cos(theta),
                   sinT = Math.sin(theta);

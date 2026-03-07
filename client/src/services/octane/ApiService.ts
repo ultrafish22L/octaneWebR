@@ -5,7 +5,7 @@
 
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
 import { BaseService } from './BaseService';
-import { Logger } from '../../utils/Logger';
+import { Logger, LogLevel } from '../../utils/Logger';
 import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
 
 /** Default timeout for API calls (ms). Prevents zombie requests from accumulating.
@@ -161,12 +161,14 @@ export class ApiService extends BaseService {
       // Apply parameter transformation if needed for API version compatibility
       const transformedParams = transformRequestParams(service, method, params);
 
-      // Log if parameters were transformed
-      const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
-      if (paramsChanged) {
-        Logger.debugV(`API Compatibility: Parameter transformation applied`);
-        Logger.debugV(`   Original:`, params);
-        Logger.debugV(`   Transformed:`, transformedParams);
+      // Log if parameters were transformed (guarded to avoid JSON.stringify on hot paths)
+      if (Logger.getLevel() >= LogLevel.DEBUGV) {
+        const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
+        if (paramsChanged) {
+          Logger.debugV(`API Compatibility: Parameter transformation applied`);
+          Logger.debugV(`   Original:`, params);
+          Logger.debugV(`   Transformed:`, transformedParams);
+        }
       }
 
       body = { ...body, ...transformedParams };

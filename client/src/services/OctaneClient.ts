@@ -177,6 +177,22 @@ export class OctaneClient extends EventEmitter {
   }
 
   /**
+   * Wait for the current scene build to fully complete (including in-flight gRPC calls).
+   * Call after abortSceneLoad() to ensure no gRPC calls are active before loadProject.
+   */
+  async waitForSceneIdle(): Promise<void> {
+    return this.sceneService.waitForIdle();
+  }
+
+  /**
+   * Unblock scene builds after loadProject completes.
+   * Must be called before triggering a scene refresh.
+   */
+  unblockSceneLoad(): void {
+    this.sceneService.unblock();
+  }
+
+  /**
    * Load attrInfo on-demand for lazy loading
    */
   async loadAttrInfo(handle: number): Promise<Record<string, unknown> | null> {
@@ -334,6 +350,15 @@ export class OctaneClient extends EventEmitter {
 
   async getOctaneVersion(): Promise<string> {
     return this.deviceService.getOctaneVersion();
+  }
+
+  async getOctaneInfo(): Promise<{
+    name: string;
+    isDemo: boolean;
+    isSubscription: boolean;
+    tier: number;
+  }> {
+    return this.deviceService.getOctaneInfo();
   }
 
   // ==================== Viewport Methods ====================

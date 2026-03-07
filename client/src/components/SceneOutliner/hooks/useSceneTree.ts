@@ -73,25 +73,7 @@ export function useSceneTree({
     requestQueue.clear();
 
     try {
-      let tree = await client.buildSceneTree();
-
-      // Retry if empty or suspiciously small — server protos may not be ready
-      // after page reload (F5), or Octane may still be loading after loadProject
-      // (which is async, indicated by callbackId in the response).
-      if (tree.length < 3) {
-        const maxRetries = tree.length === 0 ? 2 : 4;
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          Logger.debug(
-            `Scene tree has ${tree.length} items, retry ${attempt}/${maxRetries} after 500ms...`
-          );
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const newTree = await client.buildSceneTree();
-          if (newTree.length > tree.length) {
-            tree = newTree;
-            if (tree.length >= 3) break;
-          }
-        }
-      }
+      const tree = await client.buildSceneTree();
 
       // Progressive — tree was already populated via events.
       // Just ensure expansion map is initialized with final tree.
@@ -140,8 +122,12 @@ export function useSceneTree({
     // but delay inspector selection until tree build is complete (BUG-R3-2).
     // This prevents hundreds of getByAttrID calls from firing during tree build.
     let pendingRenderTarget: SceneNode | null = null;
+
     const handleProgressiveNodeAdded = ({ node, level }: { node: SceneNode; level: number }) => {
       if (level === 0) {
+        // Append each node so it pops into the outliner progressively.
+        // The listKey fix (no lastKey check) keeps the List mounted —
+        // react-window handles rowCount increases natively, no flash.
         setSceneTree(prev => [...prev, node]);
 
         // Activate the first RenderTarget in the render engine immediately
@@ -170,6 +156,7 @@ export function useSceneTree({
 
     /**
      * Level 0 complete — all level-1 nodes created.
+     * This is the single commit point for all top-level nodes.
      * Initialize expansion so SceneRoot + PT_RENDERTARGET are expanded.
      */
     const handleLevel0Complete = ({ nodes }: { nodes: SceneNode[] }) => {
@@ -202,7 +189,27 @@ export function useSceneTree({
      * Children are already attached to parent.children by the service.
      * We create new node references along the path so React detects the change
      * and the Outliner re-renders only the affected subtree.
+     *
+     * Batched: collect parent handles for 200ms then flush once, cloning
+     * all affected paths in a single setState. Without this, each of hundreds
+     * of childrenLoaded events triggers a separate re-render.
      */
+    let childrenHandleBuffer: Set<number> = new Set();
+    let childrenFlushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flushChildrenBuffer = () => {
+      childrenFlushTimer = null;
+      if (childrenHandleBuffer.size === 0) return;
+      const handles = childrenHandleBuffer;
+      childrenHandleBuffer = new Set();
+      setSceneTree(prev => {
+        let result = prev;
+        for (const handle of handles) {
+          result = clonePathToHandle(result, handle);
+        }
+        return result;
+      });
+    };
+
     const handleChildrenLoaded = ({
       parent,
       children,
@@ -212,7 +219,12 @@ export function useSceneTree({
     }) => {
       Logger.debug(`Children loaded for "${parent.name}": ${children.length} children`);
 
-      setSceneTree(prev => (parent.handle ? clonePathToHandle(prev, parent.handle) : [...prev]));
+      if (parent.handle) {
+        childrenHandleBuffer.add(parent.handle);
+        if (!childrenFlushTimer) {
+          childrenFlushTimer = setTimeout(flushChildrenBuffer, 200);
+        }
+      }
 
       // Update pending render target with the fully-loaded version (has children/pins).
       // Don't select in inspector yet — wait for structureComplete (BUG-R3-2).
@@ -223,11 +235,29 @@ export function useSceneTree({
 
     /**
      * Structure complete — entire tree built.
-     * Force a new reference so useEffect propagates to App → NodeGraph rebuilds edges.
+     * Flush any pending batched children, then force a new reference
+     * so useEffect propagates to App → NodeGraph rebuilds edges.
      */
     const handleStructureComplete = () => {
       Logger.debug('Structure complete');
-      setSceneTree(prev => [...prev]);
+      // Flush pending children batch before final propagation
+      if (childrenFlushTimer) {
+        clearTimeout(childrenFlushTimer);
+        childrenFlushTimer = null;
+      }
+      if (childrenHandleBuffer.size > 0) {
+        const handles = childrenHandleBuffer;
+        childrenHandleBuffer = new Set();
+        setSceneTree(prev => {
+          let result = prev;
+          for (const handle of handles) {
+            result = clonePathToHandle(result, handle);
+          }
+          return [...result];
+        });
+      } else {
+        setSceneTree(prev => [...prev]);
+      }
 
       // Now that the tree is fully built, select the render target in the
       // inspector. This is when inspector getByAttrID queries are safe to run
@@ -314,6 +344,8 @@ export function useSceneTree({
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
 
     return () => {
+      // Clean up batch timer
+      if (childrenFlushTimer) clearTimeout(childrenFlushTimer);
       client.off('scene:nodeAdded', handleProgressiveNodeAdded);
       client.off('scene:level0Complete', handleLevel0Complete);
       client.off('scene:childrenLoaded', handleChildrenLoaded);

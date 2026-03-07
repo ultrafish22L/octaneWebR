@@ -229,7 +229,11 @@ export function computeDAGLayout(
   // ── 4. Compute x positions per column ───────────────────────────────────────
   // Column x starts at 0 and advances by (max width in col + gap)
   const colValues = [...column.values()];
-  const maxCols = colValues.length > 0 ? Math.max(...colValues) + 1 : 1;
+  let maxCol = 0;
+  for (const v of colValues) {
+    if (v > maxCol) maxCol = v;
+  }
+  const maxCols = colValues.length > 0 ? maxCol + 1 : 1;
   const colX: number[] = new Array(maxCols).fill(0);
   const nodeById = new Map(nodes.map(n => [n.id, n]));
 

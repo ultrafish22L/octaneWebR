@@ -25,6 +25,7 @@ class LoggerInstance {
   private logBuffer: { level: string; message: string }[] = [];
   private flushInterval: number | null = null;
   private initialized = false;
+  private isFlushing = false;
 
   constructor() {
     const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
@@ -39,11 +40,9 @@ class LoggerInstance {
   private ensureInitialized(): void {
     if (this.initialized) return;
     this.initialized = true;
-    try {
-      fetch('/api/logClear', { method: 'POST' });
-    } catch {
-      /* noop */
-    }
+    fetch('/api/logClear', { method: 'POST' }).catch(() => {
+      /* server may not be ready yet */
+    });
   }
 
   // ── Level checks ────────────────────────────────────────────────
@@ -156,7 +155,8 @@ class LoggerInstance {
   }
 
   private async flush(): Promise<void> {
-    if (this.logBuffer.length === 0) return;
+    if (this.logBuffer.length === 0 || this.isFlushing) return;
+    this.isFlushing = true;
 
     const batch = this.logBuffer;
     this.logBuffer = [];
@@ -168,7 +168,9 @@ class LoggerInstance {
         body: JSON.stringify({ entries: batch }),
       });
     } catch {
-      /* noop */
+      /* noop — server may be unavailable */
+    } finally {
+      this.isFlushing = false;
     }
   }
 }

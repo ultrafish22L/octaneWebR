@@ -277,7 +277,44 @@ export class OctaneGrpcClientBase {
  *
  * The client sends `objectPtr` as a unified handle wrapper, but different proto messages
  * expect different field names (item_ref, nodePinInfoRef). This function remaps them.
+ *
+ * Data-driven: add new entries to OBJECT_PTR_REMAPPINGS instead of writing new if/else branches.
  */
+
+interface ObjectPtrRemapping {
+  service?: string; // If specified, must match the gRPC service name
+  methods: string[];
+  field: string; // The proto field name to remap objectPtr to
+  exclusive?: boolean; // If true, the objectPtr is the only param (no ...rest spread)
+}
+
+const OBJECT_PTR_REMAPPINGS: ObjectPtrRemapping[] = [
+  // ApiNodePinInfoEx.getApiNodePinInfo: objectPtr → nodePinInfoRef (objectPtr is the sole param)
+  {
+    service: 'ApiNodePinInfoEx',
+    methods: ['getApiNodePinInfo'],
+    field: 'nodePinInfoRef',
+    exclusive: true,
+  },
+  // ApiItem value methods: objectPtr → item_ref
+  {
+    methods: ['getValueByAttrID', 'setValueByAttrID', 'getValue', 'getByAttrID', 'setByAttrID'],
+    field: 'item_ref',
+  },
+  // ApiNode pin value methods: objectPtr → item_ref (apinodesystem_7.proto)
+  {
+    methods: [
+      'getPinValueByIx',
+      'getPinValueByPinID',
+      'getPinValueByName',
+      'setPinValueByIx',
+      'setPinValueByPinID',
+      'setPinValueByName',
+    ],
+    field: 'item_ref',
+  },
+];
+
 export function transformObjectPtrParams(
   service: string,
   method: string,
@@ -285,34 +322,15 @@ export function transformObjectPtrParams(
 ): Record<string, any> {
   if (!params.objectPtr) return params;
 
-  // ApiNodePinInfoEx.getApiNodePinInfo: objectPtr → nodePinInfoRef
-  if (service === 'ApiNodePinInfoEx' && method === 'getApiNodePinInfo') {
-    return { nodePinInfoRef: params.objectPtr };
-  }
+  for (const mapping of OBJECT_PTR_REMAPPINGS) {
+    if (mapping.service && mapping.service !== service) continue;
+    if (!mapping.methods.includes(method)) continue;
 
-  // ApiItem value methods: objectPtr → item_ref
-  if (
-    method === 'getValueByAttrID' ||
-    method === 'setValueByAttrID' ||
-    method === 'getValue' ||
-    method === 'getByAttrID' ||
-    method === 'setByAttrID'
-  ) {
+    if (mapping.exclusive) {
+      return { [mapping.field]: params.objectPtr };
+    }
     const { objectPtr, ...rest } = params;
-    return { item_ref: objectPtr, ...rest };
-  }
-
-  // ApiNode pin value methods: objectPtr → item_ref (apinodesystem_7.proto)
-  if (
-    method === 'getPinValueByIx' ||
-    method === 'getPinValueByPinID' ||
-    method === 'getPinValueByName' ||
-    method === 'setPinValueByIx' ||
-    method === 'setPinValueByPinID' ||
-    method === 'setPinValueByName'
-  ) {
-    const { objectPtr, ...rest } = params;
-    return { item_ref: objectPtr, ...rest };
+    return { [mapping.field]: objectPtr, ...rest };
   }
 
   return params;

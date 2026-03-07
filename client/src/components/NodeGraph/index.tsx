@@ -42,6 +42,8 @@ import {
 } from '../../utils/NodeLayoutUtils';
 import { useConnectionOperations } from './hooks/useConnectionOperations';
 import { useNodeOperations } from './hooks/useNodeOperations';
+import { useEmitterEvent } from '../../hooks/useEmitterEvent';
+import { useLatestRef } from '../../hooks/useLatestRef';
 import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
 
 interface NodeGraphEditorProps {
@@ -98,11 +100,8 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   const hasProvidedLayoutCallback = useRef(false);
   // Track whether progressive loading is in progress (skip sceneTree effect)
   const progressiveLoadingRef = useRef(false);
-  // Ref to always have latest sceneTree for event handlers (avoids stale closure)
-  const sceneTreeRef = useRef(sceneTree);
-  useEffect(() => {
-    sceneTreeRef.current = sceneTree;
-  }, [sceneTree]);
+  // Refs to always have latest values for event handlers (avoids stale closures)
+  const sceneTreeRef = useLatestRef(sceneTree);
 
   // Provide fitView callback to parent on mount (only once)
   useEffect(() => {
@@ -118,22 +117,10 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState<Edge>([]);
 
   // Refs so the auto-layout callback (passed once on mount) always sees fresh values
-  const nodesRef = useRef<Node<OctaneNodeData>[]>([]);
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-  const edgesRef = useRef<Edge[]>([]);
-  useEffect(() => {
-    edgesRef.current = edges;
-  }, [edges]);
-  const clientRef = useRef(client);
-  useEffect(() => {
-    clientRef.current = client;
-  }, [client]);
-  const connectedRef = useRef(connected);
-  useEffect(() => {
-    connectedRef.current = connected;
-  }, [connected]);
+  const nodesRef = useLatestRef(nodes);
+  const edgesRef = useLatestRef(edges);
+  const clientRef = useLatestRef(client);
+  const connectedRef = useLatestRef(connected);
 
   // Provide auto-layout callback to parent on mount (only once).
   // Uses refs internally so the closure never goes stale.
@@ -182,7 +169,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         }
       });
     }
-  }, [onAutoLayoutReady, setNodes, fitView]);
+  }, [onAutoLayoutReady, setNodes, fitView, nodesRef, edgesRef, clientRef, connectedRef]);
 
   // Custom onNodesChange handler that saves position changes to Octane
   const onNodesChange = useCallback(
@@ -214,7 +201,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         }
       });
     },
-    [onNodesChangeBase, client, connected]
+    [onNodesChangeBase, client, connected, nodesRef]
   );
 
   // Container ref for scoping keyboard shortcuts
@@ -399,247 +386,239 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
   /**
    * Load scene graph when sceneTree changes.
    *
-   * During progressive loading, skip length-based incremental checks — the tree
-   * grows via mutations and shallow copies, not via nodeAdded/nodeDeleted events.
-   * Instead, event-driven rebuilds happen on scene:structureComplete and scene:complete.
+   * During progressive loading, the sceneTree prop changes rapidly (once per
+   * childrenLoaded event). We debounce the full rebuild so hundreds of rapid
+   * updates get coalesced into a single convertSceneToGraph call.
    *
-   * For traditional/post-load operations, use length-based skip to avoid full rebuilds
-   * when nodeAdded/nodeDeleted event handlers are managing incremental updates.
+   * When NOT in progressive loading, rebuild immediately (no debounce) so
+   * post-load operations like node delete/add feel instant.
    */
   useEffect(() => {
-    Logger.debug('NodeGraphEditor: sceneTree changed, length =', sceneTree?.length || 0);
-
     if (!sceneTree || sceneTree.length === 0) {
-      Logger.debug('NodeGraphEditor: Empty scene tree, clearing graph');
       setNodes([]);
       setEdges([]);
       return;
     }
 
-    // Always rebuild the full graph when sceneTree changes.
-    // This is the single source of truth for nodes and edges.
-    const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
-    Logger.debug(
-      `NodeGraphEditor: rebuild → ${graphNodes.length} nodes, ${graphEdges.length} edges`
-    );
+    const doRebuild = () => {
+      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTree);
+      Logger.debug(
+        `NodeGraphEditor: rebuild → ${graphNodes.length} nodes, ${graphEdges.length} edges`
+      );
+      setNodes(graphNodes);
+      setEdges(graphEdges);
+    };
 
-    setNodes(graphNodes);
-    setEdges(graphEdges);
+    if (progressiveLoadingRef.current) {
+      // During progressive load: debounce — coalesce rapid updates
+      const timer = setTimeout(doRebuild, 300);
+      return () => clearTimeout(timer);
+    }
+
+    // Post-load: rebuild immediately
+    doRebuild();
   }, [sceneTree, convertSceneToGraph, setEdges, setNodes]);
 
   /**
    * Handle incremental node additions (no full graph rebuild)
    */
-  useEffect(() => {
-    if (!connected || !client) return;
+  useEmitterEvent(
+    client,
+    'nodeAdded',
+    useCallback(
+      (event: NodeAddedEvent) => {
+        if (!connectedRef.current) return;
 
-    const handleNodeAdded = (event: NodeAddedEvent) => {
-      Logger.debug('NodeGraphEditor: Adding node incrementally:', event.node.name);
+        Logger.debug('NodeGraphEditor: Adding node incrementally:', event.node.name);
 
-      // Convert just the new node to a ReactFlow node
-      const nodeIndex = sceneTreeRef.current.length - 1; // New node position
-      const nodeSpacing = NODE_SPACING_X;
-      const yCenter = NODE_CENTER_Y;
-      const handleStr = String(event.node.handle || 0);
+        // Convert just the new node to a ReactFlow node
+        const nodeIndex = sceneTreeRef.current.length - 1; // New node position
+        const nodeSpacing = NODE_SPACING_X;
+        const yCenter = NODE_CENTER_Y;
+        const handleStr = String(event.node.handle || 0);
 
-      // Extract input pins from item.children
-      const inputs = event.node.children || [];
+        // Extract input pins from item.children
+        const inputs = event.node.children || [];
+        const cl = clientRef.current;
 
-      const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
-        // O(1) lookup via scene.map instead of O(n) tree scan
-        const connectedNode = input.handle ? client.lookupItem(input.handle) : null;
+        const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => {
+          // O(1) lookup via scene.map instead of O(n) tree scan
+          const connectedNode = input.handle && cl ? cl.lookupItem(input.handle) : null;
 
-        return {
-          id: `input-${inputIndex}`,
-          label: input.staticLabel || input.name,
-          pinInfo: input.pinInfo,
-          handle: input.handle,
-          isAtTopLevel: !!connectedNode,
-          connectedNodeName: connectedNode ? connectedNode.name || connectedNode.type : null,
+          return {
+            id: `input-${inputIndex}`,
+            label: input.staticLabel || input.name,
+            pinInfo: input.pinInfo,
+            handle: input.handle,
+            isAtTopLevel: !!connectedNode,
+            connectedNodeName: connectedNode ? connectedNode.name || connectedNode.type : null,
+          };
+        });
+
+        const newReactFlowNode: Node<OctaneNodeData> = {
+          id: handleStr,
+          type: 'octane',
+          // Octane stores center-based positions; ReactFlow uses top-left corner
+          position: event.node.position
+            ? octaneToReactFlow(
+                event.node.position,
+                inputHandles.length,
+                event.node.name || event.node.type
+              )
+            : { x: nodeIndex * nodeSpacing, y: yCenter },
+          data: {
+            sceneNode: event.node,
+            inputs: inputHandles,
+            output: { id: 'output-0', label: event.node.name, pinInfo: event.node.pinInfo },
+            onContextMenu: handleNodeContextMenu,
+          },
+          selected: false,
         };
-      });
 
-      const newReactFlowNode: Node<OctaneNodeData> = {
-        id: handleStr,
-        type: 'octane',
-        // Octane stores center-based positions; ReactFlow uses top-left corner
-        position: event.node.position
-          ? octaneToReactFlow(
-              event.node.position,
-              inputHandles.length,
-              event.node.name || event.node.type
-            )
-          : { x: nodeIndex * nodeSpacing, y: yCenter },
-        data: {
-          sceneNode: event.node,
-          inputs: inputHandles,
-          output: { id: 'output-0', label: event.node.name, pinInfo: event.node.pinInfo },
-          onContextMenu: handleNodeContextMenu,
-        },
-        selected: false,
-      };
+        // Add node to graph without rebuilding everything
+        setNodes(nds => [...nds, newReactFlowNode]);
 
-      // Add node to graph without rebuilding everything
-      setNodes(nds => [...nds, newReactFlowNode]);
-
-      Logger.debug('NodeGraphEditor: Node added to canvas');
-    };
-
-    client.on('nodeAdded', handleNodeAdded);
-
-    return () => {
-      client.off('nodeAdded', handleNodeAdded);
-    };
-  }, [client, connected, setNodes, handleNodeContextMenu]);
+        Logger.debug('NodeGraphEditor: Node added to canvas');
+      },
+      [handleNodeContextMenu, setNodes, connectedRef, clientRef, sceneTreeRef]
+    )
+  );
 
   /**
    * Handle incremental node deletions (no full graph rebuild)
    */
-  useEffect(() => {
-    if (!connected || !client) return;
+  useEmitterEvent(
+    client,
+    'nodeDeleted',
+    useCallback(
+      (event: NodeDeletedEvent) => {
+        if (!connectedRef.current) return;
 
-    const handleNodeDeleted = (event: NodeDeletedEvent) => {
-      Logger.debug('NodeGraphEditor: Deleting node incrementally, handle:', event.handle);
+        Logger.debug('NodeGraphEditor: Deleting node incrementally, handle:', event.handle);
 
-      const handleStr = String(event.handle);
+        const handleStr = String(event.handle);
 
-      // Remove node from graph without rebuilding everything
-      setNodes(nds => {
-        const filtered = nds.filter(node => node.id !== handleStr);
-        Logger.debug(
-          `NodeGraphEditor: Removed node ${handleStr}, ${nds.length} → ${filtered.length} nodes`
-        );
-        return filtered;
-      });
+        // Remove node from graph without rebuilding everything
+        setNodes(nds => {
+          const filtered = nds.filter(node => node.id !== handleStr);
+          Logger.debug(
+            `NodeGraphEditor: Removed node ${handleStr}, ${nds.length} → ${filtered.length} nodes`
+          );
+          return filtered;
+        });
 
-      // Remove connected edges
-      setEdges(eds => {
-        const filtered = eds.filter(edge => edge.source !== handleStr && edge.target !== handleStr);
-        Logger.debug(`NodeGraphEditor: Removed edges for node ${handleStr}`);
-        return filtered;
-      });
+        // Remove connected edges
+        setEdges(eds => {
+          const filtered = eds.filter(
+            edge => edge.source !== handleStr && edge.target !== handleStr
+          );
+          Logger.debug(`NodeGraphEditor: Removed edges for node ${handleStr}`);
+          return filtered;
+        });
 
-      Logger.debug('NodeGraphEditor: Node removed from canvas');
-    };
-
-    client.on('nodeDeleted', handleNodeDeleted);
-
-    return () => {
-      client.off('nodeDeleted', handleNodeDeleted);
-    };
-  }, [client, connected, setNodes, setEdges]);
+        Logger.debug('NodeGraphEditor: Node removed from canvas');
+      },
+      [setNodes, setEdges, connectedRef]
+    )
+  );
 
   /**
    * Progressive loading: Listen for build lifecycle events.
    *
    * Level-0 nodes appear in the graph immediately as they arrive (no edges yet).
-   * At structureComplete, do a full rebuild with edges.
-   * At complete, do a final rebuild to pick up any remaining changes.
+   * At structureComplete/complete, the sceneTree prop updates (via useSceneTree
+   * propagation) and the prop-driven useEffect above handles the full rebuild.
    *
-   * Uses sceneTreeRef (not sceneTree) so event handlers always read the latest
-   * tree without re-registering on every sceneTree change.
+   * Note: sceneTreeRef is only used for node positioning (length), not for
+   * full rebuilds — full rebuilds always use the React-committed sceneTree prop.
    */
-  useEffect(() => {
-    if (!client) return;
-
-    const handleBuildStart = () => {
+  useEmitterEvent(
+    client,
+    'scene:buildStart',
+    useCallback(() => {
       progressiveLoadingRef.current = true;
       hasInitialFitView.current = false;
       // Clear previous graph
       setNodes([]);
       setEdges([]);
-    };
+    }, [setNodes, setEdges])
+  );
 
-    /**
-     * Level-0 node added during progressive load.
-     * Add it to the graph immediately (no edges yet — those come at structureComplete).
-     */
-    const handleProgressiveNodeAdded = ({ node }: { node: SceneNode; level: number }) => {
-      const handleStr = String(node.handle || 0);
-      const inputs = node.children || [];
+  /**
+   * Level-0 node added during progressive load.
+   * Add it to the graph immediately (no edges yet — those come at structureComplete).
+   */
+  useEmitterEvent(
+    client,
+    'scene:nodeAdded',
+    useCallback(
+      ({ node }: { node: SceneNode; level: number }) => {
+        const handleStr = String(node.handle || 0);
+        const inputs = node.children || [];
 
-      const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => ({
-        id: `input-${inputIndex}`,
-        label: input.staticLabel || input.name,
-        pinInfo: input.pinInfo,
-        handle: input.handle,
-        isAtTopLevel: false,
-        connectedNodeName: null,
-      }));
+        const inputHandles = inputs.map((input: SceneNode, inputIndex: number) => ({
+          id: `input-${inputIndex}`,
+          label: input.staticLabel || input.name,
+          pinInfo: input.pinInfo,
+          handle: input.handle,
+          isAtTopLevel: false,
+          connectedNodeName: null,
+        }));
 
-      const newReactFlowNode: Node<OctaneNodeData> = {
-        id: handleStr,
-        type: 'octane',
-        // Octane stores center-based positions; ReactFlow uses top-left corner
-        position: node.position
-          ? octaneToReactFlow(node.position, inputHandles.length, node.name || node.type)
-          : { x: 100, y: 300 },
-        data: {
-          sceneNode: node,
-          inputs: inputHandles,
-          output: { id: 'output-0', label: node.name, pinInfo: node.pinInfo },
-          onContextMenu: handleNodeContextMenu,
-        },
-        selected: false,
-      };
+        const newReactFlowNode: Node<OctaneNodeData> = {
+          id: handleStr,
+          type: 'octane',
+          // Octane stores center-based positions; ReactFlow uses top-left corner
+          position: node.position
+            ? octaneToReactFlow(node.position, inputHandles.length, node.name || node.type)
+            : { x: 100, y: 300 },
+          data: {
+            sceneNode: node,
+            inputs: inputHandles,
+            output: { id: 'output-0', label: node.name, pinInfo: node.pinInfo },
+            onContextMenu: handleNodeContextMenu,
+          },
+          selected: false,
+        };
 
-      setNodes(nds => {
-        // Avoid duplicates
-        if (nds.some(n => n.id === handleStr)) return nds;
-        return [...nds, newReactFlowNode];
-      });
-    };
+        setNodes(nds => {
+          // Avoid duplicates
+          if (nds.some(n => n.id === handleStr)) return nds;
+          return [...nds, newReactFlowNode];
+        });
+      },
+      [setNodes, handleNodeContextMenu]
+    )
+  );
 
-    /**
-     * Structure complete — full rebuild with edges.
-     * By now all level-0 nodes and their immediate children/pins are loaded.
-     */
-    const handleStructureComplete = () => {
-      Logger.debug('NodeGraphEditor: structureComplete — rebuilding graph with edges');
-      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
-      // Preserve selection across rebuild
-      setNodes(prev => {
-        const selectedId = prev.find(n => n.selected)?.id;
-        if (selectedId) {
-          const target = graphNodes.find(n => n.id === selectedId);
-          if (target) target.selected = true;
-        }
-        return graphNodes;
-      });
-      setEdges(graphEdges);
-    };
-
-    /**
-     * Scene complete — final rebuild to pick up any remaining changes.
-     */
-    const handleComplete = () => {
-      Logger.debug('NodeGraphEditor: complete — final graph rebuild');
+  /**
+   * Structure complete — edges are now available.
+   * Don't rebuild here — the sceneTree prop will update (from useSceneTree
+   * propagation) and the prop-driven useEffect handles the authoritative
+   * rebuild. Rebuilding from sceneTreeRef here caused a race condition:
+   * the ref is updated via useEffect (one render behind), so event handlers
+   * could read stale data and build the graph with missing nodes.
+   */
+  useEmitterEvent(
+    client,
+    'scene:structureComplete',
+    useCallback(() => {
+      Logger.debug('NodeGraphEditor: structureComplete — edges ready, waiting for prop');
       progressiveLoadingRef.current = false;
-      const { nodes: graphNodes, edges: graphEdges } = convertSceneToGraph(sceneTreeRef.current);
-      // Preserve selection across rebuild
-      setNodes(prev => {
-        const selectedId = prev.find(n => n.selected)?.id;
-        if (selectedId) {
-          const target = graphNodes.find(n => n.id === selectedId);
-          if (target) target.selected = true;
-        }
-        return graphNodes;
-      });
-      setEdges(graphEdges);
-    };
+    }, [])
+  );
 
-    client.on('scene:buildStart', handleBuildStart);
-    client.on('scene:nodeAdded', handleProgressiveNodeAdded);
-    client.on('scene:structureComplete', handleStructureComplete);
-    client.on('scene:complete', handleComplete);
-
-    return () => {
-      client.off('scene:buildStart', handleBuildStart);
-      client.off('scene:nodeAdded', handleProgressiveNodeAdded);
-      client.off('scene:structureComplete', handleStructureComplete);
-      client.off('scene:complete', handleComplete);
-    };
-  }, [client, convertSceneToGraph, setNodes, setEdges, handleNodeContextMenu]);
+  /**
+   * Scene complete — final signal. Progressive loading is done.
+   */
+  useEmitterEvent(
+    client,
+    'scene:complete',
+    useCallback(() => {
+      Logger.debug('NodeGraphEditor: complete — scene load finished');
+      progressiveLoadingRef.current = false;
+    }, [])
+  );
 
   /**
    * Synchronize node selection when selectedNode changes externally (e.g., from SceneOutliner)
@@ -861,7 +840,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           strokeWidth: 3,
         }}
         className="node-graph-reactflow"
-        style={{ width: '100%', height: '100%', background: '#454545' }}
+        style={{ width: '100%', height: '100%' }}
         snapToGrid={snapToGrid}
         snapGrid={[20, 20]}
       >
@@ -870,7 +849,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
           variant={BackgroundVariant.Lines}
           gap={gridVisible ? 60 : 0}
           size={gridVisible ? 1 : 0}
-          color="#555555"
+          color="transparent"
         />
 
         {/* Minimap for navigation - top-left flush with yellow tint matching Octane SE */}
@@ -880,20 +859,20 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
             const data = node.data as OctaneNodeData;
             return data.sceneNode.nodeInfo?.nodeColor
               ? formatColorValue(data.sceneNode.nodeInfo.nodeColor)
-              : '#666';
+              : '#6b6580';
           }}
           style={{
             width: 160,
             height: 120,
-            background: 'rgba(62, 61, 49, 0.95)',
-            border: '2px solid rgba(180, 162, 75, 0.75)',
+            background: 'var(--bg-tertiary)',
+            border: '2px solid var(--border)',
             borderRadius: 4,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+            boxShadow: '0 2px 8px var(--shadow)',
             margin: 0,
             padding: 0,
             overflow: 'hidden',
           }}
-          maskColor="rgba(62, 61, 49, 0.6)"
+          maskColor="rgba(20, 16, 32, 0.6)"
           maskStrokeColor="transparent"
           maskStrokeWidth={0}
           pannable={true}

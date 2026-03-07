@@ -162,8 +162,8 @@ export class RenderExportService extends BaseService {
       link.click();
       document.body.removeChild(link);
 
-      // Delay revoke to let download start
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      // Delay revoke to let download start (10s allows slow systems to begin)
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
 
       Logger.info(`Render downloaded: ${filename}.png (${width}x${height})`);
       return true;

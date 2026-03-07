@@ -150,11 +150,19 @@ input:checked + .slider:before {
 .scene-outliner-button-bar {
   display: flex;
   background: var(--bg-primary);
+  background-image: linear-gradient(
+    180deg,
+    var(--highlight-ultra-subtle) 0%,
+    var(--shadow-ultra-subtle) 100%
+  );
   border-bottom: 1px solid var(--border);
   padding: 2px 4px;
   gap: var(--spacing-xxs);
   align-items: center;
   justify-content: flex-start;
+  box-shadow:
+    inset 0 1px 1px var(--highlight-subtle),
+    inset 0 -1px 1px var(--overlay-light);
 }
 
 /* .outliner-btn base styles defined in render-viewport.css (shared icon button) */
@@ -178,6 +186,11 @@ input:checked + .slider:before {
 
 .scene-tab {
   background: var(--bg-lighter);
+  background-image: linear-gradient(
+    180deg,
+    var(--highlight-ultra-subtle) 0%,
+    var(--shadow-ultra-subtle) 100%
+  );
   border: 1px solid var(--border-primary);
   border-bottom: none;
   color: var(--text-secondary);
@@ -249,7 +262,7 @@ input:checked + .slider:before {
 
 .refresh-btn:active {
   background: var(--accent-blue);
-  color: white;
+  color: var(--text-primary);
 }
 
 /* Scene Tab Content Areas */
@@ -302,7 +315,7 @@ input:checked + .slider:before {
 
 .scene-tab-content .tree-node.selected {
   background-color: transparent;
-  color: white;
+  color: var(--text-primary);
 }
 
 /* LocalDB package item styling */
@@ -476,11 +489,16 @@ input:checked + .slider:before {
 
 /* Selection highlight only on icon + name, not full row — Octane gold 3D */
 .tree-node.selected .node-label-area {
-  background: linear-gradient(to bottom, #b89a00 0%, #9a8200 40%, #7a6800 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--selection-gold-light) 0%,
+    var(--selection-gold-mid) 40%,
+    var(--selection-gold-dark) 100%
+  );
   border-radius: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    inset 0 1px 0 var(--accent-hover),
+    inset 0 -1px 0 var(--overlay-very-subtle);
 }
 
 /* Scene node content layout */
@@ -501,8 +519,8 @@ input:checked + .slider:before {
   color: var(--text-muted);
   cursor: pointer;
   margin-right: 4px;
-  border: 1px solid #555;
-  background-color: #3a3a3a;
+  border: 1px solid var(--border);
+  background-color: var(--bg-tertiary);
   border-radius: 3px;
   flex-shrink: 0;
 }
@@ -591,7 +609,7 @@ input:checked + .slider:before {
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #333;
+  background-color: var(--tree-guide-color);
 }
 
 /* Empty guide — ancestor was last child, no vertical line */
@@ -609,7 +627,7 @@ input:checked + .slider:before {
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #333;
+  background-color: var(--tree-guide-color);
   z-index: 0;
   pointer-events: none;
 }
@@ -623,7 +641,7 @@ input:checked + .slider:before {
   top: 0;
   height: 50%;
   width: 2px;
-  background-color: #333;
+  background-color: var(--tree-guide-color);
   z-index: 0;
   pointer-events: none;
 }
@@ -639,7 +657,7 @@ input:checked + .slider:before {
   top: 50%;
   width: 16px;
   height: 2px;
-  background-color: #333;
+  background-color: var(--tree-guide-color);
   z-index: 0;
   pointer-events: none;
 }
@@ -650,7 +668,7 @@ input:checked + .slider:before {
   top: 50%;
   bottom: 0;
   width: 2px;
-  background-color: #333;
+  background-color: var(--tree-guide-color);
   z-index: 0;
   pointer-events: none;
 }

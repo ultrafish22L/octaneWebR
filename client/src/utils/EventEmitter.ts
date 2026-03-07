@@ -9,6 +9,9 @@
 
 import { Logger } from './Logger';
 
+// TODO: Replace with a typed event map generic (e.g. EventEmitter<EventMap>)
+// to get compile-time checking on event names and payload types. Currently
+// any string is accepted as an event name and payloads are untyped.
 type EventHandler = Function;
 
 export class EventEmitter {

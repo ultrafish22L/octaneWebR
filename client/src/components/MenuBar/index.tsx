@@ -10,7 +10,6 @@ import { useOctane } from '../../hooks/useOctane';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEditActions } from '../../contexts/EditActionsContext';
 import { MenuDropdown } from './MenuDropdown';
-import { KeyboardShortcutsDialog } from '../dialogs/KeyboardShortcutsDialog';
 import { PreferencesDialog } from '../dialogs/PreferencesDialog';
 import { BatchRenderingDialog } from '../dialogs/BatchRenderingDialog';
 import { DaylightAnimationDialog } from '../dialogs/DaylightAnimationDialog';
@@ -159,6 +158,7 @@ interface MenuBarProps {
     panel: 'renderViewport' | 'nodeInspector' | 'graphEditor' | 'sceneOutliner'
   ) => void;
   onResetLayout?: () => void;
+  isLoadingProjectRef: React.MutableRefObject<boolean>;
 }
 
 function MenuBar({
@@ -166,16 +166,19 @@ function MenuBar({
   onMaterialDatabaseOpen: _onMaterialDatabaseOpen,
   onTogglePanelVisibility,
   onResetLayout,
+  isLoadingProjectRef,
 }: MenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [activeMenuAnchor, setActiveMenuAnchor] = useState<HTMLElement | null>(null);
-  const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
-  const [isPreferencesDialogOpen, setIsPreferencesDialogOpen] = useState(false);
-  const [isBatchRenderingDialogOpen, setIsBatchRenderingDialogOpen] = useState(false);
-  const [isDaylightAnimationDialogOpen, setIsDaylightAnimationDialogOpen] = useState(false);
-  const [isTurntableAnimationDialogOpen, setIsTurntableAnimationDialogOpen] = useState(false);
-  const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
-  const [isSavePackageDialogOpen, setIsSavePackageDialogOpen] = useState(false);
+  type DialogId =
+    | 'preferences'
+    | 'batchRendering'
+    | 'daylightAnimation'
+    | 'turntableAnimation'
+    | 'about'
+    | 'savePackage';
+  const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
+  const closeDialog = useCallback(() => setOpenDialog(null), []);
   const menuBarRef = useRef<HTMLDivElement>(null);
 
   const { addRecentFile, clearRecentFiles, getRecentFilePaths } = useRecentFiles();
@@ -249,9 +252,12 @@ function MenuBar({
   const openFileBrowser = useFileBrowser(async path => {
     if (!path) return;
     try {
-      // Cancel pending inspector queries before loading a new scene.
-      // Stale getByAttrID calls running during loadProject crash Octane (BUG-R3-2).
+      // Cancel all in-flight work before loading a new scene.
+      // Concurrent gRPC calls during loadProject crash Octane (BUG-R3-2).
+      client.abortSceneLoad();
       requestQueue.clear();
+      isLoadingProjectRef.current = true;
+      await client.waitForSceneIdle();
       const response = await client.callApi('ApiProjectManager', 'loadProject', {
         projectPath: path,
       });
@@ -266,6 +272,9 @@ function MenuBar({
     } catch (error) {
       Logger.error('Failed to open scene:', error);
       showNotification(`Failed to open ${path}`, 'error');
+    } finally {
+      isLoadingProjectRef.current = false;
+      client.unblockSceneLoad();
     }
   });
 
@@ -299,6 +308,10 @@ function MenuBar({
             return;
           }
           try {
+            client.abortSceneLoad();
+            requestQueue.clear();
+            isLoadingProjectRef.current = true;
+            await client.waitForSceneIdle();
             const response = await client.callApi(
               'ApiProjectManager',
               'resetProject',
@@ -313,6 +326,9 @@ function MenuBar({
           } catch (error) {
             Logger.error('Failed to create new scene:', error);
             showNotification('Failed to create new scene', 'error');
+          } finally {
+            isLoadingProjectRef.current = false;
+            client.unblockSceneLoad();
           }
           break;
 
@@ -336,6 +352,10 @@ function MenuBar({
               return;
             }
             try {
+              client.abortSceneLoad();
+              requestQueue.clear();
+              isLoadingProjectRef.current = true;
+              await client.waitForSceneIdle();
               const response = await client.callApi('ApiProjectManager', 'loadProject', {
                 projectPath: data,
               });
@@ -348,6 +368,9 @@ function MenuBar({
             } catch (error) {
               Logger.error('Failed to open recent file:', error);
               showNotification(`Failed to open ${data}`, 'error');
+            } finally {
+              isLoadingProjectRef.current = false;
+              client.unblockSceneLoad();
             }
           }
           break;
@@ -387,7 +410,7 @@ function MenuBar({
           break;
 
         case 'file.saveAsPackage':
-          setIsSavePackageDialogOpen(true);
+          setOpenDialog('savePackage');
           Logger.debug('Opening Save as Package dialog');
           break;
 
@@ -417,7 +440,7 @@ function MenuBar({
           break;
 
         case 'file.preferences':
-          setIsPreferencesDialogOpen(true);
+          setOpenDialog('preferences');
           Logger.debug('Opening Preferences dialog');
           break;
 
@@ -494,17 +517,17 @@ function MenuBar({
           break;
 
         case 'script.batchRender':
-          setIsBatchRenderingDialogOpen(true);
+          setOpenDialog('batchRendering');
           Logger.debug('Opening Batch Rendering dialog');
           break;
 
         case 'script.daylightAnimation':
-          setIsDaylightAnimationDialogOpen(true);
+          setOpenDialog('daylightAnimation');
           Logger.debug('Opening Daylight Animation dialog');
           break;
 
         case 'script.turntableAnimation':
-          setIsTurntableAnimationDialogOpen(true);
+          setOpenDialog('turntableAnimation');
           Logger.debug('Opening Turntable Animation dialog');
           break;
 
@@ -573,7 +596,7 @@ function MenuBar({
           break;
 
         case 'help.about':
-          setIsAboutDialogOpen(true);
+          setOpenDialog('about');
           Logger.debug('Opening About dialog');
           break;
 
@@ -600,6 +623,7 @@ function MenuBar({
       onSceneRefresh,
       onTogglePanelVisibility,
       onResetLayout,
+      isLoadingProjectRef,
     ]
   );
 
@@ -717,44 +741,26 @@ function MenuBar({
         />
       )}
 
-      {/* Keyboard Shortcuts Dialog */}
-      <KeyboardShortcutsDialog
-        isOpen={isShortcutsDialogOpen}
-        onClose={() => setIsShortcutsDialogOpen(false)}
-      />
-
       {/* Preferences Dialog */}
-      <PreferencesDialog
-        isOpen={isPreferencesDialogOpen}
-        onClose={() => setIsPreferencesDialogOpen(false)}
-      />
+      <PreferencesDialog isOpen={openDialog === 'preferences'} onClose={closeDialog} />
 
       {/* Batch Rendering Dialog */}
-      <BatchRenderingDialog
-        isOpen={isBatchRenderingDialogOpen}
-        onClose={() => setIsBatchRenderingDialogOpen(false)}
-      />
+      <BatchRenderingDialog isOpen={openDialog === 'batchRendering'} onClose={closeDialog} />
 
       {/* Daylight Animation Dialog */}
-      <DaylightAnimationDialog
-        isOpen={isDaylightAnimationDialogOpen}
-        onClose={() => setIsDaylightAnimationDialogOpen(false)}
-      />
+      <DaylightAnimationDialog isOpen={openDialog === 'daylightAnimation'} onClose={closeDialog} />
 
       {/* Turntable Animation Dialog */}
       <TurntableAnimationDialog
-        isOpen={isTurntableAnimationDialogOpen}
-        onClose={() => setIsTurntableAnimationDialogOpen(false)}
+        isOpen={openDialog === 'turntableAnimation'}
+        onClose={closeDialog}
       />
 
       {/* About Dialog */}
-      <AboutDialog isOpen={isAboutDialogOpen} onClose={() => setIsAboutDialogOpen(false)} />
+      <AboutDialog isOpen={openDialog === 'about'} onClose={closeDialog} />
 
       {/* Save Package Dialog */}
-      <SavePackageDialog
-        isOpen={isSavePackageDialogOpen}
-        onClose={() => setIsSavePackageDialogOpen(false)}
-      />
+      <SavePackageDialog isOpen={openDialog === 'savePackage'} onClose={closeDialog} />
 
       {/* File Browser Dialogs (for Open / Save As) */}
       {openFileBrowser.dialogProps && <FileBrowserDialog {...openFileBrowser.dialogProps} />}

@@ -20,7 +20,6 @@ export interface GraphInfo {
   id?: number;
   type?: string;
   position?: { x: number; y: number };
-  [key: string]: unknown;
 }
 
 /**
@@ -34,7 +33,7 @@ export interface NodeInfo {
   nodeColor?: number;
   defaultName?: string;
   description?: string;
-  [key: string]: unknown;
+  takesPinDefaultValue?: boolean;
 }
 
 /**
@@ -44,7 +43,6 @@ export interface DimInfo {
   sliderStep?: number;
   min?: number;
   max?: number;
-  [key: string]: unknown;
 }
 
 export interface FloatInfo {
@@ -52,14 +50,12 @@ export interface FloatInfo {
   dimCount?: number;
   isColor?: boolean;
   dimInfos?: DimInfo[];
-  [key: string]: unknown;
 }
 
 export interface IntInfo {
   useSliders?: boolean;
   dimCount?: number;
   dimInfos?: DimInfo[];
-  [key: string]: unknown;
 }
 
 export interface EnumInfo {
@@ -109,7 +105,6 @@ export interface NodeConnection {
   from: number;
   to: number;
   pin?: string;
-  [key: string]: unknown;
 }
 
 /**
@@ -158,40 +153,11 @@ export interface NodeDeletedEvent {
   collapsedChildren: number[];
 }
 
-export interface DeviceMemoryUsage {
-  total: number;
-  used: number;
-  free: number;
-}
-
-export interface DeviceResourceStatistics {
-  textures: number;
-  geometry: number;
-  nodes: number;
-}
-
-export interface DeviceGeometryStatistics {
-  meshes: number;
-  vertices: number;
-  triangles: number;
-}
-
-export interface DeviceTexturesStatistics {
-  count: number;
-  memory: number;
-}
-
 export interface RenderRegion {
   active: boolean;
   regionMin: { x: number; y: number };
   regionMax: { x: number; y: number };
   featherWidth: number;
-}
-
-export interface PickResult {
-  nodeHandle: number;
-  position: { x: number; y: number; z: number };
-  normal: { x: number; y: number; z: number };
 }
 
 export interface MaterialCategory {

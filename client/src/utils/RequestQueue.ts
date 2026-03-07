@@ -69,17 +69,6 @@ class RequestQueue {
   }
 
   /**
-   * Get current queue stats
-   */
-  getStats() {
-    return {
-      active: this.activeCount,
-      queued: this.queue.length,
-      total: this.activeCount + this.queue.length,
-    };
-  }
-
-  /**
    * Clear all pending requests
    */
   clear() {

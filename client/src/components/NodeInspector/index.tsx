@@ -12,7 +12,7 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { useStatusMessage } from '../../contexts/StatusMessageContext';
@@ -449,44 +449,44 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
   // Context menu handler
-  const handleContextMenu = (event: React.MouseEvent) => {
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
     setContextMenuVisible(true);
-  };
+  }, []);
 
   // Context menu action handlers
-  const handleContextMenuClose = () => {
+  const handleContextMenuClose = useCallback(() => {
     setContextMenuVisible(false);
-  };
+  }, []);
 
-  const handleRender = () => {
+  const handleRender = useCallback(() => {
     Logger.debug('Render action for node:', node?.name);
     // TODO: Implement render action
-  };
+  }, [node]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     Logger.debug('Save action for node:', node?.name);
     // TODO: Implement save action
-  };
+  }, [node]);
 
-  const handleCut = () => {
+  const handleCut = useCallback(() => {
     Logger.debug('Cut action for node:', node?.name);
     // TODO: Implement cut action
-  };
+  }, [node]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     Logger.debug('Copy action for node:', node?.name);
     // TODO: Implement copy action
-  };
+  }, [node]);
 
-  const handlePaste = () => {
+  const handlePaste = useCallback(() => {
     Logger.debug('Paste action for node:', node?.name);
     // TODO: Implement paste action
-  };
+  }, [node]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!node || !client) return;
 
     Logger.debug('Delete action for node:', node.name);
@@ -500,27 +500,27 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
         Logger.debug('Delete operation completed from NodeInspector');
       },
     });
-  };
+  }, [node, client]);
 
-  const handleExpand = () => {
+  const handleExpand = useCallback(() => {
     Logger.debug('Expand action for node:', node?.name);
     // TODO: Implement expand all children action
-  };
+  }, [node]);
 
-  const handleShowInOutliner = () => {
+  const handleShowInOutliner = useCallback(() => {
     Logger.debug('Show in Outliner:', node?.name);
     // TODO: Implement outliner navigation
-  };
+  }, [node]);
 
-  const handleShowInGraphEditor = () => {
+  const handleShowInGraphEditor = useCallback(() => {
     Logger.debug('Show in Graph Editor:', node?.name);
     // TODO: Implement graph editor navigation
-  };
+  }, [node]);
 
-  const handleShowInLuaBrowser = () => {
+  const handleShowInLuaBrowser = useCallback(() => {
     Logger.debug('Show in Lua Browser:', node?.name);
     // TODO: Implement Lua browser navigation
-  };
+  }, [node]);
 
   // Build hasGroup map for all levels (matches octaneWeb's hasGroup[] array logic)
   // This ensures that all siblings at the same level have consistent indentation

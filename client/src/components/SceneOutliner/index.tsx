@@ -89,10 +89,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
 
     // Structural change: first/last key changed, length decreased, or went from empty to non-empty
     const isStructuralChange =
-      firstKey !== prev.firstKey ||
-      lastKey !== prev.lastKey ||
-      len < prev.len ||
-      (prev.len === 0 && len > 0);
+      firstKey !== prev.firstKey || len < prev.len || (prev.len === 0 && len > 0);
 
     prevFlatSnapshotRef.current = { len, firstKey, lastKey };
 
@@ -202,9 +199,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
           {!connected ? (
             <div className="scene-loading">Not connected</div>
           ) : sceneTree.length > 0 ? (
-            // Show tree as soon as we have data (even during progressive loading)
             <div className="scene-mesh-list">
-              {/* Virtual scrolling: Only render visible nodes */}
               <List
                 key={listKey}
                 listRef={listRef}
@@ -214,12 +209,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
                 rowProps={rowProps}
               />
             </div>
-          ) : loading ? (
-            // Only show skeleton if loading AND no data yet
-            <SkeletonTree count={12} />
-          ) : (
-            <div className="scene-loading">Click refresh to load scene</div>
-          )}
+          ) : null}
         </div>
       </div>
 
