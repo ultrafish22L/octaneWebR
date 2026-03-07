@@ -272,6 +272,58 @@ client/src/styles/
 
 ---
 
+## 🤖 MCP Server — AI Scene Creation
+
+octaneWebR includes an MCP (Model Context Protocol) server that exposes Octane's gRPC API to AI agents. Claude can create, modify, and render Octane scenes programmatically while octaneWebR visualizes changes in real time.
+
+### Setup
+
+```bash
+cd mcp && npm install    # First time only
+```
+
+Add to Claude Code settings (`.mcp.json` already included in project root):
+
+```json
+{
+  "mcpServers": {
+    "octane": {
+      "command": "npx",
+      "args": ["tsx", "mcp/src/index.ts"],
+      "cwd": "."
+    }
+  }
+}
+```
+
+For full scene building, also add the [Octane Docs MCP](https://octane-mcp.otoy.ai/sse) for Octane documentation and Lua API reference.
+
+### Tools (21)
+
+| Category      | Tools                                                                               | Description                    |
+| ------------- | ----------------------------------------------------------------------------------- | ------------------------------ |
+| **Info**      | `get_octane_version`, `get_device_info`, `list_node_types`                          | System info and type constants |
+| **Project**   | `load_project`, `save_project`, `reset_project`                                     | Scene file management          |
+| **Camera**    | `get_camera`, `set_camera`                                                          | Camera position and target     |
+| **Render**    | `start_render`, `stop_render`, `restart_render`, `get_render_status`, `save_render` | Render pipeline control        |
+| **Scene**     | `get_scene_tree`, `get_node_info`                                                   | Scene hierarchy traversal      |
+| **Node**      | `create_node`, `delete_node`, `connect_nodes`, `disconnect_pin`                     | Node graph manipulation        |
+| **Attribute** | `get_attribute`, `set_attribute`                                                    | Node parameter read/write      |
+
+### Architecture
+
+The MCP server is an independent gRPC peer — it connects directly to Octane at `127.0.0.1:51022`, just like octaneWebR. Both see each other's changes in real time.
+
+```
+Claude Code ←stdio→ MCP Server ←gRPC→ Octane ←gRPC→ octaneWebR (browser)
+```
+
+### Generative AI Assets
+
+Use [OTOY Studio](https://otoy.studio/) for AI-generated 3D models, textures, and images (Image-to-3D, Text-to-Image) to import into Octane scenes.
+
+---
+
 ## 📂 Project Structure
 
 ```
@@ -311,6 +363,11 @@ octaneWebR/
 │       ├── api/websocket.ts          # WebSocket server
 │       ├── services/callbackManager.ts # Callback streaming
 │       └── index.ts                  # Server entry point
+├── mcp/                              # MCP server for AI agents
+│   └── src/
+│       ├── index.ts                  # MCP server entry point (stdio)
+│       ├── OctaneMcpClient.ts        # gRPC client wrapper
+│       └── tools/                    # 21 tools (info, project, camera, render, scene, node, attribute)
 ├── scripts/                          # Build and utility scripts
 ├── package-for-dist/                 # Distribution packaging scripts
 ├── api-version.config.js             # API version configuration (Alpha 5/Beta 2)
@@ -462,7 +519,9 @@ curl http://localhost:57341/api/health | python -m json.tool
 
 ### External Resources
 
-- [Octane SE Manual](https://docs.otoy.com/standaloneSE/) - Complete UI reference
+- [Octane SE Manual](https://docs.otoy.com/standaloneSE/CoverPage.html) - Complete UI reference
+- [Octane Help Agent](https://octane-agent.pages.dev/) - AI-powered Octane help assistant
+- [Octane MCP Server](https://octane-mcp.otoy.ai/sse) - MCP server for OctaneRender documentation and Lua API
 - [React 18 Docs](https://react.dev/) - Component patterns
 - [ReactFlow v12 Docs](https://reactflow.dev/) - Node graph library
 - [Vite Guide](https://vitejs.dev/guide/) - Build tool
@@ -506,6 +565,6 @@ Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
 ---
 
-**Last Updated**: 2026-02-24
-**Version**: 1.1.0-dev
-**Status**: Active Development (SceneServiceP + File Node Toolbar)
+**Last Updated**: 2026-03-06
+**Version**: 1.4.4
+**Status**: Active Development

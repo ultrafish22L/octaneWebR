@@ -10,6 +10,8 @@ __pycache__/
 
 # Build output
 dist/
+mcp/dist/
+mcp/node_modules/
 .vite/
 *.tsbuildinfo
 vite.config.mts.timestamp-*

@@ -1,54 +1,61 @@
 # OctaneWebR — Improvement Backlog
 
-Items extracted from user notes that haven't been fully addressed yet.
+Ordered easy → hard within each section. #0 (MCP server) and #20 (vibe theme) completed.
 
 ---
 
-## Features
+render save dialogs need all functionality of octane's look for screenshots
+add to doc files for ai to reference https://render.otoy.com/forum/index.php login creds upon request
 
-| #   | Item                                                    | Notes                                                                                                                                                                                                    |
-| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **PreferencesDialog wiring**                            | UI stub exists but not connected to Octane. Use `ApiProjectManager.applicationPreferences()` for the prefs node handle, and the inverse setter functions.                                                |
-| 2   | **Save render passes: multi-pass export**               | Currently hardcoded to beauty pass only (`RenderExportService.ts:204`). Should discover all render passes from protos and tack pass name + extension onto filename (e.g. `_beauty.exr`, `_diffuse.exr`). |
-| 3   | **Export render passes dialog**                         | Should look like save render passes with a file name input field, not "select folder".                                                                                                                   |
-| 4   | **Save render / save render passes shared path memory** | Both operations should share the same last-used path so the user doesn't re-navigate.                                                                                                                    |
-| 5   | **FileBrowserDialog file type filter dropdown**         | Internal filtering by extension exists, but no user-facing dropdown to select file types (.orbx, .ocs, .png, etc.). (GAP-F6)                                                                             |
-| 6   | **Multi-connect: connect all selected nodes**           | Ctrl+drag from selected nodes only connects the first. Should connect all to target pin. (`useConnectionOperations.ts:313`) (GAP-MULTICONNECT)                                                           |
-| 7   | **Viewport axis rotation**                              | Axis overlay in render viewport should rotate with the camera orientation (if enabled). Currently static.                                                                                                |
-| 8   | **Fix all icons in node-add context menu**              | Icons in the Add Node context menu (right-click graph → Add Node) need to be corrected to match each node type.                                                                                          |
-| 9   | **Animation bar below render bar**                      | When the scene has animation, show an animation timeline/controls bar below the render bar. Low priority.                                                                                                |
+---
 
-## UI Polish
+## Major
 
-| #   | Item                                                | Notes                                                                                                                                                                               |
-| --- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 10  | **Panel title menu icon**                           | Black box left of each panel title. In Octane this is a panel menu — overkill for us, but the icon should be present for visual match.                                              |
-| 11  | **Tooltip yellow background**                       | User wants tooltips to have yellow background like Octane. No `--tooltip` CSS var found — needs implementation.                                                                     |
-| 12  | **Tooltip audit**                                   | Many elements show "Unknown type" or generic tooltips. Needs interactive session to identify and fix. (GAP-TOOLTIPS)                                                                |
-| 13  | **Inspector: expanded vs collapsed icon box shape** | Expanded parent nodes should have rounded right side on icon box; collapsed/end nodes should have straight right side.                                                              |
-| 14  | **Inspector: parameter bar 3D gradient**            | Parameter bar should get the 3D gradient effect to match Octane.                                                                                                                    |
-| 15  | **GPU statistics dialog: remove "selected" border** | Dialog has an unneeded selected-state border.                                                                                                                                       |
-| 16  | **GPU dialog on render bar right-click**            | GPU statistics dialog should pop when right-clicking anywhere in the render bar. Verify this works.                                                                                 |
-| 17  | **Modal dialog stacking policy**                    | Multiple modals can stack (e.g. Batch Rendering + About). Most apps enforce single-modal. (NOTE-F15)                                                                                |
-| 18  | **Dialog dimming**                                  | All modal-overlay dialogs dim the background. Consider whether dialogs should dim or not. (NOTE-DIALOG-DIM)                                                                         |
-| 19  | **Node Inspector for grouped nodes**                | Inspector display for "Node graph" group nodes looks different from Octane. May need group-specific rendering. (NOTE-A14-INSPECTOR)                                                 |
-| 20  | **Theme: create "vibe" theme**                      | Current theme should be copied to "vibe" (`theme-vibe.css` exists); "theme-octane" should match Octane as closely as possible. Verify separation is complete.                       |
-| 21  | **Toolbar button style unification**                | Render bar "play" button doesn't have the same selected tint as the "axis" button. All toolbar/bar buttons should share identical style aspects (select tint, hover, border, etc.). |
-| 22  | **CSS cleanup**                                     | Toolbar/bar button styles are scattered and inconsistent. Needs consolidation into shared classes, but tricky due to specificity and existing overrides.                            |
+| #   | Item                                                  | Notes                                                                                       |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 0   | ~~**MCP server layer for AI-driven scene creation**~~ | **DONE** — 21 tools in `mcp/`, stdio transport, esbuild + tsx. `.mcp.json` for Claude Code. |
 
-## Architecture / Code Quality
+---
 
-| #   | Item                                   | Notes                                                                                                                                                      |
-| --- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 23  | **RequestQueue configurable max size** | Should have a configurable constant for max queue size. 0 = no queuing (default to 0). Not implemented — no `maxSize` constant found.                      |
-| 24  | **Automated test suite**               | No tests yet. Vitest installed + configured (`npm run test`). Candidates: `estimateNodeWidth`, position conversion, `CacheManager`, service layer mocking. |
-| 25  | **React 19 upgrade**                   | Safe per dependency check. `@xyflow/react` 12.x and `react-error-boundary` 6.x support R19.                                                                |
+## Easy — CSS / one-file changes
 
-## Large-Scene UX (Deferred)
+| #   | Item                                                    | Difficulty | Notes                                                                                        |
+| --- | ------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
+| 1   | **GPU statistics dialog: remove "selected" border**     | Trivial    | Delete one CSS rule.                                                                         |
+| 2   | **Dialog dimming**                                      | Trivial    | Decide whether modals dim background, toggle CSS. (NOTE-DIALOG-DIM)                          |
+| 3   | **Tooltip yellow background**                           | Easy       | Add `--tooltip-bg` / `--tooltip-text` CSS vars + styles.                                     |
+| 4   | **Panel title menu icon**                               | Easy       | Add icon element left of each panel title + CSS. Visual match only, no menu behavior needed. |
+| 5   | **Inspector: parameter bar 3D gradient**                | Easy       | Apply existing 3D gradient pattern to parameter bars.                                        |
+| 6   | **Inspector: expanded vs collapsed icon box shape**     | Easy       | Conditional `border-radius` — rounded right side when expanded, straight when collapsed.     |
+| 7   | **Save render / save render passes shared path memory** | Easy       | Share a single last-used-path state variable between both operations.                        |
+| 8   | **RequestQueue configurable max size**                  | Easy       | Add a `MAX_QUEUE_SIZE` constant. 0 = no queuing (default).                                   |
+| 9   | **GPU dialog on render bar right-click**                | Easy       | Add `onContextMenu` handler to render bar that opens GPU stats dialog.                       |
 
-| #   | Item                           | Notes                                                                                                          |
-| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| 26  | **Progressive scene loading**  | Load first-level nodes + display, then connections (second level). Preferentially load UI-visible items first. |
-| 27  | **Event queuing during load**  | Events emitted synchronously from the async loading loop should be queued — don't block/slow the async load.   |
-| 28  | **Suppress edits during sync** | Prevent user edits while scene is still syncing to avoid state conflicts.                                      |
-| 29  | **Better graph arranging**     | Current DAG layout is basic. Investigate Sugiyama or force-directed algorithms for better node positioning.    |
+## Medium — multi-file or new components
+
+| #   | Item                                            | Difficulty | Notes                                                                                                                                                                 |
+| --- | ----------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10  | **Modal dialog stacking policy**                | Medium     | Add modal manager or enforce single-modal z-index policy. (NOTE-F15)                                                                                                  |
+| 11  | **Toolbar button style unification**            | Medium     | Audit all toolbar/bar buttons, unify select tint, hover, border styles.                                                                                               |
+| 12  | **CSS cleanup**                                 | Medium     | Consolidate scattered toolbar/bar button styles into shared classes. Tricky due to specificity.                                                                       |
+| 13  | **Fix all icons in node-add context menu**      | Medium     | Map each node type to correct icon in the Add Node context menu.                                                                                                      |
+| 14  | **Export render passes dialog**                 | Medium     | Rework dialog to include file name input field instead of "select folder".                                                                                            |
+| 15  | **FileBrowserDialog file type filter dropdown** | Medium     | Add user-facing dropdown to select file types (.orbx, .ocs, .png, etc.). Internal filtering exists. (GAP-F6)                                                          |
+| 16  | **Tooltip audit**                               | Medium     | Interactive session to find and fix all "Unknown type" / generic tooltips. (GAP-TOOLTIPS)                                                                             |
+| 17  | **Suppress edits during sync**                  | Medium     | Disable user edits while scene is syncing to avoid state conflicts.                                                                                                   |
+| 18  | **PreferencesDialog wiring**                    | Medium     | Connect existing UI stub to Octane via `ApiProjectManager.applicationPreferences()`.                                                                                  |
+| 19  | **React 19 upgrade**                            | Medium     | `@xyflow/react` 12.x and `react-error-boundary` 6.x support R19. Needs testing.                                                                                       |
+| 20  | **Save render passes: multi-pass export**       | Medium     | Discover all render passes from protos, export with pass name + extension (e.g. `_beauty.exr`, `_diffuse.exr`). Currently beauty only (`RenderExportService.ts:204`). |
+
+## Hard — significant new logic or architecture
+
+| #   | Item                                          | Difficulty | Notes                                                                                                                        |
+| --- | --------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 21  | **Multi-connect: connect all selected nodes** | Hard       | Ctrl+drag from selected nodes only connects first. Rewrite edge connection logic. (`useConnectionOperations.ts:313`)         |
+| 22  | **Viewport axis rotation**                    | Hard       | Axis overlay must rotate with camera orientation. Requires 3D math / matrix transforms.                                      |
+| 23  | **Automated test suite**                      | Hard       | Vitest configured but no tests. Candidates: `estimateNodeWidth`, position conversion, `CacheManager`, service layer mocking. |
+| 24  | **Event queuing during load**                 | Hard       | Events from async loading loop should be queued, not emitted synchronously.                                                  |
+| 25  | **Node Inspector for grouped nodes**          | Hard       | Group-specific rendering for "Node graph" group nodes. (NOTE-A14-INSPECTOR)                                                  |
+| 26  | **Animation bar below render bar**            | Hard       | Full new UI component + Octane animation API integration. Low priority.                                                      |
+| 27  | **Progressive scene loading**                 | Hard       | Load first-level nodes + display, then connections. Preferentially load UI-visible items first.                              |
+| 28  | **Better graph arranging**                    | Hard       | Current DAG layout is basic. Investigate Sugiyama or force-directed algorithms.                                              |

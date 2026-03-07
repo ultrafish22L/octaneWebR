@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "octane": {
+      "command": "npx",
+      "args": ["tsx", "mcp/src/index.ts"],
+      "cwd": "."
+    },
+    "octane-docs": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://octane-mcp.otoy.ai/sse"]
+    }
+  }
+}

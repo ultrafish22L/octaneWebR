@@ -16,6 +16,7 @@ export default [
       '**/build/**',
       '**/coverage/**',
       'server/**',
+      'mcp/**',
       'vite-plugin-octane-grpc.ts',
       'vite.config.mts',
     ],

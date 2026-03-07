@@ -1,0 +1,22 @@
+{
+  "name": "octane-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server exposing Octane gRPC API to AI agents",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/index.ts src/OctaneMcpClient.ts src/tools/info.ts src/tools/project.ts src/tools/camera.ts src/tools/render.ts src/tools/scene.ts src/tools/node.ts src/tools/attribute.ts --outdir=dist --platform=node --target=es2020 --format=cjs --sourcemap",
+    "start": "npx tsx src/index.ts"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "esbuild": "^0.27.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  }
+}
