@@ -4,7 +4,7 @@
 
 A React/TypeScript application that provides a browser-based interface for Octane Render, communicating with Octane via the gRPC LiveLink API.
 
-![octaneWebR — Octane Theme](docs/screenshots/theme-octane.png)
+![octaneWebR — Octane Theme](docs/screenshots/theme-octane.jpg)
 
 ---
 
@@ -241,15 +241,15 @@ octaneWebR uses a pure CSS variable-based theme system. Three themes are include
 
 **Octane** (default) — Neutral dark grays with warm orange/gold accents, matching the official Octane SE dark theme.
 
-![Octane Theme](docs/screenshots/theme-octane.png)
+![Octane Theme](docs/screenshots/theme-octane.jpg)
 
 **Vibe** — Muted pastel purple palette with lavender accents, sage greens, and dusty roses.
 
-![Vibe Theme](docs/screenshots/theme-vibe.png)
+![Vibe Theme](docs/screenshots/theme-vibe.jpg)
 
 **Debug** — Each background variable uses a distinct hue with bright orange borders, making layout and variable mismatches immediately obvious.
 
-![Debug Theme](docs/screenshots/theme-debug.png)
+![Debug Theme](docs/screenshots/theme-debug.jpg)
 
 ```
 client/src/styles/
