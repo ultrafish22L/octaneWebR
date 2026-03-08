@@ -122,25 +122,19 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
         .optional()
         .describe('PinId enum value (uses connectTo). E.g. P_EMISSION=41'),
       source_handle: z.number().describe('Source node handle (the node being connected)'),
-      evaluate: z
-        .boolean()
-        .default(false)
-        .describe(
-          'Trigger scene evaluation after connecting. Default false — use update_scene to flush a batch of changes.'
-        ),
+      evaluate: z.boolean().default(true).describe('Trigger scene evaluation after connecting'),
     },
     async ({ target_handle, pin_index, pin_name, pin_id, source_handle, evaluate }) => {
       try {
         if (pin_id !== undefined) {
           // Connect by PinId enum using connectTo
-          const params1: Record<string, any> = {
+          await client.callMethod('ApiNode', 'connectTo', {
             objectPtr: { handle: String(target_handle), type: 17 },
             pinId: pin_id,
             sourceNode: { handle: String(source_handle), type: 17 },
+            evaluate,
             doCycleCheck: true,
-          };
-          if (evaluate) params1.evaluate = true;
-          await client.callMethod('ApiNode', 'connectTo', params1);
+          });
           return jsonResult({
             success: true,
             target: target_handle,
@@ -150,14 +144,13 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
         }
         if (pin_name !== undefined) {
           // Connect by pin name using connectTo1
-          const params2: Record<string, any> = {
+          await client.callMethod('ApiNode', 'connectTo1', {
             objectPtr: { handle: String(target_handle), type: 17 },
             pinName: pin_name,
             sourceNode: { handle: String(source_handle), type: 17 },
+            evaluate,
             doCycleCheck: true,
-          };
-          if (evaluate) params2.evaluate = true;
-          await client.callMethod('ApiNode', 'connectTo1', params2);
+          });
           return jsonResult({
             success: true,
             target: target_handle,
@@ -168,14 +161,13 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
         if (pin_index === undefined) {
           return errorResult('Provide one of: pin_index, pin_name, or pin_id');
         }
-        const params3: Record<string, any> = {
+        await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(target_handle), type: 17 }, // ObjectType.ApiNode
           pinIdx: pin_index,
           sourceNode: { handle: String(source_handle), type: 17 },
+          evaluate,
           doCycleCheck: true,
-        };
-        if (evaluate) params3.evaluate = true;
-        await client.callMethod('ApiNode', 'connectToIx', params3);
+        });
         return jsonResult({
           success: true,
           target: target_handle,
@@ -194,23 +186,17 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
     {
       handle: z.number().describe('Node handle'),
       pin_index: z.number().describe('Pin index to disconnect'),
-      evaluate: z
-        .boolean()
-        .default(false)
-        .describe(
-          'Trigger scene evaluation after disconnecting. Default false — use update_scene to flush.'
-        ),
+      evaluate: z.boolean().default(true).describe('Trigger scene evaluation after disconnecting'),
     },
     async ({ handle, pin_index, evaluate }) => {
       try {
-        const params: Record<string, any> = {
+        await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(handle), type: 17 },
           pinIdx: pin_index,
           sourceNode: { handle: '0', type: 17 }, // Handle 0 = disconnect
+          evaluate,
           doCycleCheck: true,
-        };
-        if (evaluate) params.evaluate = true;
-        await client.callMethod('ApiNode', 'connectToIx', params);
+        });
         return jsonResult({ success: true, handle, pin: pin_index });
       } catch (error: any) {
         return errorResult(error);

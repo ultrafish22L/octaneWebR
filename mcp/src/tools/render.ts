@@ -49,6 +49,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
             targetNode: { handle: render_target_handle },
           });
         }
+        await client.callMethod('ApiRenderEngine', 'continueRendering', {});
         return jsonResult({ success: true });
       } catch (error: any) {
         return errorResult(error);

@@ -59,3 +59,10 @@ add to doc files for ai to reference https://render.otoy.com/forum/index.php log
 | 26  | **Animation bar below render bar**            | Hard       | Full new UI component + Octane animation API integration. Low priority.                                                      |
 | 27  | **Progressive scene loading**                 | Hard       | Load first-level nodes + display, then connections. Preferentially load UI-visible items first.                              |
 | 28  | **Better graph arranging**                    | Hard       | Current DAG layout is basic. Investigate Sugiyama or force-directed algorithms.                                              |
+
+## Bugs
+
+| #   | Item                                                    | Difficulty | Notes                                                                                                                                                          |
+| --- | ------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 29  | **Node graph editor context menu fails on empty scene** | Medium     | Right-click context menu should work even when the scene is empty (no nodes loaded).                                                                           |
+| 30  | **Audit FILE_NODE_TYPES via offline API run**           | Medium     | Query all node types via API to determine which actually require a file path. Current list was hand-curated and had NT_GEO_OBJECT wrong. Need definitive list. |

@@ -39,6 +39,8 @@ Thumbs.db
 # Generated proto files (reference only)
 server/src/generated/
 
+renders/
+
 # Icon extraction temporary files
 extracted_icons/
 extracted_icons_v2/

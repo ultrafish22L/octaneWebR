@@ -119,7 +119,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. Defers evaluation by default — call update_scene to flush changes to the render engine, or pass evaluate=true to flush immediately. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
+    'Set a node attribute value. Automatically triggers scene evaluation after setting. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
     {
       handle: z.number().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -132,29 +132,20 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           z.object({ x: z.number(), y: z.number().optional(), z: z.number().optional() }),
         ])
         .describe('Value to set (boolean, number, string, or {x, y, z} for float3)'),
-      evaluate: z
-        .boolean()
-        .default(false)
-        .describe(
-          'If true, triggers scene evaluation immediately after setting. Default false — use update_scene to flush a batch of changes. IMPORTANT: Structural changes (primitive type enums, pin count) MUST use evaluate=true or they will crash Octane.'
-        ),
     },
-    async ({ handle, attribute_id, expected_type, value, evaluate }) => {
+    async ({ handle, attribute_id, expected_type, value }) => {
       try {
         const valueParams = buildValueParams(value, expected_type);
-        const callParams: Record<string, any> = {
+        await client.callMethod('ApiItem', setMethod, {
           objectPtr: { handle: String(handle), type: 16 },
           attribute_id,
           expected_type,
           ...valueParams,
-        };
-        // Only include evaluate when true — omitting it lets Octane use its default.
-        // Sending evaluate:false to Alpha 5 proto (which lacks the field) can crash
-        // on structural changes like primitive type enums.
-        if (evaluate) {
-          callParams.evaluate = true;
-        }
-        await client.callMethod('ApiItem', setMethod, callParams);
+        });
+
+        // Trigger scene evaluation after every set — matches octaneWebR pattern.
+        // Batching deferred changes crashes Octane on structural changes (primitive types).
+        await client.callMethod('ApiChangeManager', 'update', {});
 
         return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {

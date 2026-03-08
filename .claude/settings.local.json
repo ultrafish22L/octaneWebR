@@ -18,7 +18,16 @@
       "Bash(find C:/otoyla/GRPC/dev/octaneWebR/client/src/styles -name \"*.css\" -exec grep -l \"modal-overlay\" {} ;)",
       "Bash(npm run build)",
       "Bash(echo \"exit: $?\")",
-      "mcp__octane__reset_project"
+      "mcp__octane__reset_project",
+      "mcp__octane__create_node",
+      "mcp__octane__connect_nodes",
+      "mcp__octane__set_camera",
+      "mcp__octane__start_render",
+      "mcp__octane__update_scene",
+      "mcp__octane__restart_render",
+      "mcp__octane__save_render",
+      "mcp__octane__get_node_info",
+      "mcp__octane__set_attribute"
     ]
   }
 }

@@ -283,7 +283,7 @@ export const FILE_NODE_TYPES: Record<string, { extensions: string }> = {
   NT_GEO_MESH_VOLUME_SDF: { extensions: '*.vdb;*.nvdb' },
   NT_GEO_MESH_VOLUME: { extensions: '*.vdb;*.nvdb' },
   NT_GEO_GAUSSIAN_SPLAT: { extensions: '*.ply;*.splat' },
-  NT_GEO_OBJECT: { extensions: '*.obj;*.ply;*.stl;*.fbx;*.abc' },
+  // NT_GEO_OBJECT is a Geometric Primitive (box, sphere, etc.) — NOT file-based
   // Textures / Images
   NT_TEX_IMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp' },
   NT_TEX_ALPHAIMAGE: { extensions: '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp' },

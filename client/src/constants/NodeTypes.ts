@@ -55,7 +55,7 @@ export const OCTANE_NODE_TYPES: NodeTypeHierarchy = {
     NT_GEO_MESH: { name: 'Mesh', color: '#32CD32' },
     NT_GEO_MESH_VOLUME: { name: 'Mesh Volume', color: '#32CD32' },
     NT_GEO_MESH_VOLUME_SDF: { name: 'Mesh Volume SDF', color: '#32CD32' },
-    NT_GEO_OBJECT: { name: 'Scene', color: '#32CD32' },
+    NT_GEO_OBJECT: { name: 'Geometric Primitive', color: '#32CD32' },
     NT_GEO_OSL: { name: 'OSL Geometry', color: '#32CD32' },
     NT_GEO_PLACEMENT: { name: 'Placement', color: '#32CD32' },
     NT_GEO_PLANE: { name: 'Plane', color: '#32CD32' },

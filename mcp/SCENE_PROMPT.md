@@ -370,7 +370,7 @@ Since pin indices and attribute IDs vary by node type, always follow this patter
 
 Pin indices vary by node type. **Always use `get_node_info` to discover pins.** Common patterns:
 
-- **RenderTarget**: pin 0 = camera, pin 1 = environment, pin 15 = film settings, geometry on higher pins
+- **RenderTarget**: pin 0 = camera, pin 1 = environment, pin 3 = mesh (geometry group), pin 4 = filmSettings, pin 6 = kernel
 - **Materials**: pin 0 = diffuse/albedo, pin 1 = specular (varies by material type — always check)
 - **Geometry nodes**: pin 0 = material, pin 1 = transform (varies by geometry type)
 
@@ -417,15 +417,11 @@ RenderTarget
               └── ...
 ```
 
-**CRITICAL: Deferred Evaluation Pattern**
+**CRITICAL: Immediate Evaluation Pattern**
 
-Octane processes ALL API calls on a single "message thread". Setting attributes and connecting nodes triggers scene evaluation by default, which can crash Octane if a node is partially configured. The safe pattern is:
+Every `set_attribute` call automatically triggers `ApiChangeManager.update()` — changes are applied immediately. Every `connect_nodes` call evaluates immediately (`evaluate: true` by default). This matches Octane's web client behavior and prevents crashes from batched deferred structural changes.
 
-1. **Batch changes** — `set_attribute` and `connect_nodes` default to `evaluate: false` (deferred)
-2. **Flush once** — call `update_scene` after a batch of changes to re-evaluate all dirty nodes
-3. **Never fire parallel calls** — all gRPC calls are serialized via mutex; send them one at a time
-
-From OTOY's official docs: _"It's dangerous to evaluate a node while it's not set up correctly. If you're lucky it will give you an error, if you're unlucky it will crash Octane."_
+**Safe parallel calls**: Independent `set_attribute` calls (e.g., setting Width, Height, Depth on the same node) CAN be called in parallel — the MCP mutex serializes them at transport level. Do NOT parallelize structural changes (`connect_nodes`, primitive type changes).
 
 **Create nodes:**
 
@@ -434,28 +430,28 @@ create_node { node_type: "NT_MAT_UNIVERSAL" }   → returns { handle: 42 }
 create_node { node_type: "NT_TEX_RGB" }          → returns { handle: 43 }
 ```
 
-**Discover pins, then connect (deferred):**
+**Discover pins, then connect:**
 
 ```
 get_node_info { handle: 42 }                     → see all pins with names
-connect_nodes { target_handle: 42, pin_index: 0, source_handle: 43 }  → deferred
+connect_nodes { target_handle: 42, pin_index: 0, source_handle: 43 }  → immediate evaluation
 ```
 
-**Set attributes (deferred):**
+**Set attributes (immediate):**
 
 ```
 set_attribute { handle: 43, attribute_id: 185, expected_type: 11, value: { x: 1.0, y: 0.0, z: 0.0 } }
 ```
 
-(This sets an RGB texture to red — deferred, not yet evaluated)
+(This sets an RGB texture to red — applied immediately, scene updates automatically)
 
-**Flush all changes:**
+**Manual flush (rarely needed):**
 
 ```
-update_scene                                      → evaluates all dirty nodes, updates render
+update_scene                                      → forces re-evaluation of all dirty nodes
 ```
 
-Call `update_scene` once per batch — e.g., after configuring all attributes on a geo object, or after connecting several nodes to a group.
+`update_scene` is only needed in rare edge cases — normal workflow uses auto-evaluation.
 
 ### 4. Load 3D Models
 
@@ -517,15 +513,15 @@ Save downloaded files to `C:\otoyla\GRPC\dev\octaneWebR\assets\` (create subfold
 
 ## Important Notes
 
-- **Deferred evaluation is the default** — `set_attribute` and `connect_nodes` default to `evaluate: false`. Call `update_scene` to flush a batch of changes. Pass `evaluate: true` only when you want immediate evaluation of a single change.
-- **Never evaluate incomplete nodes** — Octane's #1 crash cause. Always set ALL attributes on a node before calling `update_scene`.
-- **All gRPC calls are serialized** — The MCP client uses a mutex. Never fire parallel tool calls for Octane operations — send them one at a time.
+- **Immediate evaluation is the default** — `set_attribute` auto-calls `ApiChangeManager.update()` after every set. `connect_nodes` defaults to `evaluate: true`. No need to call `update_scene` in normal workflow.
+- **Parallel set_attribute is safe** — Independent attributes (W/H/D/transform) can be set in parallel. The MCP mutex serializes at transport level. Do NOT parallelize structural changes (connections, primitive type changes).
+- **All gRPC calls are serialized** — The MCP client uses a mutex. Parallel tool calls are safe — they queue automatically.
 - **loadProject is async** — wait ~2 seconds after `load_project` before querying the scene tree
 - **reset_project takes up to 120 seconds** — be patient
 - **Pin indices vary by node type** — always use `get_node_info` to discover pins before connecting
 - **Attributes vary by node type** — use `list_node_types` and the Octane docs MCP to look up IDs
 - **File paths must be absolute** — use escaped backslashes (`C:\\path\\file.obj`)
-- **Image textures need evaluate** — after setting `A_FILENAME` on a texture/mesh, call `update_scene` or pass `evaluate: true` to trigger loading
+- **Image textures auto-evaluate** — after setting `A_FILENAME` on a texture/mesh, it auto-evaluates and loads
 - **Cycle check** — `connect_nodes` automatically prevents cyclic connections
 - **delete_node caveat** — deleting recently-disconnected nodes can crash Octane; disconnect pins first, wait briefly
 - **octaneWebR updates in real time** — changes made via MCP are immediately visible in the browser viewport
@@ -619,13 +615,17 @@ Print descriptive messages to the user at each phase so they can follow along.
 
 ```
 8.  create_node("NT_GEO_GROUP")
-9.  set_attribute(geo_group, 113, AT_INT=3, 9)  — 9 input pins
+9.  set_attribute(geo_group, 113, AT_INT=3, 9)  — MUST set pin count FIRST (starts at 0!)
 10. connect_nodes(RT, pin 3, geo_group)
 ```
+
+**CRITICAL**: Geo groups start with **0 input pins**. You MUST set `A_PIN_COUNT=113` before connecting ANY children, or connections silently fail.
 
 **Phase 4: Walls** (print: "Building Cornell box walls...")
 
 For EACH wall: create NT_GEO_OBJECT → get_node_info → set W/H/D/position/color → connect to geo_group.
+
+After connecting the **first wall**, call `start_render(render_target_handle: RT)` to re-select the RT. Without this, the renderer doesn't pick up new geometry.
 
 Each NT_GEO_OBJECT auto-creates: pin 0=primitive enum, pin 1=diffuse material (with RGB on material's pin 0), pin 3=transform, pin 4=Width, pin 5=Height, pin 6=Depth.
 
@@ -643,14 +643,17 @@ To set color: get_node_info(material) → pin 0 has RGB handle → set_attribute
 
 ```
 11. create_node("NT_GEO_OBJECT")          — thin box for light panel
-12. Set W=0.5, H=0.01, D=0.5; position (0, 1.95, 0)
-13. create_node("NT_EMIS_BLACKBODY") with node_type_id: 53
-14. get_node_info(blackbody) → pin 0 power handle
-15. set_attribute(power, 185, AT_FLOAT=9, 100)
-16. get_node_info(light_material) → find emission pin (pin 14)
-17. connect_nodes(light_material, pin 14, blackbody)
-18. connect_nodes(geo_group, pin 5, light)
+12. Set W=0.5, H=0.01, D=0.5; position (0, 1.99, 0)
+13. create_node("NT_MAT_DIFFUSE")         — standalone material (NOT the auto-created child!)
+14. create_node("NT_EMIS_BLACKBODY")
+15. get_node_info(blackbody) → pin 0 power handle
+16. set_attribute(power, 185, AT_FLOAT=9, 200)
+17. connect_nodes(standalone_mat, pin 14, blackbody)  — emission pin on standalone mat
+18. connect_nodes(light_panel, pin 1, standalone_mat)  — replace auto-created child material
+19. connect_nodes(geo_group, pin 5, light_panel)
 ```
+
+**IMPORTANT**: Auto-created child materials on NT_GEO_OBJECT silently reject emission connections. Create a **standalone** NT_MAT_DIFFUSE, connect emission to it, then connect the standalone material to the geo object's material pin (1), replacing the auto-created child.
 
 **Phase 6: Seal the Box** (print: "Removing daylight environment...")
 
@@ -661,14 +664,18 @@ To set color: get_node_info(material) → pin 0 has RGB handle → set_attribute
 **Phase 7: Glass Sphere** (print: "Creating glass sphere...")
 
 ```
-20. create_node("NT_GEO_OBJECT")
-21. get_node_info → find primitive enum handle (pin 0)
-22. set_attribute(enum, 185, AT_INT=3, 20) — 20 = Sphere
-23. Set W=0.6, H=0.6, D=0.6; position (0.35, 0.3, 0.1) — RIGHT side (+X = right)
+20. stop_render                             — MUST stop before primitive type change
+21. create_node("NT_GEO_OBJECT")            — NOT connected to anything yet
+22. get_node_info → find primitive enum handle (pin 0)
+23. set_attribute(enum, 185, AT_INT=3, 20)  — 20 = Sphere (safe: node is disconnected)
+24. Set W=0.6, H=0.6, D=0.6; position (0.35, 0.3, 0.1) — RIGHT side (+X = right)
     *** NEVER set subdivision > 2 — GPU crash! ***
-24. Create NT_MAT_SPECULAR → connect to sphere pin 1
-25. connect_nodes(geo_group, pin 6, sphere)
+25. Create NT_MAT_SPECULAR → connect to sphere pin 1
+26. connect_nodes(geo_group, pin 6, sphere) — NOW connect to scene
+27. update_scene → start_render(RT)
 ```
+
+**Disconnected pattern**: When changing primitive type, keep the node disconnected from the scene graph until fully configured. This prevents Octane from trying to evaluate a partially-configured node.
 
 **Phase 8: Gold Cube** (print: "Creating gold metallic cube...")
 
@@ -685,11 +692,12 @@ To set color: get_node_info(material) → pin 0 has RGB handle → set_attribute
 **Phase 9: Camera & Render** (print: "Setting camera and rendering...")
 
 ```
-33. set_camera(position: {x:0, y:1, z:-2.8}, target: {x:0, y:0.5, z:0})
-34. start_render(render_target_handle: RT)
-35. Wait 30-60 seconds for path tracing
-36. save_render("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box_final.png")
-37. save_project("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box.orbx")
+33. set_camera(position: {x:0, y:1, z:2.4}, target: {x:0, y:1, z:0})  — interior view
+34. start_render(render_target_handle: RT)  — MUST pass RT to re-select after geometry changes
+35. restart_render                           — reset sample count for clean render
+36. Wait 30-60 seconds for path tracing
+37. save_render("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box_final.png")
+38. save_project("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box.orbx")
 ```
 
 ### Expected Result
