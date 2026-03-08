@@ -20,7 +20,7 @@ A small rectangular light panel sits flush against the ceiling, centered. About 
 
 **Tall box** — A white rectangular box, roughly 0.6 meters wide and deep, about 1.2 meters tall. Positioned right of center, slightly toward the back, rotated about 20 degrees on the vertical axis. Plain white matte material.
 
-**Glass sphere** — A transparent glass sphere sitting on the floor, left of center, slightly toward the back. About 0.6 meters in diameter. Refractive glass material (IOR around 1.5) — you should see the room distorted through it, with caustic light patterns on the floor.
+**Glass sphere** — A transparent glass sphere sitting on the floor, left of center, slightly toward the back. About 0.6 meters in diameter. Clear glass — you should see the room distorted through it, with caustic light patterns on the floor.
 
 ## Camera
 

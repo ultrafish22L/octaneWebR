@@ -8,11 +8,11 @@ Best practices, crash prevention rules, and reference info for building scenes v
 
 ### Three Layers
 
-| Layer         | File                        | Purpose                                                       |
-| ------------- | --------------------------- | ------------------------------------------------------------- |
-| **Recipe**    | e.g. `CORNELL_RECIPE.md`    | Pure prose — what the scene should look like. No tech.        |
-| **Knowledge** | `OCTANE_MCP.md` (this file) | All technical rules, attribute IDs, crash prevention.         |
-| **Cooked**    | e.g. `CORNELL_COOKED.md`    | Recipe compiled to literal MCP calls. Produced after testing. |
+| Layer         | File                             | Purpose                                                                                              |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Recipe**    | e.g. `CORNELL_RECIPE.md`         | Pure prose — what the scene should look like. No tech.                                               |
+| **Knowledge** | `OCTANE_MCP.md` (this file)      | All technical rules, attribute IDs, crash prevention.                                                |
+| **Cooked**    | e.g. `CORNELL_COOKED_CLASSIC.md` | Recipe compiled to literal MCP calls. Variant suffix required (e.g. `_CLASSIC`, `_WARM`, `_CHROME`). |
 
 ### Three Phases
 
@@ -25,7 +25,7 @@ Best practices, crash prevention rules, and reference info for building scenes v
 1. **Read the recipe file** — never rely on memory or context summaries
 2. **Read this file's critical rules** — refresh knowledge
 3. **Read or generate the cooked file** if one exists
-4. **Render after every object** — save_render → Read PNG → evaluate → show to human
+4. **Render after every change** — save_render → Read PNG → evaluate → show to human (both Phase 2 and replay)
 5. **Never trust session continuation summaries** for MCP scene state — verify or start fresh
 
 ---
@@ -475,3 +475,5 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 - **Formats**: .obj, .fbx, .stl, .ply, .abc | .png, .jpg, .exr, .hdr | .vdb | .orbx, .ocs
 
 Save to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
+
+Cooked files use `${ASSETS}` — resolve to the absolute path above at runtime (Octane requires absolute paths).
