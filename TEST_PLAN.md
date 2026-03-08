@@ -1,233 +1,42 @@
 # OctaneWebR — Test Plan
 
-**App:** OctaneWebR v1.4.2
-**Scene:** `teapot.orbx` (reload via File → Open to restore after destructive tests; requires clicking confirm in Octane)
-**Tests:** 161 base + 20 Round 3 new = 181 total
+**Scene:** `teapot.orbx` (reload via File→Open after destructive tests; user must click confirm in Octane)
+**Tests:** 181 total (161 base + 20 Round 3)
 
 ---
 
-## Test Tools
+## Rules
 
-| Action            | Use For                                                       |
-| ----------------- | ------------------------------------------------------------- |
-| `left_click`      | Buttons, nodes, toggles, checkboxes, menu items               |
-| `right_click`     | Context menus on nodes, outliner items, viewport              |
-| `double_click`    | Double-click interactions                                     |
-| `left_click_drag` | Drag nodes, connect pins, box-select, resize splitters        |
-| `key`             | Keyboard shortcuts — Del, Escape, Ctrl+C/V/X/D/G, F1, F5, F11 |
-| `type`            | Text input into fields                                        |
-| `scroll`          | Scroll within panels, zoom/pan via mouse wheel                |
-| `screenshot`      | Visual verification                                           |
-
-All keyboard shortcuts work — the app uses `document.addEventListener('keydown')` which accepts all events.
-All drag operations work — `left_click_drag` generates trusted mouse events.
-Only limitation: no middle-click tool (C4 pan workaround: use `scroll`).
-
----
-
-## Screenshot Rule
-
-Any test that makes a **visible change** to the UI must take before/after screenshots:
-delete, add, connect, disconnect, change node type, copy/paste, group/ungroup, drag reposition.
-
-**Filename format:** `R<round>_<testID>_<description>_<before|after>.png`
-If verifying a bug fix, include the bug ID: `R3_I11_BUG-RT-SELECT_rt-select_after.png`
-
----
-
-## Rules & Procedures
-
-### Before Testing
-
-1. **Ask the user to start Octane** with the test scene (e.g. "Please start Octane with teapot.orbx and let me know when it's ready"). **Wait for explicit go-ahead** before proceeding.
-2. **Set log level to DEBUG**: In `client/src/utils/Logger.ts`, ensure the dev default is `LogLevel.DEBUG` (not INFO).
-3. **Enable server-side file logging**: In `vite-plugin-octane-grpc.ts`, set `DEBUG_FILE_LOG = true` so gRPC request/response pairs are written to `grpc-debug.log`.
-4. **Start the dev server**: `npm run dev` (or use `preview_start`). Confirm the app loads and renders.
-5. **Verify Octane is connected**: Status bar should show "Connected". If not, wait and ask the user.
-6. **Take a baseline screenshot** before starting each pass.
-7. **Fit the app to the preview window**: Always use `preview_resize` with the `desktop` preset (1280x800) so the app renders at native size without scaling. This keeps text crisp and UI elements properly sized and clickable. Do NOT use 1920x1080 — the preview scales it down making everything too small.
-
-### During Testing
-
-- **Verify gRPC calls** for any test that changes a value (checkbox, spinner, dropdown, color, etc.): read `grpc-debug.log` to confirm `setPinValueByPinID` or equivalent call appeared.
-- **Check console for errors** after each category block (use `preview_console_logs` or browser console). Zero errors expected unless specifically testing error scenarios.
-- **Test incrementally** — don't accumulate many tests before checking for regressions.
-- **Run destructive tests last** within each pass (delete, create, change type). Reload `teapot.orbx` after each one.
-- **Don't rush** — teapot scene should respond OK, but large scenes may take time for syncing.
-
-### Debugging Lessons (R3)
-
-1. **Always check and note the logs for EVERY test.** Not just when things look wrong. Read `grpc-debug.log` after every test that fires a gRPC call. The log entry is the evidence — reference it in the test result.
-
-2. **Check logs BEFORE declaring pass/fail.** Logs first, judgment second. Never mark a test result without having read what the log showed.
-
-3. **Don't rationalize away failures.** When the user says "nothing changed," the test FAILED. Don't explain it away as "the scene renders too fast" or "the callback overwrote it." If the user sees no change, it didn't work. A gRPC call returning `{}` does NOT mean it worked — confirm the visible effect in both the app AND Octane.
-
-4. **Don't rush.** Moving fast through tests means missing failures. Each test deserves full verification — UI state, gRPC log, and visual result.
-
-5. **Be critically skeptical of your own test results.** Never mark PASS based on indirect evidence (e.g. a page reload showing the right state). Verify the actual user-facing behavior at the moment the action happens — did the UI update immediately? Did the correct call fire? A test that only works after a reload is a FAIL, not a PASS. If your synthetic event didn't trigger the real code path, the test is invalid — don't count it.
-
-6. **Every test result requires visual proof.** Never pass a test based on CSS class names, DOM attributes, or internal state alone. If a test says "grid shows," take a screenshot and confirm the grid is actually visible. If a toggle changes state, screenshot before AND after. If a gRPC call should fire, read the actual log lines and reference them. The screenshot/log IS the evidence — without it the result is unverified. Class names lie; pixels don't.
-
-7. **Don't be afraid to restart from scratch.** If the app or Octane gets into a bad state (stale connection, missing nodes, invisible nodes, broken sync, weird UI), stop testing, capture all the info you can from the bad state (logs, screenshots, console errors), then restart the dev server fresh (`preview_stop` + `preview_start` + F5). Continuing with a bad state wastes time and produces unreliable results. This applies to any scenario — crashes, post-File→Open weirdness, invisible graph nodes, stale connections — not just crashes.
-
-8. **After File→Open, the scene tree may be incomplete.** `loadProject` is async — the app can query the tree too early (BUG-R3-6). F5 can recover. Watch for partial tree state.
-
-9. **Button highlighting is part of the test.** If Pause should highlight and Start should unhighlight, and they don't, that's a FAIL — not just a cosmetic note. Same for any toggle state that should visually reflect the action.
-
-10. **Check console errors after creating nodes.** "Unknown node type" errors mean the type mapping is missing. Not all node types in the context menu have NT\_ mappings.
-
-11. **LiveLink.SetCamera works but ApiRenderEngine calls may not.** Different API surfaces have different levels of Octane support in standalone/LiveLink mode. Don't assume one working API means another works.
-
-12. **Synthetic keyboard events need complete event objects.** Include `stopPropagation`, `preventDefault`, `bubbles`, `cancelable` — missing methods crash the handler chain.
-
-13. **React fiber traversal depth matters.** Wrong depth = wrong handler. Document the correct depth for each element type when discovered.
-
-14. **Use visual checks to verify UI actions actually worked.** Never assume a hover, click, menu open, or submenu expansion succeeded — always take a screenshot or read the DOM to confirm the action produced the expected visual result. Synthetic events and fiber calls can silently fail.
-
-15. **Test after every fix — no batching.** Fix one bug, start the dev server, verify the fix works, then move to the next bug. This catches regressions early and avoids debugging multiple changes at once.
-
-16. **Test-fix loop.** When a test fails, fix the issue and re-test immediately. Keep iterating until the fix is verified, or stop and ask the user if stuck. Never move on from a failing test.
-
-17. **Fresh state per test.** Restart the dev server and reload the scene before each bug test. Stale state from a previous test can mask or cause false results.
-
-18. **Lint and build before push.** Always run `npm run lint` and `npm run build` before reporting fixes as ready. TypeScript errors (e.g. `undefined` vs `null` mismatches) won't show up until `tsc` runs.
-
-19. **Detect Octane crashes immediately.** After any test action that could crash Octane (destroy, disconnect, replace, ungroup), check `grpc-debug.log` for `ECONNRESET` or `ECONNREFUSED` errors right away. If Octane crashed, stop immediately, report the crash with the relevant log lines, and wait for the user to restart Octane before continuing.
-
-20. **Test as a human would.** Click, drag, type, hover. Don't call internal app functions directly for testing app operation. Synthetic events DO work through preview tools and React fiber props — never assume a "trusted event limitation." See the DOM Patterns section below for proven patterns.
-
-21. **Verify → fix → report cycle.** After a batch of fixes, do a clean verification test run of all items. If any fail, fix and re-test immediately. Then report results and wait for the user to push. Don't push without explicit user go-ahead.
-
-22. **If no bugs remain, delete the bug file.** Don't keep empty tracker files around.
-
-23. **Log files.** Two log files exist: `grpc-debug.log` (server-side gRPC request/response pairs, requires `DEBUG_FILE_LOG = true` in `vite-plugin-octane-grpc.ts`) and `octaneWebR_client.log` (client-side Logger output). Both are essential evidence — always check both when verifying behavior.
-
-### Scene Restoration
-
-The scene can always be restored by reloading `teapot.orbx`:
-
-1. File → Open → navigate to `teapot.orbx` → Open
-2. Octane shows a confirm dialog — **user must click confirm** (cannot be automated)
-3. Wait for scene to fully load (outliner populates, render image appears)
-4. Continue testing
+1. **Before testing**: Ask user to start Octane with test scene. Wait for go-ahead. Start dev server, verify "Connected" status.
+2. **Screenshot rule**: Any visible change needs before/after screenshots. Format: `R<round>_<testID>_<desc>_<before|after>.png`
+3. **Verify gRPC calls**: Read `grpc-debug.log` after every test that changes a value.
+4. **Don't rationalize failures**: If user sees no change, it FAILED. `{}` response ≠ success.
+5. **Visual proof required**: Screenshots/logs ARE the evidence. Class names lie; pixels don't.
+6. **Test after every fix**: Fix one, verify, then next. No batching.
+7. **Fresh state per test**: Restart dev server and reload scene before each bug test.
+8. **Detect crashes immediately**: Check `grpc-debug.log` for `ECONNRESET`/`ECONNREFUSED` after risky actions. If crashed, STOP and wait for user.
+9. **Lint+build before push**: `npm run lint` + `npm run build`.
+10. **Preview resize**: Always `desktop` preset (1280x800). NOT 1920x1080 (too small when scaled).
+11. **Logs**: `grpc-debug.log` (server, needs `DEBUG_FILE_LOG = true`), `octaneWebR_client.log` (client).
 
 ### If Octane Crashes
 
-1. **Stop testing immediately** — do not continue clicking or sending gRPC calls.
-2. **Investigate the crash cause in logs** — Octane crashes are high priority. Read `grpc-debug.log` to find the exact transition point: the last successful `RES` line and the first `ERR` line. The API call that was in-flight or immediately preceded the crash is likely the trigger. Note the timestamp gap between last success and first error.
-3. **Log the crash in `TEST_RESULTS.md`** with severity **High**, including: the test that was running, the exact sequence of actions, the last successful gRPC call (method + handle + timestamp), the first error (method + error type + timestamp), and any relevant log excerpts. Without this evidence the bug report is incomplete.
-4. **Take a screenshot** if the app is still visible.
-5. **Wait for Octane to restart** — the user will restart it manually.
-6. **Restart the dev server** (`preview_stop` + `preview_start`) — the gRPC connection on the server side is stale after a crash. This is mandatory, not optional. A stale server connection causes invisible nodes, missing edges, and other subtle graph corruption.
-7. **Refresh the page** (F5 or reload) after the new dev server is up.
-8. **Verify connection**: status bar shows "Connected", **render image shows the teapot**. On a fresh connection the teapot must always appear on the first render — if it doesn't, something is still wrong (stale connection, Octane not fully loaded, etc.). Do not proceed until the teapot is visible.
-9. **Re-run the test that caused the crash** to confirm whether it's reproducible.
-10. If reproducible, mark the test as **FAIL**.
-
-### If the App (Web UI) Crashes or Freezes
-
-1. **Refresh the page** (F5 or hard reload).
-2. If the page won't load, restart the dev server.
-3. **Log what happened**: test ID, action, any console errors before the crash.
-4. Re-run the test. If reproducible, file as a bug.
-
-### If a Test Fails
-
-1. **Take a screenshot** immediately showing the failure state.
-2. **Check console logs** for errors — copy relevant output.
-3. **Check `grpc-debug.log`** if the failure involves a missing or wrong gRPC call.
-4. **Save relevant log excerpts** to `TEST_RESULTS.md` alongside the bug entry — include gRPC log lines, console errors, and client log output that show what went wrong. Logs are evidence; without them the bug report is incomplete.
-5. **Log the failure** in `TEST_RESULTS.md` with result **FAIL** and a clear description of what went wrong.
-6. **File a bug** in `TEST_RESULTS.md` with a new ID (e.g. `BUG-R3-1`), including: steps to reproduce, expected vs actual, and the log excerpts from step 4.
-7. **Continue testing** — don't stop the pass for a single failure unless it blocks subsequent tests.
-
-### If a Test Is Blocked
-
-If a test cannot run because of a prerequisite failure (e.g. can't test delete if node creation failed):
-
-1. Mark the test as **BLOCKED** with the blocking test ID noted.
-2. Move on to the next test.
-3. Revisit blocked tests after the blocker is resolved.
-
-### New Bug Discovery
-
-If you discover a bug while running an unrelated test:
-
-1. Note it immediately — don't lose the observation.
-2. Add it to `TEST_RESULTS.md` with the next available bug ID, including relevant log excerpts (gRPC log, console errors, client log).
-3. If it doesn't block the current test, continue testing and investigate later.
-
-### Result Recording
-
-After each pass, update `TEST_RESULTS.md` with:
-
-- Test ID, result (PASS / FAIL / BLOCKED / N/A), and notes
-- Summary counts at the bottom
-- Any new bugs discovered
-
-### Keep Everything in Files
-
-All test state, results, bugs, and observations **must be written to files** — never kept only in conversation memory. Conversation context can be lost during compaction. The files are the source of truth:
-
-- `TEST_RESULTS.md` — all test results, pass/fail counts, and bug details
-- `TEST_PLAN.md` — this file, the master test plan
-- `screenshots/` — all screenshots taken during testing
-
-If you discover something important, write it to a file immediately. If it's not in a file, it doesn't exist.
-
-### Clear Logs Between Passes
-
-`grpc-debug.log` and `octaneWebR_client.log` grow large and make it hard to identify which calls belong to the current test. Before each pass:
-
-1. Delete or truncate `grpc-debug.log`
-2. Or note a timestamp marker so you know where to look
-
-### New Session / After Compaction
-
-When starting a new conversation or after context compaction:
-
-1. **Read all test files first**: `TEST_PLAN.md`, `TEST_RESULTS.md`
-2. Check which pass/test was last completed
-3. Resume from where you left off — don't restart from the beginning
-4. Run the smoke test to verify the environment is working
-
-### Coordinate Workflow
-
-Before clicking any UI element:
-
-1. Take a `screenshot` first to see the current state
-2. Identify the element's pixel coordinates from the screenshot
-3. Click at the identified coordinates
-4. Don't guess coordinates — always screenshot first
+1. Stop immediately. Read `grpc-debug.log` for last success → first error transition.
+2. Log the crash with severity High.
+3. Wait for user restart. Restart dev server. F5 refresh. Verify teapot renders.
 
 ### Known Octane API Limitations
 
-These are known holes in the Octane API that the app cannot work around. They are not app bugs.
+- **Render engine calls ignored (R3-10)**: `pauseRendering`, `stopRendering`, `continueRendering`, `setClayMode`, `setRenderPriority` return success but do nothing.
+- **Camera not reset after File→Open (R3-11)**: LiveLink camera overrides file's saved state.
 
-**Render engine calls ignored (R3-10):** `pauseRendering`, `stopRendering`, `continueRendering`, `setClayMode`, `setRenderPriority` all return success (`{}`) but produce no visible effect in Octane. Likely a LiveLink/standalone mode limitation.
+### Smoke Test
 
-**Camera position not reset after File→Open (R3-11):** After loading a new scene, the camera retains its previous position/orientation. The LiveLink camera overrides the file's saved camera state.
+Select Camera in Outliner → toggle Orthographic checkbox → verify `setPinValueByPinID` in `grpc-debug.log` → verify render updates. Run at session start and after any crash.
 
-### DOM Patterns for Automated Testing
+### DOM Patterns (Automated Testing)
 
-The Node Inspector uses a consistent DOM structure. Use these patterns instead of guessing selectors:
-
-**Finding a parameter by label:**
-
-```js
-// Every parameter row: .node-content > .node-label > .node-label-text > span.node-title
-// Find by label text, then get the input from the same .node-content container
-const titles = document.querySelectorAll('.node-title');
-for (const t of titles) {
-  if (t.textContent?.trim() === 'Bokeh side count:') {
-    const input = t.closest('.node-content').querySelector('input.number-input');
-    // input.value is the current value
-  }
-}
-```
-
-**Changing a number input (React controlled):**
+**Number input** (React controlled):
 
 ```js
 input.focus();
@@ -236,180 +45,27 @@ input.dispatchEvent(new Event('input', { bubbles: true }));
 input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
 ```
 
-**Clicking a checkbox:** Direct `.click()` works — `document.querySelector('#checkbox-1000051').click()`
+**Checkbox**: Direct `.click()` works.
 
-**Changing a dropdown/select (React controlled — must use fiber):**
-
-```js
-const titles = document.querySelectorAll('.node-title');
-for (const t of titles) {
-  if (t.textContent?.trim() === 'Stereo output:') {
-    const select = t.closest('.node-content').querySelector('select');
-    const fiberKey = Object.keys(select).find(k => k.startsWith('__reactFiber'));
-    let fiber = select[fiberKey];
-    while (fiber) {
-      if (fiber.memoizedProps?.onChange) {
-        fiber.memoizedProps.onChange({ target: { value: '1' } }); // value is option index as string
-        break;
-      }
-      fiber = fiber.return;
-    }
-  }
-}
-```
-
-**Triggering context menus on tree items (React fiber):**
+**Dropdown** (React fiber):
 
 ```js
-const treeItem = document.querySelectorAll('[role="treeitem"]')[3];
-const fiberKey = Object.keys(treeItem).find(k => k.startsWith('__reactFiber'));
-let fiber = treeItem[fiberKey];
+const fiberKey = Object.keys(select).find(k => k.startsWith('__reactFiber'));
+let fiber = select[fiberKey];
 while (fiber) {
-  if (fiber.memoizedProps?.onContextMenu) {
-    fiber.memoizedProps.onContextMenu({
-      preventDefault() {},
-      stopPropagation() {},
-      clientX: 80,
-      clientY: 100,
-    });
+  if (fiber.memoizedProps?.onChange) {
+    fiber.memoizedProps.onChange({ target: { value: '1' } });
     break;
   }
   fiber = fiber.return;
 }
 ```
 
-**Clicking context menu items:**
+**Context menu** (fiber): Find `onContextMenu` handler via fiber traversal, call with `{ preventDefault(){}, stopPropagation(){}, clientX, clientY }`.
 
-```js
-const items = document.querySelectorAll('button.context-menu-item');
-for (const el of items) {
-  if (el.textContent?.trim() === 'Delete') {
-    el.click();
-    break;
-  }
-}
-```
+**Keyboard**: `document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', code: 'F5', bubbles: true }))` — works because app uses `document.addEventListener('keydown')`.
 
-**Dragging splitters (React fiber + document events):**
-
-```js
-// 1. Trigger onMouseDown via fiber (sets React drag state)
-const splitter = document.querySelector('.left-splitter');
-const fiberKey = Object.keys(splitter).find(k => k.startsWith('__reactFiber'));
-let fiber = splitter[fiberKey];
-while (fiber) {
-  if (fiber.memoizedProps?.onMouseDown) {
-    fiber.memoizedProps.onMouseDown(new MouseEvent('mousedown'));
-    break;
-  }
-  fiber = fiber.return;
-}
-// 2. Wait a tick for React state, then dispatch mousemove/mouseup on document
-setTimeout(() => {
-  document.dispatchEvent(
-    new MouseEvent('mousemove', { clientX: 200, clientY: 400, bubbles: true })
-  );
-  document.dispatchEvent(new MouseEvent('mouseup', { clientX: 200, clientY: 400, bubbles: true }));
-}, 50);
-```
-
-**Tree item selectors:** `[role="treeitem"]:nth-child(N)` — Camera is typically `:nth-child(4)`, Render target `:nth-child(3)`.
-
-**Graph node selection:** `document.querySelectorAll('.react-flow__node')` — check `.classList.contains('selected')` for selection state.
-
-**Opening menu bar menus (File, Edit, etc.):**
-
-```js
-const btns = document.querySelectorAll('nav button');
-Array.from(btns)
-  .find(b => b.textContent?.trim() === 'File')
-  .click();
-// Wait ~100ms, then find menu items:
-const items = document.querySelectorAll('[class*="menu-item"], [role="menuitem"]');
-for (const item of items) {
-  if (item.textContent?.trim().startsWith('Open')) {
-    item.click();
-    break;
-  }
-}
-```
-
-**Closing menus/dialogs:**
-
-```js
-// Close modal dialogs:
-document.querySelector('.modal-close-btn')?.click();
-// Close dropdown menus — click on the canvas area:
-document.querySelector('canvas')?.click();
-```
-
-**File browser navigation:**
-
-```js
-// Entries are .file-browser-entry-name inside their parent rows
-// Double-click a folder to navigate into it:
-const entries = document.querySelectorAll('.file-browser-entry-name');
-for (const entry of entries) {
-  if (entry.textContent?.trim() === 'ORBX') {
-    entry.parentElement.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    break;
-  }
-}
-// Click a file to select it (populates filename input):
-entry.parentElement.click();
-// Filename input: document.querySelector('input[type="text"]')?.value
-// Click Open: document.querySelector('.btn.btn-primary')?.click()
-// File browser remembers last path between opens.
-```
-
-**Zooming the node graph:**
-
-```js
-// Dispatch WheelEvent on .react-flow__pane. deltaY < 0 = zoom in, > 0 = zoom out.
-const pane = document.querySelector('.react-flow__pane');
-pane.dispatchEvent(
-  new WheelEvent('wheel', { deltaY: -100, clientX: 650, clientY: 750, bubbles: true })
-);
-```
-
-**Keyboard shortcuts (F5, Delete, Escape, Ctrl+F, etc.):**
-
-```js
-// App uses document.addEventListener('keydown') — dispatched events work.
-document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', code: 'F5', bubbles: true }));
-document.dispatchEvent(
-  new KeyboardEvent('keydown', { key: 'Delete', code: 'Delete', bubbles: true })
-);
-document.dispatchEvent(
-  new KeyboardEvent('keydown', { key: 'f', code: 'KeyF', ctrlKey: true, bubbles: true })
-);
-```
-
-**Scene restoration shortcut (File → Open → teapot.orbx → Open):**
-
-```js
-// Open File menu → click Open → wait 500ms for dialog
-// File browser remembers last path — if already in ORBX folder, just:
-//   1. Click teapot.orbx entry → 2. Click Open button
-// Wait 5s for scene to reload (tree should have 15 items).
-// IMPORTANT: Octane shows a confirm dialog the user must click.
-```
-
-### gRPC Log Verification
-
-These tests specifically require checking `grpc-debug.log`:
-D6, D7, D8, D9, D15, D16, D18, D19, D20, D21, I4, I11
-
-### End-to-End Smoke Test
-
-Use the **Orthographic checkbox** on the Camera node as the standard quick check:
-
-1. Select Camera in Scene Outliner
-2. Toggle Orthographic checkbox in Node Inspector
-3. Verify `setPinValueByPinID` appears in `grpc-debug.log`
-4. Verify render image updates
-
-Run this smoke test at the start of each session and after any crash/restart.
+**Menu bar**: `document.querySelectorAll('nav button')` → find by text → `.click()` → wait 100ms → find menu items.
 
 ---
 
@@ -749,21 +405,17 @@ Run this smoke test at the start of each session and after any crash/restart.
 
 ## Execution Order
 
-Tests are executed in 3 passes by difficulty. Complete each pass fully before starting the next.
-
-| Pass               | Tests                                                                        | Order |
-| ------------------ | ---------------------------------------------------------------------------- | ----- |
+| Pass               | Tests                                                                        |
+| ------------------ | ---------------------------------------------------------------------------- |
 | **1: Easy** (43)   | H1–H3, B1–B7, D1–D5, G1–G3, C1–C7a, A1–A7, F1–F4, E1–E4, I1–I2               |
 | **2: Medium** (71) | H4–H6, B8–B14, D6–D17, G4–G9, C8–C20, A8–A15, F5+F7–F10, E5–E17, I3–I6       |
 | **3: Hard** (47)   | H7–H8, B15–B18, D18–D24, G10–G12, C21–C28, A16–A21, F11–F14, E18–E26, I7–I10 |
 
-> **Destructive tests** (delete, create, change type) should be run last within their pass. Reload `teapot.orbx` via File → Open after each destructive test (requires clicking confirm dialog in Octane).
+> Destructive tests last within each pass. Reload `teapot.orbx` after each.
 
 ---
 
 ## Round 3 Additional Tests (20 tests)
-
-These tests fill coverage gaps found during plan review. Execute after completing the 3 base passes.
 
 ### Node Graph (C29–C31)
 
@@ -832,19 +484,13 @@ These tests fill coverage gaps found during plan review. Execute after completin
 | I: Stress & Cross-Cutting | 10      | 2      | 12      |
 | **Total**                 | **161** | **20** | **181** |
 
-### Deferred (later round)
+### Deferred
 
 - Material Database browsing (categories, thumbnails, download)
 - Save Package Dialog controls
-- Batch Rendering start → actual render execution
-- Animation Dialogs start → actual animation execution
-- Connection loss → reconnect behavior (requires disconnecting Octane)
-
----
+- Batch/Animation dialog execution
+- Connection loss → reconnect behavior
 
 ## Fixed Bugs (All Verified)
 
-All 12 app bugs found during R1–R3 testing have been fixed and verified. See `TEST_RESULTS.md` for details.
-
-R2 fixes: BUG-R2-1, BUG-F5-1b, BUG-EDGE-DEL, BUG-RT-SELECT.
-R3 fixes: BUG-R3-1, R3-3, R3-5, R3-6, R3-7, R3-8, R3-13, R3-14.
+All 12 app bugs from R1–R3 fixed and verified.

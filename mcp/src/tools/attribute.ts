@@ -153,4 +153,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
       }
     }
   );
+
+  // NOTE: set_pin_value (setPinValueByIx) is defined in the proto but returns
+  // UNIMPLEMENTED from the Octane gRPC server. All 6 pin value RPCs (get/set ×
+  // ByIx/ByPinID/ByName) are unimplemented as of Octane 2025.1. Use
+  // get_node_info + set_attribute on child handles instead.
 }
