@@ -1,6 +1,8 @@
 # Octane MCP Reference
 
-Best practices, crash prevention rules, and reference info for building scenes via the Octane MCP server. This is the single source of truth — recipes reference this file for all technical knowledge.
+Best practices, observed patterns, and reference info for building scenes via the Octane MCP server. This is the single source of truth — recipes reference this file for all technical knowledge.
+
+**Note**: Octane's gRPC API is **pre-alpha**. We are the engineering team testing it. **Assume crashes are our fault until proven otherwise.** Patterns and workarounds here are current findings — the API will evolve and updates may change any of this.
 
 ---
 
@@ -53,7 +55,7 @@ RenderTarget
 
 ---
 
-## Critical Rules (crash prevention)
+## Critical Rules (observed patterns)
 
 ### Must-Do
 
@@ -69,28 +71,32 @@ RenderTarget
 
 ### Confirmed Crashes
 
-| Trigger                                                     | Result                                |
-| ----------------------------------------------------------- | ------------------------------------- |
-| `set_attribute(primitive_enum, 185, AT_INT=3, 20)` (Sphere) | Immediate ECONNRESET                  |
-| `set_attribute(primitive_enum, 185, AT_INT=3, 22)` (Torus)  | Delayed ECONNRESET                    |
-| `resetProject` without `suppressUI: true`                   | Crash from gRPC thread UI sync        |
-| Heavy structural ops (destroy connected node, ungroup)      | Delayed ECONNRESET 5-9s after success |
-| NT_GEO_MESH batched build + `set_camera` eval               | ECONNRESET (not fully reproducible)   |
+| Trigger                                                     | Result                                                   |
+| ----------------------------------------------------------- | -------------------------------------------------------- |
+| `set_attribute(primitive_enum, 185, AT_INT=3, 20)` (Sphere) | Immediate ECONNRESET                                     |
+| `set_attribute(primitive_enum, 185, AT_INT=3, 22)` (Torus)  | Delayed ECONNRESET                                       |
+| `resetProject` without `suppressUI: true`                   | Crash from gRPC thread UI sync                           |
+| `resetProject` (any variant)                                | Triggers "Save changes?" dialog — blocks autonomous work |
+| Heavy structural ops (destroy connected node, ungroup)      | Delayed ECONNRESET 5-9s after success                    |
+| NT_GEO_MESH batched build + `set_camera` eval               | ECONNRESET (not fully reproducible)                      |
+| `update_scene()` in complex emissive scene (5+ lights + PT) | Immediate ECONNRESET (confirmed)                         |
 
-**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `update_scene()` → then connect material/placement → `set_camera()`. See `CRASH.md` for details.
+**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `set_camera()` → connect material/placement → `set_camera()`. See `CRASH.md` for details.
+
+**Don't batch with evaluate:false + update_scene()**: The crash pattern is `connect_nodes(evaluate:false)` × N → `update_scene()`, which forces a heavy synchronous evaluation on the gRPC message thread. In complex scenes (5+ emissive objects, PT kernel), this crashes. **Instead: use `evaluate:true` (default) so each call evaluates incrementally.** Then `set_camera()` to refresh the render. This is also better for human viewers watching the live viewport — they see each change appear. `update_scene()` is safe for small flushes but avoid it for batched structural changes.
 
 ### Refresh Pattern — CRITICAL
 
 **`restart_render` / `start_render` do NOT refresh the viewport after structural changes** (connections, new geometry). Tested and confirmed 2026-03-07.
 
-**`set_camera` is the ONLY reliable way to force a re-render.** Even setting it to the exact same position works. After every structural change:
+**`set_camera` is the ONLY reliable AND SAFE way to force a re-render.** Even setting it to the exact same position works. After every structural change:
 
 ```
 connect_nodes(...)
 set_camera(current_position, current_target)   # forces re-render
 ```
 
-No `update_scene`, `restart_render`, or `start_render` needed. Just `set_camera`.
+**Avoid batching deferred changes** — using `connect_nodes(evaluate:false)` × N then `update_scene()` forces a heavy synchronous eval that crashed "The Summoning" (5th emissive object, 2026-03-08). Instead, use `evaluate:true` (default) so each connection evaluates incrementally, then `set_camera` to refresh. `update_scene()` is fine for small flushes but dangerous for large batched structural changes in complex scenes.
 
 ### Connection Rules
 
@@ -111,11 +117,22 @@ Every piece of geometry must be visually verified after connecting to the scene.
 
 **Why**: If something crashes or looks wrong, you know exactly which object caused it.
 
+### Scene Clear — Delete Method (no dialog) — PROVEN
+
+`reset_project` triggers a "Save changes?" dialog in Octane, blocking autonomous work. Instead, delete all nodes:
+
+1. `get_scene_tree(max_depth: 1)` → list of top-level node handles
+2. `delete_node(handle)` for each — leaf nodes first (emissions, textures, materials), then geo, then infra (group, env, kernel), then RT last
+3. Verify: `get_scene_tree` → `count: 0`
+4. Build new scene from scratch
+
+Proven 2026-03-08: deleted 21 connected nodes from full ARCTIC scene, zero crashes. Order matters — delete leaves before parents to minimize risk of the "destroy connected node" crash pattern.
+
 ### Setup Order (for demos)
 
 RT → camera → env → film → kernel → geo group. Start rendering right after RT creation.
 
-1. `reset_project`
+1. Clear scene (delete method or `reset_project` if user is present)
 2. `create_node(NT_RENDERTARGET)` → RT handle + pin handles from response
 3. `start_render(RT)` + `set_camera(0, 1, 3.2 → 0, 1, 0)`
 4. `create_node(NT_ENV_DAYLIGHT)` → connect to RT pin 1 → `set_camera` to refresh
