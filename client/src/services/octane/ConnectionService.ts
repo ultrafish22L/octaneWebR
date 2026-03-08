@@ -134,6 +134,9 @@ export class ConnectionService extends BaseService {
             } else if (message.type === 'projectManagerChanged') {
               Logger.debug('WebSocket: projectManagerChanged callback received');
               this.emit('OnProjectManagerChanged', message.data);
+            } else if (message.type === 'refreshScene') {
+              Logger.info('WebSocket: refreshScene broadcast received (MCP sync)');
+              this.emit('OnRefreshScene');
             } else {
               Logger.warn('WebSocket: Unknown message type:', message.type);
             }

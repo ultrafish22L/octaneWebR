@@ -18,6 +18,7 @@ import { registerRenderTools } from './tools/render';
 import { registerSceneTools } from './tools/scene';
 import { registerNodeTools } from './tools/node';
 import { registerAttributeTools } from './tools/attribute';
+import { registerWebappTools } from './tools/webapp';
 
 async function main() {
   // Connect to Octane via gRPC
@@ -46,12 +47,13 @@ async function main() {
   registerSceneTools(server, client);
   registerNodeTools(server, client);
   registerAttributeTools(server, client);
+  registerWebappTools(server);
 
   // Start stdio transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('Octane MCP server running on stdio (21 tools registered)');
+  console.error('Octane MCP server running on stdio (23 tools registered)');
 }
 
 main().catch(err => {

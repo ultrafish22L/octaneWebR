@@ -417,6 +417,16 @@ RenderTarget
               └── ...
 ```
 
+**CRITICAL: Deferred Evaluation Pattern**
+
+Octane processes ALL API calls on a single "message thread". Setting attributes and connecting nodes triggers scene evaluation by default, which can crash Octane if a node is partially configured. The safe pattern is:
+
+1. **Batch changes** — `set_attribute` and `connect_nodes` default to `evaluate: false` (deferred)
+2. **Flush once** — call `update_scene` after a batch of changes to re-evaluate all dirty nodes
+3. **Never fire parallel calls** — all gRPC calls are serialized via mutex; send them one at a time
+
+From OTOY's official docs: _"It's dangerous to evaluate a node while it's not set up correctly. If you're lucky it will give you an error, if you're unlucky it will crash Octane."_
+
 **Create nodes:**
 
 ```
@@ -424,20 +434,28 @@ create_node { node_type: "NT_MAT_UNIVERSAL" }   → returns { handle: 42 }
 create_node { node_type: "NT_TEX_RGB" }          → returns { handle: 43 }
 ```
 
-**Discover pins, then connect:**
+**Discover pins, then connect (deferred):**
 
 ```
 get_node_info { handle: 42 }                     → see all pins with names
-connect_nodes { target_handle: 42, pin_index: 0, source_handle: 43 }
+connect_nodes { target_handle: 42, pin_index: 0, source_handle: 43 }  → deferred
 ```
 
-**Set attributes:**
+**Set attributes (deferred):**
 
 ```
 set_attribute { handle: 43, attribute_id: 185, expected_type: 11, value: { x: 1.0, y: 0.0, z: 0.0 } }
 ```
 
-(This sets an RGB texture to red)
+(This sets an RGB texture to red — deferred, not yet evaluated)
+
+**Flush all changes:**
+
+```
+update_scene                                      → evaluates all dirty nodes, updates render
+```
+
+Call `update_scene` once per batch — e.g., after configuring all attributes on a geo object, or after connecting several nodes to a group.
 
 ### 4. Load 3D Models
 
@@ -499,12 +517,15 @@ Save downloaded files to `C:\otoyla\GRPC\dev\octaneWebR\assets\` (create subfold
 
 ## Important Notes
 
+- **Deferred evaluation is the default** — `set_attribute` and `connect_nodes` default to `evaluate: false`. Call `update_scene` to flush a batch of changes. Pass `evaluate: true` only when you want immediate evaluation of a single change.
+- **Never evaluate incomplete nodes** — Octane's #1 crash cause. Always set ALL attributes on a node before calling `update_scene`.
+- **All gRPC calls are serialized** — The MCP client uses a mutex. Never fire parallel tool calls for Octane operations — send them one at a time.
 - **loadProject is async** — wait ~2 seconds after `load_project` before querying the scene tree
 - **reset_project takes up to 120 seconds** — be patient
 - **Pin indices vary by node type** — always use `get_node_info` to discover pins before connecting
 - **Attributes vary by node type** — use `list_node_types` and the Octane docs MCP to look up IDs
 - **File paths must be absolute** — use escaped backslashes (`C:\\path\\file.obj`)
-- **Image textures need evaluate** — after setting `A_FILENAME` on a texture/mesh, call evaluate to trigger loading
+- **Image textures need evaluate** — after setting `A_FILENAME` on a texture/mesh, call `update_scene` or pass `evaluate: true` to trigger loading
 - **Cycle check** — `connect_nodes` automatically prevents cyclic connections
 - **delete_node caveat** — deleting recently-disconnected nodes can crash Octane; disconnect pins first, wait briefly
 - **octaneWebR updates in real time** — changes made via MCP are immediately visible in the browser viewport
@@ -532,36 +553,176 @@ For deeper reference, these are the most useful sections of the [Octane Standalo
 
 ---
 
-## Default Test Scene
+## Default Test Scene — Cornell Box (Tested & Verified)
 
-When starting a new session with no specific request, build this scene to verify MCP tools are working. Uses the included teapot.obj model and Octane's procedural nodes.
+When starting a new session with no specific request, build this scene to verify MCP tools are working. This recipe has been **tested end-to-end** and produces a correct render.
 
-> **A modern Cornell box: white room with a red wall (left), green wall (right), area light on the ceiling, a glossy teapot on one side, a glass sphere on the other, and a metallic cube in back. Path tracing kernel.**
+> **A modern Cornell box: white room with a red wall (left), green wall (right), area light on the ceiling, a glass sphere on one side, and a gold metallic cube on the other. Path tracing kernel.**
 
-This is an updated take on the classic Cornell box rendering test — the gold standard for global illumination. It tests diffuse walls (color bleeding), specular/glass transmission, metallic reflection, and area lighting.
+This is the classic Cornell box rendering test — the gold standard for global illumination. It tests diffuse walls (color bleeding), specular/glass transmission, metallic reflection, and area lighting.
 
-Asset: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\teapot.obj` (Utah teapot, included in project)
+### Live Review Mode
 
-Steps:
+Before building, ask the user: **"Would you like to watch live in octaneWebR?"**
 
-1. `get_octane_version` — verify connection
-2. `reset_project` — start blank
-3. `get_scene_tree` — find the existing RenderTarget node and its handle
-4. Create kernel: `NT_KERN_PATHTRACING` → connect to RenderTarget kernel pin
-5. Create the Cornell box walls using `NT_GEO_PLANE` nodes (floor, ceiling, back wall, left wall, right wall):
-   - Floor, ceiling, back wall: `NT_MAT_DIFFUSE` with white `NT_TEX_RGB` (0.9, 0.9, 0.9)
-   - Left wall: `NT_MAT_DIFFUSE` with red `NT_TEX_RGB` (0.8, 0.1, 0.1)
-   - Right wall: `NT_MAT_DIFFUSE` with green `NT_TEX_RGB` (0.1, 0.7, 0.1)
-6. Create area light: `NT_LIGHT_QUAD` on the ceiling (small square, pointing down) — the classic Cornell box light source
-7. Load teapot (left side): `NT_GEO_MESH` → set filename to `C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\assets\\teapot.obj` → `NT_MAT_GLOSSY` with warm white (high reflectivity, low roughness)
-8. Create glass sphere (right side): `NT_GEO_MESH` (sphere primitive) → `NT_MAT_SPECULAR` with IOR 1.5
-9. Create metallic cube (back center): `NT_GEO_MESH` (box primitive) → `NT_MAT_METAL` with gold `NT_TEX_RGB` (1.0, 0.84, 0.0)
-10. Position camera at box opening: `set_camera { position: { x: 0, y: 1, z: -3 }, target: { x: 0, y: 1, z: 0 } }`
-11. `start_render` → `get_render_status` → wait for samples → `save_render`
+If yes, call `refresh_webapp` after each major phase so the web UI updates in real time. Good cadence: after walls, after light, after each object, after camera. This lets the human watch the scene being built node by node.
 
-The path tracer will naturally produce color bleeding from the red/green walls onto the white surfaces and objects — the hallmark of the Cornell box test.
+If no (or octaneWebR isn't running), skip `refresh_webapp` calls — just render and save at the end.
 
-Use `get_node_info` on each node after creation to discover the correct pin indices before connecting. Use `list_node_types` to find primitive mesh types if needed.
+### GPU Safety Warning
+
+**NEVER set NT_GEO_OBJECT subdivision level > 2.** Higher values generate millions of polygons and WILL crash the NVIDIA driver, causing a Windows bluescreen. Keep subdivision at 0 (default) for all primitives.
+
+### Coordinate System
+
+With camera at (0, Y, -Z) looking into +Z:
+
+- **+X = RIGHT** of camera view, **-X = LEFT** (standard convention)
+- **+Y = UP**, **+Z = toward camera** (camera looks into -Z)
+
+### Key Constants
+
+| Constant      | Value | Description                    |
+| ------------- | ----- | ------------------------------ |
+| A_VALUE       | 185   | Generic value attribute        |
+| A_PIN_COUNT   | 113   | Set pin count on groups        |
+| A_TRANSLATION | 172   | Position {x,y,z}               |
+| A_ROTATION    | 137   | Rotation degrees               |
+| AT_INT        | 3     | Integer type                   |
+| AT_INT2       | 4     | Int pair (resolution)          |
+| AT_FLOAT      | 9     | Float type                     |
+| AT_FLOAT3     | 11    | Float triple (color, position) |
+
+### Step-by-Step Recipe
+
+Print descriptive messages to the user at each phase so they can follow along.
+
+**Phase 1: Setup** (print: "Setting up the scene...")
+
+```
+1. reset_project                          — blank slate (~2s)
+2. get_scene_tree                         — find RenderTarget handle (RT)
+3. get_node_info(RT)                      — read all 12 pin handles
+   RT pins: 0=camera, 1=environment, 3=mesh, 4=filmSettings, 6=kernel
+```
+
+**Phase 2: Kernel & Resolution** (print: "Configuring path tracing kernel...")
+
+```
+4. create_node("NT_KERN_PATHTRACING")     — path tracing kernel
+5. connect_nodes(RT, pin 6, kernel)       — replace default DL kernel
+6. get_node_info(film_settings_handle)    — find resolution pin (pin 0) → res_handle
+7. set_attribute(res_handle, 185, AT_INT2=4, {x:1024, y:1024})
+```
+
+**Phase 3: Geometry Group** (print: "Creating geometry container...")
+
+```
+8.  create_node("NT_GEO_GROUP")
+9.  set_attribute(geo_group, 113, AT_INT=3, 9)  — 9 input pins
+10. connect_nodes(RT, pin 3, geo_group)
+```
+
+**Phase 4: Walls** (print: "Building Cornell box walls...")
+
+For EACH wall: create NT_GEO_OBJECT → get_node_info → set W/H/D/position/color → connect to geo_group.
+
+Each NT_GEO_OBJECT auto-creates: pin 0=primitive enum, pin 1=diffuse material (with RGB on material's pin 0), pin 3=transform, pin 4=Width, pin 5=Height, pin 6=Depth.
+
+| Wall        | Group Pin | Position {x,y,z} | Size W,H,D | Color {R,G,B} |
+| ----------- | --------- | ---------------- | ---------- | ------------- |
+| Floor       | 0         | 0, -0.005, 0     | 2, 0.01, 2 | 0.9, 0.9, 0.9 |
+| Ceiling     | 1         | 0, 2.005, 0      | 2, 0.01, 2 | 0.9, 0.9, 0.9 |
+| Back        | 2         | 0, 1, 1.005      | 2, 2, 0.01 | 0.9, 0.9, 0.9 |
+| Left RED    | 3         | -1.005, 1, 0     | 0.01, 2, 2 | 0.8, 0.1, 0.1 |
+| Right GREEN | 4         | 1.005, 1, 0      | 0.01, 2, 2 | 0.1, 0.7, 0.1 |
+
+To set color: get_node_info(material) → pin 0 has RGB handle → set_attribute(rgb, 185, AT_FLOAT3=11, {x:R, y:G, z:B}).
+
+**Phase 5: Area Light** (print: "Adding ceiling area light...")
+
+```
+11. create_node("NT_GEO_OBJECT")          — thin box for light panel
+12. Set W=0.5, H=0.01, D=0.5; position (0, 1.95, 0)
+13. create_node("NT_EMIS_BLACKBODY") with node_type_id: 53
+14. get_node_info(blackbody) → pin 0 power handle
+15. set_attribute(power, 185, AT_FLOAT=9, 100)
+16. get_node_info(light_material) → find emission pin (pin 14)
+17. connect_nodes(light_material, pin 14, blackbody)
+18. connect_nodes(geo_group, pin 5, light)
+```
+
+**Phase 6: Seal the Box** (print: "Removing daylight environment...")
+
+```
+19. disconnect_pin(RT, pin 1)             — box lit only by area light
+```
+
+**Phase 7: Glass Sphere** (print: "Creating glass sphere...")
+
+```
+20. create_node("NT_GEO_OBJECT")
+21. get_node_info → find primitive enum handle (pin 0)
+22. set_attribute(enum, 185, AT_INT=3, 20) — 20 = Sphere
+23. Set W=0.6, H=0.6, D=0.6; position (0.35, 0.3, 0.1) — RIGHT side (+X = right)
+    *** NEVER set subdivision > 2 — GPU crash! ***
+24. Create NT_MAT_SPECULAR → connect to sphere pin 1
+25. connect_nodes(geo_group, pin 6, sphere)
+```
+
+**Phase 8: Gold Cube** (print: "Creating gold metallic cube...")
+
+```
+26. create_node("NT_GEO_OBJECT")          — default Box primitive
+27. Set W=0.5, H=0.5, D=0.5; position (-0.35, 0.25, 0.3) — LEFT side (-X = left)
+28. Set rotation: set_attribute(transform, 137, AT_FLOAT3=11, {x:0, y:25, z:0})
+29. Create NT_MAT_GLOSSY → connect to cube pin 1
+30. Set glossy diffuse color: (1.0, 0.84, 0.0) — gold
+31. Find roughness pin on glossy mat → set to 0.15
+32. connect_nodes(geo_group, pin 7, cube)
+```
+
+**Phase 9: Camera & Render** (print: "Setting camera and rendering...")
+
+```
+33. set_camera(position: {x:0, y:1, z:-2.8}, target: {x:0, y:0.5, z:0})
+34. start_render(render_target_handle: RT)
+35. Wait 30-60 seconds for path tracing
+36. save_render("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box_final.png")
+37. save_project("C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\cornell_box.orbx")
+```
+
+### Expected Result
+
+Square 1024x1024 render showing:
+
+- Red wall on left, green wall on right, white floor/ceiling/back
+- Bright rectangular area light on ceiling
+- Color bleeding (red/green tint on white surfaces near colored walls)
+- Gold glossy cube on left side, slightly rotated
+- Glass sphere on right side (refracts background — subtle but present)
+- Soft shadows from area light
+
+### NT_GEO_OBJECT Primitive Types (full enum)
+
+| Value | Shape        | Value  | Shape             |
+| ----- | ------------ | ------ | ----------------- |
+| 0     | Box          | 12     | Hyperboloid       |
+| 1     | Pill         | 13     | Icosahedron       |
+| 2     | Capsule      | 14     | Octahedron        |
+| 3     | Cone         | 15     | Plane             |
+| 4     | Cylinder     | 16     | Pentagon          |
+| 5     | Dreidel      | 17     | Prism (hexagonal) |
+| 6     | Disc         | 18     | Quad              |
+| 7     | Dodecahedron | 19     | Saddle            |
+| 8     | Hemisphere   | **20** | **Sphere**        |
+| 9     | Ellipsoid    | 21     | Tetrahedron       |
+| 10    | Torus (fat)  | 22     | Torus             |
+| 11    | Hourglass    | 23     | Truncated Cone    |
+
+### Timing
+
+Full build: ~3-5 min MCP calls + ~60-120s render at 1024x1024 path tracing.
 
 ## Advanced Scene
 

@@ -1,5 +1,5 @@
 /**
- * Scene Tools — get_scene_tree, get_node_info
+ * Scene Tools — get_scene_tree, get_node_info, update_scene
  *
  * These replicate the traversal pattern from SceneService.buildSceneTree
  * but return plain JSON instead of populating a Scene object.
@@ -20,6 +20,19 @@ function errorResult(error: any) {
     ],
     isError: true as const,
   };
+}
+
+/** Extract handle from gRPC response — tries result.handle, list.handle, handle, value.handle */
+function extractHandle(result: any): number | undefined {
+  const h =
+    result?.result?.handle ?? result?.list?.handle ?? result?.handle ?? result?.value?.handle;
+  if (h === undefined || h === null || h === 0 || h === '0') return undefined;
+  return Number(h);
+}
+
+/** Extract scalar value from gRPC response — tries result, value */
+function extractValue(result: any): any {
+  return result?.result ?? result?.value ?? result;
 }
 
 interface SceneTreeNode {
@@ -46,25 +59,25 @@ async function traverseGraph(
       objectPtr: { handle: String(graphHandle), type: 20 }, // ObjectType.ApiNodeGraph = 20
     });
 
-    const listHandle = listResult?.handle ?? listResult?.value?.handle;
+    const listHandle = extractHandle(listResult);
     if (!listHandle) return nodes;
 
     // Get count
     const sizeResult = await client.callMethod('ApiItemArray', 'size', {
       objectPtr: { handle: String(listHandle), type: 31 }, // ObjectType.ApiItemArray = 31
     });
-    const count = sizeResult?.value ?? sizeResult ?? 0;
+    const count = extractValue(sizeResult) ?? 0;
 
     // Iterate items
     for (let i = 0; i < count; i++) {
       try {
-        const itemResult = await client.callMethod('ApiItemArray', 'getAt', {
+        const itemResult = await client.callMethod('ApiItemArray', 'get', {
           objectPtr: { handle: String(listHandle), type: 31 },
           index: i,
         });
 
-        const itemHandle = itemResult?.handle ?? itemResult?.value?.handle;
-        if (!itemHandle || itemHandle === 0) continue;
+        const itemHandle = extractHandle(itemResult);
+        if (!itemHandle) continue;
 
         // Get node info
         const nameResult = await client.callMethod('ApiItem', 'name', {
@@ -77,9 +90,9 @@ async function traverseGraph(
           objectPtr: { handle: String(itemHandle), type: 16 },
         });
 
-        const name = nameResult?.value ?? String(nameResult);
-        const type = typeResult?.value ?? typeResult ?? 0;
-        const isGraph = graphResult?.value ?? graphResult ?? false;
+        const name = extractValue(nameResult) ?? '';
+        const type = extractValue(typeResult) ?? 0;
+        const isGraph = extractValue(graphResult) ?? false;
 
         const node: SceneTreeNode = {
           handle: Number(itemHandle),
@@ -99,7 +112,7 @@ async function traverseGraph(
             const pinResult = await client.callMethod('ApiNode', 'pinCount', {
               objectPtr: { handle: String(itemHandle), type: 17 }, // ObjectType.ApiNode = 17
             });
-            node.pinCount = pinResult?.value ?? pinResult ?? 0;
+            node.pinCount = extractValue(pinResult) ?? 0;
           } catch {
             // Some items may not support pinCount
           }
@@ -125,9 +138,9 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
     { max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)') },
     async ({ max_depth }) => {
       try {
-        // Get root node graph
+        // Get root node graph — response is { result: { handle, type } }
         const rootResult = await client.callMethod('ApiProjectManager', 'rootNodeGraph', {});
-        const rootHandle = rootResult?.handle ?? rootResult?.value?.handle;
+        const rootHandle = extractHandle(rootResult);
 
         if (!rootHandle) {
           return errorResult('No root node graph found. Is a scene loaded?');
@@ -159,9 +172,9 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
 
         const info: any = {
           handle,
-          name: nameResult?.value ?? String(nameResult),
-          type: typeResult?.value ?? typeResult,
-          isGraph: graphResult?.value ?? graphResult,
+          name: extractValue(nameResult) ?? '',
+          type: extractValue(typeResult),
+          isGraph: extractValue(graphResult),
           pins: [],
         };
 
@@ -170,17 +183,46 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
           const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
             objectPtr: { handle: String(handle), type: 17 },
           });
-          const pinCount = pinCountResult?.value ?? pinCountResult ?? 0;
+          const pinCount = extractValue(pinCountResult) ?? 0;
 
           for (let i = 0; i < pinCount; i++) {
             try {
-              const pinValue = await client.callMethod('ApiNode', 'getPinValueByIx', {
-                objectPtr: { handle: String(handle), type: 17 },
-                pinIdx: i,
-              });
-              const connectedHandle = pinValue?.handle ?? pinValue?.value?.handle ?? 0;
+              const pin: any = { index: i };
 
-              const pin: any = { index: i, connected_handle: Number(connectedHandle) };
+              // Get pin name
+              try {
+                const pinNameResult = await client.callMethod('ApiNode', 'pinNameIx', {
+                  objectPtr: { handle: String(handle), type: 17 },
+                  index: i,
+                });
+                pin.name = extractValue(pinNameResult) ?? '';
+              } catch {
+                // Some pins may not have names
+              }
+
+              // Get connected node: try graph-connected first, then pin-owned
+              let connectedHandle = 0;
+              try {
+                const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                  objectPtr: { handle: String(handle), type: 17 },
+                  pinIx: i,
+                });
+                connectedHandle = extractHandle(connResult) ?? 0;
+              } catch {
+                // Not graph-connected, try pin-owned
+              }
+              if (!connectedHandle) {
+                try {
+                  const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
+                    objectPtr: { handle: String(handle), type: 17 },
+                    pinIx: i,
+                  });
+                  connectedHandle = extractHandle(ownedResult) ?? 0;
+                } catch {
+                  // Pin has no node
+                }
+              }
+              pin.connected_handle = connectedHandle;
 
               // Get connected node name if connected
               if (connectedHandle && connectedHandle !== 0) {
@@ -188,15 +230,18 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
                   const connName = await client.callMethod('ApiItem', 'name', {
                     objectPtr: { handle: String(connectedHandle), type: 16 },
                   });
-                  pin.connected_name = connName?.value ?? String(connName);
+                  pin.connected_name = extractValue(connName) ?? '';
                 } catch {
                   // Skip if name lookup fails
                 }
               }
 
               info.pins.push(pin);
-            } catch {
-              info.pins.push({ index: i, error: 'failed to read pin' });
+            } catch (pinErr: any) {
+              info.pins.push({
+                index: i,
+                error: `failed to read pin: ${pinErr?.message || pinErr}`,
+              });
             }
           }
         } catch {
@@ -204,6 +249,20 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
         }
 
         return jsonResult(info);
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'update_scene',
+    'Flush pending changes to the render engine. Call this after a batch of set_attribute and/or connect_nodes calls (which defer evaluation by default). This is the equivalent of ApiChangeManager.update() — it tells Octane to re-evaluate all dirty nodes and update the render.',
+    {},
+    async () => {
+      try {
+        await client.callMethod('ApiChangeManager', 'update', {});
+        return jsonResult({ success: true });
       } catch (error: any) {
         return errorResult(error);
       }

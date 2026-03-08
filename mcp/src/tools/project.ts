@@ -67,7 +67,7 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
     {},
     async () => {
       try {
-        await client.callMethod('ApiProjectManager', 'resetProject', {}, 120000);
+        await client.callMethod('ApiProjectManager', 'resetProject', { suppressUI: true }, 120000);
         return jsonResult({ success: true });
       } catch (error: any) {
         return errorResult(error);

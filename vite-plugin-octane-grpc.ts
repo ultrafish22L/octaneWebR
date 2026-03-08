@@ -618,6 +618,23 @@ export function octaneGrpcPlugin(): Plugin {
           return;
         }
 
+        // Scene refresh endpoint — broadcasts to all WebSocket clients to trigger scene tree rebuild.
+        // Used by MCP or external tools that modify Octane directly (bypassing octaneWebR's gRPC connection).
+        if (url === '/api/refresh-scene' && req.method === 'POST') {
+          let broadcastCount = 0;
+          wss?.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ type: 'refreshScene' }));
+              broadcastCount++;
+            }
+          });
+          slog.info(`Scene refresh broadcast to ${broadcastCount} client(s)`);
+          res.setHeader('Content-Type', 'application/json');
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: true, clients: broadcastCount }));
+          return;
+        }
+
         // Client log clear endpoint (camelCase to match client call)
         if (url === '/api/logClear' && req.method === 'POST') {
           try {

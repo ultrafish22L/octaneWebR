@@ -25,9 +25,11 @@ function errorResult(error: any) {
 // AttrType enum values (from OctaneTypes.ts)
 const AT_BOOL = 1;
 const AT_INT = 3;
+const AT_INT2 = 4;
 const AT_FLOAT = 9;
-const AT_STRING = 14;
+const AT_FLOAT2 = 90;
 const AT_FLOAT3 = 11;
+const AT_STRING = 14;
 
 /**
  * Map expected_type to the correct proto oneof field for getValue responses.
@@ -62,6 +64,16 @@ function buildValueParams(value: any, expectedType: number): Record<string, any>
       return { float_value: Number(value) };
     case AT_STRING:
       return { string_value: String(value) };
+    case AT_INT2:
+      if (typeof value === 'object' && value.x !== undefined) {
+        return { int2_value: { x: Number(value.x), y: Number(value.y ?? 0) } };
+      }
+      return { int_value: Number(value) };
+    case AT_FLOAT2:
+      if (typeof value === 'object' && value.x !== undefined) {
+        return { float2_value: { x: value.x, y: value.y ?? 0 } };
+      }
+      return { float_value: Number(value) };
     case AT_FLOAT3:
       if (typeof value === 'object' && value.x !== undefined) {
         return { float3_value: { x: value.x, y: value.y ?? 0, z: value.z ?? 0 } };
@@ -107,7 +119,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. After setting, triggers scene evaluation. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
+    'Set a node attribute value. Defers evaluation by default — call update_scene to flush changes to the render engine, or pass evaluate=true to flush immediately. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
     {
       handle: z.number().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -120,19 +132,29 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           z.object({ x: z.number(), y: z.number().optional(), z: z.number().optional() }),
         ])
         .describe('Value to set (boolean, number, string, or {x, y, z} for float3)'),
+      evaluate: z
+        .boolean()
+        .default(false)
+        .describe(
+          'If true, triggers scene evaluation immediately after setting. Default false — use update_scene to flush a batch of changes. IMPORTANT: Structural changes (primitive type enums, pin count) MUST use evaluate=true or they will crash Octane.'
+        ),
     },
-    async ({ handle, attribute_id, expected_type, value }) => {
+    async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
         const valueParams = buildValueParams(value, expected_type);
-        await client.callMethod('ApiItem', setMethod, {
+        const callParams: Record<string, any> = {
           objectPtr: { handle: String(handle), type: 16 },
           attribute_id,
           expected_type,
           ...valueParams,
-        });
-
-        // Trigger scene evaluation
-        await client.callMethod('ApiChangeManager', 'update', {});
+        };
+        // Only include evaluate when true — omitting it lets Octane use its default.
+        // Sending evaluate:false to Alpha 5 proto (which lacks the field) can crash
+        // on structural changes like primitive type enums.
+        if (evaluate) {
+          callParams.evaluate = true;
+        }
+        await client.callMethod('ApiItem', setMethod, callParams);
 
         return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {

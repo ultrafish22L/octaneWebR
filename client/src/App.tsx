@@ -125,6 +125,16 @@ function AppContent() {
     }, [])
   );
 
+  // MCP live sync: external tools call POST /api/refresh-scene to trigger scene tree rebuild
+  useEmitterEvent(
+    client,
+    'OnRefreshScene',
+    useCallback(() => {
+      Logger.info('MCP refresh: rebuilding scene tree');
+      setSceneRefreshTrigger(prev => prev + 1);
+    }, [])
+  );
+
   // Scene tree change handler — stable identity to prevent listener churn
   const handleSceneTreeChange = useCallback((tree: SceneNode[]) => {
     setSceneTree(tree);

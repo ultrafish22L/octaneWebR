@@ -316,7 +316,7 @@ function MenuBar({
               'ApiProjectManager',
               'resetProject',
               {},
-              {},
+              { suppressUI: true },
               120_000
             );
             if (response) {

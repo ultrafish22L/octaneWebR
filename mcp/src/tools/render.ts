@@ -33,14 +33,28 @@ const FORMAT_MAP: Record<string, number> = {
 };
 
 export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
-  server.tool('start_render', 'Start or continue rendering the current scene', {}, async () => {
-    try {
-      await client.callMethod('ApiRenderEngine', 'continueRendering', {});
-      return jsonResult({ success: true });
-    } catch (error: any) {
-      return errorResult(error);
+  server.tool(
+    'start_render',
+    'Start or continue rendering the current scene',
+    {
+      render_target_handle: z
+        .number()
+        .optional()
+        .describe('Handle of the RenderTarget node to select for rendering'),
+    },
+    async ({ render_target_handle }) => {
+      try {
+        if (render_target_handle) {
+          await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
+            targetNode: { handle: render_target_handle },
+          });
+        }
+        return jsonResult({ success: true });
+      } catch (error: any) {
+        return errorResult(error);
+      }
     }
-  });
+  );
 
   server.tool('stop_render', 'Stop the current render', {}, async () => {
     try {

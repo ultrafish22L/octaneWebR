@@ -17,7 +17,8 @@
       "Bash(grep -l \"Dialog\\\\|Dialog\" \"/c/otoyla/GRPC/dev/octaneWebR/client/src/components/dialogs/\"*.tsx)",
       "Bash(find C:/otoyla/GRPC/dev/octaneWebR/client/src/styles -name \"*.css\" -exec grep -l \"modal-overlay\" {} ;)",
       "Bash(npm run build)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "mcp__octane__reset_project"
     ]
   }
 }
