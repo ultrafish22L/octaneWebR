@@ -27,7 +27,8 @@
       "mcp__octane__restart_render",
       "mcp__octane__save_render",
       "mcp__octane__get_node_info",
-      "mcp__octane__set_attribute"
+      "mcp__octane__set_attribute",
+      "mcp__octane__get_render_status"
     ]
   }
 }

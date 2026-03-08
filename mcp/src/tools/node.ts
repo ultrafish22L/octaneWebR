@@ -78,12 +78,39 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
           objectPtr: { handle: String(newHandle), type: 16 },
         });
 
+        // Discover auto-created pin children (eliminates separate get_node_info round-trip)
+        const pins: { index: number; handle: number }[] = [];
+        try {
+          const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
+            objectPtr: { handle: String(newHandle), type: 17 },
+          });
+          const pinCount = extractValue(pinCountResult) ?? 0;
+
+          for (let i = 0; i < pinCount; i++) {
+            let childHandle = 0;
+            try {
+              const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                objectPtr: { handle: String(newHandle), type: 17 },
+                pinIx: i,
+                enterWrapperNode: true,
+              });
+              childHandle = extractHandle(connResult) ?? 0;
+            } catch {
+              // No child on this pin
+            }
+            pins.push({ index: i, handle: childHandle });
+          }
+        } catch {
+          // Node may not support pins
+        }
+
         return jsonResult({
           success: true,
           handle: newHandle,
           name: extractValue(nameResult) ?? '',
           type: node_type,
           type_id: typeId,
+          pins,
         });
       } catch (error: any) {
         return errorResult(error);
