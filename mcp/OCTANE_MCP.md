@@ -65,14 +65,19 @@ RenderTarget
 | **Geo group uses pin_name**       | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.               |
 | **Handles are opaque**            | Never guess. Only use values from `create_node` or `get_node_info`.                                                     |
 | **Sphere primitive=20 CRASHES**   | Confirmed 2026-03-07. Immediate ECONNRESET. Use NT_GEO_MESH + sphere.obj instead.                                       |
+| **Torus primitive=22 CRASHES**    | Confirmed 2026-03-08. Delayed ECONNRESET. Use NT_GEO_MESH + torus.obj instead.                                          |
 
 ### Confirmed Crashes
 
 | Trigger                                                     | Result                                |
 | ----------------------------------------------------------- | ------------------------------------- |
 | `set_attribute(primitive_enum, 185, AT_INT=3, 20)` (Sphere) | Immediate ECONNRESET                  |
+| `set_attribute(primitive_enum, 185, AT_INT=3, 22)` (Torus)  | Delayed ECONNRESET                    |
 | `resetProject` without `suppressUI: true`                   | Crash from gRPC thread UI sync        |
 | Heavy structural ops (destroy connected node, ungroup)      | Delayed ECONNRESET 5-9s after success |
+| NT_GEO_MESH batched build + `set_camera` eval               | ECONNRESET (not fully reproducible)   |
+
+**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `update_scene()` → then connect material/placement → `set_camera()`. See `CRASH.md` for details.
 
 ### Refresh Pattern — CRITICAL
 
@@ -93,6 +98,18 @@ No `update_scene`, `restart_render`, or `start_render` needed. Just `set_camera`
 - **Geo group dynamic pins**: `pin_index` SILENTLY FAILS. Must use `pin_name: "Input N"` (e.g. "Input 1", "Input 2")
 - **Material emission pin 14**: Use `pin_name: "emission"` (pin_index may silently fail)
 - **General rule**: If a connection returns success but `get_node_info` shows handle=0, switch to `pin_name`
+
+### One Object at a Time — RULE
+
+Every piece of geometry must be visually verified after connecting to the scene. No batching multiple geo objects into a single render check.
+
+1. Build one object (create node, set attributes, connect material)
+2. Connect to geo group → `set_camera()` → `save_render()` → `Read` PNG → verify
+3. Only then start the next object
+
+**Exceptions**: Setup infrastructure (RT, env, kernel, geo group) can batch. The first wall can batch with its geo group connection. But once objects are going in, each one renders individually.
+
+**Why**: If something crashes or looks wrong, you know exactly which object caused it.
 
 ### Setup Order (for demos)
 
@@ -280,7 +297,7 @@ set_attribute(RGB_child, 185, AT_FLOAT3=11, {0.65, 0.05, 0.05})  → red
 | 7   | Dodecahedron   | 19     | Saddle                      |
 | 8   | Hemisphere     | **20** | **Sphere — CRASHES Octane** |
 | 9   | Ellipsoid      | 21     | Tetrahedron                 |
-| 10  | Torus (fat)    | 22     | Torus                       |
+| 10  | Torus (fat)    | **22** | **Torus — CRASHES Octane**  |
 | 11  | Hourglass      | 23     | Truncated Cone              |
 
 ---
@@ -299,11 +316,24 @@ set_attribute(RGB_child, 185, AT_FLOAT3=11, {0.65, 0.05, 0.05})  → red
 ### Verified Connections
 
 - RGB texture → material diffuse pin 0
+- **Image texture → material diffuse pin 0** (replaces auto-created RGB child)
 - Blackbody emission → standalone material `pin_name: "emission"`
 - Geometry objects → geo group `pin_name: "Input N"`
 - Geo group → RT pin 3 (pin_index works)
 - PT kernel → RT pin 6 (pin_index works)
 - Specular material → geo mesh pin 0 (pin_index works)
+
+### Image Texture on Material
+
+To use an image file instead of a flat color on any material's diffuse:
+
+```
+create_node(NT_TEX_IMAGE) → TEX
+set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "C:/absolute/path/to/image.jpg")
+connect_nodes(TEX → material, pin_index: 0)   # replaces auto-created RGB child
+```
+
+Works on auto-created materials (NT_GEO_OBJECT pin 1) and standalone materials. The image texture node uses A_FILENAME=34 (same as NT_GEO_MESH). No A_RELOAD needed — the texture loads on connect. Proven 2026-03-08 with OTOY Studio-generated ice texture on Cornell box floor.
 
 ### Sphere via .obj Mesh
 
@@ -337,6 +367,7 @@ All require `get_node_info` to discover child handles first, then `set_attribute
 | **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0, Albedo=white                         |
 | **Plastic**    | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.2, Specular=0.5                       |
 | **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                          |
+| **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)             |
 
 ### IOR Reference
 
@@ -471,9 +502,24 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 - **3D Models**: Sketchfab, TurboSquid (free), Poly Haven
 - **HDRIs**: [Poly Haven](https://polyhaven.com/hdris) — .hdr/.exr for NT_ENV_TEXTURE
 - **Textures**: [Poly Haven](https://polyhaven.com/textures), [ambientCG](https://ambientcg.com)
-- **OTOY Studio**: https://otoy.studio/ — AI image-to-3D, text-to-image
+- **OTOY Studio**: https://otoy.studio/ — AI text-to-image + image-to-3D (see workflow below)
 - **Formats**: .obj, .fbx, .stl, .ply, .abc | .png, .jpg, .exr, .hdr | .vdb | .orbx, .ocs
 
 Save to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
 
 Cooked files use `${ASSETS}` — resolve to the absolute path above at runtime (Octane requires absolute paths).
+
+### OTOY Studio → Octane Pipeline (proven 2026-03-08)
+
+**Text-to-Image** (Seedream v4):
+
+1. Navigate to https://otoy.studio/ (user must be logged in)
+2. Enter prompt, select aspect ratio, click Create (~10s generation)
+3. Click thumbnail in gallery → Generation Details panel
+4. Click Download button (use `find("Download button")` + ref-click — coordinate clicks unreliable)
+5. File lands in `C:/Users/johnc/Downloads/otoy_studio_image_{prompt}_{timestamp}.jpg`
+6. Copy to `ORBX/assets/` → use as NT_TEX_IMAGE filename
+
+**Image-to-3D** (Seed3D): Navigate to `/image-to-3d`, upload reference image, 2 credits per generation. Not yet tested end-to-end.
+
+**Full pipeline proven**: OTOY Studio generate → download → NT_TEX_IMAGE → material diffuse → render. Used for ice texture on ARCTIC Cornell box floor.
