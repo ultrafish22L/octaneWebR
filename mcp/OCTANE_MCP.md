@@ -6,6 +6,44 @@ Best practices, observed patterns, and reference info for building scenes via th
 
 ---
 
+## ⚡ CHEAT SHEET — READ THIS FIRST
+
+**DO NOT HALLUCINATE THESE VALUES. They are exact.**
+
+```
+MESH PATH PREFIX:  C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/
+MESH FILES:        floor.obj, sphere_hd.obj, sphere.obj, sphere_uv.obj,
+                   cube.obj, torus.obj, ring.obj, teapot.obj, quad.obj,
+                   diamond.obj, monolith.obj, prism.obj, pillar.obj
+
+TRANSFORM ATTRS:   A_TRANSLATION = 172   A_ROTATION = 137   A_SCALE = 139
+                   All AT_FLOAT3 (type 11).  NOT 140/141!
+
+OTHER KEY ATTRS:   A_VALUE = 185   A_FILENAME = 34   A_RELOAD = 92
+
+ATTR TYPES:        AT_BOOL=1  AT_INT=3  AT_INT2=4  AT_FLOAT=9
+                   AT_FLOAT2=90  AT_FLOAT3=11  AT_STRING=14
+
+WIRING PATTERN:    material → mesh (pin 0)
+                   mesh → placement (pin_name "geometry")
+                   placement → geo group (pin_name "Input N")
+                   NOT: material → placement. NEVER.
+
+RT PIN LAYOUT:     0=camera  1=environment  3=geometry  4=film  6=kernel
+
+INFRA BUILD:       create RT → start_render(RT) → set_camera(HERO)
+                   → create env → connect RT pin 1 → set_camera to refresh
+                   → get film child → set resolution (AT_INT2=4)
+                   → create PT kernel → connect RT pin 6 → set_camera
+                   → create geo group → set slots (113, AT_INT=3, 8)
+                   → connect RT pin 3 → set_camera
+
+REFRESH RULE:      set_camera is the ONLY way to force re-render.
+                   start_render/restart_render do NOT refresh geometry.
+```
+
+---
+
 ## Scene Building Workflow
 
 ### Two Knowledge Sources
