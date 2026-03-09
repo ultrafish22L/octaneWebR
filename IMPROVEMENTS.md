@@ -13,7 +13,7 @@ add to doc files for ai to reference https://render.otoy.com/forum/index.php log
 
 | #   | Item                                                  | Notes                                                                                       |
 | --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0   | ~~**MCP server layer for AI-driven scene creation**~~ | **DONE** — 21 tools in `mcp/`, stdio transport, esbuild + tsx. `.mcp.json` for Claude Code. |
+| 0   | ~~**MCP server layer for AI-driven scene creation**~~ | **DONE** — 23 tools in `mcp/`, stdio transport, esbuild + tsx. `.mcp.json` for Claude Code. |
 
 ---
 

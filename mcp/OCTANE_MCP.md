@@ -373,7 +373,11 @@ NT_MAT_SPECULAR → NT_GEO_MESH pin 0 (material)
 NT_GEO_PLACEMENT → geo_group pin_name "Input N"
 ```
 
-File: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere.obj` (must be **absolute path** — relative paths don't resolve)
+Files (must be **absolute paths** — relative paths don't resolve):
+
+- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere.obj` — low-poly sphere
+- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere_hd.obj` — high-detail sphere (used in Scene 1, radius ≈ 0.5)
+- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere_uv.obj` — UV-mapped sphere
 
 ---
 

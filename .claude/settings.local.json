@@ -59,7 +59,12 @@
       "WebFetch(domain:vfxrendering.com)",
       "WebFetch(domain:variety.com)",
       "WebFetch(domain:tommytoy.typepad.com)",
-      "mcp__octane__disconnect_pin"
+      "mcp__octane__disconnect_pin",
+      "mcp__octane__delete_node",
+      "mcp__octane__load_project",
+      "mcp__octane__get_camera",
+      "mcp__octane__get_attribute",
+      "mcp__octane-docs__search_octane_api"
     ]
   }
 }
