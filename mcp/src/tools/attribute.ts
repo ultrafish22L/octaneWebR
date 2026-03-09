@@ -119,7 +119,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. Automatically triggers scene evaluation after setting. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
+    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
     {
       handle: z.number().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -132,8 +132,14 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           z.object({ x: z.number(), y: z.number().optional(), z: z.number().optional() }),
         ])
         .describe('Value to set (boolean, number, string, or {x, y, z} for float3)'),
+      evaluate: z
+        .boolean()
+        .default(true)
+        .describe(
+          'Trigger scene evaluation after setting. Set false to batch multiple attribute changes, then call update_scene. WARNING: structural changes (primitive types) may crash if batched.'
+        ),
     },
-    async ({ handle, attribute_id, expected_type, value }) => {
+    async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
         const valueParams = buildValueParams(value, expected_type);
         await client.callMethod('ApiItem', setMethod, {
@@ -143,9 +149,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           ...valueParams,
         });
 
-        // Trigger scene evaluation after every set — matches octaneWebR pattern.
-        // Batching deferred changes crashes Octane on structural changes (primitive types).
-        await client.callMethod('ApiChangeManager', 'update', {});
+        if (evaluate) {
+          await client.callMethod('ApiChangeManager', 'update', {});
+        }
 
         return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {

@@ -35,12 +35,8 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
     {},
     async () => {
       try {
-        const version = await client.callMethod('ApiInfo', 'octaneVersion', {});
-        const name = await client.callMethod('ApiInfo', 'octaneName', {});
-        return jsonResult({
-          version: version?.value ?? version,
-          name: name?.value ?? name,
-        });
+        const info = await client.getSessionInfo();
+        return jsonResult(info);
       } catch (error: any) {
         return errorResult(error);
       }
@@ -53,16 +49,15 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
     { device_index: z.number().default(0).describe('GPU device index (default 0)') },
     async ({ device_index }) => {
       try {
-        const count = await client.callMethod('ApiRenderEngine', 'getDeviceCount', {});
-        const name = await client.callMethod('ApiRenderEngine', 'getDeviceName', {
-          deviceIndex: device_index,
-        });
+        const count = await client.getDeviceCount();
+        const name = await client.getDeviceName(device_index);
+        // Memory is dynamic — always query fresh
         const memory = await client.callMethod('ApiRenderEngine', 'getMemoryUsage', {
           deviceIndex: device_index,
         });
         return jsonResult({
-          device_count: count?.value ?? count,
-          name: name?.value ?? name,
+          device_count: count,
+          name: name,
           memory: memory,
         });
       } catch (error: any) {

@@ -28,6 +28,7 @@ import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService'
 import { Scene, SceneNode } from './types';
 import { getIconForType } from '../../constants/PinTypes';
 import { AttrType, AttributeId } from '../../constants/OctaneTypes';
+import { cacheManager } from '../CacheManager';
 
 export class SceneService extends BaseService {
   private apiService: ApiService;
@@ -407,18 +408,24 @@ export class SceneService extends BaseService {
       }
 
       try {
-        const nameResponse = await this.apiService.callApi('ApiItem', 'name', handleNum);
-        itemName = String(nameResponse?.result ?? 'Unnamed');
+        itemName = await cacheManager.get(`node:${handleNum}:info:name`, async () => {
+          const nameResponse = await this.apiService.callApi('ApiItem', 'name', handleNum);
+          return String(nameResponse?.result ?? 'Unnamed');
+        });
 
-        const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', handleNum);
-        outType = String(outTypeResponse?.result ?? '');
+        outType = await cacheManager.get(`node:${handleNum}:info:outType`, async () => {
+          const outTypeResponse = await this.apiService.callApi('ApiItem', 'outType', handleNum);
+          return String(outTypeResponse?.result ?? '');
+        });
 
         Logger.debug(
           `API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
         );
 
-        const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', handleNum);
-        isGraph = asBool(isGraphResponse?.result, false);
+        isGraph = await cacheManager.get(`node:${handleNum}:info:isGraph`, async () => {
+          const isGraphResponse = await this.apiService.callApi('ApiItem', 'isGraph', handleNum);
+          return asBool(isGraphResponse?.result, false);
+        });
 
         // Position for level-1 nodes
         if (level === 1) {

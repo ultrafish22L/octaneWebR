@@ -64,7 +64,11 @@
       "mcp__octane__load_project",
       "mcp__octane__get_camera",
       "mcp__octane__get_attribute",
-      "mcp__octane-docs__search_octane_api"
+      "mcp__octane-docs__search_octane_api",
+      "mcp__octane__stop_render",
+      "mcp__octane__refresh_webapp",
+      "mcp__octane-docs__list_octane_constants",
+      "mcp__octane-docs__get_octane_function"
     ]
   }
 }

@@ -1,10 +1,14 @@
 /**
  * Node Tools — create_node, delete_node, connect_nodes, disconnect_pin
+ *
+ * Uses ApiCache for instant pin layout / type lookups when available.
+ * Falls back to gRPC queries when cache is missing or handle is unknown.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { ApiCache } from '../ApiCache';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { NodeType } = require('../../../client/src/constants/OctaneTypes');
@@ -22,7 +26,7 @@ function errorResult(error: any) {
   };
 }
 
-/** Extract handle from gRPC response — tries result.handle, list.handle, handle, value.handle */
+/** Extract handle from gRPC response */
 function extractHandle(result: any): number | undefined {
   const h =
     result?.result?.handle ?? result?.list?.handle ?? result?.handle ?? result?.value?.handle;
@@ -35,9 +39,9 @@ function extractValue(result: any): any {
   return result?.result ?? result?.value ?? result;
 }
 
-// --- Pin type validation ---
+// --- Legacy pin type validation (fallback when cache unavailable) ---
 
-/** NodePinType enum (from octaneids.proto) → human-readable name */
+/** NodePinType enum → human-readable name */
 export const PIN_TYPE_NAMES: Record<number, string> = {
   0: 'PT_UNKNOWN',
   1: 'PT_BOOL',
@@ -86,44 +90,36 @@ export const PIN_TYPE_NAMES: Record<number, string> = {
   47: 'PT_TRACE_SET_VISIBILITY_RULE',
 };
 
-/** Cache: node handle → output pin type name (e.g. "PT_GEOMETRY") */
-const outTypeCache = new Map<number, string>();
-
-/** Cache: node handle → array of pin info (index, type, name) */
-const pinInfoCache = new Map<number, { index: number; type: string; name: string }[]>();
-
-/** Get a node's output pin type, with caching */
-async function getOutType(client: OctaneMcpClient, handle: number): Promise<string | undefined> {
-  const cached = outTypeCache.get(handle);
-  if (cached) return cached;
+/** Fallback: get output type via gRPC */
+async function getOutTypeFallback(
+  client: OctaneMcpClient,
+  handle: number
+): Promise<string | undefined> {
   try {
     const result = await client.callMethod('ApiItem', 'outType', {
       objectPtr: { handle: String(handle), type: 16 },
     });
-    const typeNum = Number(extractValue(result) ?? 0);
-    const typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
-    outTypeCache.set(handle, typeName);
-    return typeName;
+    const typeRaw = extractValue(result);
+    // enums: String → returns "PT_TEXTURE" (string), not 5 (number)
+    if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) return typeRaw;
+    const typeNum = Number(typeRaw ?? 0);
+    return PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
   } catch {
     return undefined;
   }
 }
 
-/** Get all pin info for a node (type + name per pin), with caching */
-async function getPinInfo(
+/** Fallback: get pin info via gRPC */
+async function getPinInfoFallback(
   client: OctaneMcpClient,
   handle: number
 ): Promise<{ index: number; type: string; name: string }[]> {
-  const cached = pinInfoCache.get(handle);
-  if (cached) return cached;
-
   const pins: { index: number; type: string; name: string }[] = [];
   try {
     const countResult = await client.callMethod('ApiNode', 'pinCount', {
       objectPtr: { handle: String(handle), type: 17 },
     });
     const count = Number(extractValue(countResult) ?? 0);
-
     for (let i = 0; i < count; i++) {
       let typeName = 'PT_UNKNOWN';
       let pinName = '';
@@ -132,10 +128,15 @@ async function getPinInfo(
           objectPtr: { handle: String(handle), type: 17 },
           index: i,
         });
-        const typeNum = Number(extractValue(typeResult) ?? 0);
-        typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+        const typeRaw = extractValue(typeResult);
+        if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) {
+          typeName = typeRaw;
+        } else {
+          const typeNum = Number(typeRaw ?? 0);
+          typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+        }
       } catch {
-        // Pin may not report type
+        /* */
       }
       try {
         const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
@@ -144,19 +145,21 @@ async function getPinInfo(
         });
         pinName = String(extractValue(nameResult) ?? '');
       } catch {
-        // Pin may not have name
+        /* */
       }
       pins.push({ index: i, type: typeName, name: pinName });
     }
   } catch {
-    // Node may not support pins
+    /* */
   }
-
-  pinInfoCache.set(handle, pins);
   return pins;
 }
 
-export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
+export function registerNodeTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  cache: ApiCache | null
+) {
   server.tool(
     'create_node',
     'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. For NT_GEO_OBJECT, set primitive type on pin 0 enum child (get_node_info first!) via set_attribute(handle, 185, AT_INT=3, value). Primitive types: 0=Box, 1=Pill, 2=Capsule, 3=Cone, 4=Cylinder, 5=Dreidel, 6=Disc, 7=Dodecahedron, 8=Hemisphere, 9=Ellipsoid, 10=Torus(fat), 11=Hourglass, 12=Hyperboloid, 13=Icosahedron, 14=Octahedron, 15=Plane, 16=Pentagon, 17=Prism, 18=Quad, 19=Saddle, 20=Sphere, 21=Tetrahedron, 22=Torus, 23=TruncatedCone.',
@@ -180,49 +183,77 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
           );
         }
 
-        // Get root graph to create node in
-        const rootResult = await client.callMethod('ApiProjectManager', 'rootNodeGraph', {});
-        const rootHandle = extractHandle(rootResult);
-        if (!rootHandle) return errorResult('No root node graph found');
+        // Get root graph — cached after first call
+        const rootHandle = await client.getRootNodeGraph();
 
         const result = await client.callMethod('ApiNode', 'create', {
           type: typeId,
-          ownerGraph: { handle: String(rootHandle), type: 20 }, // ObjectType.ApiNodeGraph
+          ownerGraph: { handle: String(rootHandle), type: 20 },
           configurePins: true,
         });
 
         const newHandle = extractHandle(result);
         if (!newHandle) return errorResult('Node creation returned no handle');
 
+        // Track handle → type for connect_nodes cache lookups
+        client.handleToTypeName.set(newHandle, node_type);
+
         // Get the name Octane assigned
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(newHandle), type: 16 },
         });
 
-        // Discover auto-created pin children (eliminates separate get_node_info round-trip)
-        const pins: { index: number; handle: number }[] = [];
-        try {
-          const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
-            objectPtr: { handle: String(newHandle), type: 17 },
-          });
-          const pinCount = extractValue(pinCountResult) ?? 0;
+        // Discover auto-created pin children
+        const cachedInfo = cache?.getNodeType(node_type);
+        const pins: { index: number; handle: number; name?: string; type?: string }[] = [];
 
-          for (let i = 0; i < pinCount; i++) {
+        if (cachedInfo) {
+          // FAST PATH: use cache for pin layout, only query pins with defaultNodeType
+          for (const cp of cachedInfo.pins) {
             let childHandle = 0;
-            try {
-              const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                objectPtr: { handle: String(newHandle), type: 17 },
-                pinIx: i,
-                enterWrapperNode: true,
-              });
-              childHandle = extractHandle(connResult) ?? 0;
-            } catch {
-              // No child on this pin
+            if (cp.defaultNodeType) {
+              try {
+                const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                  objectPtr: { handle: String(newHandle), type: 17 },
+                  pinIx: cp.index,
+                  enterWrapperNode: true,
+                });
+                childHandle = extractHandle(connResult) ?? 0;
+              } catch {
+                /* no child */
+              }
             }
-            pins.push({ index: i, handle: childHandle });
+            pins.push({
+              index: cp.index,
+              handle: childHandle,
+              name: cp.staticName,
+              type: cp.type,
+            });
           }
-        } catch {
-          // Node may not support pins
+        } else {
+          // FALLBACK: enumerate all pins via gRPC
+          try {
+            const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
+              objectPtr: { handle: String(newHandle), type: 17 },
+            });
+            const pinCount = extractValue(pinCountResult) ?? 0;
+            for (let i = 0; i < pinCount; i++) {
+              let childHandle = 0;
+              try {
+                const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                  objectPtr: { handle: String(newHandle), type: 17 },
+                  pinIx: i,
+                  enterWrapperNode: true,
+                });
+                childHandle = extractHandle(connResult) ?? 0;
+              } catch {
+                /* */
+              }
+              pins.push({ index: i, handle: childHandle });
+            }
+          } catch {
+            /* */
+          }
         }
 
         return jsonResult({
@@ -248,6 +279,7 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: 16 },
         });
+        client.handleToTypeName.delete(handle);
         return jsonResult({ success: true, deleted_handle: handle });
       } catch (error: any) {
         return errorResult(error);
@@ -274,30 +306,48 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
     },
     async ({ target_handle, pin_index, pin_name, pin_id, source_handle, evaluate }) => {
       try {
-        // --- Pin type validation ---
-        // Query source node's output type and target pin's expected type.
-        // If they mismatch, reject the connection before sending to Octane.
-        const sourceType = await getOutType(client, source_handle);
+        // --- Pin type validation (cache-first, gRPC fallback) ---
+        const sourceTypeName = client.handleToTypeName.get(source_handle);
+        const targetTypeName = client.handleToTypeName.get(target_handle);
+
+        let sourceType: string | undefined;
         let targetPinType: string | undefined;
         let resolvedPinName: string | undefined;
         let resolvedPinIndex: number | undefined;
 
+        // Get source output type
+        if (sourceTypeName && cache) {
+          sourceType = cache.getOutType(sourceTypeName);
+        } else {
+          sourceType = await getOutTypeFallback(client, source_handle);
+        }
+
+        // Get target pin type
         if (pin_index !== undefined) {
-          // Direct index — get pin type for this index
-          const pins = await getPinInfo(client, target_handle);
-          const pin = pins.find(p => p.index === pin_index);
-          targetPinType = pin?.type;
-          resolvedPinName = pin?.name;
+          if (targetTypeName && cache) {
+            const pin = cache.getPinByIndex(targetTypeName, pin_index);
+            targetPinType = pin?.type;
+            resolvedPinName = pin?.staticName;
+          } else {
+            const pins = await getPinInfoFallback(client, target_handle);
+            const pin = pins.find(p => p.index === pin_index);
+            targetPinType = pin?.type;
+            resolvedPinName = pin?.name;
+          }
           resolvedPinIndex = pin_index;
         } else if (pin_name !== undefined) {
-          // Name-based — find pin by name
-          const pins = await getPinInfo(client, target_handle);
-          const pin = pins.find(p => p.name === pin_name);
-          targetPinType = pin?.type;
+          if (targetTypeName && cache) {
+            const pin = cache.getPinByName(targetTypeName, pin_name);
+            targetPinType = pin?.type;
+            resolvedPinIndex = pin?.index;
+          } else {
+            const pins = await getPinInfoFallback(client, target_handle);
+            const pin = pins.find(p => p.name === pin_name);
+            targetPinType = pin?.type;
+            resolvedPinIndex = pin?.index;
+          }
           resolvedPinName = pin_name;
-          resolvedPinIndex = pin?.index;
         }
-        // pin_id route: skip validation (rare, hard to resolve without full iteration)
 
         if (
           sourceType &&
@@ -318,7 +368,6 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
 
         // --- Perform the connection ---
         if (pin_id !== undefined) {
-          // Connect by PinId enum using connectTo
           await client.callMethod('ApiNode', 'connectTo', {
             objectPtr: { handle: String(target_handle), type: 17 },
             pinId: pin_id,
@@ -336,7 +385,6 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
           });
         }
         if (pin_name !== undefined) {
-          // Connect by pin name using connectTo1
           await client.callMethod('ApiNode', 'connectTo1', {
             objectPtr: { handle: String(target_handle), type: 17 },
             pinName: pin_name,
@@ -357,7 +405,7 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
           return errorResult('Provide one of: pin_index, pin_name, or pin_id');
         }
         await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(target_handle), type: 17 }, // ObjectType.ApiNode
+          objectPtr: { handle: String(target_handle), type: 17 },
           pinIdx: pin_index,
           sourceNode: { handle: String(source_handle), type: 17 },
           evaluate,
@@ -390,7 +438,7 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
         await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(handle), type: 17 },
           pinIdx: pin_index,
-          sourceNode: { handle: '0', type: 17 }, // Handle 0 = disconnect
+          sourceNode: { handle: '0', type: 17 },
           evaluate,
           doCycleCheck: true,
         });

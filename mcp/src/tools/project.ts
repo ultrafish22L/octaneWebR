@@ -31,6 +31,7 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
         });
         // loadProject is async in Octane — wait for scene to populate
         await new Promise(r => setTimeout(r, 2000));
+        client.clearRootGraphCache();
         return jsonResult({ success: true, path, callbackId: result?.callbackId });
       } catch (error: any) {
         return errorResult(error);
@@ -68,6 +69,7 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
     async () => {
       try {
         await client.callMethod('ApiProjectManager', 'resetProject', { suppressUI: true }, 120000);
+        client.clearRootGraphCache();
         return jsonResult({ success: true });
       } catch (error: any) {
         return errorResult(error);

@@ -11,6 +11,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { OctaneMcpClient } from './OctaneMcpClient';
+import { ApiCache } from './ApiCache';
 import { registerInfoTools } from './tools/info';
 import { registerProjectTools } from './tools/project';
 import { registerCameraTools } from './tools/camera';
@@ -39,13 +40,26 @@ async function main() {
     version: '1.0.0',
   });
 
+  // Load static API cache (graceful fallback if missing)
+  const cache = ApiCache.load();
+  if (cache) {
+    console.error(
+      `API cache loaded: ${cache.nodeTypeCount} node types, ${cache.totalPins} pins (${cache.version})`
+    );
+  } else {
+    console.error('WARNING: No API cache found at mcp/data/octane-api-cache.json');
+    console.error(
+      'Run "node scripts/fetch-api-cache.js" to generate it. Falling back to gRPC queries.'
+    );
+  }
+
   // Register all tool groups
   registerInfoTools(server, client);
   registerProjectTools(server, client);
   registerCameraTools(server, client);
   registerRenderTools(server, client);
-  registerSceneTools(server, client);
-  registerNodeTools(server, client);
+  registerSceneTools(server, client, cache);
+  registerNodeTools(server, client, cache);
   registerAttributeTools(server, client);
   registerWebappTools(server);
 

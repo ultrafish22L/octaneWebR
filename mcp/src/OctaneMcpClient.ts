@@ -32,6 +32,18 @@ const transformParams: (s: string, m: string, p: Record<string, any>) => Record<
 export class OctaneMcpClient {
   private base: any; // OctaneGrpcClientBase (loaded at runtime)
   private mutex: Promise<void> = Promise.resolve(); // Serializes all gRPC calls
+  private rootGraphHandle: number | null = null; // Cached root node graph handle
+
+  // Session info cache — static per Octane session
+  private sessionInfo: {
+    version?: any;
+    name?: any;
+    deviceCount?: any;
+    deviceNames: Map<number, any>;
+  } = { deviceNames: new Map() };
+
+  // Handle-to-type tracking — shared across all tools
+  readonly handleToTypeName = new Map<number, string>();
 
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
@@ -67,6 +79,54 @@ export class OctaneMcpClient {
     } finally {
       resolve!();
     }
+  }
+
+  /** Get root node graph handle, cached after first call */
+  async getRootNodeGraph(): Promise<number> {
+    if (this.rootGraphHandle) return this.rootGraphHandle;
+    const result = await this.callMethod('ApiProjectManager', 'rootNodeGraph', {});
+    const h = result?.result?.handle ?? result?.handle;
+    const handle = h ? Number(h) : 0;
+    if (!handle) throw new Error('No root node graph found');
+    this.rootGraphHandle = handle;
+    return handle;
+  }
+
+  /** Clear all session caches (call on load_project / reset_project) */
+  clearRootGraphCache(): void {
+    this.rootGraphHandle = null;
+    this.handleToTypeName.clear();
+    this.sessionInfo = { deviceNames: new Map() };
+  }
+
+  /** Get cached Octane version + name (lazy-populated on first call) */
+  async getSessionInfo(): Promise<{ version: any; name: any }> {
+    if (this.sessionInfo.version !== undefined) {
+      return { version: this.sessionInfo.version, name: this.sessionInfo.name };
+    }
+    const vResult = await this.callMethod('ApiInfo', 'octaneVersion', {});
+    const nResult = await this.callMethod('ApiInfo', 'octaneName', {});
+    this.sessionInfo.version = vResult?.value ?? vResult;
+    this.sessionInfo.name = nResult?.value ?? nResult;
+    return { version: this.sessionInfo.version, name: this.sessionInfo.name };
+  }
+
+  /** Get cached device count (lazy-populated on first call) */
+  async getDeviceCount(): Promise<any> {
+    if (this.sessionInfo.deviceCount !== undefined) return this.sessionInfo.deviceCount;
+    const result = await this.callMethod('ApiRenderEngine', 'getDeviceCount', {});
+    this.sessionInfo.deviceCount = result?.value ?? result;
+    return this.sessionInfo.deviceCount;
+  }
+
+  /** Get cached device name by index (lazy-populated per device) */
+  async getDeviceName(deviceIndex: number): Promise<any> {
+    const cached = this.sessionInfo.deviceNames.get(deviceIndex);
+    if (cached !== undefined) return cached;
+    const result = await this.callMethod('ApiRenderEngine', 'getDeviceName', { deviceIndex });
+    const name = result?.value ?? result;
+    this.sessionInfo.deviceNames.set(deviceIndex, name);
+    return name;
   }
 
   async checkHealth(): Promise<boolean> {

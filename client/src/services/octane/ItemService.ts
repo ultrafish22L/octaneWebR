@@ -10,6 +10,7 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
 import { AttributeId, AttrType } from '../../constants/OctaneTypes';
+import { cacheManager } from '../CacheManager';
 
 export type ParameterRawValue =
   | boolean
@@ -38,43 +39,46 @@ export class ItemService extends BaseService {
    * Returns null when the attribute is absent or the call fails.
    */
   async getParameterValue(handle: string, expectedType: number): Promise<ParameterValue | null> {
-    try {
-      const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', handle, {
-        attribute_id: AttributeId.A_VALUE,
-        expected_type: expectedType,
-      });
+    const cacheKey = `node:${handle}:params:${expectedType}`;
+    return cacheManager.get<ParameterValue | null>(cacheKey, async () => {
+      try {
+        const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', handle, {
+          attribute_id: AttributeId.A_VALUE,
+          expected_type: expectedType,
+        });
 
-      if (!response) return null;
+        if (!response) return null;
 
-      // Response format: { value: "float_value", float_value: 2 }
-      // The "value" field names the oneof variant that is populated.
-      // Check for specific known field names rather than relying on Object.keys() order.
-      const responseMap = response as Record<string, unknown>;
-      const valueField =
-        (responseMap.value as string) ||
-        (responseMap.bool_value !== undefined ? 'bool_value' : undefined) ||
-        (responseMap.int_value !== undefined ? 'int_value' : undefined) ||
-        (responseMap.int2_value !== undefined ? 'int2_value' : undefined) ||
-        (responseMap.int3_value !== undefined ? 'int3_value' : undefined) ||
-        (responseMap.int4_value !== undefined ? 'int4_value' : undefined) ||
-        (responseMap.long_value !== undefined ? 'long_value' : undefined) ||
-        (responseMap.long2_value !== undefined ? 'long2_value' : undefined) ||
-        (responseMap.float_value !== undefined ? 'float_value' : undefined) ||
-        (responseMap.float2_value !== undefined ? 'float2_value' : undefined) ||
-        (responseMap.float3_value !== undefined ? 'float3_value' : undefined) ||
-        (responseMap.float4_value !== undefined ? 'float4_value' : undefined) ||
-        (responseMap.string_value !== undefined ? 'string_value' : undefined);
-      if (!valueField) return null;
-      const actualValue = responseMap[valueField];
+        // Response format: { value: "float_value", float_value: 2 }
+        // The "value" field names the oneof variant that is populated.
+        // Check for specific known field names rather than relying on Object.keys() order.
+        const responseMap = response as Record<string, unknown>;
+        const valueField =
+          (responseMap.value as string) ||
+          (responseMap.bool_value !== undefined ? 'bool_value' : undefined) ||
+          (responseMap.int_value !== undefined ? 'int_value' : undefined) ||
+          (responseMap.int2_value !== undefined ? 'int2_value' : undefined) ||
+          (responseMap.int3_value !== undefined ? 'int3_value' : undefined) ||
+          (responseMap.int4_value !== undefined ? 'int4_value' : undefined) ||
+          (responseMap.long_value !== undefined ? 'long_value' : undefined) ||
+          (responseMap.long2_value !== undefined ? 'long2_value' : undefined) ||
+          (responseMap.float_value !== undefined ? 'float_value' : undefined) ||
+          (responseMap.float2_value !== undefined ? 'float2_value' : undefined) ||
+          (responseMap.float3_value !== undefined ? 'float3_value' : undefined) ||
+          (responseMap.float4_value !== undefined ? 'float4_value' : undefined) ||
+          (responseMap.string_value !== undefined ? 'string_value' : undefined);
+        if (!valueField) return null;
+        const actualValue = responseMap[valueField];
 
-      return { value: actualValue, type: expectedType };
-    } catch (error) {
-      Logger.error(
-        ` getParameterValue failed for handle ${handle}:`,
-        error instanceof Error ? error.message : error
-      );
-      return null;
-    }
+        return { value: actualValue, type: expectedType };
+      } catch (error) {
+        Logger.error(
+          ` getParameterValue failed for handle ${handle}:`,
+          error instanceof Error ? error.message : error
+        );
+        return null;
+      }
+    });
   }
 
   /**
@@ -153,6 +157,9 @@ export class ItemService extends BaseService {
       [valueField]: formattedValue,
       evaluate: false, // Defer evaluation until ApiChangeManager.update
     });
+
+    // Invalidate cached parameter values for this node
+    cacheManager.invalidate(`node:${handle}:params:*`);
 
     // Notify Octane to re-evaluate the scene after the value change
     await this.apiService.callApi('ApiChangeManager', 'update', {});

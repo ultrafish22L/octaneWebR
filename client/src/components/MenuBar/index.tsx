@@ -21,6 +21,7 @@ import { commandHistory } from '../../services/CommandHistory';
 import { useFileBrowser } from '../../hooks/useFileBrowser';
 import { FileBrowserDialog } from '../dialogs/FileBrowserDialog';
 import { requestQueue } from '../../utils/RequestQueue';
+import { cacheManager } from '../../services/CacheManager';
 
 interface PanelVisibility {
   renderViewport: boolean;
@@ -256,6 +257,7 @@ function MenuBar({
       // Concurrent gRPC calls during loadProject crash Octane (BUG-R3-2).
       client.abortSceneLoad();
       requestQueue.clear();
+      cacheManager.clear();
       isLoadingProjectRef.current = true;
       await client.waitForSceneIdle();
       const response = await client.callApi('ApiProjectManager', 'loadProject', {
@@ -310,6 +312,7 @@ function MenuBar({
           try {
             client.abortSceneLoad();
             requestQueue.clear();
+            cacheManager.clear();
             isLoadingProjectRef.current = true;
             await client.waitForSceneIdle();
             const response = await client.callApi(
@@ -354,6 +357,7 @@ function MenuBar({
             try {
               client.abortSceneLoad();
               requestQueue.clear();
+              cacheManager.clear();
               isLoadingProjectRef.current = true;
               await client.waitForSceneIdle();
               const response = await client.callApi('ApiProjectManager', 'loadProject', {

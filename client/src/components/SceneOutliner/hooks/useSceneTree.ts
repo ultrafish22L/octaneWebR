@@ -14,6 +14,7 @@ import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/OctaneClient';
 import { requestQueue } from '../../../utils/RequestQueue';
+import { cacheManager } from '../../../services/CacheManager';
 
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
@@ -71,6 +72,7 @@ export function useSceneTree({
     // Without this, hundreds of stale getByAttrID calls can run concurrently
     // with the tree build and overwhelm Octane (BUG-R3-2).
     requestQueue.clear();
+    cacheManager.clear();
 
     try {
       const tree = await client.buildSceneTree();

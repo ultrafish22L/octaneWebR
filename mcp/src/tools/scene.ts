@@ -8,6 +8,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { ApiCache } from '../ApiCache';
 import { PIN_TYPE_NAMES } from './node';
 
 function jsonResult(data: any) {
@@ -132,23 +133,21 @@ async function traverseGraph(
   return nodes;
 }
 
-export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
+export function registerSceneTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  cache: ApiCache | null
+) {
   server.tool(
     'get_scene_tree',
     'Get the full scene node hierarchy. Returns handles, names, types, and children for all nodes. Use max_depth to limit traversal depth for large scenes.',
     { max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)') },
     async ({ max_depth }) => {
       try {
-        // Get root node graph — response is { result: { handle, type } }
-        const rootResult = await client.callMethod('ApiProjectManager', 'rootNodeGraph', {});
-        const rootHandle = extractHandle(rootResult);
+        const rootHandle = await client.getRootNodeGraph();
 
-        if (!rootHandle) {
-          return errorResult('No root node graph found. Is a scene loaded?');
-        }
-
-        const tree = await traverseGraph(client, Number(rootHandle), 0, max_depth);
-        return jsonResult({ root_handle: Number(rootHandle), nodes: tree, count: tree.length });
+        const tree = await traverseGraph(client, rootHandle, 0, max_depth);
+        return jsonResult({ root_handle: rootHandle, nodes: tree, count: tree.length });
       } catch (error: any) {
         return errorResult(error);
       }
@@ -179,46 +178,49 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
           pins: [],
         };
 
+        // Try to get node type for cache lookup
+        let cachedNodeInfo = null;
+        if (cache) {
+          try {
+            const nodeTypeResult = await client.callMethod('ApiNode', 'type', {
+              objectPtr: { handle: String(handle), type: 17 },
+            });
+            const nodeTypeRaw = extractValue(nodeTypeResult);
+            // enums: String → returns "NT_MAT_UNIVERSAL" (string), not 130 (number)
+            const nodeTypeName =
+              typeof nodeTypeRaw === 'string'
+                ? nodeTypeRaw
+                : cache.getNodeTypeName(Number(nodeTypeRaw));
+            if (nodeTypeName) {
+              cachedNodeInfo = cache.getNodeType(nodeTypeName);
+              if (cachedNodeInfo) {
+                info.nodeType = nodeTypeName;
+                client.handleToTypeName.set(handle, nodeTypeName);
+              }
+            }
+          } catch {
+            // Fall through to gRPC path
+          }
+        }
+
         // Get pin information
         try {
-          const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
-            objectPtr: { handle: String(handle), type: 17 },
-          });
-          const pinCount = extractValue(pinCountResult) ?? 0;
+          if (cachedNodeInfo) {
+            // FAST PATH: pin names and types from cache, only query runtime connections
+            for (const cp of cachedNodeInfo.pins) {
+              const pin: any = {
+                index: cp.index,
+                name: cp.staticName,
+                type: cp.type,
+              };
 
-          for (let i = 0; i < pinCount; i++) {
-            try {
-              const pin: any = { index: i };
-
-              // Get pin name
-              try {
-                const pinNameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-                  objectPtr: { handle: String(handle), type: 17 },
-                  index: i,
-                });
-                pin.name = extractValue(pinNameResult) ?? '';
-              } catch {
-                // Some pins may not have names
-              }
-
-              // Get pin type (e.g. PT_GEOMETRY, PT_MATERIAL, PT_TEXTURE)
-              try {
-                const pinTypeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
-                  objectPtr: { handle: String(handle), type: 17 },
-                  index: i,
-                });
-                const typeNum = Number(extractValue(pinTypeResult) ?? 0);
-                pin.type = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
-              } catch {
-                // Some pins may not report type
-              }
-
-              // Get connected node: try graph-connected first, then pin-owned
+              // Get connected node (runtime data — must query)
               let connectedHandle = 0;
               try {
                 const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
                   objectPtr: { handle: String(handle), type: 17 },
-                  pinIx: i,
+                  pinIx: cp.index,
+                  enterWrapperNode: true,
                 });
                 connectedHandle = extractHandle(connResult) ?? 0;
               } catch {
@@ -228,7 +230,7 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
                 try {
                   const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
                     objectPtr: { handle: String(handle), type: 17 },
-                    pinIx: i,
+                    pinIx: cp.index,
                   });
                   connectedHandle = extractHandle(ownedResult) ?? 0;
                 } catch {
@@ -237,7 +239,6 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
               }
               pin.connected_handle = connectedHandle;
 
-              // Get connected node name if connected
               if (connectedHandle && connectedHandle !== 0) {
                 try {
                   const connName = await client.callMethod('ApiItem', 'name', {
@@ -250,11 +251,86 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
               }
 
               info.pins.push(pin);
-            } catch (pinErr: any) {
-              info.pins.push({
-                index: i,
-                error: `failed to read pin: ${pinErr?.message || pinErr}`,
-              });
+            }
+          } else {
+            // FALLBACK: enumerate all pins via gRPC
+            const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
+              objectPtr: { handle: String(handle), type: 17 },
+            });
+            const pinCount = extractValue(pinCountResult) ?? 0;
+
+            for (let i = 0; i < pinCount; i++) {
+              try {
+                const pin: any = { index: i };
+
+                try {
+                  const pinNameResult = await client.callMethod('ApiNode', 'pinNameIx', {
+                    objectPtr: { handle: String(handle), type: 17 },
+                    index: i,
+                  });
+                  pin.name = extractValue(pinNameResult) ?? '';
+                } catch {
+                  // Some pins may not have names
+                }
+
+                try {
+                  const pinTypeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
+                    objectPtr: { handle: String(handle), type: 17 },
+                    index: i,
+                  });
+                  const typeRaw = extractValue(pinTypeResult);
+                  // enums: String → returns "PT_TEXTURE" (string), not 5 (number)
+                  if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) {
+                    pin.type = typeRaw;
+                  } else {
+                    const typeNum = Number(typeRaw ?? 0);
+                    pin.type = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+                  }
+                } catch {
+                  // Some pins may not report type
+                }
+
+                let connectedHandle = 0;
+                try {
+                  const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                    objectPtr: { handle: String(handle), type: 17 },
+                    pinIx: i,
+                  });
+                  connectedHandle = extractHandle(connResult) ?? 0;
+                } catch {
+                  // Not graph-connected, try pin-owned
+                }
+                if (!connectedHandle) {
+                  try {
+                    const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
+                      objectPtr: { handle: String(handle), type: 17 },
+                      pinIx: i,
+                    });
+                    connectedHandle = extractHandle(ownedResult) ?? 0;
+                  } catch {
+                    // Pin has no node
+                  }
+                }
+                pin.connected_handle = connectedHandle;
+
+                if (connectedHandle && connectedHandle !== 0) {
+                  try {
+                    const connName = await client.callMethod('ApiItem', 'name', {
+                      objectPtr: { handle: String(connectedHandle), type: 16 },
+                    });
+                    pin.connected_name = extractValue(connName) ?? '';
+                  } catch {
+                    // Skip if name lookup fails
+                  }
+                }
+
+                info.pins.push(pin);
+              } catch (pinErr: any) {
+                info.pins.push({
+                  index: i,
+                  error: `failed to read pin: ${pinErr?.message || pinErr}`,
+                });
+              }
             }
           }
         } catch {
