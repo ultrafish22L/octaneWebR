@@ -46,6 +46,7 @@ React/TypeScript web frontend for Octane renderer, communicating via gRPC throug
 - **Be critically honest about renders**: Never sugarcoat. "Flat brown" is not "golden hour sky." Evaluate what you actually see, not what you intended.
 - **Recipes are prose creative briefs**: Not rigid. Prose vision + reference values + "what would elevate." Goal = render to wow.
 - **Both must agree to lock**: Stop for user review after each meaningful iteration. Present critical self-review, then pause.
+- **Track render times**: Call `get_render_status` after every render and report timing (samples, seconds, resolution). Track wall-clock build time too.
 
 ## Creative Philosophy
 
@@ -79,6 +80,11 @@ For every scene, this is the rendering order. Each step gets a render + honest c
 1. Clear scene (delete-all-nodes method, not reset_project)
 2. Test render: create RT → `start_render(RT)` → env → connect → `set_camera` → `save_render` → verify
 3. `set_camera` is the ONLY way to force re-render after structural changes
+
+## Cooked Recipes
+
+- `recipes/glass_metal_COOKED.md` — Scene 1 exact MCP call sequence. No interpretation needed.
+- **Speed run benchmark**: Scene 1 from reset → final render in ~8 MCP rounds, 19s Octane render (5000 samples @ 1024×512).
 
 ## Architecture Quick Ref
 

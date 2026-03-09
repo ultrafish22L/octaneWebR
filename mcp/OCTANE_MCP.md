@@ -40,6 +40,9 @@ INFRA BUILD:       create RT → start_render(RT) → set_camera(HERO)
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render/restart_render do NOT refresh geometry.
+
+TIMING RULE:       Call get_render_status after EVERY render.
+                   Report: samples, seconds, resolution. Track build time too.
 ```
 
 ---
