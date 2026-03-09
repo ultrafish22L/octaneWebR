@@ -269,12 +269,14 @@ Any light source visible through transparent glass shows as a **refracted shape*
 - Diffuse: `(1, 0.84, 0)` — NOT yellow `(1,1,0)`
 - Specular: 1.0
 - Roughness: 0.1-0.2 (polished) or 0.3 (brushed)
+- **IOR: 100** — this is critical. Default IOR 1.5 makes gold look like painted plastic. High IOR flattens the Fresnel curve so the material reflects at all angles, giving proper metallic behavior. The diffuse color becomes the metallic tint. This applies to ALL metallic glossy materials (gold, copper, bronze, etc.).
 
 **Chrome/Mirror (Glossy)**
 
 - Diffuse: `(0.9, 0.9, 0.92)`
 - Specular: 1.0
 - Roughness: 0.01 (mirror) or 0.05 (polished)
+- IOR: 100 (metallic Fresnel)
 
 **Matte Plastic (Diffuse)**
 
@@ -309,14 +311,14 @@ Any light source visible through transparent glass shows as a **refracted shape*
 
 ### Glass Visibility Decision Tree
 
-| Want This Look                      | Material               | Key Settings                              | Lighting Requirement                            |
-| ----------------------------------- | ---------------------- | ----------------------------------------- | ----------------------------------------------- |
-| Tinted glass (blue, green, red)     | Specular               | Transmission color, IOR 1.5               | Any — color shows in all lighting               |
-| Clear glass with rainbow dispersion | Specular               | IOR 1.8+, dispersion on, fake shadows off | Strong directional light (quad or mesh emitter) |
-| Frosted/translucent glass           | Specular               | Roughness 0.1-0.3, transmission white     | Any                                             |
-| Golden/warm metallic                | **Glossy** (NOT glass) | Diffuse `(1, 0.84, 0)`, specular 1.0      | Any                                             |
-| Amber glass                         | Specular               | Transmission `(1, 0.6, 0.1)`              | **Warm light only** — cool light gets absorbed  |
-| Crystal clear (invisible!)          | Specular               | Transmission white, IOR 1.5               | ❌ Won't be visible in uniform light            |
+| Want This Look                      | Material               | Key Settings                                      | Lighting Requirement                            |
+| ----------------------------------- | ---------------------- | ------------------------------------------------- | ----------------------------------------------- |
+| Tinted glass (blue, green, red)     | Specular               | Transmission color, IOR 1.5                       | Any — color shows in all lighting               |
+| Clear glass with rainbow dispersion | Specular               | IOR 1.8+, dispersion on, fake shadows off         | Strong directional light (quad or mesh emitter) |
+| Frosted/translucent glass           | Specular               | Roughness 0.1-0.3, transmission white             | Any                                             |
+| Golden/warm metallic                | **Glossy** (NOT glass) | Diffuse `(1, 0.84, 0)`, specular 1.0, **IOR 100** | Any                                             |
+| Amber glass                         | Specular               | Transmission `(1, 0.6, 0.1)`                      | **Warm light only** — cool light gets absorbed  |
+| Crystal clear (invisible!)          | Specular               | Transmission white, IOR 1.5                       | ❌ Won't be visible in uniform light            |
 
 **Glass traps to avoid:**
 
@@ -335,6 +337,23 @@ Any light source visible through transparent glass shows as a **refracted shape*
 ---
 
 ## 4. Camera & Composition
+
+### Framing is 70% of the Deal
+
+**The camera position and object placement determine 70% of the final result.** Materials and lighting are the other 30%. Before creating any nodes:
+
+1. Study the reference — describe what you see (depth formation, margins, how objects fill the frame)
+2. Know the exact camera position. If you can't state it, you don't have a visual plan.
+3. Know every object's position in 3D space, including Z-depth relationships.
+4. For demos: set the hero camera FIRST. Objects pop into the composed frame one by one.
+
+**Framing strategy scales with scene complexity:**
+
+- **Simple scenes** (few objects): Framing carries everything — depth arrangements, spacing, and margins matter most because there's nothing else to lean on. Use specific formations (V, diagonal, staggered) to create dimension.
+- **Complex scenes** (many objects): Frame the PRIMARY subject clearly, surround with peripheral context that supports but doesn't compete. The eye should know exactly where to go. Peripheral context is usually env/daylight — set it up early and fast so every object appears in a lit, atmospheric frame from the moment it's created.
+- **Animation**: All of the above plus FLOW — how the eye travels through the scene over time.
+
+**Don't put objects in a flat line.** Real Z-depth between objects creates parallax and dimension that no amount of material work can fake.
 
 ### Composition Fundamentals
 

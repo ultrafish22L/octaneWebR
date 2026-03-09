@@ -20,8 +20,8 @@ Best practices, observed patterns, and reference info for building scenes via th
 
 1. **Read the recipe** — never rely on memory or context summaries
 2. **Read this file's critical rules** — refresh technical knowledge
-3. **Render after every object** — save_render → Read PNG → evaluate → show to human
-4. **Start camera wide/back/above** — build in overview mode, zoom to hero angles later
+3. **Plan the frame FIRST** — know the camera position, object positions, and depth formation BEFORE creating any nodes. If you can't state the camera position, you don't have a plan. Framing is 70% of the result.
+4. **Render after every object** — save_render → Read PNG → evaluate → show to human
 5. **Never trust session continuations** for scene state — verify or start fresh
 
 ### Cooking a Recipe
@@ -137,15 +137,21 @@ Proven 2026-03-08: deleted 21 connected nodes from full ARCTIC scene, zero crash
 
 ### Setup Order (for demos)
 
-RT → camera → env → film → kernel → geo group. Start rendering right after RT creation.
+**Hero camera from the start.** The viewer sees objects pop into the final composed frame — much more cinematic than building in overview and jump-cutting. Know the camera position BEFORE you create the first node.
+
+RT → hero camera → env → film → kernel → geo group. Start rendering right after RT creation. Env/daylight is peripheral context — get it in FAST so the human always reviews objects in a lit, atmospheric frame.
 
 1. Clear scene (delete method or `reset_project` if user is present)
 2. `create_node(NT_RENDERTARGET)` → RT handle + pin handles from response
-3. `start_render(RT)` + `set_camera(0, 1, 3.2 → 0, 1, 0)`
+3. `start_render(RT)` + `set_camera(HERO_POSITION → HERO_TARGET)` — the FINAL camera, not a placeholder
 4. `create_node(NT_ENV_DAYLIGHT)` → connect to RT pin 1 → `set_camera` to refresh
-5. Film: `get_node_info(film_settings_handle)` → pin 0 → "Image resolution" child → `set_attribute(child, 185, AT_INT2=4, {1024,1024})`
+5. Film: `get_node_info(film_settings_handle)` → pin 0 → "Image resolution" child → `set_attribute(child, 185, AT_INT2=4, {1024,576})`
 6. `create_node(NT_KERN_PATHTRACING)` → connect to RT pin 6 → `set_camera` to refresh
 7. `create_node(NT_GEO_GROUP)` → `set_attribute(group, 113, AT_INT=3, 8)` → connect to RT pin 3 → `set_camera`
+
+### Setup Order (for iteration)
+
+Same as demos but start camera wide/back/above. Iterate on framing after objects are in.
 
 ### Emission Workaround
 
@@ -387,17 +393,21 @@ Files (must be **absolute paths** — relative paths don't resolve):
 
 All require `get_node_info` to discover child handles first, then `set_attribute(child, 185, type, value)`.
 
-| Material       | Type                  | Key Attributes                                                |
-| -------------- | --------------------- | ------------------------------------------------------------- |
-| **White wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.9, 0.9, 0.9})`                      |
-| **Red wall**   | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.65, 0.05, 0.05})`                   |
-| **Green wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.12, 0.45, 0.15})`                   |
-| **Glass**      | NT_MAT_SPECULAR       | IOR child → `(185, 9, 1.5)` + smooth child → `(185, 1, true)` |
-| **Gold**       | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0.15, Albedo=(1.0, 0.84, 0.0)           |
-| **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0, Albedo=white                         |
-| **Plastic**    | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.2, Specular=0.5                       |
-| **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                          |
-| **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)             |
+| Material       | Type                  | Key Attributes                                                                     |
+| -------------- | --------------------- | ---------------------------------------------------------------------------------- |
+| **White wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.9, 0.9, 0.9})`                                           |
+| **Red wall**   | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.65, 0.05, 0.05})`                                        |
+| **Green wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.12, 0.45, 0.15})`                                        |
+| **Glass**      | NT_MAT_SPECULAR       | IOR child → `(185, 9, 1.5)` + smooth child → `(185, 1, true)`                      |
+| **Gold**       | NT_MAT_GLOSSY         | Diffuse=(1, 0.84, 0), Specular=1.0, Roughness=0.15, **IOR=100** (metallic Fresnel) |
+| **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0, Albedo=white                                              |
+| **Plastic**    | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.2, Specular=0.5                                            |
+| **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                                               |
+| **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)                                  |
+
+### Metallic Fresnel — CRITICAL
+
+NT_MAT_GLOSSY defaults to IOR 1.5 (glass). At low IOR, specular reflections only appear at grazing angles — the material looks like painted plastic, not metal. **For any metallic material (gold, chrome, copper, etc.), set IOR to 100** on the glossy material's `index` pin (pin 12). This flattens the Fresnel curve so it reflects at all angles, giving proper metallic behavior. The diffuse color then acts as the metallic tint.
 
 For IOR values and material creative guidance, see `OCTANE_CREATIVE.md` Section 3.
 
