@@ -1,4 +1,6 @@
-# Cornell Box Recipe — ARCTIC
+# Cornell Box — ARCTIC
+
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
 _The polar opposite of SPICYOTOY. Where that one burns, this one freezes._
 

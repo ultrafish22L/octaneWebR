@@ -1,27 +1,38 @@
 # The Beacon (Scene 9)
 
-A tall glass pillar stands on a dark mirror floor, lit from within, against a starfield backdrop.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Dark texture environment using a starfield image (`ORBX/assets/starfield.jpg`). Very low power — just enough to provide subtle ambient fill and stars in the background. No daylight.
+A tall glass pillar standing on a dark mirror floor against a starfield backdrop. The pillar glows from within — a single light source embedded inside it refracts through the glass, casting intricate caustic patterns on the mirror floor below. The pillar IS the light. A luminous beacon in the void of space.
 
-## Floor
+**The mirror floor doubles everything.** The pillar's glow extends downward into the reflection — a luminous column that appears to stretch both up into the stars and down into an infinite mirror dimension. This doubling transforms a single object into a compositional axis that divides the image vertically.
 
-A large mirror floor stretching out beneath the pillar. Dark glossy material — high specular reflection, very low roughness. The glass pillar's glow should reflect in the floor's surface.
+**Portrait orientation matches the subject.** A tall, narrow pillar demands a vertical frame. 1080x1920 (9:16) gives the pillar room to breathe vertically while keeping the starfield backdrop tight on the sides. The vertical format emphasizes the beacon's height and the column-of-light effect in the floor reflection.
 
-## The Pillar
+**Low angle hero shot.** Camera at y=0.4, looking up at mid-pillar height. This makes the pillar feel monumental — a structure, not a prop. The offset right position breaks symmetry. The starfield is visible above and around the pillar, grounding it in deep space.
 
-A tall, narrow glass column (mesh: `pillar.obj`) standing upright at the center. Clear specular glass material with IOR ~1.5. Scaled tall and thin — a vertical beacon shape. Positioned at center, sitting on the floor.
+**The light-through-glass trade-off.** A quad light inside the pillar will show as a refracted rectangle through the glass. In this scene, that's acceptable — even desirable. The refracted shape becomes part of the beacon's glow, a burning core visible through translucent glass. The warm-tinted transmission `(1.0, 0.95, 0.85)` softens the refracted light with warmth.
 
-## Lighting
+**Environment at low power** — just enough for visible stars and subtle ambient fill, not enough to compete with the internal glow. The beacon should be the brightest thing in the scene by far.
 
-A quad light embedded inside or just behind the pillar, providing the internal glow. Warm white emission, moderate-to-high power. The light refracts through the glass, creating caustic patterns on the floor. No other direct lights — the pillar IS the light source.
+## Reference Values
 
-## Camera
+| Element         | Setting                                                           | Value                                                               |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Environment** | Texture                                                           | `ORBX/assets/starfield.jpg`, power 1.0-1.5                          |
+| **Floor**       | Mesh                                                              | `floor.obj`, scale 10x                                              |
+|                 | Material                                                          | Glossy — diffuse `(0.02, 0.02, 0.03)`, specular 0.9, roughness 0.01 |
+| **Pillar**      | Mesh                                                              | `pillar.obj`, tall/narrow, center                                   |
+|                 | Material                                                          | Specular — IOR 1.5, transmission `(1.0, 0.95, 0.85)`, smooth on     |
+| **Light**       | Quad inside pillar, position `(0, 1, 0)`                          |
+|                 | 4000K warm white, power 3000-5000, size 0.3                       |
+| **Camera**      | Position `(1, 0.4, 3)` → Target `(0, 1.5, 0)`, 1080x1920 portrait |
 
-Low angle, looking slightly up at the pillar. Positioned close enough to see detail in the glass refraction, far enough to see the floor reflections and starfield behind. Portrait orientation (1080x1920).
+## What Would Elevate This Further
 
-## The Look
-
-A luminous glass beacon against deep space. The pillar glows from within, light refracting through its glass surfaces and casting intricate caustic patterns on the mirror floor below. Stars visible in the dark background. Moody, sci-fi atmosphere.
+- Bloom post-processing to make the internal glow bleed outward through the glass
+- A subtle warm-to-cool gradient in the pillar's transmission — warm at the base (near the light), cooler at the top
+- Environment medium (light fog) near the floor to create ground-level haze around the base
+- Try a slightly blue/cyan tinted glass instead of warm — beacon becomes an alien artifact rather than a warm lantern
+- Consider a ring of small objects around the base (like stones around a campfire) for scale reference

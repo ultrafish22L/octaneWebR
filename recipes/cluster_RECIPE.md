@@ -1,31 +1,42 @@
 # The Cluster (Scene 10)
 
-Five colored glass marbles sit clustered together on a dark reflective floor under soft daylight.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Daylight environment at low-moderate power (~0.3). Provides natural sky lighting and subtle blue fill. Not too bright — the scene should feel intimate, not overexposed.
+Five colored glass marbles clustered together on a dark reflective floor. Each marble transmits its own jewel color — ruby, sapphire, emerald, amber, amethyst — and each casts its color as caustic light onto the dark floor below. A celebration of colored glass and Octane's spectral rendering.
 
-## Floor
+**Five marbles = rule of odds.** The grouping feels natural and dynamic because odd numbers prevent the brain from pairing objects into static couples. Arrange them as a loose, organic cluster — some touching, some with small gaps — not a grid, not a line, not a perfect pentagon. Natural randomness sells realism.
 
-A large flat floor with glossy dark material. High specular, low roughness — reflective enough to mirror the marbles above. Extends well beyond the cluster in all directions.
+**The dark floor is the gallery wall.** Each marble projects its transmission color onto the dark surface as caustic light — five distinct pools of jewel-toned color. Ruby red, sapphire blue, emerald green, amber gold, amethyst purple. The dark mirror surface also reflects each marble from below, creating a jewel-box-within-a-jewel-box doubling effect.
 
-## The Marbles
+**Colored transmission solves the invisible glass problem.** Clear glass is invisible in uniform lighting — only caustic shadows reveal it. These saturated transmission colors ensure each marble is immediately visible, distinct, and vivid. The colors aren't painted on — they're the result of wavelength-selective absorption through the glass, physically accurate in Octane's spectral engine.
 
-Five glass spheres (mesh: `sphere_hd.obj`) arranged in a tight cluster on the floor. Each marble is a different color of specular glass (IOR 1.5, smooth):
+**Daylight at low power for natural illumination.** Not too bright — intimate, not overexposed. Daylight provides enough warm+cool spectrum to illuminate all five colors. Note: amber glass absorbs blue/green wavelengths, so the amber marble may appear darker than the others under cool-dominant light. That's correct physics.
 
-- **Ruby** — deep red transmission (1, 0.1, 0.1)
-- **Sapphire** — rich blue transmission (0.1, 0.2, 1)
-- **Emerald** — vivid green transmission (0.1, 0.8, 0.2)
-- **Amber** — warm golden transmission (1, 0.7, 0.1)
-- **Amethyst** — purple transmission (0.6, 0.1, 0.8)
+**Elevated three-quarter view.** Camera above and to the side, looking down into the cluster. This angle shows each marble's color clearly and reveals the caustic light patterns on the floor between and around the group. Portrait orientation (1080x1920) emphasizes the cluster's vertical depth when viewed at this angle.
 
-All roughly the same size (~0.6 scale). Arranged in a natural-looking cluster — not a grid. Some touching, some with small gaps. Low reflection values so the colored transmission dominates.
+## Reference Values
 
-## Camera
+| Element         | Setting                                                         | Value                                                               |
+| --------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Environment** | Daylight, power ~0.3                                            |
+| **Floor**       | Mesh                                                            | `floor.obj`, scale 10x                                              |
+|                 | Material                                                        | Glossy — diffuse `(0.05, 0.05, 0.06)`, specular 0.8, roughness 0.02 |
+| **Marbles**     | Mesh                                                            | `sphere_hd.obj`, scale ~0.6 each, tight cluster, on floor           |
+|                 | All Specular, IOR 1.5, smooth on                                |
+|                 | Ruby                                                            | transmission `(1, 0.1, 0.1)`                                        |
+|                 | Sapphire                                                        | transmission `(0.1, 0.2, 1)`                                        |
+|                 | Emerald                                                         | transmission `(0.1, 0.8, 0.2)`                                      |
+|                 | Amber                                                           | transmission `(1, 0.7, 0.1)`                                        |
+|                 | Amethyst                                                        | transmission `(0.6, 0.1, 0.8)`                                      |
+| **Camera**      | Position `(2, 2, 3)` → Target `(0, 0.2, 0)`, 1080x1920 portrait |
 
-Elevated three-quarter view, looking down at the cluster from above and to the side. Close enough to see each marble's color and the caustics they cast. Portrait orientation (1080x1920).
+## What Would Elevate This Further
 
-## The Look
-
-A jewel-like collection of colored glass spheres. Each marble transmits its color onto the dark floor below as colored caustic light. The marbles reflect each other subtly. The dark floor mirrors the arrangement from below. Clean, elegant, colorful.
+- Vary the marble sizes slightly (0.5, 0.55, 0.6, 0.65, 0.5) — uniform size screams CG
+- A subtle warm key light from the side to create highlights on one face of each marble while the other falls to shadow — daylight alone can feel flat
+- Dark polished wood or stone floor texture instead of flat grey
+- One marble slightly separated from the group (the "rebel") for visual tension
+- Shallow DOF with focus on the center marble — the outer marbles softly blur
+- Consider adding dispersion to one or two of the marbles for rainbow edge effects

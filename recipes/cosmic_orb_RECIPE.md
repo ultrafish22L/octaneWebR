@@ -1,27 +1,43 @@
-# Cosmic Orb (Scene 4)
+# Cosmic Orb (Scene 4) — LOCKED
 
-A large glass sphere against a starfield, acting as a cosmic lens that refracts the universe with rainbow dispersion.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Starfield texture environment with a visible purple nebula. Moderate power — bright enough to illuminate the sphere and create visible star points.
+A large glass sphere suspended in deep space, refracting the cosmos with rainbow dispersion. No floor, no lights, no distractions — just a crystal ball floating in the void with the universe bending through it.
 
-## Floor
+The starfield wraps around the sphere — the milky way band refracts through the glass, splitting into prismatic rainbow rings at the equator. This is Octane's spectral rendering superpower on full display: real chromatic dispersion across the continuous visible spectrum, not an RGB approximation. The sphere is simultaneously transparent and transformative — a lens that warps the universe into rainbows.
 
-Dark reflective floor beneath the sphere, reflecting the starfield.
+**Negative space is the composition**. The orb sits in vast darkness with breathing room on all sides. This isn't a crop-it-tight product shot — it's a lone object in infinity. The emptiness makes the sphere feel significant, almost sacred. Pull the camera back further than feels natural.
 
-## The Orb
+**Environment IS the lighting**. No artificial lights — the starfield at moderate power provides all illumination. This was a deliberate choice: any quad light or mesh emitter visible through glass creates ugly refracted shapes. Environment-only lighting gives clean, even illumination that lets the dispersion physics shine without distracting artifacts. The purple/blue nebula tones provide natural color contrast against the clear glass.
 
-A large glass sphere (sphere_hd.obj or sphere_uv.obj). Specular glass with high IOR and dispersion enabled. Fills most of the frame. The sphere refracts the entire starfield behind it — stars appear as radial streaks with rainbow color separation. The purple nebula is visible distorted through the glass. Vivid chromatic aberration rings near the edges.
+**Scale**: The camera is slightly low and offset, looking slightly up at the orb. This isn't dramatic — just enough elevation change to suggest the orb has presence, that it matters. A 45° FOV keeps the perspective natural for interactive orbiting.
 
-## Lighting
+## Reference Values
 
-A quad light visible through the glass sphere, creating a bright highlight with rainbow dispersion halo. The starfield provides ambient illumination.
+| Element         | Setting    | Value                                                              |
+| --------------- | ---------- | ------------------------------------------------------------------ |
+| **Environment** | Texture    | `ORBX/assets/starfield.jpg` (Seedream v4)                          |
+|                 | Power      | 3.5                                                                |
+| **Orb**         | Mesh       | `sphere_hd.obj`, placement scale 2.0, position `(0, 1, 0)`         |
+|                 | Material   | Specular — IOR 1.9, dispersion 0.12, transmission clear, smooth on |
+| **Camera**      | Position   | `(1, 1.5, 7)` — offset, pulled back                                |
+|                 | Target     | `(0, 1, 0)` — sphere center                                        |
+|                 | FOV        | 45°                                                                |
+|                 | Resolution | 1280x720 landscape                                                 |
 
-## Camera
+## What Didn't Work (Proven)
 
-Close-up, nearly filling the frame with the sphere. Slightly off-center. The camera looks through the glass to see the refracted cosmos within. Landscape orientation.
+- **Floor**: Felt wrong for floating-in-space. Removed.
+- **Quad light**: Refracted rectangles through glass at every position/power. Unavoidable.
+- **Gold tint**: Amber transmission absorbed too much in dark env — opaque dark blob.
+- **FLUX starfield**: Too much nebula, not enough dark void. No power setting looked right.
+- **Close camera**: Sphere crammed against edges. Needed breathing room for orbiting.
 
-## The Look
+## What Would Elevate This Further
 
-A cosmic crystal ball. The glass sphere transforms the starfield into a swirling kaleidoscope of refracted light — rainbow rings, dispersed star points, and a distorted nebula. The sphere is simultaneously a window into and a lens distorting the universe behind it.
+- A higher-quality starfield (real deep-space HDRI from Poly Haven if one exists with good contrast)
+- Subtle DOF at wide aperture — the starfield softly blurs behind the sharp glass sphere
+- Film stock tone mapping to add cinematic color grading (cooler tones, deeper blacks)
+- A second smaller sphere nearby for scale reference and visual interest (though minimalism has its own power)

@@ -1,31 +1,46 @@
 # Neon Noir (Scene 2)
 
-The same three-sphere composition as Glass & Metal, but relit with dark moody lighting that reveals chromatic dispersion in the glass.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Dark environment, very low ambient. The scene is primarily lit by a warm area light, creating a noir atmosphere.
+The same three spheres from Glass & Metal, but the sun has set and a single warm light remains. This is the noir version — everything the daylight scene hid is now revealed.
 
-## Floor
+In daylight, the glass sphere was pretty. In darkness, it becomes _spectacular_. Chromatic dispersion rings — vivid concentric rainbows — appear where the single warm overhead light enters the glass. These rings are invisible in bright multi-source daylight because the spectral bands overlap and cancel. In controlled single-light darkness, each color separates and burns. This is the physics payoff of noir lighting — Octane's spectral engine showing what it can really do.
 
-A warm-toned reflective floor. Catches the light and sphere reflections.
+The gold sphere catches one warm crescent of metallic fire against shadow. The orange matte sphere (shifted from Scene 1's red to match the warm palette) glows softly like a dying ember. Everything else falls to black.
 
-## The Spheres
+**This is an 8:1+ lighting ratio scene** — one light, no fill, near-black environment. Maximum drama. The environment isn't zero-black — just enough ambient to keep shadows from becoming absolute voids, to hint that there's a world beyond the light cone.
 
-Three spheres arranged left to right:
+**Same camera as Scene 1.** That's the point — identical geometry, identical angle, completely different mood. Lighting alone transforms the scene. The viewer gets to compare and understand what lighting does.
 
-- **Gold metallic** (left) — Glossy gold, now catching warm highlights from the area light against the dark background.
-- **Glass with dispersion** (center) — Specular glass showing vivid rainbow chromatic dispersion. The dark lighting makes the prismatic colors pop — visible rainbow rings and caustics.
-- **Orange matte** (right) — Warm diffuse orange, glowing under the directional light.
+**Depth through contrast**: Dark environment = background. Lit surfaces = midground. Floor reflections = foreground layer below. Warm amber against cool near-black = natural warm/cool depth separation.
 
-## Lighting
+## Reference Values
 
-Warm area light positioned above/behind, creating dramatic directional illumination. The low-key lighting reveals the glass sphere's dispersion effects that were washed out in the daylight version.
+| Element           | Setting                                                   | Value                                                                           |
+| ----------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Environment**   | Texture color                                             | `(0.02, 0.02, 0.03)` — near-black, slight blue                                  |
+| **Floor**         | Material                                                  | Glossy — diffuse `(0.15, 0.1, 0.08)` (warm umber), specular 0.8, roughness 0.03 |
+| **Gold sphere**   | Material                                                  | Glossy — diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.15                   |
+| **Glass sphere**  | Material                                                  | Specular — transmission `(0.9, 0.9, 1.0)`, IOR 1.5, dispersion on               |
+| **Orange sphere** | Material                                                  | Diffuse — color `(0.9, 0.4, 0.05)`                                              |
+| **Light**         | Single quad, position `(0, 2.5, 1)`, rotation `(180,0,0)` |
+|                   | 3500K warm amber, power 500-2000, size 3                  |
+| **Camera**        | Position `(-3, 1.2, 6)` → Target `(0, 0.2, 0)`, 1280x720  |
 
-## Camera
+### Floor Texture (Recommended)
 
-Same eye-level composition as Glass & Metal. Landscape orientation.
+```
+dark polished concrete surface, seamless tileable texture, flat orthographic top-down material scan,
+evenly lit diffuse studio lighting, no shadows no highlights no reflections,
+PBR albedo map, photorealistic, square 1:1
+```
 
-## The Look
+## What Would Elevate This Further
 
-A moody, cinematic reinterpretation. The dark environment transforms the glass sphere into a prism of rainbow light. Gold gleams warmly, orange glows softly. Chromatic dispersion is the star — vivid rainbow caustics that only emerge in controlled, dark lighting.
+- Bloom on the dispersion rings to make them glow beyond the glass
+- Film stock tone mapping (Kodak warm stock) for cinematic amber push
+- Vignetting to darken frame edges and compress focus to center
+- Try the light more to the side (45°) for rim-lit gold and stronger form shadows
+- PMC kernel for cleaner caustic convergence in the glass

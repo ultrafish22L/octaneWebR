@@ -35,6 +35,127 @@ function extractValue(result: any): any {
   return result?.result ?? result?.value ?? result;
 }
 
+// --- Pin type validation ---
+
+/** NodePinType enum (from octaneids.proto) → human-readable name */
+export const PIN_TYPE_NAMES: Record<number, string> = {
+  0: 'PT_UNKNOWN',
+  1: 'PT_BOOL',
+  2: 'PT_FLOAT',
+  3: 'PT_INT',
+  4: 'PT_TRANSFORM',
+  5: 'PT_TEXTURE',
+  6: 'PT_EMISSION',
+  7: 'PT_MATERIAL',
+  8: 'PT_CAMERA',
+  9: 'PT_ENVIRONMENT',
+  10: 'PT_IMAGER',
+  11: 'PT_KERNEL',
+  12: 'PT_GEOMETRY',
+  13: 'PT_MEDIUM',
+  14: 'PT_PHASEFUNCTION',
+  15: 'PT_FILM_SETTINGS',
+  16: 'PT_ENUM',
+  17: 'PT_OBJECTLAYER',
+  18: 'PT_POSTPROCESSING',
+  19: 'PT_RENDERTARGET',
+  20: 'PT_WORK_PANE',
+  21: 'PT_PROJECTION',
+  22: 'PT_DISPLACEMENT',
+  23: 'PT_STRING',
+  24: 'PT_RENDER_PASSES',
+  25: 'PT_RENDER_LAYER',
+  26: 'PT_VOLUME_RAMP',
+  27: 'PT_ANIMATION_SETTINGS',
+  28: 'PT_LUT',
+  29: 'PT_RENDER_JOB',
+  30: 'PT_TOON_RAMP',
+  31: 'PT_BIT_MASK',
+  32: 'PT_ROUND_EDGES',
+  33: 'PT_MATERIAL_LAYER',
+  34: 'PT_OCIO_VIEW',
+  35: 'PT_OCIO_LOOK',
+  36: 'PT_OCIO_COLOR_SPACE',
+  37: 'PT_OUTPUT_AOV_GROUP',
+  38: 'PT_OUTPUT_AOV',
+  39: 'PT_TEX_COMPOSITE_LAYER',
+  40: 'PT_OUTPUT_AOV_LAYER',
+  44: 'PT_BLENDING_SETTINGS',
+  45: 'PT_POST_VOLUME',
+  46: 'PT_TRACE_SET_VISIBILITY_RULE_GROUP',
+  47: 'PT_TRACE_SET_VISIBILITY_RULE',
+};
+
+/** Cache: node handle → output pin type name (e.g. "PT_GEOMETRY") */
+const outTypeCache = new Map<number, string>();
+
+/** Cache: node handle → array of pin info (index, type, name) */
+const pinInfoCache = new Map<number, { index: number; type: string; name: string }[]>();
+
+/** Get a node's output pin type, with caching */
+async function getOutType(client: OctaneMcpClient, handle: number): Promise<string | undefined> {
+  const cached = outTypeCache.get(handle);
+  if (cached) return cached;
+  try {
+    const result = await client.callMethod('ApiItem', 'outType', {
+      objectPtr: { handle: String(handle), type: 16 },
+    });
+    const typeNum = Number(extractValue(result) ?? 0);
+    const typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+    outTypeCache.set(handle, typeName);
+    return typeName;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Get all pin info for a node (type + name per pin), with caching */
+async function getPinInfo(
+  client: OctaneMcpClient,
+  handle: number
+): Promise<{ index: number; type: string; name: string }[]> {
+  const cached = pinInfoCache.get(handle);
+  if (cached) return cached;
+
+  const pins: { index: number; type: string; name: string }[] = [];
+  try {
+    const countResult = await client.callMethod('ApiNode', 'pinCount', {
+      objectPtr: { handle: String(handle), type: 17 },
+    });
+    const count = Number(extractValue(countResult) ?? 0);
+
+    for (let i = 0; i < count; i++) {
+      let typeName = 'PT_UNKNOWN';
+      let pinName = '';
+      try {
+        const typeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
+          objectPtr: { handle: String(handle), type: 17 },
+          index: i,
+        });
+        const typeNum = Number(extractValue(typeResult) ?? 0);
+        typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+      } catch {
+        // Pin may not report type
+      }
+      try {
+        const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
+          objectPtr: { handle: String(handle), type: 17 },
+          index: i,
+        });
+        pinName = String(extractValue(nameResult) ?? '');
+      } catch {
+        // Pin may not have name
+      }
+      pins.push({ index: i, type: typeName, name: pinName });
+    }
+  } catch {
+    // Node may not support pins
+  }
+
+  pinInfoCache.set(handle, pins);
+  return pins;
+}
+
 export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(
     'create_node',
@@ -153,6 +274,49 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
     },
     async ({ target_handle, pin_index, pin_name, pin_id, source_handle, evaluate }) => {
       try {
+        // --- Pin type validation ---
+        // Query source node's output type and target pin's expected type.
+        // If they mismatch, reject the connection before sending to Octane.
+        const sourceType = await getOutType(client, source_handle);
+        let targetPinType: string | undefined;
+        let resolvedPinName: string | undefined;
+        let resolvedPinIndex: number | undefined;
+
+        if (pin_index !== undefined) {
+          // Direct index — get pin type for this index
+          const pins = await getPinInfo(client, target_handle);
+          const pin = pins.find(p => p.index === pin_index);
+          targetPinType = pin?.type;
+          resolvedPinName = pin?.name;
+          resolvedPinIndex = pin_index;
+        } else if (pin_name !== undefined) {
+          // Name-based — find pin by name
+          const pins = await getPinInfo(client, target_handle);
+          const pin = pins.find(p => p.name === pin_name);
+          targetPinType = pin?.type;
+          resolvedPinName = pin_name;
+          resolvedPinIndex = pin?.index;
+        }
+        // pin_id route: skip validation (rare, hard to resolve without full iteration)
+
+        if (
+          sourceType &&
+          targetPinType &&
+          sourceType !== 'PT_UNKNOWN' &&
+          targetPinType !== 'PT_UNKNOWN' &&
+          sourceType !== targetPinType
+        ) {
+          const pinDesc = resolvedPinName
+            ? `'${resolvedPinName}' (index ${resolvedPinIndex})`
+            : `index ${resolvedPinIndex}`;
+          return errorResult(
+            `Pin type mismatch: target pin ${pinDesc} expects ${targetPinType} ` +
+              `but source node (handle ${source_handle}) outputs ${sourceType}. ` +
+              `Use get_node_info to check pin types before connecting.`
+          );
+        }
+
+        // --- Perform the connection ---
         if (pin_id !== undefined) {
           // Connect by PinId enum using connectTo
           await client.callMethod('ApiNode', 'connectTo', {
@@ -167,6 +331,8 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
             target: target_handle,
             pin_id,
             source: source_handle,
+            source_type: sourceType,
+            target_pin_type: targetPinType,
           });
         }
         if (pin_name !== undefined) {
@@ -183,6 +349,8 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
             target: target_handle,
             pin_name,
             source: source_handle,
+            source_type: sourceType,
+            target_pin_type: targetPinType,
           });
         }
         if (pin_index === undefined) {
@@ -200,6 +368,8 @@ export function registerNodeTools(server: McpServer, client: OctaneMcpClient) {
           target: target_handle,
           pin: pin_index,
           source: source_handle,
+          source_type: sourceType,
+          target_pin_type: targetPinType,
         });
       } catch (error: any) {
         return errorResult(error);

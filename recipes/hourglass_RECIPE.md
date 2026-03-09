@@ -1,31 +1,41 @@
 # The Hourglass (Scene 11)
 
-Two spheres stacked vertically — polished gold on the bottom, blue glass on top — sitting on a dark mirror floor with warm side-lighting.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Dark texture environment, very low power (~0.25). Provides minimal ambient fill. The scene is primarily lit by the area light.
+Two spheres stacked vertically — polished gold on the bottom, blue glass on top. A single warm side-light. The warm and cool materials together in one vertical composition, each transforming the same light differently.
 
-## Floor
+**This is a material contrast study.** The gold sphere is opaque, reflective, warm — it catches the side-light as a rich metallic streak, a crescent of fire. The blue glass sphere above is semi-transparent — the gold sphere below is visible distorted through it, refracted and shifted blue. The same warm light creates completely different effects on each material. Metal reflects; glass refracts. Warm absorbs; cool transmits.
 
-A large flat mirror floor with glossy material. Dark diffuse, high specular reflection, very low roughness. Should clearly reflect both spheres and the warm light.
+**The mirror floor creates three things, not two.** The reflection doubles the stacked pair into a column of four — gold-blue-blue-gold stretching from reflection to reality to glass to gold. The warm light streak reflects too, becoming a luminous band cutting across the dark mirror surface.
 
-## The Spheres
+**Warm side-light, no fill.** Single warm amber light from the side (3500K, 3000-5000 power). The warm temperature favors the gold sphere — it blazes. The blue glass absorbs some of the warm light and transmits it cooler — the natural filtering creates the warm/cool contrast without needing two different colored lights. Lighting ratio is 4:1+ — dramatic but not noir-level black.
 
-Two spheres (mesh: `sphere_hd.obj`) stacked vertically at center:
+**Low camera on the warm side.** Position on the lit side, at y=0.4, looking slightly up at the stacked pair. This makes the composition feel tall and sculptural. The warm-lit faces of both spheres are presented to the camera while the shadow sides fall away. Portrait orientation matches the vertical stack.
 
-**Bottom sphere — Polished Gold**: Glossy metallic material. Warm gold diffuse (0.95, 0.7, 0.05), gold-tinted specular (1, 0.85, 0.35), very low roughness (0.02). Sits on the floor. Scale ~0.6.
+**Quad light through glass warning.** The light will be visible through the blue glass sphere as a refracted rectangle. Position it so the refraction is either out of the glass sphere's direct transmission path, or accept it as part of the warm glow. The glass will warp and color-shift the refracted shape — sometimes this looks intentional and beautiful.
 
-**Top sphere — Blue Glass**: Specular glass material. Blue transmission (0.3, 0.5, 1.0), very low reflection (0.05), IOR 1.5, smooth. Rests on top of the gold sphere. Same scale. Slightly transparent — you can see the gold sphere distorted through it.
+## Reference Values
 
-## Lighting
+| Element         | Setting                                                           | Value                                                               |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Environment** | Texture color                                                     | `(0.02, 0.02, 0.03)`, power ~0.25                                   |
+| **Floor**       | Mesh                                                              | `floor.obj`, scale 10x                                              |
+|                 | Material                                                          | Glossy — diffuse `(0.03, 0.03, 0.04)`, specular 0.9, roughness 0.01 |
+| **Gold sphere** | Mesh                                                              | `sphere_hd.obj`, scale ~0.6, on floor                               |
+|                 | Material                                                          | Glossy — diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.02       |
+| **Blue glass**  | Mesh                                                              | `sphere_hd.obj`, scale ~0.6, on top of gold                         |
+|                 | Material                                                          | Specular — transmission `(0.3, 0.5, 1.0)`, IOR 1.5, smooth on       |
+| **Light**       | Single quad, position `(3, 2, 1)` — side, elevated                |
+|                 | 3500K warm amber, power 3000-5000, size 2-3                       |
+| **Camera**      | Position `(2, 0.4, 3)` → Target `(0, 0.5, 0)`, 1080x1920 portrait |
 
-A single warm quad light positioned to the side, slightly elevated. High power (~5000). Illuminates the warm side of both spheres, leaving the opposite side in shadow. No cool fill light — the environment provides subtle ambient only.
+## What Would Elevate This Further
 
-## Camera
-
-Low angle, positioned on the warm-lit side. Looking slightly up at the sphere pair. Close enough to see material detail. Portrait orientation (1080x1920).
-
-## The Look
-
-A warm/cool material study. The gold sphere catches the warm side-light with rich metallic highlights. The blue glass sphere above it is semi-transparent, refracting the gold sphere below and the warm light. The mirror floor reflects the entire composition. Moody, warm-dominant lighting with the blue glass providing cool contrast.
+- Try gold-tinted specular highlights `(1, 0.85, 0.35)` on the gold sphere — metallic specular reflections carry the material's color in reality
+- A very subtle cool rim light from behind to separate the blue sphere from the dark background
+- Film stock tone mapping to push the warm/cool contrast further
+- Slight DOF to soften the floor reflection, keeping the spheres sharp
+- Consider a slight size difference between the spheres — the gold slightly larger as a stable "base", the glass slightly smaller as a delicate "crown"
+- Vignetting to darken the frame edges and focus on the stacked pair

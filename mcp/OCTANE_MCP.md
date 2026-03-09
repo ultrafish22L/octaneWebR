@@ -6,29 +6,33 @@ Best practices, observed patterns, and reference info for building scenes via th
 
 ---
 
-## Demo Workflow
+## Scene Building Workflow
 
-### Three Layers
+### Two Knowledge Sources
 
-| Layer         | File                             | Purpose                                                                                              |
-| ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Recipe**    | e.g. `CORNELL_RECIPE.md`         | Pure prose — what the scene should look like. No tech.                                               |
-| **Knowledge** | `OCTANE_MCP.md` (this file)      | All technical rules, attribute IDs, crash prevention.                                                |
-| **Cooked**    | e.g. `CORNELL_COOKED_CLASSIC.md` | Recipe compiled to literal MCP calls. Variant suffix required (e.g. `_CLASSIC`, `_WARM`, `_CHROME`). |
-
-### Three Phases
-
-1. **Recipe** — Human writes/approves a prose scene description.
-2. **Test & Refine** — Build from recipe + this file's knowledge. Render after EVERY object. Critically evaluate each render (shape? color? position? material?). If wrong, STOP and fix. Iterate until perfect.
-3. **Cook** — Compile the proven working sequence into literal MCP calls. Review in critical persona. Human approves. Future runs execute mechanically.
+| Source        | File                        | Purpose                                                                    |
+| ------------- | --------------------------- | -------------------------------------------------------------------------- |
+| **Recipe**    | `recipes/*_RECIPE.md`       | Creative direction — prose vision + reference values. Not rigid.           |
+| **Technical** | `OCTANE_MCP.md` (this file) | API rules, pin layouts, crash prevention, MCP patterns.                    |
+| **Creative**  | `OCTANE_CREATIVE.md`        | Lighting, materials, composition, depth, scale — how to make it look good. |
 
 ### Session Start Rules
 
-1. **Read the recipe file** — never rely on memory or context summaries
-2. **Read this file's critical rules** — refresh knowledge
-3. **Read or generate the cooked file** if one exists
-4. **Render after every change** — save_render → Read PNG → evaluate → show to human (both Phase 2 and replay)
-5. **Never trust session continuation summaries** for MCP scene state — verify or start fresh
+1. **Read the recipe** — never rely on memory or context summaries
+2. **Read this file's critical rules** — refresh technical knowledge
+3. **Render after every object** — save_render → Read PNG → evaluate → show to human
+4. **Start camera wide/back/above** — build in overview mode, zoom to hero angles later
+5. **Never trust session continuations** for scene state — verify or start fresh
+
+### Cooking a Recipe
+
+A **cooked recipe** is a recipe compiled into a precise, reproducible sequence of literal MCP calls that constructs the scene exactly as proven. It locks a specific look technically — every handle, attribute, and connection in order.
+
+- **Only cook at user request** — don't proactively create cooked files
+- **Only cook after a scene is proven** — build from the recipe first, iterate until it looks right, THEN cook
+- **Format**: Pseudocode with `→ VAR` for stored handles, `VAR.pins[N]` for pin children, `${ASSETS}` for asset path
+- **File naming**: `{scene}_COOKED.md` in the same directory as the recipe
+- **Review critically** — a cooked file is a contract. Every call must be verified against the proven build.
 
 ---
 
@@ -101,8 +105,6 @@ connect_nodes(...)
 set_camera(current_position, current_target)   # forces re-render
 ```
 
-**Avoid batching deferred changes** — using `connect_nodes(evaluate:false)` × N then `update_scene()` forces a heavy synchronous eval that crashed "The Summoning" (5th emissive object, 2026-03-08). Instead, use `evaluate:true` (default) so each connection evaluates incrementally, then `set_camera` to refresh. `update_scene()` is fine for small flushes but dangerous for large batched structural changes in complex scenes.
-
 ### Connection Rules
 
 - **RT pins (0-11)**: `pin_index` works fine
@@ -144,14 +146,6 @@ RT → camera → env → film → kernel → geo group. Start rendering right a
 5. Film: `get_node_info(film_settings_handle)` → pin 0 → "Image resolution" child → `set_attribute(child, 185, AT_INT2=4, {1024,1024})`
 6. `create_node(NT_KERN_PATHTRACING)` → connect to RT pin 6 → `set_camera` to refresh
 7. `create_node(NT_GEO_GROUP)` → `set_attribute(group, 113, AT_INT=3, 8)` → connect to RT pin 3 → `set_camera`
-
-### Camera (Cornell Box)
-
-```
-position: (0, 1, 3.2)  target: (0, 1, 0)
-```
-
-Interior view from front, frames entire 2x2x2 box.
 
 ### Emission Workaround
 
@@ -401,18 +395,11 @@ All require `get_node_info` to discover child handles first, then `set_attribute
 | **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                          |
 | **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)             |
 
-### IOR Reference
-
-| Material      | IOR  | Material      | IOR  |
-| ------------- | ---- | ------------- | ---- |
-| Air           | 1.0  | Water         | 1.33 |
-| Glass (crown) | 1.52 | Glass (flint) | 1.62 |
-| Diamond       | 2.42 | Acrylic       | 1.49 |
-| Ice           | 1.31 | Crystal       | 2.00 |
+For IOR values and material creative guidance, see `OCTANE_CREATIVE.md` Section 3.
 
 ---
 
-## Lighting
+## Lighting (MCP Pattern)
 
 ### Area Light (Emission Panel)
 
@@ -423,48 +410,21 @@ NT_GEO_OBJECT (thin box: H=0.01)
   → connect to geo_group via pin_name "Input N"
 ```
 
-### Environment
-
-- **Daylight**: Best for outdoors. Connect to RT pin 1.
-- **Texture**: HDRI-based. Good for studio/product shots.
-
-### Tips
-
-- Interior scenes: emission panels + PT kernel (DL kernel won't bounce light)
-- Larger area lights = softer shadows
-- Power 100-300 for room-scale panels
+For lighting design, mood recipes, and environment strategy, see `OCTANE_CREATIVE.md` Sections 2 and 8.
 
 ---
 
 ## Kernels
 
-| Kernel              | Use           | Notes                                              |
-| ------------------- | ------------- | -------------------------------------------------- |
-| **Path Tracing**    | Most scenes   | ALWAYS use for interiors. DL kernel renders white. |
-| **Direct Lighting** | Quick preview | No bounced light. Only for open/exterior scenes.   |
-| **PMC**             | Caustics      | Slow but handles difficult glass caustics.         |
+| Kernel              | Type ID | Notes                                              |
+| ------------------- | ------- | -------------------------------------------------- |
+| **Path Tracing**    | 25      | ALWAYS use for interiors. DL kernel renders white. |
+| **Direct Lighting** | 24      | No bounced light. Only for open/exterior scenes.   |
+| **PMC**             | 23      | Slow but handles difficult glass caustics.         |
 
-- **Samples**: 256 preview, 1000 clean, 5000+ final
-- **Film resolution**: Set on Image resolution grandchild of RT
+For kernel selection strategy, caustics tips, and denoiser settings, see `OCTANE_CREATIVE.md` Section 9.
 
 ---
-
-## Cornell Box Build Order
-
-Wall order: left (red) → right (green) → floor → ceiling → back. Then light, tall box, sphere.
-
-| Group Pin | Object       | Dimensions      | Position                      | Material               |
-| --------- | ------------ | --------------- | ----------------------------- | ---------------------- |
-| Input 1   | Left wall    | 0.01x2.0x2.0    | (-1,1,0)                      | red (0.65,0.05,0.05)   |
-| Input 2   | Right wall   | 0.01x2.0x2.0    | (1,1,0)                       | green (0.12,0.45,0.15) |
-| Input 3   | Floor        | 2.0x0.01x2.0    | (0,0,0)                       | white                  |
-| Input 4   | Ceiling      | 2.0x0.01x2.0    | (0,2,0)                       | white                  |
-| Input 5   | Back wall    | 2.0x2.0x0.01    | (0,1,-1)                      | white                  |
-| Input 6   | Light panel  | 0.47x0.01x0.38  | (0,1.99,0)                    | blackbody power=200    |
-| Input 7   | Tall box     | 0.59x1.19x0.59  | (0.29,0.59,0.33) rotY=22      | white (0.9,0.9,0.9)    |
-| Input 8   | Glass sphere | mesh sphere.obj | (-0.33,0.30,-0.16) scale=0.59 | specular IOR=1.5       |
-
-For each object: create → set attributes → connect to geo group via `pin_name` → `set_camera` to refresh viewport.
 
 ---
 
@@ -497,18 +457,9 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 
 ---
 
-## Scene Wisdom (proven the hard way)
+## Scene Wisdom
 
-### Glass & Transparency
-
-- **Clear glass is invisible in uniform lighting**: Proven in Cluster and Eclipse scenes. Clear glass spheres in daylight/uniform env are completely invisible — only caustic shadows on the floor show evidence. Use colored transmission (e.g. amber, blue) for visibility.
-- **Quad lights always visible through glass**: Even tiny (0.1) quad lights with extreme power show as refracted rectangles through transparent glass. Only fix: move lights out of frame or disconnect.
-- **Amber glass absorbs cool light**: Amber transmission (1, 0.6, 0.1) absorbs blue/green wavelengths completely. Cool-toned light can't illuminate amber glass — sphere appears black on the cool-lit side. Use glossy metallic gold instead of amber glass if you need warm tones.
-
-### Render Engine Stability
-
-- **Engine corrupts after ~50+ create/delete cycles**: After extensive node creation/deletion in a single session, the render engine may stop rendering mesh geometry (shows only environment + built-in geo, renders at impossible speed). Loading .orbx files also fails. Requires full Octane restart.
-- **Eclipse/backlight impossible without bloom**: A matte black sphere with a bright light behind it produces no visible corona in path tracing. Would need volumetrics or post-processing bloom.
+> **Full creative wisdom is in `OCTANE_CREATIVE.md`** — glass/transparency rules, environment strategy, lighting design, material recipes, camera composition, AI generation tips, and session health. This section retains only technical/API-specific notes.
 
 ### Project File Workflow
 
@@ -516,6 +467,11 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 - **.orbx** = packaged scene with embedded assets. **Portable** — use for final delivery. But external file references break on reload (textures look inside package, not on disk).
 - **Workflow**: Save .ocs during development, .orbx for final delivery. Unpack .orbx with `octane.project.unpackPackage()` Lua API if needed.
 - **.orbx reload loses mesh connections**: After save/load .orbx, placement nodes may change pin layout. Meshes on late geo group pins may disconnect. External OBJ paths also lost. Verify and reconnect after reload.
+
+### Render Engine Stability
+
+- **Engine corrupts after ~50+ create/delete cycles**: After extensive node creation/deletion in a single session, the render engine may stop rendering mesh geometry. Requires full Octane restart.
+- **Eclipse/backlight impossible without bloom**: Matte sphere + backlight produces no visible corona in path tracing. Needs post-processing bloom.
 
 ---
 
@@ -555,29 +511,74 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 
 ---
 
-## Asset Sources
+## Pin Type Validation
 
-- **3D Models**: Sketchfab, TurboSquid (free), Poly Haven
-- **HDRIs**: [Poly Haven](https://polyhaven.com/hdris) — .hdr/.exr for NT_ENV_TEXTURE
-- **Textures**: [Poly Haven](https://polyhaven.com/textures), [ambientCG](https://ambientcg.com)
-- **OTOY Studio**: https://otoy.studio/ — AI text-to-image + image-to-3D (see workflow below)
-- **Formats**: .obj, .fbx, .stl, .ply, .abc | .png, .jpg, .exr, .hdr | .vdb | .orbx, .ocs
+`connect_nodes` validates pin types before connecting. If the source node's output type doesn't match the target pin's expected type, the connection is rejected with an error message. Types are queried via `ApiItem.outType` and `ApiNode.pinTypeIx`, cached per handle.
 
-Save to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
+`get_node_info` now returns a `type` field on each pin (e.g. `PT_GEOMETRY`, `PT_MATERIAL`, `PT_KERNEL`). Use this to know what a pin accepts before connecting.
 
-Cooked files use `${ASSETS}` — resolve to the absolute path above at runtime (Octane requires absolute paths).
+---
 
-### OTOY Studio → Octane Pipeline (proven 2026-03-08)
+## ApiInfo — Octane's Type System Introspection
 
-**Text-to-Image** (Seedream v4):
+`ApiInfo` (gRPC service `ApiInfoService`) exposes Octane's complete type system — the same data OctaneSE uses internally. This is the foundation for making octaneWebR type-aware.
 
-1. Navigate to https://otoy.studio/ (user must be logged in)
-2. Enter prompt, select aspect ratio, click Create (~10s generation)
-3. Click thumbnail in gallery → Generation Details panel
-4. Click Download button (use `find("Download button")` + ref-click — coordinate clicks unreliable)
-5. File lands in `C:/Users/johnc/Downloads/otoy_studio_image_{prompt}_{timestamp}.jpg`
-6. Copy to `ORBX/assets/` → use as NT_TEX_IMAGE filename
+### Available Methods
 
-**Image-to-3D** (Seed3D): Navigate to `/image-to-3d`, upload reference image, 2 credits per generation. Not yet tested end-to-end.
+| Method                                                              | Returns                                                   | Purpose                                                                        |
+| ------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `getNodeTypes()`                                                    | All ~300 node types                                       | Complete node catalog                                                          |
+| `nodeInfo(NodeType)`                                                | `ApiNodeInfo`                                             | outType, category, description, pinInfoCount, attributeInfoCount per node type |
+| `nodePinInfo(NodeType, pinIx)`                                      | `ObjectRef` → `getApiNodePinInfo(ref)` → `ApiNodePinInfo` | Pin id, type, name, label, description, defaultNodeType                        |
+| `attributeInfo(NodeType, AttrId)`                                   | `ApiAttributeInfo`                                        | Attribute type, isArray, description, defaults                                 |
+| `attributeInfo1(NodeType, attrIx)`                                  | Same, by index                                            | Enumerate all attributes for a node type                                       |
+| `getCompatibleTypes(PinType)`                                       | Compatible node types + graph types                       | Authoritative pin compatibility map                                            |
+| `getPinTypes()`                                                     | All pin types                                             | Complete pin type catalog                                                      |
+| `getPinTypeName(type)` / `getPinTypeColor(type)`                    | Name, ARGB color                                          | Pin type metadata                                                              |
+| `getAttributeTypes()`                                               | All attribute types                                       | Complete attribute type catalog                                                |
+| `getNodeTypeName(type)` / `getAttributeName(id)` / `getPinName(id)` | Name strings                                              | Forward lookups                                                                |
+| `getAttributeId(name)` / `getPinId(name)`                           | IDs                                                       | Reverse lookups (name → ID)                                                    |
 
-**Full pipeline proven**: OTOY Studio generate → download → NT_TEX_IMAGE → material diffuse → render. Used for ice texture on ARCTIC Cornell box floor.
+### Key Data Structures
+
+**`ApiNodeInfo`** (from `octaneinfos.proto`):
+
+```
+type, outType, category, defaultName, description, pinInfoCount, attributeInfoCount,
+movableInputCountAttribute, movableInputPinCount, movableInputFormat, movableInputName,
+isHidden, isCreatableByApi, isLinker, texNodeTypeInfo, compatibilityModeInfos
+```
+
+**`ApiNodePinInfo`** (from `octaneinfos.proto`):
+
+```
+id (PinId), type (NodePinType), staticName, staticLabel, description, groupName,
+defaultNodeType, pinColor, isTypedTexturePin, minVersion, endVersion,
+boolInfo, floatInfo, intInfo, enumInfo, texInfo, transformInfo, stringInfo, ...
+```
+
+**`ApiAttributeInfo`** (from `octaneinfos.proto`):
+
+```
+id, type, isArray, description, defaultInts, defaultLongs, defaultFloats, defaultString
+```
+
+### Future: Type Catalog Generator
+
+A generator script (`mcp/scripts/generate-type-catalog.ts`) can query ApiInfo exhaustively and produce a comprehensive JSON/TypeScript constants file containing all node types with their full pin layouts, attributes, and compatibility maps. This would:
+
+- Replace hand-curated `PinTypes.ts` and `OctaneTypes.ts` with generated, authoritative data
+- Enable type-safe MCP tools (validate connections, attributes, node creation)
+- Provide a `get_type_info(node_type)` tool so Claude can query pin layouts without creating nodes
+- Auto-generate the pin layout tables in this document
+- Make octaneWebR's type knowledge identical to OctaneSE
+
+---
+
+## Asset Paths
+
+Save assets to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
+
+Octane requires **absolute paths** with forward slashes: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/file.obj`
+
+For asset sources, generation pipelines, and texture prompts, see `OCTANE_CREATIVE.md` Section 1.

@@ -8,6 +8,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { PIN_TYPE_NAMES } from './node';
 
 function jsonResult(data: any) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
@@ -198,6 +199,18 @@ export function registerSceneTools(server: McpServer, client: OctaneMcpClient) {
                 pin.name = extractValue(pinNameResult) ?? '';
               } catch {
                 // Some pins may not have names
+              }
+
+              // Get pin type (e.g. PT_GEOMETRY, PT_MATERIAL, PT_TEXTURE)
+              try {
+                const pinTypeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
+                  objectPtr: { handle: String(handle), type: 17 },
+                  index: i,
+                });
+                const typeNum = Number(extractValue(pinTypeResult) ?? 0);
+                pin.type = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
+              } catch {
+                // Some pins may not report type
               }
 
               // Get connected node: try graph-connected first, then pin-owned

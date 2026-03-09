@@ -1,27 +1,45 @@
 # Crystal Diamond (Scene 3)
 
-A large diamond-cut gemstone on a light floor, refracting light into rainbow fire.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Dark environment with controlled lighting. The background fades to deep gray/black, keeping focus on the diamond.
+A single diamond on a light floor, surrounded by darkness. One dramatic light. Pure luxury.
 
-## Floor
+Diamond has the highest IOR of any common transparent material — 2.4. Combined with Octane's spectral path tracing, each facet becomes a tiny prism, splitting white light into vivid rainbow fire inside the stone. Reds, greens, and blues should flicker through the crystal faces, and prismatic caustics should scatter across the floor like fallen jewels of light.
 
-A light reflective floor that catches the diamond's shadow and scattered light.
+**This scene is about absolute isolation.** Dark background, single subject, no distractions. Jeweler's photography on black velvet — let the stone do the talking. The light floor provides contrast from below and catches the caustic rainbows. Every element exists to serve the diamond: the dark background isolates it, the light floor catches its fire, the side light reveals its soul.
 
-## The Diamond
+**Low camera = monumental gemstone.** At y=0.4, looking slightly up, the diamond feels larger than life. Higher angles make it feel like a trinket on a table. The offset right position breaks symmetry for a natural, photographic composition.
 
-A faceted diamond shape (diamond.obj mesh). Specular glass material with high IOR (~2.4, diamond). The faceted geometry splits light into vivid rainbow dispersion — reds, greens, blues visible through the crystal faces. The top table facet shows the most dramatic internal fire.
+**Sharp, small light source.** Smaller lights create sharper, more defined caustics and more vivid spectral fire. A large soft light turns the rainbow into mush. One strong light from above-right, hitting at an angle that maximizes internal refraction — that's where the magic happens.
 
-## Lighting
+## Reference Values
 
-Directional light from above/behind, hitting the diamond at an angle that maximizes internal refraction and dispersion. The light enters through facets and splits into spectral colors.
+| Element         | Setting                                                   | Value                                                               |
+| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Environment** | Texture color                                             | `(0.03, 0.02, 0.04)` — near-black, purple hint                      |
+| **Floor**       | Mesh                                                      | `floor.obj`, scale 10x                                              |
+|                 | Material                                                  | Glossy — diffuse `(0.85, 0.85, 0.88)`, specular 0.7, roughness 0.05 |
+| **Diamond**     | Mesh                                                      | `diamond.obj`                                                       |
+|                 | Material                                                  | Specular — IOR 2.4, dispersion on, transmission clear, smooth on    |
+| **Light**       | Single quad, position `(2, 3, -1)`                        |
+|                 | 5500K neutral white, power 2000-5000, size 1.5            |
+| **Camera**      | Position `(1.5, 0.4, 3)` → Target `(0, 0.3, 0)`, 1280x720 |
 
-## Camera
+### Floor Texture (Optional)
 
-Close-up, slightly below eye level, looking up at the diamond. The camera frames the diamond large in frame to showcase the internal fire. Landscape orientation.
+```
+polished light grey stone surface, seamless tileable texture, flat orthographic top-down material scan,
+evenly lit diffuse studio lighting, no shadows no highlights no reflections,
+PBR albedo map, photorealistic, square 1:1
+```
 
-## The Look
+## What Would Elevate This Further
 
-A jeweler's showcase. The diamond's facets split white light into vivid rainbow fire inside the stone. The white lower portion catches direct light while the dark upper facets reveal the spectral colors within. Dramatic, luxurious, technically impressive dispersion rendering.
+- A very faint cool fill light from the opposite side (~10% of key, 8000K) so the shadow side still shows faceted geometry
+- PMC kernel for cleaner caustic convergence at IOR 2.4
+- Subtle DOF to blur the floor in the foreground, keeping the diamond razor-sharp
+- Film stock tone mapping for warmer blacks and richer highlights
+- Rotate the diamond until one large facet catches a specular flash — the "hero sparkle" moment
+- Dark fabric or velvet texture on the floor instead of flat grey

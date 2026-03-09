@@ -12,9 +12,9 @@
 - `ARCHITECTURE.md` — architecture, service layer, gRPC, theming
 - `TEST_PLAN.md` — 181 tests, testing rules (gold standard)
 - `IMPROVEMENTS.md` — 33-item backlog (includes MCP resilience items)
-- `mcp/OCTANE_MCP.md` — MCP rules, pin layouts, crash prevention (single source of truth)
-- `mcp/CORNELL_RECIPE.md` — Cornell box demo recipe (+ SPICYOTOY, ARCTIC variants)
-- `recipes/` — scene gallery recipes (13 scenes, prose format)
+- `mcp/OCTANE_MCP.md` — MCP technical reference: pin layouts, crash prevention, API patterns
+- `mcp/OCTANE_CREATIVE.md` — creative guide: lighting, materials, composition, depth, scale, environments, anti-CG
+- `recipes/` — all scene recipes (13 scenes + 3 Cornell variants, prose creative briefs with reference values)
 
 ## Testing Rules
 
@@ -27,6 +27,6 @@ All in `TEST_PLAN.md`. Key points:
 
 ## Status
 
-- **Version**: 1.4.5
+- **Version**: 1.4.6
 - **0 open bugs** — 4 known Octane API limitations (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken)
 - **Testing**: R1+R2+R3 complete. 181 tests, 16 bugs fixed and verified.

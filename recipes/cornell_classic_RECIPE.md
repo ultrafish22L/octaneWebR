@@ -1,4 +1,6 @@
-# Cornell Box
+# Cornell Box (Classic)
+
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
 A classic radiosity test scene used to validate global illumination. Everything is built inside a simple open-front room.
 

@@ -1,5 +1,7 @@
 # Cornell Box — SPICYOTOY
 
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
+
 A fiery reimagining of the classic Cornell box. Same room, completely different energy. The room feels like peering into a furnace — dark walls absorb light while two blazing accent walls throw fire-orange and electric magenta across every surface.
 
 ## The Room

@@ -1,31 +1,41 @@
 # The Ring (Scene 12)
 
-A large polished gold ring floats above a dark mirror floor, with a crystal sphere at its center refracting the stars behind it.
+> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
 
-## Environment
+## The Vision
 
-Starfield texture environment (starfield.jpg) at moderate power (~3.5). Provides a deep space backdrop with a visible purple nebula. Stars reflect faintly in the mirror floor and gold ring surface.
+A large polished gold ring floating above a dark mirror floor in deep space. A crystal sphere at its center refracts the starfield, bending the cosmos into a miniature universe framed by gold. Luxury meets infinity.
 
-## Floor
+**The ring is a frame within the frame.** The gold ring acts as a compositional device — it literally frames the crystal sphere and the starfield behind it. This creates a frame-within-a-frame composition: the image frame → the gold ring → the distorted cosmos inside the sphere. Three nested levels of containment drawing the eye inward, deeper, smaller.
 
-A large flat mirror floor (floor.obj, scaled 10x). Glossy material — very dark diffuse (0.02), bright specular (0.9), near-zero roughness (0.01). Reflects the ring, sphere, and starfield.
+**The crystal sphere is the window.** Clear glass (IOR 2.0) with the starfield behind it creates a miniature inverted cosmos visible through the glass — nebula clouds swirl, stars distort, the milky way bends. The sphere doesn't just sit inside the ring — it transforms everything behind it into something alien and beautiful.
 
-## The Ring
+**Warm gold against cold space = natural tension.** The gold ring catches warm directional light on one side, creating a rich metallic arc that fades to shadow on the other side. This warm crescent sits against the cold blue/purple starfield. The mirror floor reflects everything — ring, sphere, stars — creating a vertical axis of symmetry.
 
-A large gold ring (mesh: ring.obj) floating above the floor, tilted 15 degrees forward. Glossy metallic material — warm gold diffuse (0.95, 0.7, 0.05), gold-tinted specular (1, 0.85, 0.35), very low roughness (0.03). Scaled 1.5x, positioned at center (0, 1.2, 0). The gold catches the directional warm light on one side, fading to shadow on the other.
+**One strong warm light, far away and out of frame.** High power (20000-30000) compensates for the distance. The light creates directional warm highlights on the left side of the ring while the right falls to shadow — strong form that reveals the ring's three-dimensional shape. Positioned far upper-left behind the scene so it never appears through the crystal sphere.
 
-## The Crystal Sphere
+**Three-quarter overhead camera.** Slightly above and forward, looking down at the ring face. Shows the full ring circle with the crystal sphere at center. Portrait orientation for vertical impact with the floor reflection extending the composition downward.
 
-A crystal glass sphere (mesh: sphere_hd.obj) sitting at the center of the ring. Specular glass with high IOR (2.0) for strong refraction — the starfield and nebula appear beautifully distorted through it. Scale 0.55, positioned at the ring center (0, 1.2, 0). Clear transmission, smooth surface.
+## Reference Values
 
-## Lighting
+| Element            | Setting                                                              | Value                                                               |
+| ------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Environment**    | Texture                                                              | `ORBX/assets/starfield.jpg`, power ~3.5                             |
+| **Floor**          | Mesh                                                                 | `floor.obj`, scale 10x                                              |
+|                    | Material                                                             | Glossy — diffuse `(0.02, 0.02, 0.02)`, specular 0.9, roughness 0.01 |
+| **Ring**           | Mesh                                                                 | `ring.obj`, scale 1.5x, position `(0, 1.2, 0)`, tilted ~15° forward |
+|                    | Material                                                             | Glossy — diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.03       |
+| **Crystal sphere** | Mesh                                                                 | `sphere_hd.obj`, scale 0.55, position `(0, 1.2, 0)` (ring center)   |
+|                    | Material                                                             | Specular — IOR 2.0, transmission clear, smooth on                   |
+| **Light**          | Single quad, position `(-6, 3, -4)` — far upper-left behind          |
+|                    | 4500K neutral-warm, power 20000-30000, size 1.5                      |
+| **Camera**         | Position `(0.3, 2, 3.8)` → Target `(0, 0.95, 0)`, 1080x1920 portrait |
 
-A quad light positioned far to the upper-left behind the scene (-6, 3, -4), angled to graze the ring's surface. Size 1.5, warm emission (4500K, power 30000). Creates directional warm highlights on the left side of the ring and a caustic spot on the floor below the crystal sphere. Positioned out of camera frame.
+## What Would Elevate This Further
 
-## Camera
-
-Overhead three-quarter angle from slightly right of center (0.3, 2, 3.8), looking down at the ring center (0, 0.95, 0). Shows the full ring face with the crystal sphere at center. Portrait orientation (1080x1920).
-
-## The Look
-
-A floating gold ring in deep space, its polished surface catching warm directional light. A crystal sphere at its center acts as a lens, refracting the starfield and purple nebula behind it into a swirling miniature cosmos. The dark mirror floor reflects the entire composition. Sculptural, cosmic, elegant.
+- Gold-tinted specular `(1, 0.85, 0.35)` for more realistic metallic reflections
+- Dispersion on the crystal sphere for rainbow edge effects where stars refract
+- A second very faint cool fill light from the right to keep the shadow side of the ring from disappearing
+- Subtle bloom on the starfield brightest stars
+- Try rotating the ring tilt angle for the most dramatic light-catch on the gold surface
+- Consider a small emissive element at the sphere center — a tiny warm point light that illuminates the inner ring surface from within
