@@ -164,4 +164,4 @@ npm run lint         # ESLint
 
 OTOY © 2026 - All rights reserved. Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
-**Version**: 1.4.4 | **Status**: Active Development
+**Version**: 1.4.5 | **Status**: Active Development

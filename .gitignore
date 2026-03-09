@@ -39,7 +39,12 @@ Thumbs.db
 # Generated proto files (reference only)
 server/src/generated/
 
+# Octane scene files and renders (large binaries)
 renders/
+ORBX/assets/
+ORBX/*.orbx
+ORBX/*.ocs
+ORBX/tour/
 
 # Icon extraction temporary files
 extracted_icons/

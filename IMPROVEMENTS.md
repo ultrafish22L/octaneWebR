@@ -60,6 +60,14 @@ add to doc files for ai to reference https://render.otoy.com/forum/index.php log
 | 27  | **Progressive scene loading**                 | Hard       | Load first-level nodes + display, then connections. Preferentially load UI-visible items first.                              |
 | 28  | **Better graph arranging**                    | Hard       | Current DAG layout is basic. Investigate Sugiyama or force-directed algorithms.                                              |
 
+## MCP Server Resilience
+
+| #   | Item                                    | Difficulty | Notes                                                                                                                                                                                                                                              |
+| --- | --------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 31  | **Crash detection + recovery guidance** | Medium     | Detect ECONNRESET/ECONNREFUSED in MCP tools, return structured error with "Octane crashed — restart required, all handles invalidated" instead of raw gRPC errors.                                                                                 |
+| 32  | **Block primitive type changes**        | Easy       | `set_attribute` should refuse `set_attribute(node, 185, AT_INT=3, N)` on primitive enum children. Primitive type changes via gRPC are non-deterministic crash vectors (Sphere, Torus, Cone all crashed). Guide user to NT_GEO_MESH + .obj instead. |
+| 33  | **Deferred evaluation safety warning**  | Easy       | Track `evaluate:false` calls. If 3+ pile up, log a warning. Batching deferred changes + `update_scene()` crashed a 10-object emissive scene. Incremental `evaluate:true` is safer.                                                                 |
+
 ## Bugs
 
 | #   | Item                                                    | Difficulty | Notes                                                                                                                                                          |

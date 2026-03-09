@@ -59,15 +59,19 @@ RenderTarget
 
 ### Must-Do
 
-| Rule                              | Why                                                                                                                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Create NT_KERN_PATHTRACING**    | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                           |
-| **Film resolution on grandchild** | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})` |
-| **Geo group pin count first**     | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                        |
-| **Geo group uses pin_name**       | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.               |
-| **Handles are opaque**            | Never guess. Only use values from `create_node` or `get_node_info`.                                                     |
-| **Sphere primitive=20 CRASHES**   | Confirmed 2026-03-07. Immediate ECONNRESET. Use NT_GEO_MESH + sphere.obj instead.                                       |
-| **Torus primitive=22 CRASHES**    | Confirmed 2026-03-08. Delayed ECONNRESET. Use NT_GEO_MESH + torus.obj instead.                                          |
+| Rule                               | Why                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Create NT_KERN_PATHTRACING**     | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                             |
+| **Film resolution on grandchild**  | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`   |
+| **Geo group pin count first**      | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                          |
+| **Geo group uses pin_name**        | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                 |
+| **Handles are opaque**             | Never guess. Only use values from `create_node` or `get_node_info`.                                                       |
+| **Sphere primitive=20 CRASHES**    | Confirmed 2026-03-07. Immediate ECONNRESET. Use NT_GEO_MESH + sphere.obj instead.                                         |
+| **Torus primitive=22 CRASHES**     | Confirmed 2026-03-08. Delayed ECONNRESET. Use NT_GEO_MESH + torus.obj instead.                                            |
+| **ALL primitive changes suspect**  | Cone(3) also crashed. Box(0) works only because it's the DEFAULT. For any non-box shape, use NT_GEO_MESH + .obj.          |
+| **RT pin layout varies**           | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.               |
+| **Blackbody efficiency=0.025**     | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak. |
+| **Mesh A_RELOAD after A_FILENAME** | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.       |
 
 ### Confirmed Crashes
 
@@ -79,9 +83,10 @@ RenderTarget
 | `resetProject` (any variant)                                | Triggers "Save changes?" dialog — blocks autonomous work |
 | Heavy structural ops (destroy connected node, ungroup)      | Delayed ECONNRESET 5-9s after success                    |
 | NT_GEO_MESH batched build + `set_camera` eval               | ECONNRESET (not fully reproducible)                      |
+| `set_attribute(primitive_enum, 185, AT_INT=3, 3)` (Cone)    | Immediate ECONNRESET (non-deterministic)                 |
 | `update_scene()` in complex emissive scene (5+ lights + PT) | Immediate ECONNRESET (confirmed)                         |
 
-**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `set_camera()` → connect material/placement → `set_camera()`. See `CRASH.md` for details.
+**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `set_camera()` → connect material/placement → `set_camera()`.
 
 **Don't batch with evaluate:false + update_scene()**: The crash pattern is `connect_nodes(evaluate:false)` × N → `update_scene()`, which forces a heavy synchronous evaluation on the gRPC message thread. In complex scenes (5+ emissive objects, PT kernel), this crashes. **Instead: use `evaluate:true` (default) so each call evaluates incrementally.** Then `set_camera()` to refresh the render. This is also better for human viewers watching the live viewport — they see each change appear. `update_scene()` is safe for small flushes but avoid it for batched structural changes.
 
@@ -284,12 +289,22 @@ Use `get_node_info(specular)` to discover child handles, then `set_attribute(chi
 
 ## NT_EMIS_BLACKBODY Pin Layout (thermal emission)
 
-| Pin | Name              | Type         | Example                                       |
-| --- | ----------------- | ------------ | --------------------------------------------- |
-| 1   | power             | AT_FLOAT (9) | `set_attribute(child, 185, 9, 200)`           |
-| 5   | temperature       | AT_FLOAT (9) | `set_attribute(child, 185, 9, 6500)` (Kelvin) |
-| 2   | surfaceBrightness | AT_BOOL (1)  |                                               |
-| 4   | doubleSided       | AT_BOOL (1)  |                                               |
+| Pin | Name              | Type         | Example                                                                |
+| --- | ----------------- | ------------ | ---------------------------------------------------------------------- |
+| 0   | efficiency        | AT_FLOAT (9) | `set_attribute(child, 185, 9, 1.0)` — **MUST SET! Defaults to ~0.025** |
+| 1   | power             | AT_FLOAT (9) | `set_attribute(child, 185, 9, 200)`                                    |
+| 5   | temperature       | AT_FLOAT (9) | `set_attribute(child, 185, 9, 6500)` (Kelvin)                          |
+| 2   | surfaceBrightness | AT_BOOL (1)  |                                                                        |
+| 4   | doubleSided       | AT_BOOL (1)  |                                                                        |
+
+## NT_GEO_PLACEMENT Pin Layout (mesh wrapper)
+
+| Pin | Name      | Type            | Notes                                                                   |
+| --- | --------- | --------------- | ----------------------------------------------------------------------- |
+| 0   | transform | Transform value | `A_TRANSLATION=172`, `A_ROTATION=137`, `A_SCALE=139` (all AT_FLOAT3=11) |
+| 1   | geometry  | —               | Connect mesh here via `pin_name: "geometry"` (NOT pin_index 0!)         |
+
+**OBJ scale is multiplicative**: If the .obj defines 0.3×3×0.3 geometry, placement scale (0.3, 3, 0.3) = 0.09×9×0.09. Check the mesh's native size before scaling.
 
 ### Setting Material Color on Auto-Created Materials
 
@@ -482,6 +497,28 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 
 ---
 
+## Scene Wisdom (proven the hard way)
+
+### Glass & Transparency
+
+- **Clear glass is invisible in uniform lighting**: Proven in Cluster and Eclipse scenes. Clear glass spheres in daylight/uniform env are completely invisible — only caustic shadows on the floor show evidence. Use colored transmission (e.g. amber, blue) for visibility.
+- **Quad lights always visible through glass**: Even tiny (0.1) quad lights with extreme power show as refracted rectangles through transparent glass. Only fix: move lights out of frame or disconnect.
+- **Amber glass absorbs cool light**: Amber transmission (1, 0.6, 0.1) absorbs blue/green wavelengths completely. Cool-toned light can't illuminate amber glass — sphere appears black on the cool-lit side. Use glossy metallic gold instead of amber glass if you need warm tones.
+
+### Render Engine Stability
+
+- **Engine corrupts after ~50+ create/delete cycles**: After extensive node creation/deletion in a single session, the render engine may stop rendering mesh geometry (shows only environment + built-in geo, renders at impossible speed). Loading .orbx files also fails. Requires full Octane restart.
+- **Eclipse/backlight impossible without bloom**: A matte black sphere with a bright light behind it produces no visible corona in path tracing. Would need volumetrics or post-processing bloom.
+
+### Project File Workflow
+
+- **.ocs** = scene file referencing assets by disk path. **Reloadable** — use during iteration and camera work.
+- **.orbx** = packaged scene with embedded assets. **Portable** — use for final delivery. But external file references break on reload (textures look inside package, not on disk).
+- **Workflow**: Save .ocs during development, .orbx for final delivery. Unpack .orbx with `octane.project.unpackPackage()` Lua API if needed.
+- **.orbx reload loses mesh connections**: After save/load .orbx, placement nodes may change pin layout. Meshes on late geo group pins may disconnect. External OBJ paths also lost. Verify and reconnect after reload.
+
+---
+
 ## Debug
 
 ### Common Failures
@@ -493,8 +530,12 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 | Connect returns success but nothing changed | Used pin_index on geo group (silently fails)          | Use `pin_name: "Input N"` for geo group             |
 | Wrong aspect ratio                          | Film resolution set with AT_INT=3                     | Use AT_INT2=4 on Image resolution grandchild        |
 | Film resolution won't change                | Set on Film Settings node, not Image Resolution child | get_node_info(film) → pin 0 → child → set_attribute |
-| ECONNRESET/ECONNREFUSED                     | Octane crashed. STOP. User must restart.              | Avoid sphere primitive, heavy structural ops        |
+| ECONNRESET/ECONNREFUSED                     | Octane crashed. STOP. User must restart.              | Avoid primitive changes, heavy structural ops       |
 | Render grey/blue                            | Camera looking at sky through open wall               | Check wall positions and camera angle               |
+| Mesh loads but invisible                    | Missing A_RELOAD after setting A_FILENAME             | `set_attribute(mesh, 124, AT_BOOL=1, true)`         |
+| Emission very dim (40x weaker)              | Blackbody efficiency defaults to 0.025                | Set pin 0 child to 1.0                              |
+| Mesh renders impossibly fast, no geo        | Engine corruption from excessive create/delete cycles | Restart Octane completely                           |
+| Glass sphere invisible                      | Clear glass in uniform lighting                       | Use colored transmission for visibility             |
 
 ### Thread Safety
 
