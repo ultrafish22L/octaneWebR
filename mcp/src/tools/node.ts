@@ -162,7 +162,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. For NT_GEO_OBJECT, set primitive type on pin 0 enum child (get_node_info first!) via set_attribute(handle, 185, AT_INT=3, value). Primitive types: 0=Box, 1=Pill, 2=Capsule, 3=Cone, 4=Cylinder, 5=Dreidel, 6=Disc, 7=Dodecahedron, 8=Hemisphere, 9=Ellipsoid, 10=Torus(fat), 11=Hourglass, 12=Hyperboloid, 13=Icosahedron, 14=Octahedron, 15=Plane, 16=Pentagon, 17=Prism, 18=Quad, 19=Saddle, 20=Sphere, 21=Tetrahedron, 22=Torus, 23=TruncatedCone.',
+    'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. WARNING: NT_GEO_OBJECT defaults to Box primitive. DO NOT change the primitive type — ALL primitive type changes crash Octane (confirmed for Capsule, Cone, Sphere, Torus). For non-box shapes, use NT_GEO_MESH with .obj files (e.g., sphere_hd.obj, torus.obj, cone.obj).',
     {
       node_type: z
         .string()
@@ -253,6 +253,16 @@ export function registerNodeTools(
             }
           } catch {
             /* */
+          }
+        }
+
+        // Track primitive enum handles for crash prevention.
+        // ALL NT_GEO_OBJECT primitive type changes crash Octane (Sphere=20, Torus=22,
+        // Cone=3, Capsule=2 confirmed). Pin 0 child is the primitive enum.
+        if (node_type === 'NT_GEO_OBJECT') {
+          const pin0 = pins.find(p => p.index === 0);
+          if (pin0 && pin0.handle) {
+            client.primitiveEnumHandles.add(pin0.handle);
           }
         }
 

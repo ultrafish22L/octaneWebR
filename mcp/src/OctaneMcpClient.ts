@@ -45,6 +45,10 @@ export class OctaneMcpClient {
   // Handle-to-type tracking — shared across all tools
   readonly handleToTypeName = new Map<number, string>();
 
+  // Primitive enum handles — setting A_VALUE on these CRASHES Octane.
+  // Populated by create_node(NT_GEO_OBJECT) with pin 0 child handle.
+  readonly primitiveEnumHandles = new Set<number>();
+
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
   }
@@ -96,6 +100,7 @@ export class OctaneMcpClient {
   clearRootGraphCache(): void {
     this.rootGraphHandle = null;
     this.handleToTypeName.clear();
+    this.primitiveEnumHandles.clear();
     this.sessionInfo = { deviceNames: new Map() };
   }
 

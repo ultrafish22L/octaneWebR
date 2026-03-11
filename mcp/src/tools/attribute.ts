@@ -88,6 +88,34 @@ function buildValueParams(value: any, expectedType: number): Record<string, any>
   }
 }
 
+// Primitive type names for error messages
+const PRIMITIVE_NAMES: Record<number, string> = {
+  0: 'Box',
+  1: 'Pill',
+  2: 'Capsule',
+  3: 'Cone',
+  4: 'Cylinder',
+  5: 'Dreidel',
+  6: 'Disc',
+  7: 'Dodecahedron',
+  8: 'Hemisphere',
+  9: 'Ellipsoid',
+  10: 'Torus(fat)',
+  11: 'Hourglass',
+  12: 'Hyperboloid',
+  13: 'Icosahedron',
+  14: 'Octahedron',
+  15: 'Plane',
+  16: 'Pentagon',
+  17: 'Prism',
+  18: 'Quad',
+  19: 'Saddle',
+  20: 'Sphere',
+  21: 'Tetrahedron',
+  22: 'Torus',
+  23: 'TruncatedCone',
+};
+
 export function registerAttributeTools(server: McpServer, client: OctaneMcpClient) {
   const getMethod = USE_ALPHA5_API ? 'getByAttrID' : 'getValueByAttrID';
   const setMethod = USE_ALPHA5_API ? 'setByAttrID' : 'setValueByAttrID';
@@ -136,17 +164,39 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .boolean()
         .default(true)
         .describe(
-          'Trigger scene evaluation after setting. Set false to batch multiple attribute changes, then call update_scene. WARNING: structural changes (primitive types) may crash if batched.'
+          'Trigger scene evaluation after setting. Set false to batch multiple attribute changes, then call update_scene. WARNING: primitive type changes on NT_GEO_OBJECT are blocked — they crash Octane. Use NT_GEO_MESH + .obj files for non-box shapes.'
         ),
     },
     async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
+        // SAFETY GUARD: Block primitive type changes on NT_GEO_OBJECT.
+        // ALL non-default primitive changes crash Octane (Sphere=20, Torus=22, Cone=3,
+        // Capsule=2 confirmed). Use NT_GEO_MESH + .obj files for non-box shapes.
+        if (
+          client.primitiveEnumHandles.has(handle) &&
+          attribute_id === 185 &&
+          expected_type === AT_INT
+        ) {
+          const primName = PRIMITIVE_NAMES[Number(value)] ?? `unknown(${value})`;
+          return errorResult(
+            `BLOCKED: Setting primitive type to ${primName} (${value}) would crash Octane. ` +
+              `ALL NT_GEO_OBJECT primitive type changes cause ECONNRESET crashes. Box(0) works ` +
+              `only because it is the default. For non-box shapes, use NT_GEO_MESH with .obj ` +
+              `files instead (e.g., sphere_hd.obj, torus.obj). See OCTANE_MCP.md "Confirmed Crashes".`
+          );
+        }
+
         const valueParams = buildValueParams(value, expected_type);
+        // Always send evaluate: false in gRPC params (matching octaneWebR pattern).
+        // Then explicitly call ApiChangeManager.update() to trigger re-evaluation.
+        // Without this, Octane may double-evaluate (once from the set call's default
+        // evaluate=true, once from update()), which can cause render engine crashes.
         await client.callMethod('ApiItem', setMethod, {
           objectPtr: { handle: String(handle), type: 16 },
           attribute_id,
           expected_type,
           ...valueParams,
+          evaluate: false,
         });
 
         if (evaluate) {
