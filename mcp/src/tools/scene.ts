@@ -350,8 +350,10 @@ export function registerSceneTools(
     {},
     async () => {
       try {
+        const pendingCount = client.getDeferredEvalCount();
         await client.callMethod('ApiChangeManager', 'update', {});
-        return jsonResult({ success: true });
+        client.resetDeferredEvalCount();
+        return jsonResult({ success: true, flushed_deferred_count: pendingCount });
       } catch (error: any) {
         return errorResult(error);
       }

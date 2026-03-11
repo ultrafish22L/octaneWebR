@@ -162,7 +162,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. WARNING: NT_GEO_OBJECT defaults to Box primitive. DO NOT change the primitive type — ALL primitive type changes crash Octane (confirmed for Capsule, Cone, Sphere, Torus). For non-box shapes, use NT_GEO_MESH with .obj files (e.g., sphere_hd.obj, torus.obj, cone.obj).',
+    'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. NT_GEO_OBJECT defaults to Box primitive. Change primitive type via pin 0 enum child: set_attribute(enum_handle, 185, AT_INT=3, N). See OCTANE_MCP.md for primitive type values.',
     {
       node_type: z
         .string()
@@ -376,6 +376,15 @@ export function registerNodeTools(
           );
         }
 
+        // Track deferred evaluations
+        let evalWarning: string | undefined;
+        if (evaluate) {
+          client.resetDeferredEvalCount();
+        } else {
+          const warning = client.trackDeferredEval();
+          if (warning) evalWarning = warning;
+        }
+
         // --- Perform the connection ---
         if (pin_id !== undefined) {
           await client.callMethod('ApiNode', 'connectTo', {
@@ -392,6 +401,7 @@ export function registerNodeTools(
             source: source_handle,
             source_type: sourceType,
             target_pin_type: targetPinType,
+            ...(evalWarning && { warning: evalWarning }),
           });
         }
         if (pin_name !== undefined) {
@@ -409,6 +419,7 @@ export function registerNodeTools(
             source: source_handle,
             source_type: sourceType,
             target_pin_type: targetPinType,
+            ...(evalWarning && { warning: evalWarning }),
           });
         }
         if (pin_index === undefined) {
@@ -428,6 +439,7 @@ export function registerNodeTools(
           source: source_handle,
           source_type: sourceType,
           target_pin_type: targetPinType,
+          ...(evalWarning && { warning: evalWarning }),
         });
       } catch (error: any) {
         return errorResult(error);

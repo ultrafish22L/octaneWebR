@@ -18,6 +18,55 @@ function mcpLog(msg: string): void {
   fs.appendFileSync(MCP_LOG_PATH, `[${ts}] ${msg}\n`);
 }
 
+/** Crash signature patterns in gRPC error messages */
+const CRASH_PATTERNS = [
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'Stream removed',
+  'Connection dropped',
+  'socket hang up',
+];
+
+/**
+ * Detect Octane crash from gRPC error and throw a structured error message
+ * that tells the AI agent exactly what happened and what to do.
+ *
+ * Takes an optional client reference to clear cached handles on crash detection,
+ * preventing stale-handle errors after Octane restarts.
+ */
+function enhanceCrashError(
+  error: any,
+  service: string,
+  method: string,
+  client?: OctaneMcpClient
+): Error {
+  const msg = String(error?.message || error);
+  const isCrash = CRASH_PATTERNS.some(p => msg.includes(p));
+
+  if (isCrash) {
+    mcpLog(`CRASH DETECTED on ${service}.${method}: ${msg}`);
+    // Clear cached handles — they're all invalid after a crash
+    if (client) {
+      client.clearRootGraphCache();
+      mcpLog('Cleared root graph cache and handle maps after crash');
+    }
+    return new Error(
+      `OCTANE CRASHED (${service}.${method}): ${msg}\n` +
+        `\n` +
+        `Octane has terminated or lost connection. ALL node handles are now INVALID.\n` +
+        `\n` +
+        `Recovery steps:\n` +
+        `1. Ask the user to restart Octane\n` +
+        `2. Wait for Octane to finish launching\n` +
+        `3. Rebuild the scene from scratch (all handles are invalidated)\n` +
+        `\n` +
+        `Do NOT retry the same call — the connection is dead.`
+    );
+  }
+
+  return error;
+}
+
 // Resolve paths relative to mcp/dist/ at runtime
 const SERVER_ROOT = path.resolve(__dirname, '../../server');
 const GRPC_CLIENT_PATH = path.join(SERVER_ROOT, 'src/grpc/OctaneGrpcClientBase');
@@ -45,9 +94,14 @@ export class OctaneMcpClient {
   // Handle-to-type tracking — shared across all tools
   readonly handleToTypeName = new Map<number, string>();
 
-  // Primitive enum handles — setting A_VALUE on these CRASHES Octane.
-  // Populated by create_node(NT_GEO_OBJECT) with pin 0 child handle.
+  // Primitive enum handles — tracks pin 0 enum children of NT_GEO_OBJECT nodes.
+  // Populated by create_node(NT_GEO_OBJECT). Used for diagnostics only.
   readonly primitiveEnumHandles = new Set<number>();
+
+  // Deferred evaluation tracking — warns when evaluate:false calls pile up.
+  // Batching deferred changes + update_scene() crashed a 10-object emissive scene.
+  private deferredEvalCount = 0;
+  private static readonly DEFERRED_WARN_THRESHOLD = 3;
 
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
@@ -80,6 +134,8 @@ export class OctaneMcpClient {
       const result = await this.base.callMethod(service, method, transformed, options);
       mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`);
       return result;
+    } catch (error: any) {
+      throw enhanceCrashError(error, service, method, this);
     } finally {
       resolve!();
     }
@@ -132,6 +188,35 @@ export class OctaneMcpClient {
     const name = result?.value ?? result;
     this.sessionInfo.deviceNames.set(deviceIndex, name);
     return name;
+  }
+
+  /**
+   * Track a deferred evaluation (evaluate:false). Returns a warning string
+   * if the count exceeds the threshold, or null if safe.
+   */
+  trackDeferredEval(): string | null {
+    this.deferredEvalCount++;
+    if (this.deferredEvalCount >= OctaneMcpClient.DEFERRED_WARN_THRESHOLD) {
+      const count = this.deferredEvalCount;
+      mcpLog(`WARN: ${count} deferred evaluations pending — risk of crash on flush`);
+      return (
+        `WARNING: ${count} deferred evaluations (evaluate:false) are pending. ` +
+        `Batching many deferred changes and flushing with update_scene() has caused ` +
+        `crashes in complex scenes. Consider using evaluate:true (default) for ` +
+        `incremental evaluation instead.`
+      );
+    }
+    return null;
+  }
+
+  /** Reset deferred eval counter (call after evaluation happens) */
+  resetDeferredEvalCount(): void {
+    this.deferredEvalCount = 0;
+  }
+
+  /** Get current deferred eval count */
+  getDeferredEvalCount(): number {
+    return this.deferredEvalCount;
   }
 
   async checkHealth(): Promise<boolean> {

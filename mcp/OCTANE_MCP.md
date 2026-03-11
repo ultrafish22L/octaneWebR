@@ -104,32 +104,35 @@ RenderTarget
 
 ### Must-Do
 
-| Rule                                 | Why                                                                                                                                                                                                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Create NT_KERN_PATHTRACING**       | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                                                                                                                                                           |
-| **Film resolution on grandchild**    | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`                                                                                                                                 |
-| **Geo group pin count first**        | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                                                                                                                                                        |
-| **Geo group uses pin_name**          | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                                                                                                                                               |
-| **Handles are opaque**               | Never guess. Only use values from `create_node` or `get_node_info`.                                                                                                                                                                                     |
-| **ALL primitive type changes CRASH** | Capsule(2), Cone(3), Sphere(20), Torus(22) all confirmed ECONNRESET. Box(0) only works because it's the DEFAULT. **NEVER set primitive type. Use NT_GEO_MESH + .obj for all non-box shapes.** MCP `set_attribute` now blocks these calls automatically. |
-| **RT pin layout varies**             | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                                                                                                                                             |
-| **Blackbody efficiency=0.025**       | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.                                                                                                                               |
-| **Mesh A_RELOAD after A_FILENAME**   | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.                                                                                                                                     |
-| **Save .ocs NOT .orbx for MCP**      | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.                                                                                                                            |
+| Rule                               | Why                                                                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Create NT_KERN_PATHTRACING**     | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                                |
+| **Film resolution on grandchild**  | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`      |
+| **Geo group pin count first**      | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                             |
+| **Geo group uses pin_name**        | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                    |
+| **Handles are opaque**             | Never guess. Only use values from `create_node` or `get_node_info`.                                                          |
+| **All 24 primitive types work**    | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.  |
+| **RT pin layout varies**           | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                  |
+| **Blackbody efficiency=0.025**     | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.    |
+| **Mesh A_RELOAD after A_FILENAME** | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.          |
+| **Save .ocs NOT .orbx for MCP**    | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery. |
 
 ### Confirmed Crashes
 
-| Trigger                                                     | Result                                                                  | Mitigation                                              |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------- |
-| `set_attribute(primitive_enum, 185, AT_INT=3, N)` for N≠0   | Immediate ECONNRESET (Capsule=2, Cone=3, Sphere=20, Torus=22 confirmed) | **BLOCKED by MCP safety guard.** Use NT_GEO_MESH + .obj |
-| `resetProject` without `suppressUI: true`                   | Crash from gRPC thread UI sync                                          | Use delete-all-nodes pattern                            |
-| `resetProject` (any variant)                                | Triggers "Save changes?" dialog — blocks autonomous work                | Use delete-all-nodes pattern                            |
-| Heavy structural ops (destroy connected node, ungroup)      | Delayed ECONNRESET 5-9s after success                                   | Disconnect pins before deleting                         |
-| NT_GEO_MESH batched build + `set_camera` eval               | ECONNRESET (not fully reproducible)                                     | Build mesh in phases                                    |
-| `update_scene()` in complex emissive scene (5+ lights + PT) | Immediate ECONNRESET (confirmed)                                        | Use `evaluate:true` incrementally                       |
-| `set_attribute(filename)` on ORBX-packaged texture node     | DEADLINE_EXCEEDED — Octane hangs resolving internal path                | Rebuild fresh with absolute paths, or use .ocs          |
+| Trigger                                                 | Result                                              | Mitigation                                     |
+| ------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------- |
+| `resetProject` (any variant)                            | Triggers "Save changes?" dialog — blocks autonomous | Use delete-all-nodes pattern                   |
+| `set_attribute(filename)` on ORBX-packaged texture node | DEADLINE_EXCEEDED — Octane hangs resolving path     | Rebuild fresh with absolute paths, or use .ocs |
 
-**Mesh build mitigation**: Build mesh objects in phases — create + set filename + reload → `set_camera()` → connect material/placement → `set_camera()`.
+### Under Investigation
+
+| Trigger                                       | Observation                                                        | Status                |
+| --------------------------------------------- | ------------------------------------------------------------------ | --------------------- |
+| Heavy structural ops (destroy connected node) | Previously reported as crash — not yet reproduced with current MCP | Unverified conjecture |
+| `update_scene()` in complex scene             | Previously reported as crash — not yet reproduced with current MCP | Unverified conjecture |
+| NT_GEO_MESH batched build + `set_camera`      | Previously not reproducible                                        | Unverified conjecture |
+
+**Resolved:** Primitive type changes on NT_GEO_OBJECT — all 24 types (0-23) work. Previous Quad(18) crashes were due to post-crash Octane state, not the type value itself.
 
 **Don't batch with evaluate:false + update_scene()**: The crash pattern is `connect_nodes(evaluate:false)` × N → `update_scene()`, which forces a heavy synchronous evaluation on the gRPC message thread. In complex scenes (5+ emissive objects, PT kernel), this crashes. **Instead: use `evaluate:true` (default) so each call evaluates incrementally.** Then `set_camera()` to refresh the render. This is also better for human viewers watching the live viewport — they see each change appear. `update_scene()` is safe for small flushes but avoid it for batched structural changes.
 
@@ -227,38 +230,38 @@ create_node(NT_GEO_OBJECT) → {
 
 ## Node Types (common)
 
-| Category         | Type Key                 | ID  | Description                                                                 |
-| ---------------- | ------------------------ | --- | --------------------------------------------------------------------------- |
-| **Render**       | `NT_RENDERTARGET`        | 56  | Scene root                                                                  |
-| **Geometry**     | `NT_GEO_GROUP`           | 3   | Geometry container                                                          |
-|                  | `NT_GEO_OBJECT`          | 153 | Geometric primitive (**box ONLY** — all other primitive types crash Octane) |
-|                  | `NT_GEO_MESH`            | 1   | Mesh from file (.obj/.fbx/.stl)                                             |
-|                  | `NT_GEO_PLACEMENT`       | 4   | Placement wrapper (transform/scale)                                         |
-|                  | `NT_GEO_PLANE`           | 110 | Infinite plane                                                              |
-|                  | `NT_GEO_SCATTER`         | 5   | Scatter instances on surface                                                |
-|                  | `NT_GEO_VOLUME`          | 115 | OpenVDB volume (.vdb)                                                       |
-| **Materials**    | `NT_MAT_UNIVERSAL`       | 130 | PBR material (recommended default)                                          |
-|                  | `NT_MAT_DIFFUSE`         | 17  | Matte material                                                              |
-|                  | `NT_MAT_GLOSSY`          | 16  | Glossy/reflective                                                           |
-|                  | `NT_MAT_SPECULAR`        | 18  | Glass/transparent (IOR-based)                                               |
-|                  | `NT_MAT_METAL`           | 120 | Metal (complex IOR)                                                         |
-|                  | `NT_MAT_MIX`             | 19  | Blend two materials                                                         |
-| **Textures**     | `NT_TEX_RGB`             | 33  | Solid color                                                                 |
-|                  | `NT_TEX_FLOAT`           | 31  | Solid float                                                                 |
-|                  | `NT_TEX_IMAGE`           | 34  | Image file                                                                  |
-|                  | `NT_TEX_CHECKS`          | 45  | Checkerboard                                                                |
-|                  | `NT_TEX_NOISE`           | 87  | Noise                                                                       |
-| **Emission**     | `NT_EMIS_BLACKBODY`      | 53  | Thermal emission (power + temperature)                                      |
-|                  | `NT_EMIS_TEXTURE`        | 54  | Textured emission                                                           |
-| **Environments** | `NT_ENV_DAYLIGHT`        | 14  | Physical sun + sky                                                          |
-|                  | `NT_ENV_TEXTURE`         | 37  | HDRI environment                                                            |
-| **Cameras**      | `NT_CAM_THINLENS`        | 13  | Standard camera                                                             |
-|                  | `NT_CAM_UNIVERSAL`       | 157 | Multi-mode camera                                                           |
-| **Kernels**      | `NT_KERN_PATHTRACING`    | 25  | Path tracing (use this!)                                                    |
-|                  | `NT_KERN_DIRECTLIGHTING` | 24  | Direct lighting (fast preview)                                              |
-|                  | `NT_KERN_PMC`            | 23  | PMC (difficult caustics)                                                    |
-| **Lights**       | `NT_LIGHT_QUAD`          | 148 | Rectangular area light                                                      |
-|                  | `NT_LIGHT_SPHERE`        | 149 | Sphere area light                                                           |
+| Category         | Type Key                 | ID  | Description                                                         |
+| ---------------- | ------------------------ | --- | ------------------------------------------------------------------- |
+| **Render**       | `NT_RENDERTARGET`        | 56  | Scene root                                                          |
+| **Geometry**     | `NT_GEO_GROUP`           | 3   | Geometry container                                                  |
+|                  | `NT_GEO_OBJECT`          | 153 | Geometric primitive (supports all primitive types — see pin 0 enum) |
+|                  | `NT_GEO_MESH`            | 1   | Mesh from file (.obj/.fbx/.stl)                                     |
+|                  | `NT_GEO_PLACEMENT`       | 4   | Placement wrapper (transform/scale)                                 |
+|                  | `NT_GEO_PLANE`           | 110 | Infinite plane                                                      |
+|                  | `NT_GEO_SCATTER`         | 5   | Scatter instances on surface                                        |
+|                  | `NT_GEO_VOLUME`          | 115 | OpenVDB volume (.vdb)                                               |
+| **Materials**    | `NT_MAT_UNIVERSAL`       | 130 | PBR material (recommended default)                                  |
+|                  | `NT_MAT_DIFFUSE`         | 17  | Matte material                                                      |
+|                  | `NT_MAT_GLOSSY`          | 16  | Glossy/reflective                                                   |
+|                  | `NT_MAT_SPECULAR`        | 18  | Glass/transparent (IOR-based)                                       |
+|                  | `NT_MAT_METAL`           | 120 | Metal (complex IOR)                                                 |
+|                  | `NT_MAT_MIX`             | 19  | Blend two materials                                                 |
+| **Textures**     | `NT_TEX_RGB`             | 33  | Solid color                                                         |
+|                  | `NT_TEX_FLOAT`           | 31  | Solid float                                                         |
+|                  | `NT_TEX_IMAGE`           | 34  | Image file                                                          |
+|                  | `NT_TEX_CHECKS`          | 45  | Checkerboard                                                        |
+|                  | `NT_TEX_NOISE`           | 87  | Noise                                                               |
+| **Emission**     | `NT_EMIS_BLACKBODY`      | 53  | Thermal emission (power + temperature)                              |
+|                  | `NT_EMIS_TEXTURE`        | 54  | Textured emission                                                   |
+| **Environments** | `NT_ENV_DAYLIGHT`        | 14  | Physical sun + sky                                                  |
+|                  | `NT_ENV_TEXTURE`         | 37  | HDRI environment                                                    |
+| **Cameras**      | `NT_CAM_THINLENS`        | 13  | Standard camera                                                     |
+|                  | `NT_CAM_UNIVERSAL`       | 157 | Multi-mode camera                                                   |
+| **Kernels**      | `NT_KERN_PATHTRACING`    | 25  | Path tracing (use this!)                                            |
+|                  | `NT_KERN_DIRECTLIGHTING` | 24  | Direct lighting (fast preview)                                      |
+|                  | `NT_KERN_PMC`            | 23  | PMC (difficult caustics)                                            |
+| **Lights**       | `NT_LIGHT_QUAD`          | 148 | Rectangular area light                                              |
+|                  | `NT_LIGHT_SPHERE`        | 149 | Sphere area light                                                   |
 
 ## Attribute IDs
 
@@ -295,16 +298,16 @@ The proto defines `setPinValueByIx`, `setPinValueByPinID`, `setPinValueByName` (
 
 `create_node` returns all child handles. Pin indices are fixed:
 
-| Pin | Name        | Child Type       | Notes                                                                                                                                          |
-| --- | ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | primitive   | Enum value       | **DO NOT SET. ALL primitive type changes crash Octane.** Box(0) is default. MCP blocks these calls. Use NT_GEO_MESH + .obj for non-box shapes. |
-| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                      |
-| 2   | objectLayer | Object layer     |                                                                                                                                                |
-| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                                                       |
-| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                   |
-| 5   | Height      | Float value      |                                                                                                                                                |
-| 6   | Depth       | Float value      |                                                                                                                                                |
-| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                               |
+| Pin | Name        | Child Type       | Notes                                                                                                                                       |
+| --- | ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(0) default. Types 0-17 tested OK. Under investigation for crash on rapid sequential changes. |
+| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                   |
+| 2   | objectLayer | Object layer     |                                                                                                                                             |
+| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                                                    |
+| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                |
+| 5   | Height      | Float value      |                                                                                                                                             |
+| 6   | Depth       | Float value      |                                                                                                                                             |
+| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                            |
 
 ## NT_MAT_SPECULAR Pin Layout (glass/transparent)
 
@@ -354,24 +357,26 @@ get_node_info(material_handle) → pin 0 → RGB_child_handle
 set_attribute(RGB_child, 185, AT_FLOAT3=11, {0.65, 0.05, 0.05})  → red
 ```
 
-## Primitive Types — DO NOT CHANGE (all crash except Box default)
+## Primitive Types (NT_GEO_OBJECT pin 0 enum)
 
-**ALL primitive type changes crash Octane.** The MCP `set_attribute` tool blocks these automatically. Use NT_GEO_MESH + .obj files for any non-box shape. The table below is reference only.
+Set via: `set_attribute(enum_child_handle, 185, AT_INT=3, N)`
 
-| Val | Shape         | Val | Shape          | Status        |
-| --- | ------------- | --- | -------------- | ------------- |
-| 0   | Box (DEFAULT) | 12  | Hyperboloid    | CRASHES       |
-| 1   | Pill          | 13  | Icosahedron    | CRASHES       |
-| 2   | Capsule       | 14  | Octahedron     | CRASHES       |
-| 3   | Cone          | 15  | Plane          | CRASHES       |
-| 4   | Cylinder      | 16  | Pentagon       | CRASHES       |
-| 5   | Dreidel       | 17  | Prism          | CRASHES       |
-| 6   | Disc          | 18  | Quad           | CRASHES       |
-| 7   | Dodecahedron  | 19  | Saddle         | CRASHES       |
-| 8   | Hemisphere    | 20  | Sphere         | **CONFIRMED** |
-| 9   | Ellipsoid     | 21  | Tetrahedron    | CRASHES       |
-| 10  | Torus (fat)   | 22  | Torus          | **CONFIRMED** |
-| 11  | Hourglass     | 23  | Truncated Cone | CRASHES       |
+| Val | Shape         | Val | Shape          | Tested  |
+| --- | ------------- | --- | -------------- | ------- |
+| 0   | Box (DEFAULT) | 12  | Hyperboloid    | OK      |
+| 1   | Pill          | 13  | Icosahedron    | OK      |
+| 2   | Capsule       | 14  | Octahedron     | OK      |
+| 3   | Cone          | 15  | Plane          | OK      |
+| 4   | Cylinder      | 16  | Pentagon       | OK      |
+| 5   | Dreidel       | 17  | Prism          | OK      |
+| 6   | Disc          | 18  | Quad           | CRASH\* |
+| 7   | Dodecahedron  | 19  | Saddle         | —       |
+| 8   | Hemisphere    | 20  | Sphere         | —       |
+| 9   | Ellipsoid     | 21  | Tetrahedron    | —       |
+| 10  | Torus (fat)   | 22  | Torus          | —       |
+| 11  | Hourglass     | 23  | Truncated Cone | —       |
+
+\*Quad(18) crashed after 19 consecutive type changes on the same handle. Likely contextual — retest in isolation pending.
 
 ---
 

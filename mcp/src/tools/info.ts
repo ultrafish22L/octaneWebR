@@ -4,6 +4,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 
 // Import node type constants from client
@@ -96,6 +98,27 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
           attribute_ids: AttributeId,
           object_types: { ApiItem: ObjectType.ApiItem, ApiNode: ObjectType.ApiNode },
         });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  const MCP_LOG_PATH = path.resolve(__dirname, '../../../mcp-debug.log');
+
+  server.tool(
+    'clear_log',
+    'Clear the mcp-debug.log file to start with a fresh log. Returns the line count of the old log.',
+    {},
+    async () => {
+      try {
+        let oldLines = 0;
+        if (fs.existsSync(MCP_LOG_PATH)) {
+          const content = fs.readFileSync(MCP_LOG_PATH, 'utf-8');
+          oldLines = content.split('\n').length;
+          fs.writeFileSync(MCP_LOG_PATH, '');
+        }
+        return jsonResult({ cleared: true, old_line_count: oldLines, path: MCP_LOG_PATH });
       } catch (error: any) {
         return errorResult(error);
       }
