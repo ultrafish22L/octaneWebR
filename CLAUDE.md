@@ -9,6 +9,7 @@
 
 ## Key Docs
 
+- `.claude/MEMORY.md` — accumulated project knowledge, MCP workflows, crash prevention, lessons learned
 - `ARCHITECTURE.md` — architecture, service layer, gRPC, theming
 - `TEST_PLAN.md` — 181 tests, testing rules (gold standard)
 - `IMPROVEMENTS.md` — 33-item backlog (includes MCP resilience items)
@@ -30,3 +31,4 @@ All in `TEST_PLAN.md`. Key points:
 - **Version**: 1.4.6
 - **0 open bugs** — 4 known Octane API limitations (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken)
 - **Testing**: R1+R2+R3 complete. 181 tests, 16 bugs fixed and verified.
+- **Current priority**: MCP bug fixing until stable → demo for bosses.
