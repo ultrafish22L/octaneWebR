@@ -11,7 +11,7 @@
 
 - `ARCHITECTURE.md` — architecture, service layer, gRPC, theming
 - `TEST_PLAN.md` — 181 tests, testing rules (gold standard)
-- `IMPROVEMENTS.md` — 36-item backlog (includes MCP resilience items)
+- `IMPROVEMENTS.md` — 42-item backlog (includes MCP resilience items)
 - `mcp/OCTANE_MCP.md` — MCP technical reference: pin layouts, crash prevention, API patterns
 - `mcp/OCTANE_CREATIVE.md` — creative guide: lighting, materials, composition, depth, scale, environments, anti-CG
 - `recipes/` — 17 scene recipes (prose creative briefs with reference values)
