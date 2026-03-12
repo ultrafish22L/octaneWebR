@@ -25,6 +25,16 @@ All in `TEST_PLAN.md`. Key points:
 - Detect Octane crashes immediately — check for `ECONNRESET`/`ECONNREFUSED`.
 - Lint and build before push — `npm run lint` + `npm run build`.
 
+## MCP Scene Building Rules
+
+Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details):
+
+- **NEVER use `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
+- **Restart ALL servers** (dev, preview) before every build run and after every crash.
+- **PT kernel BEFORE `start_render`** — swapping kernels on a live render crashes Octane.
+- **NEVER flip camera up vector** — rotate the model instead. `set_camera` resets up to (0,1,0).
+- **Renders go in `renders/`** — NEVER save renders to `ORBX/`.
+
 ## Status
 
 - **Version**: 1.5.1

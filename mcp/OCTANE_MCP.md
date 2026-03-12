@@ -42,13 +42,18 @@ DRESS BUILD:       RT + PT kernel (connect BEFORE start_render!)
                    → geo group (8 slots) → bare geo 1-by-1 (renders)
                    → materials 1-by-1 (renders) → refinement
 
-SPEED BUILD:       create ALL nodes in parallel batches
-                   → set ALL attrs with evaluate:false
-                   → wire ALL chains → update_scene flush
+SPEED BUILD:       create ALL nodes quickly (no renders between)
+                   → set ALL attrs (evaluate:true, the default)
+                   → wire ALL chains (evaluate:true)
                    → start_render → set_camera → save_render
+                   NEVER use evaluate:false. See CRASH RULES below.
 
-CRASH RULE:        Connect PT kernel to RT BEFORE start_render().
-                   Swapping kernels on a live render → ECONNRESET crash.
+CRASH RULES:       1. Connect PT kernel to RT BEFORE start_render().
+                      Swapping kernels on a live render → ECONNRESET crash.
+                   2. NEVER use evaluate:false. Always use evaluate:true
+                      (the default). Deferred batches have caused 3+ crashes.
+                   3. Restart ALL servers (dev, preview) before every build
+                      run AND after every Octane crash.
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render/restart_render do NOT refresh geometry.
@@ -72,7 +77,18 @@ TIMING RULE:       Call get_render_status after EVERY render.
 | **Technical** | `OCTANE_MCP.md` (this file) | API rules, pin layouts, crash prevention, MCP patterns.                    |
 | **Creative**  | `OCTANE_CREATIVE.md`        | Lighting, materials, composition, depth, scale — how to make it look good. |
 
-### Session Start Rules
+### Session Start / Post-Crash Restart Rules
+
+**Exact restart sequence:**
+
+1. **Claude stops servers** — `preview_stop` to shut down dev server / preview
+2. **Wait for user** to restart Octane (NEVER try to restart Octane yourself)
+3. **User gives the OK** — "go", "ok", "ready", etc.
+4. **Claude starts servers** — `preview_start` for dev server
+5. **Claude verifies** — `get_octane_version` (gRPC alive?), `preview_screenshot` (webapp live?)
+6. **Build** — only then start creating nodes
+
+**Build session rules:**
 
 1. **Read the recipe** — never rely on memory or context summaries
 2. **Read this file's critical rules** — refresh technical knowledge
@@ -140,17 +156,17 @@ RenderTarget
 | `resetProject` (any variant)                            | Triggers "Save changes?" dialog — blocks autonomous | Use delete-all-nodes pattern                   |
 | `set_attribute(filename)` on ORBX-packaged texture node | DEADLINE_EXCEEDED — Octane hangs resolving path     | Rebuild fresh with absolute paths, or use .ocs |
 
-### Under Investigation
+### Confirmed Crash Patterns (from testing)
 
-| Trigger                                       | Observation                                                        | Status                |
-| --------------------------------------------- | ------------------------------------------------------------------ | --------------------- |
-| Heavy structural ops (destroy connected node) | Previously reported as crash — not yet reproduced with current MCP | Unverified conjecture |
-| `update_scene()` in complex scene             | Previously reported as crash — not yet reproduced with current MCP | Unverified conjecture |
-| NT_GEO_MESH batched build + `set_camera`      | Previously not reproducible                                        | Unverified conjecture |
+| Trigger                                       | Observation                                                                        | Status                            |
+| --------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
+| `evaluate:false` × N + structural connection  | 12 deferred ops + geo group→RT connection = ECONNRESET crash. Reproduced 3+ times. | **CONFIRMED** — never defer evals |
+| Heavy structural ops (destroy connected node) | Previously reported as crash — not yet reproduced with current MCP                 | Unverified conjecture             |
+| NT_GEO_MESH batched build + `set_camera`      | Previously not reproducible                                                        | Unverified conjecture             |
 
 **Resolved:** Primitive type changes on NT_GEO_OBJECT — all 24 types (0-23) work. Previous Quad(18) crashes were due to post-crash Octane state, not the type value itself.
 
-**Don't batch with evaluate:false + update_scene()**: The crash pattern is `connect_nodes(evaluate:false)` × N → `update_scene()`, which forces a heavy synchronous evaluation on the gRPC message thread. In complex scenes (5+ emissive objects, PT kernel), this crashes. **Instead: use `evaluate:true` (default) so each call evaluates incrementally.** Then `set_camera()` to refresh the render. This is also better for human viewers watching the live viewport — they see each change appear. `update_scene()` is safe for small flushes but avoid it for batched structural changes.
+**HARD RULE: NEVER use evaluate:false.** The crash pattern is `connect_nodes(evaluate:false)` × N, which accumulates deferred evaluations. When flushed (via `update_scene()` or any evaluating call), the combined load crashes Octane with ECONNRESET. This has happened 3+ times across different scenes. **Always use `evaluate:true` (the default) — never pass `evaluate:false`.** Each call evaluates incrementally (~50ms), which is negligible vs the minutes lost to a crash + restart + full rebuild. This also gives live viewport feedback — the human sees each change appear in real time.
 
 ### Refresh Pattern — CRITICAL
 
@@ -694,3 +710,17 @@ Save assets to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
 Octane requires **absolute paths** with forward slashes: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/file.obj`
 
 For asset sources, generation pipelines, and texture prompts, see `OCTANE_CREATIVE.md` Section 1.
+
+---
+
+## External Resources
+
+When in doubt about Octane behavior, search the web or these resources:
+
+| Resource            | URL                                                | Use For                             |
+| ------------------- | -------------------------------------------------- | ----------------------------------- |
+| **OTOY Forum**      | https://render.otoy.com/forum/index.php            | Community knowledge, scene tips     |
+| **Octane Docs**     | https://docs.otoy.com/                             | Official plugin/standalone docs     |
+| **Octane Docs MCP** | `npx -y mcp-remote https://octane-mcp.otoy.ai/sse` | Lua API search, constants, examples |
+| **Octane Live DB**  | https://render.otoy.com/livedb/                    | Community materials and assets      |
+| **Poly Haven**      | https://polyhaven.com/                             | Free HDRI, textures, models         |

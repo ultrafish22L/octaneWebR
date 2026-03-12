@@ -23,7 +23,10 @@
 
 1. Stop immediately. Read `grpc-debug.log` for last success → first error transition.
 2. Log the crash with severity High.
-3. Wait for user restart. Restart dev server. F5 refresh. Verify teapot renders.
+3. **Claude stops ALL servers** — `preview_stop` for dev server/preview. Do this BEFORE user restarts Octane.
+4. **Wait for user** to restart Octane and give the OK ("go", "ok", "ready").
+5. **Claude starts servers** — `preview_start` for dev server.
+6. **Claude verifies** — check Octane gRPC (`get_octane_version`), check preview is live (`preview_screenshot`), verify teapot renders.
 
 ### Known Octane API Limitations
 
