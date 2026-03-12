@@ -48,7 +48,7 @@ octaneWebR/
 │   ├── data/             - API cache (octane-api-cache.json)
 │   ├── OCTANE_MCP.md     - MCP technical reference
 │   └── OCTANE_CREATIVE.md - Creative guide
-├── recipes/              - 16 scene recipes
+├── recipes/              - 17 scene recipes
 ├── ORBX/assets/          - 3D meshes (.obj) and textures
 ├── api-version.config.js - API version configuration (Alpha 5/Beta 2)
 └── vite-plugin-octane-grpc.ts - Embedded proxy plugin

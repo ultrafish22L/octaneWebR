@@ -14,7 +14,7 @@
 - `IMPROVEMENTS.md` — 36-item backlog (includes MCP resilience items)
 - `mcp/OCTANE_MCP.md` — MCP technical reference: pin layouts, crash prevention, API patterns
 - `mcp/OCTANE_CREATIVE.md` — creative guide: lighting, materials, composition, depth, scale, environments, anti-CG
-- `recipes/` — 16 scene recipes (prose creative briefs with reference values)
+- `recipes/` — 17 scene recipes (prose creative briefs with reference values)
 
 ## Testing Rules
 

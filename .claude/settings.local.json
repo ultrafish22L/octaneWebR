@@ -73,7 +73,8 @@
       "Bash(find C:otoylaGRPCdevoctaneWebRmcpnode_modules@modelcontextprotocol -name *.d.ts -type f)",
       "Bash(sed 's/.*RES //')",
       "Bash(python3 -m json.tool)",
-      "Bash(grep -r \"bg-primary\\\\|bg-secondary\\\\|bg-parameter\" /c/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)"
+      "Bash(grep -r \"bg-primary\\\\|bg-secondary\\\\|bg-parameter\" /c/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)",
+      "Bash(find C:otoylaGRPCdevoctaneWebR -type f -name *bug* -o -name *issue*)"
     ]
   }
 }
