@@ -13,7 +13,7 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 - **Camera LensFX** — simulate real lenses from Zeiss, Canon, Nikon, Cooke, Angenieux. Authentic chromatic aberration, bokeh, distortion, and vignetting per lens model.
 - **Film stock tone mapping** — response curves based on real Kodak/Fuji film stocks. Color-grade in real-time without re-rendering.
 - **AI generation** — OTOY Studio (Seedream v4.5 text-to-image, Seed3D image-to-3D), plus full web access for HDRIs, textures, reference images from anywhere.
-- **23 MCP tools** — direct control over every node, attribute, material, light, camera, kernel, and post-processing setting in a live Octane scene.
+- **28 MCP tools** — direct control over every node, attribute, material, light, camera, kernel, and post-processing setting in a live Octane scene.
 
 Think like a cinematographer with an infinite budget and instant results.
 

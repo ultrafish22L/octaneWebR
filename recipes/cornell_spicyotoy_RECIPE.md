@@ -33,3 +33,19 @@ Same as classic — looking straight in from the front at eye height. Frames the
 ## The Look
 
 When properly lit, the dark room amplifies every color. Orange bleeds from the left, magenta from the right, and they mix on the dark floor in rich warm tones. The chrome torus becomes a distorted mirror of fire colors. The red glass sphere glows warm and refracts the scene in amber. The small ember on the floor creates a bright accent and a pool of warm light on the obsidian floor. It should feel hot just looking at it.
+
+## Handle Map
+
+| Object           | Handle | Material                 | Notes                       |
+| ---------------- | ------ | ------------------------ | --------------------------- |
+| Render Target    |        |                          |                             |
+| Geo Group        |        |                          | 8 input slots               |
+| Left wall        |        | Diffuse orange           | Blazing embers              |
+| Right wall       |        | Diffuse magenta          | Electric hot                |
+| Floor            |        | Diffuse near-black       | Obsidian                    |
+| Ceiling          |        | Diffuse near-black       |                             |
+| Back wall        |        | Diffuse near-black       |                             |
+| Light panel      |        | Emissive warm amber      | Generous power              |
+| Chrome torus     |        | Glossy mirror            | Rotated to catch both walls |
+| Hot glass sphere |        | Specular, red-amber tint | IOR 1.5                     |
+| Glowing ember    |        | Emissive warm orange     | Small, floor accent         |

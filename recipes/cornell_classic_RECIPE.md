@@ -31,3 +31,18 @@ Looking straight into the room from the front, at eye height (about 1 meter up).
 ## The Look
 
 When properly lit, you see red light bleeding onto the white surfaces near the left wall, green bleeding from the right. The glass sphere refracts the scene behind it and casts subtle caustics. The tall box casts a soft shadow on the floor. The ceiling light creates gentle gradients across all surfaces.
+
+## Handle Map
+
+| Object        | Handle | Material          | Notes              |
+| ------------- | ------ | ----------------- | ------------------ |
+| Render Target |        |                   |                    |
+| Geo Group     |        |                   | 8 input slots      |
+| Left wall     |        | Diffuse red       |                    |
+| Right wall    |        | Diffuse green     |                    |
+| Floor         |        | Diffuse white     |                    |
+| Ceiling       |        | Diffuse white     |                    |
+| Back wall     |        | Diffuse white     |                    |
+| Light panel   |        | Emissive          | Flush with ceiling |
+| Tall box      |        | Diffuse white     | Rotated ~20 deg    |
+| Glass sphere  |        | Specular, IOR 1.5 | Clear glass        |

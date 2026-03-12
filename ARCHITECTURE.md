@@ -19,9 +19,10 @@ Architecture, patterns, and conventions for the octaneWebR codebase.
 ## Technology Stack
 
 ```
-Frontend: React 18, TypeScript (strict), Vite, ReactFlow v12, React Context API, CSS Modules + Variables
+Frontend: React 18, TypeScript (strict), Vite, ReactFlow v12, React Context API, CSS Variables
 Backend:  Vite Plugin (embedded gRPC-Web proxy), WebSocket (callback streaming)
 Comms:    gRPC LiveLink API (Octane ↔ octaneWebR), REST (health checks, file ops)
+MCP:      Model Context Protocol server (28 tools, stdio transport, esbuild + tsx)
 ```
 
 ### Directory Structure
@@ -36,11 +37,19 @@ octaneWebR/
 │   ├── constants/        - Enums, icon mappings, node types
 │   ├── config/           - Application configuration (API version, etc.)
 │   ├── types/            - TypeScript type definitions
+│   ├── styles/           - CSS files (themes, components)
 │   └── App.tsx           - Root component
 ├── server/
 │   ├── proto/            - Beta 2 protobuf definitions (2026.1)
 │   ├── proto_old/        - Alpha 5 protobuf definitions (2026.1)
 │   └── src/              - gRPC proxy server
+├── mcp/
+│   ├── src/              - MCP server source (28 tools)
+│   ├── data/             - API cache (octane-api-cache.json)
+│   ├── OCTANE_MCP.md     - MCP technical reference
+│   └── OCTANE_CREATIVE.md - Creative guide
+├── recipes/              - 16 scene recipes
+├── ORBX/assets/          - 3D meshes (.obj) and textures
 ├── api-version.config.js - API version configuration (Alpha 5/Beta 2)
 └── vite-plugin-octane-grpc.ts - Embedded proxy plugin
 ```
@@ -136,12 +145,13 @@ Render updates: gRPC stream → `callbackManager` → WebSocket broadcast → `R
 
 ## Styling
 
-- CSS Modules for component isolation
-- CSS Variables for theming (134 variables in `octane-theme.css`)
+- CSS Variables for theming (3 themes: vibe, octane, debug)
 - No inline styles, no hardcoded colors — all `var(--*)` references
 - Theme switch: change import in `client/src/main.tsx`
 
-**Style files**: `octane-theme.css` (variables), `app.css`, `scene-outliner.css`, `viewport.css`, `node-graph.css`, `node-inspector.css`
+**Theme files**: `theme-vibe.css` (default), `theme-octane.css`, `theme-octane-debug.css`
+
+**Style files**: `app.css`, `scene-outliner.css`, `render-viewport.css`, `node-graph.css`, `node-inspector.css`, `error-boundary.css`
 
 ### Icons
 

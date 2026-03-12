@@ -14,18 +14,93 @@ The starfield wraps around the sphere — the milky way band refracts through th
 
 **Scale**: The camera is slightly low and offset, looking slightly up at the orb. This isn't dramatic — just enough elevation change to suggest the orb has presence, that it matters. A 45° FOV keeps the perspective natural for interactive orbiting.
 
-## Reference Values
+---
 
-| Element         | Setting    | Value                                                              |
-| --------------- | ---------- | ------------------------------------------------------------------ |
-| **Environment** | Texture    | `ORBX/assets/starfield.jpg` (Seedream v4)                          |
-|                 | Power      | 3.5                                                                |
-| **Orb**         | Mesh       | `sphere_hd.obj`, placement scale 2.0, position `(0, 1, 0)`         |
-|                 | Material   | Specular — IOR 1.9, dispersion 0.12, transmission clear, smooth on |
-| **Camera**      | Position   | `(1, 1.5, 7)` — offset, pulled back                                |
-|                 | Target     | `(0, 1, 0)` — sphere center                                        |
-|                 | FOV        | 45°                                                                |
-|                 | Resolution | 1280x720 landscape                                                 |
+## Directions
+
+_4 renders. Minimal scene, maximum spectral beauty._
+
+### Prep
+
+Clear the scene. Create render target + path tracing kernel. Connect kernel BEFORE starting render. Set resolution to 1024x576.
+
+### 1. Set the mood
+
+> "Deep space. The universe is the backdrop."
+
+Create texture environment with starfield image, power 3.5. Connect to RT. Start render. Set hero camera. First thing visible: the cosmos at the final camera angle.
+
+### 2. The orb appears
+
+> "Glass sphere in the void. Already bending stars."
+
+Create geo group (8 slots). Sphere mesh at scale 2.0, position (0, 1, 0). No material yet — default white sphere floating in space.
+
+### 3. Dress the orb
+
+> "Spectral glass. Rainbows through the cosmos."
+
+Specular material with IOR 1.9, dispersion 0.12, smooth on. The starfield refracts through the sphere, splitting into prismatic color bands.
+
+### 4. Final framing
+
+> "Pull back. Let it breathe. That's the shot."
+
+Adjust camera if needed — ensure breathing room on all sides. Scene complete.
+
+---
+
+## Ingredients
+
+_Living values — refined each time the scene is built._
+
+### Camera
+
+| Setting    | Value                |
+| ---------- | -------------------- |
+| Position   | (1, 1.5, 7)          |
+| Target     | (0, 1, 0)            |
+| FOV        | 45°                  |
+| Resolution | 1024x576 interactive |
+| Beauty     | 1280x720             |
+
+### Environment
+
+| Setting | Value                       | Notes                            |
+| ------- | --------------------------- | -------------------------------- |
+| Texture | `ORBX/assets/starfield.jpg` | Seedream v4 starfield            |
+| Power   | 3.5                         | Environment IS the only lighting |
+
+### Orb
+
+| Setting    | Value         |
+| ---------- | ------------- |
+| Mesh       | sphere_hd.obj |
+| Position   | (0, 1, 0)     |
+| Scale      | 2.0           |
+| Material   | Specular      |
+| IOR        | 1.9           |
+| Dispersion | 0.12          |
+| Smooth     | on            |
+
+### Render
+
+| Setting | Value           |
+| ------- | --------------- |
+| Samples | 5000            |
+| Time    | ~15s @ 1024x576 |
+
+---
+
+## Handle Map
+
+_Fill as you build. Reference for camera tweaks and material iteration._
+
+| Object | Mesh | Placement | Transform | Material | Geo Group Slot |
+| ------ | ---- | --------- | --------- | -------- | -------------- |
+| Orb    | —    | —         | —         | Specular | Input 1        |
+
+---
 
 ## What Didn't Work (Proven)
 

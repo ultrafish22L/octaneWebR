@@ -16,18 +16,175 @@ The gold sphere catches one warm crescent of metallic fire against shadow. The o
 
 **Depth through contrast**: Dark environment = background. Lit surfaces = midground. Floor reflections = foreground layer below. Warm amber against cool near-black = natural warm/cool depth separation.
 
-## Reference Values
+---
 
-| Element           | Setting                                                   | Value                                                                           |
-| ----------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **Environment**   | Texture color                                             | `(0.02, 0.02, 0.03)` — near-black, slight blue                                  |
-| **Floor**         | Material                                                  | Glossy — diffuse `(0.15, 0.1, 0.08)` (warm umber), specular 0.8, roughness 0.03 |
-| **Gold sphere**   | Material                                                  | Glossy — diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.15                   |
-| **Glass sphere**  | Material                                                  | Specular — transmission `(0.9, 0.9, 1.0)`, IOR 1.5, dispersion on               |
-| **Orange sphere** | Material                                                  | Diffuse — color `(0.9, 0.4, 0.05)`                                              |
-| **Light**         | Single quad, position `(0, 2.5, 1)`, rotation `(180,0,0)` |
-|                   | 3500K warm amber, power 500-2000, size 3                  |
-| **Camera**        | Position `(-3, 1.2, 6)` → Target `(0, 0.2, 0)`, 1280x720  |
+## Directions
+
+_10 renders. Same spheres, opposite mood. Brisk, not rushed._
+
+### Prep
+
+Clear the scene. Create render target + path tracing kernel. Connect kernel BEFORE starting render. Set resolution to 1280x720.
+
+### 1. Set the mood
+
+> "Near-black void. One warm light overhead."
+
+Create texture environment with near-black color. Create the overhead quad light with warm amber color. Connect env to RT. Start render. Set hero camera. First frame: darkness with a single pool of warm light hitting the floor.
+
+### 2. Lay the table
+
+> "Dark polished floor. Warm light pooling on it."
+
+Create geo group (8 slots). Floor mesh at 10x scale, default white material. The overhead light paints a warm circle on the bare floor.
+
+### 3. Gold sphere
+
+> "Gold sphere, left side. Same spot as daylight."
+
+Bare white sphere in the left-forward position. Shape only — the single light carves a crescent on it.
+
+### 4. Glass sphere
+
+> "Glass sphere, center back. White for now."
+
+Second white sphere, center and recessed. Same V-formation as Scene 1.
+
+### 5. Orange sphere
+
+> "Orange sphere, right. All three placed."
+
+Third white sphere completes the trio. Geometry matches Scene 1 exactly.
+
+### 6. Dress the floor
+
+> "Dark warm concrete. Noir stage."
+
+Glossy material — warm umber diffuse, high specular, near-mirror. The light pool tightens and deepens.
+
+### 7. Dress the gold
+
+> "Gold crescent against shadow."
+
+Glossy metallic gold. Only the lit crescent catches the overhead light — the rest falls to black.
+
+### 8. Dress the glass
+
+> "Glass with dispersion. Watch the rainbow rings."
+
+Specular glass with near-clear transmission and dispersion ON. The overhead light enters and splits into concentric spectral rings. The physics payoff.
+
+### 9. Dress the orange
+
+> "Warm ember glow. That's noir."
+
+Diffuse orange. Soft and warm against the darkness. Scene complete.
+
+### 10. Refine
+
+> "Final framing. Check the dispersion rings."
+
+Tweak light power if needed. Ensure the dispersion rings are vivid. Beauty render.
+
+---
+
+## Ingredients
+
+_Living values — refined each time the scene is built._
+
+### Camera
+
+| Setting    | Value                |
+| ---------- | -------------------- |
+| Position   | (-3, 1.2, 6)         |
+| Target     | (0, 0.2, 0)          |
+| Resolution | 1280x720 interactive |
+| Beauty     | 1920x1080            |
+
+### Environment
+
+| Setting       | Value                        |
+| ------------- | ---------------------------- |
+| Texture color | (0.02, 0.02, 0.03)           |
+| Notes         | Near-black, slight blue tint |
+
+### Floor
+
+| Setting   | Value             |
+| --------- | ----------------- |
+| Mesh      | floor.obj, 10x    |
+| Material  | Glossy            |
+| Diffuse   | (0.15, 0.1, 0.08) |
+| Specular  | 0.8               |
+| Roughness | 0.03              |
+| Notes     | Warm umber        |
+
+### Gold Sphere (left, forward)
+
+| Setting   | Value            |
+| --------- | ---------------- |
+| Mesh      | sphere_hd.obj    |
+| Position  | (-0.9, 0.3, 0.4) |
+| Scale     | 0.6              |
+| Material  | Glossy           |
+| Diffuse   | (1, 0.84, 0)     |
+| Specular  | 1.0              |
+| Roughness | 0.15             |
+
+### Glass Sphere (center, recessed)
+
+| Setting      | Value           |
+| ------------ | --------------- |
+| Mesh         | sphere_hd.obj   |
+| Position     | (0, 0.38, -0.3) |
+| Scale        | 0.75            |
+| Material     | Specular        |
+| Transmission | (0.9, 0.9, 1.0) |
+| IOR          | 1.5             |
+| Dispersion   | ON              |
+
+### Orange Sphere (right, forward)
+
+| Setting  | Value            |
+| -------- | ---------------- |
+| Mesh     | sphere_hd.obj    |
+| Position | (0.9, 0.3, 0.3)  |
+| Scale    | 0.6              |
+| Material | Diffuse          |
+| Diffuse  | (0.9, 0.4, 0.05) |
+
+### Light
+
+| Setting  | Value            |
+| -------- | ---------------- |
+| Type     | Quad             |
+| Position | (0, 2.5, 1)      |
+| Rotation | (180, 0, 0)      |
+| Color    | 3500K warm amber |
+| Power    | 500–2000         |
+| Size     | 3                |
+
+### Render
+
+| Setting | Value           |
+| ------- | --------------- |
+| Samples | 5000            |
+| Time    | ~25s @ 1280x720 |
+
+---
+
+## Handle Map
+
+_Fill as you build. Reference for camera tweaks and material iteration._
+
+| Object | Mesh | Placement | Transform | Material | Geo Group Slot |
+| ------ | ---- | --------- | --------- | -------- | -------------- |
+| Floor  | —    | —         | —         | Glossy   | Input 1        |
+| Gold   | —    | —         | —         | Glossy   | Input 2        |
+| Glass  | —    | —         | —         | Specular | Input 3        |
+| Orange | —    | —         | —         | Diffuse  | Input 4        |
+
+---
 
 ### Floor Texture (Recommended)
 

@@ -16,15 +16,128 @@ The prism sits on a dark reflective floor. White light enters one face from a sm
 
 **Elevated close-up camera.** Slightly above and offset, looking down at the prism. Close enough to see both warm and cool beams emerging from the prism faces, far enough to see the spectral light painting the floor on both sides.
 
-## Reference Values
+---
 
-| Element         | Setting                                                   | Value                                                                                      |
-| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| **Environment** | Texture color                                             | `(0.01, 0.01, 0.02)` — near-black                                                          |
-| **Floor**       | Mesh                                                      | `floor.obj`, scale 10x                                                                     |
-|                 | Material                                                  | Glossy — diffuse `(0.08, 0.08, 0.1)`, specular 0.8, roughness 0.02                         |
-| **Prism**       | Mesh                                                      | `prism.obj`, on floor center                                                               |
-|                 | Material                                                  | Specular — IOR 1.8, dispersion on, transmission `(0.15, 0.15, 0.2)` (dark tint), smooth on |
-| **Light**       | Single quad, position `(-3, 0.5, 0)` — side, prism height |
-|                 | 5500K neutral white, power 3000-5000, size 0.5-1          |
-| **Camera**      | Position `(0.5, 1.2, 3)` → Target `(0, 0.3, 0)`, 1280x720 |
+## Directions
+
+_7 renders. One prism, one light, pure physics. Brisk, not rushed._
+
+### Prep
+
+Clear the scene. Create render target + path tracing kernel. Connect kernel BEFORE starting render. Set resolution to 1280x720.
+
+### 1. Set the mood
+
+> "Near-black void. Tight white light from the side."
+
+Create texture environment with near-black color. Create the side quad light — small, neutral white, at prism height. Connect env to RT. Start render. Set hero camera. First frame: darkness with a tight beam of white light.
+
+### 2. Lay the table
+
+> "Dark mirror floor. Light skims across it."
+
+Create geo group (8 slots). Floor mesh at 10x scale, default white. The side light rakes across the bare floor.
+
+### 3. Place the prism
+
+> "Dark prism, center stage."
+
+Prism mesh on the floor at center. Bare white material. The light hits the triangular form.
+
+### 4. Dress the floor
+
+> "Near-black mirror. Sets the void."
+
+Glossy material on the floor — very dark, high specular, near-mirror finish. The prism's silhouette reflects below.
+
+### 5. Dress the prism
+
+> "Dark glass with dispersion. Watch the spectrum split."
+
+Specular glass — high IOR for wide spectral separation, dark tint transmission, dispersion ON. The white beam enters one face and fans out into warm and cool on opposite sides.
+
+### 6. Tune the light
+
+> "Tighten the beam. Sharper spectral lines."
+
+Adjust light size and power. Smaller = sharper color bands. The floor should show distinct warm/cool zones on each side of the prism.
+
+### 7. Final
+
+> "Pink Floyd on the floor. That's the shot."
+
+Final framing. Ensure both warm and cool spectral fans are visible. Beauty render.
+
+---
+
+## Ingredients
+
+_Living values — refined each time the scene is built._
+
+### Camera
+
+| Setting    | Value                |
+| ---------- | -------------------- |
+| Position   | (0.5, 1.2, 3)        |
+| Target     | (0, 0.3, 0)          |
+| Resolution | 1280x720 interactive |
+| Beauty     | 1920x1080            |
+
+### Environment
+
+| Setting       | Value              |
+| ------------- | ------------------ |
+| Texture color | (0.01, 0.01, 0.02) |
+| Notes         | Near-black         |
+
+### Floor
+
+| Setting   | Value             |
+| --------- | ----------------- |
+| Mesh      | floor.obj, 10x    |
+| Material  | Glossy            |
+| Diffuse   | (0.08, 0.08, 0.1) |
+| Specular  | 0.8               |
+| Roughness | 0.02              |
+
+### Prism (center)
+
+| Setting      | Value                            |
+| ------------ | -------------------------------- |
+| Mesh         | prism.obj                        |
+| Position     | (0, 0, 0) on floor               |
+| Material     | Specular                         |
+| IOR          | 1.8                              |
+| Dispersion   | ON                               |
+| Transmission | (0.15, 0.15, 0.2)                |
+| Smooth       | ON                               |
+| Notes        | Dark tint — appears nearly black |
+
+### Light
+
+| Setting  | Value                                               |
+| -------- | --------------------------------------------------- |
+| Type     | Quad                                                |
+| Position | (-3, 0.5, 0)                                        |
+| Color    | 5500K neutral white                                 |
+| Power    | 3000–5000                                           |
+| Size     | 0.5–1                                               |
+| Notes    | Side, at prism height. Small = sharp spectral lines |
+
+### Render
+
+| Setting | Value           |
+| ------- | --------------- |
+| Samples | 5000            |
+| Time    | ~25s @ 1280x720 |
+
+---
+
+## Handle Map
+
+_Fill as you build. Reference for camera tweaks and material iteration._
+
+| Object | Mesh | Placement | Transform | Material | Geo Group Slot |
+| ------ | ---- | --------- | --------- | -------- | -------------- |
+| Floor  | —    | —         | —         | Glossy   | Input 1        |
+| Prism  | —    | —         | —         | Specular | Input 2        |

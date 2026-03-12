@@ -1,6 +1,6 @@
 # OctaneWebR — Improvement Backlog
 
-Ordered easy → hard within each section. #0 (MCP server) and #20 (vibe theme) completed.
+Ordered easy → hard within each section. #0 (MCP server) completed.
 
 ---
 
@@ -11,9 +11,9 @@ add to doc files for ai to reference https://render.otoy.com/forum/index.php log
 
 ## Major
 
-| #   | Item                                                  | Notes                                                                                       |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0   | ~~**MCP server layer for AI-driven scene creation**~~ | **DONE** — 23 tools in `mcp/`, stdio transport, esbuild + tsx. `.mcp.json` for Claude Code. |
+| #   | Item                                                  | Notes                                                                               |
+| --- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 0   | ~~**MCP server layer for AI-driven scene creation**~~ | **DONE** — 28 tools in `mcp/`, stdio transport, API cache, incremental webapp sync. |
 
 ---
 
@@ -62,11 +62,11 @@ add to doc files for ai to reference https://render.otoy.com/forum/index.php log
 
 ## MCP Server Resilience
 
-| #   | Item                                    | Difficulty | Notes                                                                                                                                                                                                                                              |
-| --- | --------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 31  | **Crash detection + recovery guidance** | Medium     | Detect ECONNRESET/ECONNREFUSED in MCP tools, return structured error with "Octane crashed — restart required, all handles invalidated" instead of raw gRPC errors.                                                                                 |
-| 32  | **Block primitive type changes**        | Easy       | `set_attribute` should refuse `set_attribute(node, 185, AT_INT=3, N)` on primitive enum children. Primitive type changes via gRPC are non-deterministic crash vectors (Sphere, Torus, Cone all crashed). Guide user to NT_GEO_MESH + .obj instead. |
-| 33  | **Deferred evaluation safety warning**  | Easy       | Track `evaluate:false` calls. If 3+ pile up, log a warning. Batching deferred changes + `update_scene()` crashed a 10-object emissive scene. Incremental `evaluate:true` is safer.                                                                 |
+| #   | Item                                    | Difficulty | Notes                                                                                                                                                                              |
+| --- | --------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 31  | **Crash detection + recovery guidance** | Medium     | Detect ECONNRESET/ECONNREFUSED in MCP tools, return structured error with "Octane crashed — restart required, all handles invalidated" instead of raw gRPC errors.                 |
+| 32  | ~~**Block primitive type changes**~~    | ~~Easy~~   | **RESOLVED** — All 24 primitive types (0-23) tested and work. Guard removed. Previous crashes were due to post-crash Octane state.                                                 |
+| 33  | **Deferred evaluation safety warning**  | Easy       | Track `evaluate:false` calls. If 3+ pile up, log a warning. Batching deferred changes + `update_scene()` crashed a 10-object emissive scene. Incremental `evaluate:true` is safer. |
 
 ## Bugs
 

@@ -33,7 +33,7 @@ Three objects on the floor, each playing with ice and light:
    - Should scatter light softly, like looking through frosted window glass
 
 2. **Ice crystal column** (right of center, toward back)
-   - Tall thin box (not a primitive that crashes) — like a column of ice
+   - Tall thin box — like a column of ice
    - Glossy material, very slight blue tint in specular
    - Very low roughness (0.02) — almost mirror but with just enough imperfection to read as ice, not chrome
    - Tall and elegant — maybe 0.2 x 0.7 x 0.2, rotated slightly
@@ -49,3 +49,19 @@ Three objects on the floor, each playing with ice and light:
 Serene. Still. The cold blue light wraps everything in frost. The two glass/ice objects refract and scatter the blue light in different ways — the sphere softly, the crystal sharply. And in the center, the tiny warm ember reminds you that somewhere, far away, there's still fire.
 
 The color story is the inverse of SPICYOTOY: where that scene had warm walls with dark absorption, this scene has cool walls with high reflectivity. Where that scene needed 1500W to light up obsidian, this scene needs only 200W because the pale walls bounce light everywhere.
+
+## Handle Map
+
+| Object             | Handle | Material               | Notes                              |
+| ------------------ | ------ | ---------------------- | ---------------------------------- |
+| Render Target      |        |                        |                                    |
+| Geo Group          |        |                        | 8 input slots                      |
+| Left wall          |        | Diffuse glacial blue   |                                    |
+| Right wall         |        | Diffuse pale cyan      |                                    |
+| Floor              |        | Diffuse pale blue-gray |                                    |
+| Ceiling            |        | Diffuse pale blue-gray |                                    |
+| Back wall          |        | Diffuse mid blue-gray  |                                    |
+| Light panel        |        | Emissive 8500K         | Cold blue-white                    |
+| Frosted sphere     |        | Specular, IOR 1.5      | Pale blue tint, roughness 0.05-0.1 |
+| Ice crystal column |        | Glossy, blue tint      | Roughness 0.02, rotated            |
+| Warm ember         |        | Emissive 2200K         | Tiny, low power                    |
