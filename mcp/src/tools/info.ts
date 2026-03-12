@@ -6,7 +6,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import {
+  OctaneMcpClient,
+  profileReport,
+  profileReset,
+  profileStart,
+  profileEnd,
+} from '../OctaneMcpClient';
 
 // Import node type constants from client
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -101,6 +107,69 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
       } catch (error: any) {
         return errorResult(error);
       }
+    }
+  );
+
+  // ── Profiling tools ──────────────────────────────────────────────
+
+  server.tool(
+    'profile_start',
+    'Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
+    { label: z.string().describe('Name for this profile span') },
+    async ({ label }) => {
+      profileStart(label);
+      return jsonResult({ started: label });
+    }
+  );
+
+  server.tool(
+    'profile_end',
+    'End a named profile span started with profile_start.',
+    { label: z.string().describe('Name of the span to end') },
+    async ({ label }) => {
+      const ms = profileEnd(label);
+      return jsonResult({ ended: label, durationMs: Math.round(ms) });
+    }
+  );
+
+  server.tool(
+    'profile_report',
+    'Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
+    {},
+    async () => {
+      const report = profileReport();
+      // Format a human-readable summary too
+      const lines = [
+        `=== PROFILE REPORT ===`,
+        `Wall clock:    ${(report.wallClockMs / 1000).toFixed(1)}s`,
+        `gRPC total:    ${(report.totalGrpcMs / 1000).toFixed(1)}s (${report.grpcCallCount} calls)`,
+        `Overhead:      ${(report.totalOverheadMs / 1000).toFixed(1)}s (mutex waits + serialization + MCP transport)`,
+        ``,
+        `── gRPC by method ──`,
+        ...report.grpcByMethod.map(
+          m =>
+            `  ${m.method.padEnd(40)} ${String(m.count).padStart(3)}x  ${String(m.avgMs).padStart(4)}ms avg  ${String(m.totalMs).padStart(6)}ms total`
+        ),
+      ];
+      if (report.spans.length > 0) {
+        lines.push(``, `── Manual spans ──`);
+        for (const s of report.spans) {
+          lines.push(`  ${s.label.padEnd(40)} ${String(s.durationMs).padStart(6)}ms`);
+        }
+      }
+      return {
+        content: [{ type: 'text' as const, text: lines.join('\n') }],
+      };
+    }
+  );
+
+  server.tool(
+    'profile_reset',
+    'Reset all profiling data. Call before starting a timed build run.',
+    {},
+    async () => {
+      profileReset();
+      return jsonResult({ reset: true });
     }
   );
 

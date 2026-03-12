@@ -16,7 +16,7 @@
   flex-direction: column;
   max-height: 100%;
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   position: relative;
 }
@@ -359,8 +359,6 @@ input:checked + .slider:before {
   flex: 1;
   font-size: var(--font-size-small);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .db-loading {
@@ -505,7 +503,7 @@ input:checked + .slider:before {
 .node-content {
   display: flex;
   align-items: center;
-  width: 100%;
+  min-width: fit-content;
   padding: 0 4px;
 }
 
@@ -549,9 +547,9 @@ input:checked + .slider:before {
 }
 
 .node-name {
-  flex: 1;
   font-size: var(--font-size-small);
   color: inherit;
+  white-space: nowrap;
 }
 
 /* Label area wrapper for selection highlight (icon + name only) */

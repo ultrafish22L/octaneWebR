@@ -13,9 +13,124 @@ import fs from 'fs';
 
 const MCP_LOG_PATH = path.resolve(__dirname, '../../mcp-debug.log');
 
-function mcpLog(msg: string): void {
+// Log levels: 'debug' = everything, 'warn' = warnings+errors, 'error' = errors only, 'off' = silent
+type LogLevel = 'debug' | 'warn' | 'error' | 'off';
+const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'off';
+
+const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, warn: 1, error: 2, off: 3 };
+
+function mcpLog(msg: string, level: LogLevel = 'debug'): void {
+  if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
   const ts = new Date().toISOString().substring(11, 23);
   fs.appendFileSync(MCP_LOG_PATH, `[${ts}] ${msg}\n`);
+}
+
+// ── Quick & dirty profiler ──────────────────────────────────────────
+export interface ProfileEntry {
+  label: string;
+  startMs: number;
+  endMs?: number;
+  durationMs?: number;
+}
+
+/** All profile spans, in chronological order */
+const profileSpans: ProfileEntry[] = [];
+/** Open spans keyed by label (for start/end pairs) */
+const openSpans = new Map<string, ProfileEntry>();
+/** Session wall-clock start (set on first profileStart or first gRPC call) */
+let sessionStartMs = 0;
+
+export function profileStart(label: string): void {
+  const now = performance.now();
+  if (!sessionStartMs) sessionStartMs = now;
+  const entry: ProfileEntry = { label, startMs: now };
+  profileSpans.push(entry);
+  openSpans.set(label, entry);
+  mcpLog(`PROFILE START: ${label}`);
+}
+
+export function profileEnd(label: string): number {
+  const now = performance.now();
+  const entry = openSpans.get(label);
+  if (entry) {
+    entry.endMs = now;
+    entry.durationMs = now - entry.startMs;
+    openSpans.delete(label);
+    mcpLog(`PROFILE END: ${label} — ${entry.durationMs.toFixed(1)}ms`);
+    return entry.durationMs;
+  }
+  mcpLog(`PROFILE END: ${label} — no matching start`);
+  return 0;
+}
+
+/** Auto-profile a gRPC call (called from callMethod) */
+function profileGrpc(service: string, method: string): () => void {
+  const now = performance.now();
+  if (!sessionStartMs) sessionStartMs = now;
+  const label = `gRPC:${service}.${method}`;
+  const entry: ProfileEntry = { label, startMs: now };
+  profileSpans.push(entry);
+  return () => {
+    entry.endMs = performance.now();
+    entry.durationMs = entry.endMs - entry.startMs;
+  };
+}
+
+export function profileReport(): {
+  wallClockMs: number;
+  totalGrpcMs: number;
+  grpcCallCount: number;
+  totalOverheadMs: number;
+  spans: { label: string; durationMs: number }[];
+  grpcByMethod: { method: string; count: number; totalMs: number; avgMs: number }[];
+} {
+  const now = performance.now();
+  const wallClockMs = sessionStartMs ? now - sessionStartMs : 0;
+
+  // Separate gRPC spans from manual spans
+  const grpcSpans = profileSpans.filter(s => s.label.startsWith('gRPC:') && s.durationMs != null);
+  const manualSpans = profileSpans.filter(
+    s => !s.label.startsWith('gRPC:') && s.durationMs != null
+  );
+
+  const totalGrpcMs = grpcSpans.reduce((sum, s) => sum + (s.durationMs || 0), 0);
+
+  // Aggregate gRPC by method
+  const byMethod = new Map<string, { count: number; totalMs: number }>();
+  for (const s of grpcSpans) {
+    const key = s.label.replace('gRPC:', '');
+    const agg = byMethod.get(key) || { count: 0, totalMs: 0 };
+    agg.count++;
+    agg.totalMs += s.durationMs || 0;
+    byMethod.set(key, agg);
+  }
+  const grpcByMethod = [...byMethod.entries()]
+    .map(([method, { count, totalMs }]) => ({
+      method,
+      count,
+      totalMs: Math.round(totalMs),
+      avgMs: Math.round(totalMs / count),
+    }))
+    .sort((a, b) => b.totalMs - a.totalMs);
+
+  return {
+    wallClockMs: Math.round(wallClockMs),
+    totalGrpcMs: Math.round(totalGrpcMs),
+    grpcCallCount: grpcSpans.length,
+    totalOverheadMs: Math.round(wallClockMs - totalGrpcMs),
+    spans: manualSpans.map(s => ({
+      label: s.label,
+      durationMs: Math.round(s.durationMs || 0),
+    })),
+    grpcByMethod,
+  };
+}
+
+export function profileReset(): void {
+  profileSpans.length = 0;
+  openSpans.clear();
+  sessionStartMs = 0;
+  mcpLog('PROFILE RESET');
 }
 
 /** Crash signature patterns in gRPC error messages */
@@ -44,11 +159,11 @@ function enhanceCrashError(
   const isCrash = CRASH_PATTERNS.some(p => msg.includes(p));
 
   if (isCrash) {
-    mcpLog(`CRASH DETECTED on ${service}.${method}: ${msg}`);
+    mcpLog(`CRASH DETECTED on ${service}.${method}: ${msg}`, 'error');
     // Clear cached handles — they're all invalid after a crash
     if (client) {
       client.clearRootGraphCache();
-      mcpLog('Cleared root graph cache and handle maps after crash');
+      mcpLog('Cleared root graph cache and handle maps after crash', 'warn');
     }
     return new Error(
       `OCTANE CRASHED (${service}.${method}): ${msg}\n` +
@@ -130,9 +245,11 @@ export class OctaneMcpClient {
       await prev; // wait for previous call
       const transformed = transformParams(service, method, params);
       const options = timeoutMs ? { timeout: timeoutMs } : {};
-      mcpLog(`REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`);
+      mcpLog(`REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`, 'debug');
+      const endProfile = profileGrpc(service, method);
       const result = await this.base.callMethod(service, method, transformed, options);
-      mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`);
+      endProfile();
+      mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');
       return result;
     } catch (error: any) {
       throw enhanceCrashError(error, service, method, this);
@@ -198,7 +315,7 @@ export class OctaneMcpClient {
     this.deferredEvalCount++;
     if (this.deferredEvalCount >= OctaneMcpClient.DEFERRED_WARN_THRESHOLD) {
       const count = this.deferredEvalCount;
-      mcpLog(`WARN: ${count} deferred evaluations pending — risk of crash on flush`);
+      mcpLog(`WARN: ${count} deferred evaluations pending — risk of crash on flush`, 'warn');
       return (
         `WARNING: ${count} deferred evaluations (evaluate:false) are pending. ` +
         `Batching many deferred changes and flushing with update_scene() has caused ` +

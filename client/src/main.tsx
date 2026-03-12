@@ -1,9 +1,9 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
 // Import theme variables first, then component styles
-//import './styles/theme-octane.css';
+import './styles/theme-octane.css';
 //import './styles/theme-octane-debug.css'
-import './styles/theme-vibe.css';
+//import './styles/theme-vibe.css';
 import './styles/app.css';
 import './styles/scene-outliner.css';
 import './styles/node-graph.css';

@@ -87,7 +87,16 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
-        return jsonResult(result);
+        // Extract only useful stats — drop huge repeated RENDER_PASS arrays
+        const s = result?.statistics ?? result;
+        return jsonResult({
+          resolution: s?.setSize ? `${s.setSize.x}x${s.setSize.y}` : undefined,
+          samples: s?.beautySamplesPerPixel ?? 0,
+          maxSamples: s?.beautyMaxSamplesPerPixel ?? 0,
+          renderTime: s?.renderTime ?? 0,
+          state: s?.state ?? 'unknown',
+          samplesPerSecond: s?.beautySamplesPerSecond ?? 0,
+        });
       } catch (error: any) {
         return errorResult(error);
       }

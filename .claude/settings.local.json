@@ -68,7 +68,12 @@
       "mcp__octane__stop_render",
       "mcp__octane__refresh_webapp",
       "mcp__octane-docs__list_octane_constants",
-      "mcp__octane-docs__get_octane_function"
+      "mcp__octane-docs__get_octane_function",
+      "Bash(grep -r \"batch\\\\|stream\\\\|parallel\" C:otoylaGRPCdevoctaneWebRmcpnode_modules@modelcontextprotocolsdkdistserver*.d.ts)",
+      "Bash(find C:otoylaGRPCdevoctaneWebRmcpnode_modules@modelcontextprotocol -name *.d.ts -type f)",
+      "Bash(sed 's/.*RES //')",
+      "Bash(python3 -m json.tool)",
+      "Bash(grep -r \"bg-primary\\\\|bg-secondary\\\\|bg-parameter\" /c/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)"
     ]
   }
 }

@@ -268,13 +268,19 @@ export function registerNodeTools(
         }
 
         await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
+
+        // Only return pins with auto-created children (handle != 0).
+        // Reduces response size dramatically (e.g. PT kernel: 49 pins → ~15 with children).
+        // Claude can use get_node_info if it needs the full pin layout later.
+        const activePins = pins.filter(p => p.handle !== 0);
+
         return jsonResult({
           success: true,
           handle: newHandle,
           name: extractValue(nameResult) ?? '',
           type: node_type,
           type_id: typeId,
-          pins,
+          pins: activePins,
         });
       } catch (error: any) {
         return errorResult(error);
