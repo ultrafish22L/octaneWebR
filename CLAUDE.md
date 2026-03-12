@@ -28,7 +28,7 @@ All in `TEST_PLAN.md`. Key points:
 
 ## Status
 
-- **Version**: 1.4.6
+- **Version**: 1.5.1
 - **0 open bugs** — 4 known Octane API limitations (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken)
 - **Testing**: R1+R2+R3 complete. 181 tests, 16 bugs fixed and verified.
 - **Current priority**: MCP bug fixing until stable → demo for bosses.
