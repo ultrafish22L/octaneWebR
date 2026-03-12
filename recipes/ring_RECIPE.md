@@ -30,12 +30,3 @@ A large polished gold ring floating above a dark mirror floor in deep space. A c
 | **Light**          | Single quad, position `(-6, 3, -4)` — far upper-left behind          |
 |                    | 4500K neutral-warm, power 20000-30000, size 1.5                      |
 | **Camera**         | Position `(0.3, 2, 3.8)` → Target `(0, 0.95, 0)`, 1080x1920 portrait |
-
-## What Would Elevate This Further
-
-- Gold-tinted specular `(1, 0.85, 0.35)` for more realistic metallic reflections
-- Dispersion on the crystal sphere for rainbow edge effects where stars refract
-- A second very faint cool fill light from the right to keep the shadow side of the ring from disappearing
-- Subtle bloom on the starfield brightest stars
-- Try rotating the ring tilt angle for the most dramatic light-catch on the gold surface
-- Consider a small emissive element at the sphere center — a tiny warm point light that illuminates the inner ring surface from within

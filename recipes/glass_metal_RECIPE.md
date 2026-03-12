@@ -16,41 +16,154 @@ The floor isn't just a surface — it's a canvas. Reflections of all three spher
 
 **Lighting ratio**: This is a daylight scene (~2:1 ratio) — the sun is key, the sky is fill. Not dramatic, but not flat either. The warm/cool contrast between direct sun and blue sky fill does the heavy lifting.
 
-## Reference Values
+---
 
-| Element          | Setting        | Value                                                                                         |
-| ---------------- | -------------- | --------------------------------------------------------------------------------------------- |
-| **Environment**  | Daylight, hour | 19.0 (golden hour)                                                                            |
-|                  | Turbidity      | 8 (atmospheric haze)                                                                          |
-|                  | Sun size       | 5 (soft shadows)                                                                              |
-|                  | Sunset color   | `(1, 0.4, 0.15)`                                                                              |
-| **Floor**        | Mesh           | `floor.obj`, scale 10x                                                                        |
-|                  | Material       | Glossy — diffuse `(0.7, 0.7, 0.7)`, specular 1.0, roughness 0.02                              |
-| **Gold sphere**  | Position       | `(-0.9, 0.3, 0.4)` — left, FORWARD                                                            |
-|                  | Scale          | 0.6                                                                                           |
-|                  | Material       | Glossy — diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.15, **IOR 100** (metallic Fresnel) |
-| **Glass sphere** | Position       | `(0, 0.38, -0.3)` — center, RECESSED                                                          |
-|                  | Scale          | 0.75                                                                                          |
-|                  | Material       | Specular — transmission `(0.3, 0.5, 1.0)`, IOR 1.5, smooth on                                 |
-| **Red sphere**   | Position       | `(0.9, 0.3, 0.3)` — right, FORWARD                                                            |
-|                  | Scale          | 0.6                                                                                           |
-|                  | Material       | Diffuse — color `(0.8, 0.05, 0.05)`                                                           |
-| **Spheres**      | Mesh           | `sphere_hd.obj`, sitting on floor (y = scale × 0.5)                                           |
-| **Camera**       | Position       | `(-1.5, 0.9, 4.2)` — tight framing, offset left                                               |
-|                  | Target         | `(0, 0.15, 0)` — sphere centers                                                               |
-|                  | Resolution     | 1024x576 interactive, 1280x720 beauty                                                         |
+## Directions
 
-### Texture Upgrade (Optional)
+_9 renders. Each one a visible change. Brisk, not rushed._
 
-```
-polished white marble surface, seamless tileable texture, flat orthographic top-down material scan,
-evenly lit diffuse studio lighting, no shadows no highlights no reflections,
-PBR albedo map, photorealistic, square 1:1
-```
+### Prep
 
-## What Would Elevate This Further
+Clear the scene. Create render target + path tracing kernel. Connect kernel BEFORE starting render. Set resolution to 1024x576.
 
-- A polished marble or concrete floor texture instead of flat grey diffuse
-- Subtle DOF to soften the background sky and foreground floor edges
-- Film stock tone mapping to shift from clinical CG to cinematic warmth
-- V-formation is proven — gold+red forward, glass recessed. Don't flatten to z=0.
+### 1. Set the mood
+
+> "Sunset sky. Sets the whole mood."
+
+Create daylight environment with final values. Connect to RT. Start render. Set hero camera. First thing the boss sees: warm golden hour sky at the final camera angle.
+
+### 2. Lay the table
+
+> "Floor down. Already catching reflections."
+
+Create geo group (8 slots). Floor mesh at 10x scale, no material yet — default white is fine. The sunset sky reflects off the bare floor.
+
+### 3. Gold sphere
+
+> "Gold sphere, left side."
+
+Bare white sphere in the left-forward position. Shape and placement only.
+
+### 4. Glass sphere
+
+> "Glass sphere, center back. V-formation."
+
+Second white sphere, center and recessed. The depth triangle starts to read.
+
+### 5. Red sphere
+
+> "Red sphere, right. All three placed."
+
+Third white sphere completes the trio. All geometry in position, all default white.
+
+### 6. Dress the floor
+
+> "Mirror floor. Watch those sunset reflections."
+
+Glossy material on the floor. Near-mirror finish. The sunset blooms across the surface.
+
+### 7. Dress the gold
+
+> "Gold material. Warm metallic."
+
+Glossy metallic gold. The sphere catches the warm sky and lights up.
+
+### 8. Dress the glass
+
+> "Glass. Blue tint, caustics on the floor."
+
+Specular glass with blue transmission. Light bends through it, caustic patterns scatter below.
+
+### 9. Dress the red
+
+> "Matte red. That's the shot."
+
+Diffuse red. The quiet anchor. Scene complete.
+
+---
+
+## Ingredients
+
+_Living values — refined each time the scene is built._
+
+### Camera
+
+| Setting    | Value                |
+| ---------- | -------------------- |
+| Position   | (-1.5, 0.9, 4.2)     |
+| Target     | (0, 0.15, 0)         |
+| Resolution | 1024x576 interactive |
+| Beauty     | 1280x720             |
+
+### Environment
+
+| Setting      | Value           | Notes                                 |
+| ------------ | --------------- | ------------------------------------- |
+| Hour         | 19.0            | Golden hour sunset                    |
+| Turbidity    | 8               | Atmospheric haze                      |
+| Sky color    | (0.7, 0.5, 0.4) | Warm amber — critical for gold sphere |
+| Sunset color | (1, 0.35, 0.08) | Deep orange-red                       |
+| Sun size     | 5               | Soft shadows                          |
+
+### Floor
+
+| Setting   | Value           |
+| --------- | --------------- |
+| Mesh      | floor.obj, 10x  |
+| Material  | Glossy          |
+| Diffuse   | (0.7, 0.7, 0.7) |
+| Specular  | 1.0             |
+| Roughness | 0.02            |
+
+### Gold Sphere (left, forward)
+
+| Setting   | Value            |
+| --------- | ---------------- |
+| Mesh      | sphere_hd.obj    |
+| Position  | (-0.9, 0.3, 0.4) |
+| Scale     | 0.6              |
+| Material  | Glossy           |
+| Diffuse   | (1, 0.84, 0)     |
+| Specular  | 1.0              |
+| Roughness | 0.15             |
+| IOR       | 30               |
+
+### Glass Sphere (center, recessed)
+
+| Setting      | Value           |
+| ------------ | --------------- |
+| Mesh         | sphere_hd.obj   |
+| Position     | (0, 0.38, -0.3) |
+| Scale        | 0.75            |
+| Material     | Specular        |
+| Transmission | (0.3, 0.5, 1.0) |
+
+### Red Sphere (right, forward)
+
+| Setting  | Value             |
+| -------- | ----------------- |
+| Mesh     | sphere_hd.obj     |
+| Position | (0.9, 0.3, 0.3)   |
+| Scale    | 0.6               |
+| Material | Diffuse           |
+| Diffuse  | (0.8, 0.05, 0.05) |
+
+### Render
+
+| Setting | Value           |
+| ------- | --------------- |
+| Samples | 5000            |
+| Time    | ~20s @ 1024x576 |
+
+---
+
+## Handle Map
+
+_Fill as you build. Reference for camera tweaks and material iteration._
+
+| Object | Mesh | Placement | Transform | Material | Geo Group Slot |
+| ------ | ---- | --------- | --------- | -------- | -------------- |
+| Floor  | —    | —         | —         | Glossy   | Input 1        |
+| Gold   | —    | —         | —         | Glossy   | Input 2        |
+| Glass  | —    | —         | —         | Specular | Input 3        |
+| Red    | —    | —         | —         | Diffuse  | Input 4        |

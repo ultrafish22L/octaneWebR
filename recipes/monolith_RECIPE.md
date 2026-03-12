@@ -36,11 +36,3 @@ brushed light concrete surface, seamless tileable texture, flat orthographic top
 evenly lit diffuse studio lighting, no shadows no highlights no reflections,
 PBR albedo map, photorealistic, square 1:1
 ```
-
-## What Would Elevate This Further
-
-- A very subtle blue rim light from behind to give the monolith edge separation from the dark background
-- Environment medium (light fog) between the camera and the objects for atmospheric depth
-- The monolith slightly off-center on the sphere — perfectly centered feels too stable, a slight offset adds tension
-- PMC kernel for better dispersion convergence on the sphere
-- Consider a slight tilt to the monolith — not quite vertical — for unsettling surrealism

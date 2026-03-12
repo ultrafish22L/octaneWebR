@@ -25,12 +25,3 @@ A large glass sphere in total darkness, lit from directly above. The overhead li
 |                 | 5500K neutral white, power 3000-5000, size 2-3                     |
 | **Camera**      | Position `(0, 0.5, 3)` → Target `(0, 0.5, 0)` — front-on, centered |
 |                 | Resolution                                                         | 1080x1080 square (1:1)                                           |
-
-## What Would Elevate This Further
-
-- PMC kernel for cleaner dispersion ring convergence
-- Experiment with the light size: smaller = sharper rings with more distinct color bands, larger = softer rainbow gradient
-- Try slightly offsetting the light from dead-center — asymmetric dispersion patterns can be more visually interesting than perfect symmetry
-- A very subtle warm tint to the light (5000K instead of 5500K) might give the spectrum a richer quality
-- Film stock tone mapping to deepen the blacks and add subtle color grading
-- Consider a second sphere nearby at different scale — the dispersion patterns would interact

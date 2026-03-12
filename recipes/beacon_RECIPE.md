@@ -28,11 +28,3 @@ A tall glass pillar standing on a dark mirror floor against a starfield backdrop
 | **Light**       | Quad inside pillar, position `(0, 1, 0)`                          |
 |                 | 4000K warm white, power 3000-5000, size 0.3                       |
 | **Camera**      | Position `(1, 0.4, 3)` → Target `(0, 1.5, 0)`, 1080x1920 portrait |
-
-## What Would Elevate This Further
-
-- Bloom post-processing to make the internal glow bleed outward through the glass
-- A subtle warm-to-cool gradient in the pillar's transmission — warm at the base (near the light), cooler at the top
-- Environment medium (light fog) near the floor to create ground-level haze around the base
-- Try a slightly blue/cyan tinted glass instead of warm — beacon becomes an alien artifact rather than a warm lantern
-- Consider a ring of small objects around the base (like stones around a campfire) for scale reference

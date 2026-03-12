@@ -825,3 +825,37 @@ Haze/fog between the camera and distant objects is the most powerful natural sca
 - **Use real-world measurements**: 1 unit = 1 meter in Octane. Human eye height Y=1.0-1.7. Table Y=0.75. Door height 2.0. Room ceiling 2.5-3.0.
 - **Wrong proportions register as "fake" instantly** — even slightly off scale relationships make the brain reject the image
 - **Scale relationships matter**: A coffee mug should be ~0.1m, a chair seat ~0.45m, a doorframe ~2.0m. If any of these are wrong relative to each other, the scene feels CG.
+
+---
+
+## 13. Demo Presentation (DRESS Mode)
+
+When building a scene for an audience — the boss, a client, a demo — the build itself IS the presentation. DRESS mode optimizes for maximum visual change per second.
+
+### Build Order
+
+Mood first, shapes second, beauty last.
+
+1. **Environment** — the lighting/mood is the first thing the viewer sees. Set it final from the start.
+2. **Bare geometry** — objects appear one by one in default white. The composition assembles before their eyes.
+3. **Materials** — each object "dresses up" one by one. Each material swap is a dramatic visual transformation.
+
+Every step gets a render. Every render is a visible, meaningful change.
+
+### Voice
+
+Minimal creative director. Short, visual, confident. Zero tech language.
+
+- "Sunset sky. Sets the whole mood." — not "NT_ENV_DAYLIGHT with turbidity 8"
+- "Gold material. Warm metallic." — not "Glossy, IOR 30 for metallic Fresnel"
+- "That's the shot." — not "Scene complete, 5000 samples at 1024x576"
+
+One sentence per step. Two max for hero moments (first render, final render). Not a product presenter — no "Now watch as..." or "Notice how..." Feels like someone casually narrating while they work.
+
+### Pacing
+
+Brisk, not rushed. Each render is a moment, but don't linger. The viewer should feel momentum — things are happening, the scene is alive, building toward the final image.
+
+### Ingredients Are Living
+
+Recipe ingredient values get refined each time the scene is built and improved. They're the current best, not the original. When a build produces better values, update the recipe.

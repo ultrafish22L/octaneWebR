@@ -93,7 +93,7 @@ function AppContent() {
     handleMaterialDatabaseClose,
   } = usePanelLayout();
 
-  // App-level event listeners (need selectedNode / sceneRefreshTrigger)
+  // App-level event listeners
   useEmitterEvent(
     client,
     'nodeDeleted',
@@ -126,13 +126,18 @@ function AppContent() {
     }, [])
   );
 
-  // MCP live sync: external tools call POST /api/refresh-scene to trigger scene tree rebuild
+  // MCP delete: clear inspector if the selected node was deleted externally
   useEmitterEvent(
     client,
-    'OnRefreshScene',
-    useCallback(() => {
-      Logger.info('MCP refresh: rebuilding scene tree');
-      setSceneRefreshTrigger(prev => prev + 1);
+    'OnMcpNodeDeleted',
+    useCallback(({ handle }: { handle: number }) => {
+      setSelectedNode(current => {
+        if (current && current.handle === handle) {
+          Logger.debug('MCP deleted selected node — clearing inspector');
+          return null;
+        }
+        return current;
+      });
     }, [])
   );
 

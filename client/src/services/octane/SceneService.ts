@@ -576,6 +576,51 @@ export class SceneService extends BaseService {
     setTimeout(() => this.emit(event, data), 0);
   }
 
+  // ─── MCP incremental operations (independent of abort mechanism) ──
+
+  /**
+   * Build metadata for a single newly-created node WITHOUT going through the
+   * abort mechanism.  Multiple concurrent calls are safe because each operates
+   * on a different handle and writes to a different slot in the scene map.
+   * Returns the built SceneNode, or null on failure.
+   */
+  async buildNewNode(handle: number): Promise<SceneNode | null> {
+    if (this.buildBlocked) return null;
+    try {
+      const tempArray: SceneNode[] = [];
+      const node = await this.addSceneItem(tempArray, { handle }, null, 1);
+      if (node) {
+        await this.addItemChildren(node);
+      }
+      return node ?? null;
+    } catch (error) {
+      Logger.error('buildNewNode failed:', error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }
+
+  /**
+   * Refresh an existing node's children (pin connections) in-place.
+   * Called when MCP connect_nodes / disconnect_pin fires nodeChanged.
+   * Re-fetches the node's input pins from the API and updates the SceneNode
+   * so the NodeGraph editor can rebuild edges.
+   * Returns true if the node was found and refreshed.
+   */
+  async refreshNodeChildren(handle: number): Promise<boolean> {
+    const node = this.scene.map.get(handle);
+    if (!node) return false;
+    try {
+      await this.addItemChildren(node);
+      return true;
+    } catch (error) {
+      Logger.error(
+        'refreshNodeChildren failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+      return false;
+    }
+  }
+
   // ─── Public API ────────────────────────────────────────────────────
 
   abort(): void {

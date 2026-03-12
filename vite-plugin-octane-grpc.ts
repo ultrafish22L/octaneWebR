@@ -635,6 +635,35 @@ export function octaneGrpcPlugin(): Plugin {
           return;
         }
 
+        // Smart scene event endpoint — broadcasts targeted events (nodeAdded, nodeDeleted, nodeChanged)
+        // to WebSocket clients for incremental UI updates instead of full scene rebuilds.
+        if (url === '/api/scene-event' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: Buffer) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            try {
+              const event = JSON.parse(body);
+              let broadcastCount = 0;
+              wss?.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify(event));
+                  broadcastCount++;
+                }
+              });
+              slog.info(`Scene event '${event.type}' broadcast to ${broadcastCount} client(s)`);
+              res.setHeader('Content-Type', 'application/json');
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, clients: broadcastCount }));
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+            }
+          });
+          return;
+        }
+
         // Client log clear endpoint (camelCase to match client call)
         if (url === '/api/logClear' && req.method === 'POST') {
           try {

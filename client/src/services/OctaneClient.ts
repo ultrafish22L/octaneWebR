@@ -200,6 +200,22 @@ export class OctaneClient extends EventEmitter {
     return node?.attrInfo || null;
   }
 
+  /**
+   * Build a single new node's metadata without aborting any in-flight builds.
+   * Safe to call concurrently for multiple handles (MCP rapid-fire adds).
+   */
+  async buildNewNode(handle: number): Promise<SceneNode | null> {
+    return this.sceneService.buildNewNode(handle);
+  }
+
+  /**
+   * Refresh an existing node's children (pin connections) in-place.
+   * Call when MCP connect_nodes / disconnect_pin changes wiring.
+   */
+  async refreshNodeChildren(handle: number): Promise<boolean> {
+    return this.sceneService.refreshNodeChildren(handle);
+  }
+
   lookupItem(handle: number): SceneNode | null {
     return this.sceneService.lookupItem(handle);
   }

@@ -26,11 +26,3 @@ An inverted glass cone floating above a mirror floor. A single bright overhead l
 | **Light**       | Single quad, position `(0, 4, 0)`, rotation `(180,0,0)`   |
 |                 | 5500K neutral white, power 5000-10000, size 1-2           |
 | **Camera**      | Position `(1.5, 0.3, 3)` → Target `(0, 1.0, 0)`, 1280x720 |
-
-## What Would Elevate This Further
-
-- PMC kernel for faster caustic convergence (this scene is ALL caustics)
-- Slightly tilt the cone off-vertical for asymmetric dispersion patterns — more organic, less "CG centered"
-- Try a very slightly warm-tinted floor instead of neutral grey — warm undertones make spectral colors pop more
-- Bloom post-processing to make the brightest spectral bands glow
-- Consider two smaller cones instead of one — creates interaction between their dispersion patterns

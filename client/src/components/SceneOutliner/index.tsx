@@ -56,6 +56,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
     onSceneTreeChange,
     onSyncStateChange,
     onNodeSelect,
+    selectedNode,
     initializeExpansion: handleInitializeExpansion,
   });
 

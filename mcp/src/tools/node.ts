@@ -9,6 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
+import { notifyWebapp } from './webapp';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { NodeType } = require('../../../client/src/constants/OctaneTypes');
@@ -266,6 +267,7 @@ export function registerNodeTools(
           }
         }
 
+        await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
         return jsonResult({
           success: true,
           handle: newHandle,
@@ -290,6 +292,7 @@ export function registerNodeTools(
           objectPtr: { handle: String(handle), type: 16 },
         });
         client.handleToTypeName.delete(handle);
+        await notifyWebapp({ type: 'nodeDeleted', handle });
         return jsonResult({ success: true, deleted_handle: handle });
       } catch (error: any) {
         return errorResult(error);
@@ -394,6 +397,7 @@ export function registerNodeTools(
             evaluate,
             doCycleCheck: true,
           });
+          await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
           return jsonResult({
             success: true,
             target: target_handle,
@@ -412,6 +416,7 @@ export function registerNodeTools(
             evaluate,
             doCycleCheck: true,
           });
+          await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
           return jsonResult({
             success: true,
             target: target_handle,
@@ -432,6 +437,7 @@ export function registerNodeTools(
           evaluate,
           doCycleCheck: true,
         });
+        await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
         return jsonResult({
           success: true,
           target: target_handle,
@@ -464,6 +470,7 @@ export function registerNodeTools(
           evaluate,
           doCycleCheck: true,
         });
+        await notifyWebapp({ type: 'nodeChanged', handle });
         return jsonResult({ success: true, handle, pin: pin_index });
       } catch (error: any) {
         return errorResult(error);

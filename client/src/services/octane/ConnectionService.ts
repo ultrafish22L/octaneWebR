@@ -137,6 +137,15 @@ export class ConnectionService extends BaseService {
             } else if (message.type === 'refreshScene') {
               Logger.info('WebSocket: refreshScene broadcast received (MCP sync)');
               this.emit('OnRefreshScene');
+            } else if (message.type === 'nodeAdded') {
+              Logger.info('WebSocket: MCP nodeAdded', message.handle);
+              this.emit('OnMcpNodeAdded', { handle: message.handle });
+            } else if (message.type === 'nodeDeleted') {
+              Logger.info('WebSocket: MCP nodeDeleted', message.handle);
+              this.emit('OnMcpNodeDeleted', { handle: message.handle });
+            } else if (message.type === 'nodeChanged') {
+              Logger.info('WebSocket: MCP nodeChanged', message.handle);
+              this.emit('OnMcpNodeChanged', { handle: message.handle });
             } else {
               Logger.warn('WebSocket: Unknown message type:', message.type);
             }

@@ -36,11 +36,3 @@ dark polished concrete surface, seamless tileable texture, flat orthographic top
 evenly lit diffuse studio lighting, no shadows no highlights no reflections,
 PBR albedo map, photorealistic, square 1:1
 ```
-
-## What Would Elevate This Further
-
-- Bloom on the dispersion rings to make them glow beyond the glass
-- Film stock tone mapping (Kodak warm stock) for cinematic amber push
-- Vignetting to darken frame edges and compress focus to center
-- Try the light more to the side (45°) for rim-lit gold and stronger form shadows
-- PMC kernel for cleaner caustic convergence in the glass

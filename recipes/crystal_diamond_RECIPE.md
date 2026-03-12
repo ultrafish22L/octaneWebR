@@ -34,12 +34,3 @@ polished light grey stone surface, seamless tileable texture, flat orthographic 
 evenly lit diffuse studio lighting, no shadows no highlights no reflections,
 PBR albedo map, photorealistic, square 1:1
 ```
-
-## What Would Elevate This Further
-
-- A very faint cool fill light from the opposite side (~10% of key, 8000K) so the shadow side still shows faceted geometry
-- PMC kernel for cleaner caustic convergence at IOR 2.4
-- Subtle DOF to blur the floor in the foreground, keeping the diamond razor-sharp
-- Film stock tone mapping for warmer blacks and richer highlights
-- Rotate the diamond until one large facet catches a specular flash — the "hero sparkle" moment
-- Dark fabric or velvet texture on the floor instead of flat grey

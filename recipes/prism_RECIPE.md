@@ -28,11 +28,3 @@ The prism sits on a dark reflective floor. White light enters one face from a sm
 | **Light**       | Single quad, position `(-3, 0.5, 0)` — side, prism height |
 |                 | 5500K neutral white, power 3000-5000, size 0.5-1          |
 | **Camera**      | Position `(0.5, 1.2, 3)` → Target `(0, 0.3, 0)`, 1280x720 |
-
-## What Would Elevate This Further
-
-- PMC kernel for cleaner spectral separation (this is a caustics-heavy scene)
-- Try the light at a slight angle rather than perfectly perpendicular — real prism demonstrations often use a slightly angled beam for wider spectral spread
-- A tiny amount of bloom to make the spectral beams glow on the floor
-- The floor could be slightly warm-tinted to make the cool blue side pop harder by contrast
-- Consider a second prism recombining the light — the classic Newton experiment

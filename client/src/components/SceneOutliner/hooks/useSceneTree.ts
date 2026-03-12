@@ -20,6 +20,7 @@ interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
   onSyncStateChange?: (syncing: boolean) => void;
   onNodeSelect?: (node: SceneNode | null) => void;
+  selectedNode?: SceneNode | null;
   initializeExpansion: (tree: SceneNode[]) => void;
 }
 
@@ -27,6 +28,7 @@ export function useSceneTree({
   onSceneTreeChange,
   onSyncStateChange,
   onNodeSelect,
+  selectedNode,
   initializeExpansion,
 }: UseSceneTreeProps) {
   const { client, connected } = useOctane();
@@ -44,6 +46,8 @@ export function useSceneTree({
   onSyncStateChangeRef.current = onSyncStateChange;
   const onNodeSelectRef = useRef(onNodeSelect);
   onNodeSelectRef.current = onNodeSelect;
+  const selectedNodeRef = useRef(selectedNode);
+  selectedNodeRef.current = selectedNode;
   const initializeExpansionRef = useRef(initializeExpansion);
   initializeExpansionRef.current = initializeExpansion;
 
@@ -338,12 +342,139 @@ export function useSceneTree({
 
     const handleSceneTreeUpdated = (scene: { tree?: SceneNode[] }) => {
       Logger.debug('SceneOutliner: Full scene tree update');
-      setSceneTree(scene.tree || []);
+      const newTree = scene.tree || [];
+      setSceneTree(newTree);
+
+      // Re-resolve selectedNode from the new tree so the inspector
+      // gets the fresh (complete) node object instead of a stale reference.
+      const selHandle = selectedNodeRef.current?.handle;
+      if (selHandle) {
+        const findByHandle = (nodes: SceneNode[]): SceneNode | null => {
+          for (const n of nodes) {
+            if (n.handle === selHandle) return n;
+            if (n.children) {
+              const found = findByHandle(n.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const fresh = findByHandle(newTree);
+        if (fresh) {
+          Logger.debug(`Re-selecting node ${selHandle} from rebuilt tree`);
+          onNodeSelectRef.current?.(fresh);
+        }
+      }
     };
 
     client.on('nodeAdded', handleNodeAdded);
     client.on('nodeDeleted', handleNodeDeleted);
     client.on('sceneTreeUpdated', handleSceneTreeUpdated);
+
+    // MCP live sync: external MCP tools modify the scene via a separate gRPC connection.
+    // Strategy: incremental add/delete (instant), debounced rebuild for connects only.
+
+    // Structural sharing delete helper (reused by MCP delete + post-load delete)
+    const filterDeleted = (
+      nodes: SceneNode[],
+      targetHandle: number
+    ): { updated: SceneNode[]; changed: boolean } => {
+      let changed = false;
+      const filtered: SceneNode[] = [];
+      for (const node of nodes) {
+        if (node.handle === targetHandle) {
+          changed = true;
+          continue;
+        }
+        if (node.children && node.children.length > 0) {
+          const childResult = filterDeleted(node.children, targetHandle);
+          if (childResult.changed) {
+            filtered.push({ ...node, children: childResult.updated });
+            changed = true;
+          } else {
+            filtered.push(node);
+          }
+        } else {
+          filtered.push(node);
+        }
+      }
+      return { updated: filtered, changed };
+    };
+
+    // ─── MCP live sync handlers ──────────────────────────────────────
+    // Uses buildNewNode() which does NOT abort other in-flight builds,
+    // so rapid-fire MCP adds (RT, kernel, env in parallel) all succeed.
+
+    // nodeAdded: build just this node, append to tree
+    const handleMcpNodeAdded = async ({ handle }: { handle: number }) => {
+      if (!handle || !client) return;
+      Logger.info('MCP sync: incremental add', handle);
+      try {
+        const node = await client.buildNewNode(handle);
+        if (node) {
+          setSceneTree(prev => [...prev, node]);
+
+          // Auto-select RenderTarget: activate in render engine AND select in UI
+          if (node.type === 'PT_RENDERTARGET' && node.handle && node.handle !== -1) {
+            client
+              .setRenderTargetNode(node.handle)
+              .then(success => {
+                if (success) {
+                  Logger.debug(
+                    `MCP: RenderTarget auto-activated: "${node.name}" (handle: ${node.handle})`
+                  );
+                  // Select in inspector/outliner so the UI reflects the active RT
+                  onNodeSelectRef.current?.(node);
+                }
+              })
+              .catch(err => {
+                Logger.error('MCP: Error auto-activating render target:', err);
+              });
+          }
+        }
+      } catch (err) {
+        Logger.error('MCP incremental add failed, falling back to full reload', err);
+        loadSceneTree();
+      }
+    };
+
+    // nodeDeleted: incremental — remove from map + filter from React tree
+    const handleMcpNodeDeleted = ({ handle }: { handle: number }) => {
+      if (!handle || !client) return;
+      Logger.info('MCP sync: incremental delete', handle);
+      client.removeFromScene(handle);
+      setSceneTree(prev => {
+        const result = filterDeleted(prev, handle);
+        return result.changed ? result.updated : prev;
+      });
+    };
+
+    // nodeChanged: connect/disconnect — refresh the node's children (pin connections)
+    // so the NodeGraph editor can rebuild edges. Uses structural sharing to trigger
+    // React re-render without a full tree rebuild.
+    const handleMcpNodeChanged = async ({ handle }: { handle: number }) => {
+      if (!handle || !client) return;
+      Logger.debug('MCP sync: refreshing connections for', handle);
+      const refreshed = await client.refreshNodeChildren(handle);
+      if (refreshed) {
+        const updatedNode = client.lookupItem(handle);
+        if (updatedNode) {
+          // Structural sharing: clone only the path to this node to trigger React update
+          setSceneTree(prev => prev.map(n => (n.handle === handle ? { ...updatedNode } : n)));
+        }
+      }
+    };
+
+    // refreshScene: MCP refresh_webapp() triggers a full reload
+    const handleRefreshScene = () => {
+      Logger.info('MCP sync: refresh_webapp → full scene reload');
+      loadSceneTree();
+    };
+
+    client.on('OnMcpNodeAdded', handleMcpNodeAdded);
+    client.on('OnMcpNodeDeleted', handleMcpNodeDeleted);
+    client.on('OnMcpNodeChanged', handleMcpNodeChanged);
+    client.on('OnRefreshScene', handleRefreshScene);
 
     return () => {
       // Clean up batch timer
@@ -356,8 +487,12 @@ export function useSceneTree({
       client.off('nodeAdded', handleNodeAdded);
       client.off('nodeDeleted', handleNodeDeleted);
       client.off('sceneTreeUpdated', handleSceneTreeUpdated);
+      client.off('OnMcpNodeAdded', handleMcpNodeAdded);
+      client.off('OnMcpNodeDeleted', handleMcpNodeDeleted);
+      client.off('OnMcpNodeChanged', handleMcpNodeChanged);
+      client.off('OnRefreshScene', handleRefreshScene);
     };
-  }, [client]);
+  }, [client, loadSceneTree]);
 
   return {
     sceneTree,

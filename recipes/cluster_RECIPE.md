@@ -31,12 +31,3 @@ Five colored glass marbles clustered together on a dark reflective floor. Each m
 |                 | Amber                                                           | transmission `(1, 0.7, 0.1)`                                        |
 |                 | Amethyst                                                        | transmission `(0.6, 0.1, 0.8)`                                      |
 | **Camera**      | Position `(2, 2, 3)` → Target `(0, 0.2, 0)`, 1080x1920 portrait |
-
-## What Would Elevate This Further
-
-- Vary the marble sizes slightly (0.5, 0.55, 0.6, 0.65, 0.5) — uniform size screams CG
-- A subtle warm key light from the side to create highlights on one face of each marble while the other falls to shadow — daylight alone can feel flat
-- Dark polished wood or stone floor texture instead of flat grey
-- One marble slightly separated from the group (the "rebel") for visual tension
-- Shallow DOF with focus on the center marble — the outer marbles softly blur
-- Consider adding dispersion to one or two of the marbles for rainbow edge effects

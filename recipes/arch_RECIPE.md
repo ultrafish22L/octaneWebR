@@ -32,12 +32,3 @@ A sci-fi gateway — two tall gold pillars connected by a chrome ring at the top
 | **Light**       | Single quad, position `(0, 4, 2)` — high, slightly forward     |
 |                 | 4500K neutral-warm, power 2000-5000, size 3                    |
 | **Camera**      | Position `(0.3, 1, 5)` → Target `(0, 1.2, 0)`, 1000x563 (16:9) |
-
-## What Would Elevate This Further
-
-- Environment medium (light fog) at ground level — the arch appears to rise out of cosmic mist
-- A second orb color option: try cyan/blue emission instead of warm — sci-fi vs. mystical mood
-- Subtle bloom on the emissive orb for a glowing halo effect
-- Vary the pillar roughness: slightly rougher at the base (weathered/ancient) smoother at the top (reaching toward the chrome ring)
-- Try the camera slightly off-axis — not looking straight through the arch, but at a slight angle. This reveals the pillar depth and makes the gateway feel three-dimensional rather than flat
-- Consider a tiny second set of pillars visible in the distance through the arch — implying a corridor of gateways

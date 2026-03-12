@@ -30,12 +30,3 @@ Two spheres stacked vertically — polished gold on the bottom, blue glass on to
 | **Light**       | Single quad, position `(3, 2, 1)` — side, elevated                |
 |                 | 3500K warm amber, power 3000-5000, size 2-3                       |
 | **Camera**      | Position `(2, 0.4, 3)` → Target `(0, 0.5, 0)`, 1080x1920 portrait |
-
-## What Would Elevate This Further
-
-- Try gold-tinted specular highlights `(1, 0.85, 0.35)` on the gold sphere — metallic specular reflections carry the material's color in reality
-- A very subtle cool rim light from behind to separate the blue sphere from the dark background
-- Film stock tone mapping to push the warm/cool contrast further
-- Slight DOF to soften the floor reflection, keeping the spheres sharp
-- Consider a slight size difference between the spheres — the gold slightly larger as a stable "base", the glass slightly smaller as a delicate "crown"
-- Vignetting to darken the frame edges and focus on the stacked pair

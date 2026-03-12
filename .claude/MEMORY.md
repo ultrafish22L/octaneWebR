@@ -105,9 +105,10 @@ For every scene, this is the rendering order. Each step gets a render + honest c
 - **Octane Alpha 5 crashes during cache generation**: Use the interactive script, not the big batch one. Octane is fragile with rapid-fire ApiInfo calls.
 - **gRPC deadline pattern**: Use `Date.now() + timeoutMs` (number), NOT `new Date()` objects. Match octaneWebR's pattern in `OctaneGrpcClientBase.ts`.
 
-## Cooked Recipes
+## Recipes
 
-- `recipes/glass_metal_COOKED.md` — Scene 1 exact MCP call sequence. No interpretation needed.
+- Recipes have 3 sections: **Vision** (prose), **Directions** (DRESS mode build steps), **Ingredients** (living values, refined over time)
+- No separate "cooked" files — directions live inside the recipe
 - **Speed run benchmark**: Scene 1 from reset → final render in ~8 MCP rounds, 19s Octane render (5000 samples @ 1024×512).
 
 ## Architecture Quick Ref

@@ -31,12 +31,21 @@ WIRING PATTERN:    material → mesh (pin 0)
 
 RT PIN LAYOUT:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
-INFRA BUILD:       create RT → start_render(RT) → set_camera(HERO)
-                   → create env → connect RT pin 1 → set_camera to refresh
-                   → get film child → set resolution (AT_INT2=4)
-                   → create PT kernel → connect RT pin 6 → set_camera
-                   → create geo group → set slots (113, AT_INT=3, 8)
-                   → connect RT pin 3 → set_camera
+BUILD MODES:       DRESS = demo for boss (1-by-1, max visual change/sec)
+                   SPEED = batch everything, minimize round-trips
+
+DRESS BUILD:       RT + PT kernel (connect BEFORE start_render!)
+                   → final env (all values) → start_render → hero camera
+                   → geo group (8 slots) → bare geo 1-by-1 (renders)
+                   → materials 1-by-1 (renders) → refinement
+
+SPEED BUILD:       create ALL nodes in parallel batches
+                   → set ALL attrs with evaluate:false
+                   → wire ALL chains → update_scene flush
+                   → start_render → set_camera → save_render
+
+CRASH RULE:        Connect PT kernel to RT BEFORE start_render().
+                   Swapping kernels on a live render → ECONNRESET crash.
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render/restart_render do NOT refresh geometry.
@@ -65,15 +74,15 @@ TIMING RULE:       Call get_render_status after EVERY render.
 4. **Render after every object** — save_render → Read PNG → evaluate → show to human
 5. **Never trust session continuations** for scene state — verify or start fresh
 
-### Cooking a Recipe
+### Recipe Format
 
-A **cooked recipe** is a recipe compiled into a precise, reproducible sequence of literal MCP calls that constructs the scene exactly as proven. It locks a specific look technically — every handle, attribute, and connection in order.
+Each recipe has three sections:
 
-- **Only cook at user request** — don't proactively create cooked files
-- **Only cook after a scene is proven** — build from the recipe first, iterate until it looks right, THEN cook
-- **Format**: Pseudocode with `→ VAR` for stored handles, `VAR.pins[N]` for pin children, `${ASSETS}` for asset path
-- **File naming**: `{scene}_COOKED.md` in the same directory as the recipe
-- **Review critically** — a cooked file is a contract. Every call must be verified against the proven build.
+- **Vision** — prose creative direction. What the scene should feel like. Not rigid.
+- **Directions** — DRESS mode build steps with commentary cues. 1 render per step, each a visible change.
+- **Ingredients** — living values (camera, env, materials, positions). Refined each time the scene is built and improved. These are the current best, not the original.
+
+No separate "cooked" files. Directions live inside the recipe.
 
 ---
 
@@ -104,18 +113,19 @@ RenderTarget
 
 ### Must-Do
 
-| Rule                               | Why                                                                                                                          |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Create NT_KERN_PATHTRACING**     | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                                |
-| **Film resolution on grandchild**  | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`      |
-| **Geo group pin count first**      | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                             |
-| **Geo group uses pin_name**        | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                    |
-| **Handles are opaque**             | Never guess. Only use values from `create_node` or `get_node_info`.                                                          |
-| **All 24 primitive types work**    | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.  |
-| **RT pin layout varies**           | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                  |
-| **Blackbody efficiency=0.025**     | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.    |
-| **Mesh A_RELOAD after A_FILENAME** | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.          |
-| **Save .ocs NOT .orbx for MCP**    | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery. |
+| Rule                               | Why                                                                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Create NT_KERN_PATHTRACING**     | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                                     |
+| **Film resolution on grandchild**  | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`           |
+| **Geo group pin count first**      | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                                  |
+| **Geo group uses pin_name**        | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                         |
+| **Handles are opaque**             | Never guess. Only use values from `create_node` or `get_node_info`.                                                               |
+| **All 24 primitive types work**    | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.       |
+| **RT pin layout varies**           | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                       |
+| **Blackbody efficiency=0.025**     | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.         |
+| **Mesh A_RELOAD after A_FILENAME** | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.               |
+| **Save .ocs NOT .orbx for MCP**    | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.      |
+| **PT kernel BEFORE start_render**  | Connect NT_KERN_PATHTRACING to RT pin 6 BEFORE calling start_render(). Swapping kernels on a live render causes ECONNRESET crash. |
 
 ### Confirmed Crashes
 
@@ -194,6 +204,32 @@ RT → hero camera → env → film → kernel → geo group. Start rendering ri
 ### Setup Order (for iteration)
 
 Same as demos but start camera wide/back/above. Iterate on framing after objects are in.
+
+### 3D Asset Pipeline (OTOY Studio → Octane)
+
+**OTOY Studio** (otoy.studio) provides AI-powered 3D generation:
+
+1. **Text-to-Image**: Seedream v4.5 — generate concept art
+2. **Image-to-3D**: Hunyuan-3d v3.1 [Pro] Image — 56 credits, needs front image, optional back/left/right views
+3. **Download**: OBJ + texture PNG → save to `ORBX/assets/`
+4. **Load in Octane**: `NT_GEO_MESH` → set `A_FILENAME` → material with `NT_TEX_IMAGE` for texture
+
+**Model orientation — CRITICAL**:
+
+- 3D models from Image-to-3D have a fixed facing direction determined by the source image
+- **ALWAYS determine the model's facing direction BEFORE placing the camera** — do a test render from multiple angles if needed
+- Anticipate orientation from the source image: if the subject faces the viewer in the 2D image, it likely faces +Z or -Z in the OBJ
+- **Never place a default camera and hope** — have a complete composition plan (camera position, model facing, framing) before creating any nodes
+- If the model faces the wrong way: rotate it (A_ROTATION=137) or reposition the camera
+
+**Wiring pattern for external meshes**:
+
+```
+NT_TEX_IMAGE (texture file) → material albedo pin
+NT_MAT_UNIVERSAL (material) → NT_GEO_MESH pin 0
+NT_GEO_MESH (OBJ file) → NT_GEO_PLACEMENT pin "geometry"
+NT_GEO_PLACEMENT (transform) → NT_GEO_GROUP pin "Input N"
+```
 
 ### Emission Workaround
 
