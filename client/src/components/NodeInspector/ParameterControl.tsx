@@ -16,7 +16,7 @@
  * - Custom comparison function for deep equality checks on paramValue
  */
 
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { AttrType } from '../../constants/OctaneTypes';
 import { formatColorValue } from '../../utils/ColorUtils';
@@ -83,6 +83,168 @@ function DeferredInput({
         }
       }}
     />
+  );
+}
+
+/**
+ * Octane-style number input with left/right arrow buttons and background scrub bar.
+ * Used for single-value numeric fields (AT_FLOAT, AT_INT, AT_LONG).
+ */
+function NumberInput({
+  value,
+  onCommit,
+  step,
+  min,
+  max,
+  format,
+  parse,
+}: {
+  value: number;
+  onCommit: (value: number) => void;
+  step: number;
+  min?: number;
+  max?: number;
+  format: (n: number) => string;
+  parse: (s: string) => number;
+}) {
+  const [localValue, setLocalValue] = useState(format(value));
+  const [focused, setFocused] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [narrow, setNarrow] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragStartX = useRef(0);
+  const dragStartValue = useRef(0);
+
+  // Auto-hide arrows when container is narrow
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setNarrow(entry.contentRect.width < 80);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Compute scrub bar fill percentage
+  const scrubMin = min ?? 0;
+  const scrubMax = max ?? (value > 0 ? value * 2 : value < 0 ? -value * 2 : 1);
+  const range = scrubMax - scrubMin;
+  const fillPct = range > 0 ? Math.max(0, Math.min(100, ((value - scrubMin) / range) * 100)) : 0;
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleScrubDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // Arrows handle their own clicks
+      if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartValue.current = value;
+      let didDrag = false;
+
+      const onMove = (me: MouseEvent) => {
+        if (!didDrag && Math.abs(me.clientX - dragStartX.current) > 3) {
+          didDrag = true;
+          setDragging(true);
+        }
+        if (didDrag && range > 0) {
+          const r = containerRef.current?.getBoundingClientRect();
+          if (!r) return;
+          const pct = Math.max(0, Math.min(1, (me.clientX - r.left) / r.width));
+          const newVal = scrubMin + pct * range;
+          const snapped = Math.round(newVal / step) * step;
+          onCommit(snapped);
+        }
+      };
+
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        if (didDrag) {
+          setDragging(false);
+        } else {
+          // Click without drag — enter text edit mode
+          setFocused(true);
+          setLocalValue(format(value));
+          setTimeout(() => {
+            inputRef.current?.focus();
+            inputRef.current?.select();
+          }, 0);
+        }
+      };
+
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [value, step, scrubMin, range, onCommit, format]
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      className={`number-control${narrow ? ' narrow' : ''}${dragging ? ' dragging' : ''}`}
+      onMouseDown={handleScrubDown}
+      role="slider"
+      aria-valuenow={value}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      tabIndex={-1}
+    >
+      <div className="number-control-scrub">
+        <div className="number-control-scrub-fill" style={{ width: `${fillPct}%` }} />
+      </div>
+      {!narrow && (
+        <button
+          className="number-control-arrow number-control-arrow-left"
+          onClick={e => {
+            e.stopPropagation();
+            onCommit(parse(format(value - step)));
+          }}
+          title="Decrease value"
+          type="button"
+        >
+          &#9664;
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="text"
+        className="number-input number-control-input"
+        value={focused ? localValue : format(value)}
+        onChange={e => setLocalValue(e.target.value)}
+        onMouseDown={e => {
+          if (!focused) e.preventDefault();
+        }}
+        onFocus={() => {
+          setFocused(true);
+          setLocalValue(format(value));
+        }}
+        onBlur={() => {
+          setFocused(false);
+          onCommit(parse(localValue));
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        }}
+        autoComplete="off"
+      />
+      {!narrow && (
+        <button
+          className="number-control-arrow number-control-arrow-right"
+          onClick={e => {
+            e.stopPropagation();
+            onCommit(parse(format(value + step)));
+          }}
+          title="Increase value"
+          type="button"
+        >
+          &#9654;
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -155,39 +317,21 @@ function ParameterControlComponent({
     case AttrType.AT_FLOAT: {
       const floatValue = typeof value === 'number' ? value : 0;
       const floatInfo = node.pinInfo?.floatInfo;
-      const useSliders = floatInfo?.useSliders ?? true;
       const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
+      const sliderMin = floatInfo?.dimInfos?.[0]?.minValue;
+      const sliderMax = floatInfo?.dimInfos?.[0]?.maxValue;
 
       controlHtml = (
         <div className="parameter-control-container">
-          <div className="parameter-number-with-spinner">
-            <DeferredInput
-              type="text"
-              className="number-input parameter-control"
-              displayValue={formatFloatForDisplay(floatValue)}
-              onCommit={v => onValueChange(parseFloatValue(v))}
-              autoComplete="off"
-              name="octane-number-input-1"
-            />
-            {useSliders && (
-              <div className="parameter-spinner-container">
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => onValueChange(parseFloatValue((floatValue || 0) + step))}
-                  title="Increase value"
-                >
-                  ▲
-                </button>
-                <button
-                  className="parameter-spinner-btn"
-                  onClick={() => onValueChange(parseFloatValue((floatValue || 0) - step))}
-                  title="Decrease value"
-                >
-                  ▼
-                </button>
-              </div>
-            )}
-          </div>
+          <NumberInput
+            value={floatValue}
+            onCommit={v => onValueChange(v)}
+            step={step}
+            min={sliderMin != null ? Number(sliderMin) : undefined}
+            max={sliderMax != null ? Number(sliderMax) : undefined}
+            format={formatFloatForDisplay}
+            parse={parseFloatValue}
+          />
         </div>
       );
       break;
@@ -198,29 +342,48 @@ function ParameterControlComponent({
         const { x = 0, y = 0 } = value;
         const floatInfo = node.pinInfo?.floatInfo;
         const dimCount = floatInfo?.dimCount ?? 2;
+        const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
+        const dimMin = floatInfo?.dimInfos?.[0]?.minValue;
+        const dimMax = floatInfo?.dimInfos?.[0]?.maxValue;
 
-        controlHtml = (
-          <div className="parameter-control-container">
-            <DeferredInput
-              type="text"
-              className="number-input parameter-control"
-              displayValue={formatFloatForDisplay(x)}
-              onCommit={v => onValueChange({ x: parseFloatValue(v), y })}
-              autoComplete="off"
-              name="octane-number-input-2"
-            />
-            {dimCount >= 2 && (
+        if (dimCount === 1) {
+          controlHtml = (
+            <div className="parameter-control-container">
+              <NumberInput
+                value={x}
+                onCommit={v => onValueChange({ x: v, y })}
+                step={step}
+                min={dimMin != null ? Number(dimMin) : undefined}
+                max={dimMax != null ? Number(dimMax) : undefined}
+                format={formatFloatForDisplay}
+                parse={parseFloatValue}
+              />
+            </div>
+          );
+        } else {
+          controlHtml = (
+            <div className="parameter-control-container">
               <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                displayValue={formatFloatForDisplay(y)}
-                onCommit={v => onValueChange({ x, y: parseFloatValue(v) })}
+                displayValue={formatFloatForDisplay(x)}
+                onCommit={v => onValueChange({ x: parseFloatValue(v), y })}
                 autoComplete="off"
-                name="octane-number-input-3"
+                name="octane-number-input-2"
               />
-            )}
-          </div>
-        );
+              {dimCount >= 2 && (
+                <DeferredInput
+                  type="text"
+                  className="number-input parameter-control"
+                  displayValue={formatFloatForDisplay(y)}
+                  onCommit={v => onValueChange({ x, y: parseFloatValue(v) })}
+                  autoComplete="off"
+                  name="octane-number-input-3"
+                />
+              )}
+            </div>
+          );
+        }
       }
       break;
     }
@@ -255,6 +418,23 @@ function ParameterControlComponent({
                 }}
                 autoComplete="off"
                 name="octane-color-input-4"
+              />
+            </div>
+          );
+        } else if (dimCount === 1) {
+          const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
+          const dimMin = floatInfo?.dimInfos?.[0]?.minValue;
+          const dimMax = floatInfo?.dimInfos?.[0]?.maxValue;
+          controlHtml = (
+            <div className="parameter-control-container">
+              <NumberInput
+                value={x}
+                onCommit={v => onValueChange({ x: v, y, z })}
+                step={step}
+                min={dimMin != null ? Number(dimMin) : undefined}
+                max={dimMax != null ? Number(dimMax) : undefined}
+                format={formatFloatForDisplay}
+                parse={parseFloatValue}
               />
             </div>
           );
@@ -303,17 +483,22 @@ function ParameterControlComponent({
         const dimCount = floatInfo?.dimCount ?? 4;
 
         // Render based on dimension count (matching octaneWeb exactly)
+        const f4step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
+        const f4min = floatInfo?.dimInfos?.[0]?.minValue;
+        const f4max = floatInfo?.dimInfos?.[0]?.maxValue;
+
         switch (dimCount) {
           case 1:
             controlHtml = (
               <div className="parameter-control-container">
-                <DeferredInput
-                  type="text"
-                  className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(x)}
-                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
-                  autoComplete="off"
-                  name="octane-number-input-8"
+                <NumberInput
+                  value={x}
+                  onCommit={v => onValueChange({ x: v, y, z, w })}
+                  step={f4step}
+                  min={f4min != null ? Number(f4min) : undefined}
+                  max={f4max != null ? Number(f4max) : undefined}
+                  format={formatFloatForDisplay}
+                  parse={parseFloatValue}
                 />
               </div>
             );
@@ -441,42 +626,23 @@ function ParameterControlComponent({
           </div>
         );
       } else {
-        // Regular integer input with spinners
+        // Regular integer input with Octane-style arrows
         const intInfo = node.pinInfo?.intInfo;
-        const useSliders = intInfo?.useSliders ?? true;
         const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
+        const sliderMin = intInfo?.dimInfos?.[0]?.minValue;
+        const sliderMax = intInfo?.dimInfos?.[0]?.maxValue;
 
         controlHtml = (
           <div className="parameter-control-container">
-            <div className="parameter-number-with-spinner">
-              <input
-                type="number"
-                className="number-input parameter-control"
-                value={intValue || 0}
-                step={step}
-                onChange={e => onValueChange(parseInt(e.target.value))}
-                autoComplete="off"
-                name="octane-number-input-18"
-              />
-              {useSliders && (
-                <div className="parameter-spinner-container">
-                  <button
-                    className="parameter-spinner-btn"
-                    onClick={() => onValueChange((intValue || 0) + step)}
-                    title="Increase value"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    className="parameter-spinner-btn"
-                    onClick={() => onValueChange((intValue || 0) - step)}
-                    title="Decrease value"
-                  >
-                    ▼
-                  </button>
-                </div>
-              )}
-            </div>
+            <NumberInput
+              value={intValue}
+              onCommit={v => onValueChange(Math.round(v))}
+              step={step}
+              min={sliderMin != null ? Number(sliderMin) : undefined}
+              max={sliderMax != null ? Number(sliderMax) : undefined}
+              format={n => String(Math.round(n))}
+              parse={s => parseInt(s) || 0}
+            />
           </div>
         );
       }
@@ -489,28 +655,47 @@ function ParameterControlComponent({
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 2;
 
-        controlHtml = (
-          <div className="parameter-control-container">
-            <DeferredInput
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(x || 0)}
-              onCommit={v => onValueChange({ x: parseInt(v) || 0, y })}
-              autoComplete="off"
-              name="octane-number-input-20"
-            />
-            {dimCount >= 2 && (
+        if (dimCount === 1) {
+          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
+          const dimMin = intInfo?.dimInfos?.[0]?.minValue;
+          const dimMax = intInfo?.dimInfos?.[0]?.maxValue;
+          controlHtml = (
+            <div className="parameter-control-container">
+              <NumberInput
+                value={x}
+                onCommit={v => onValueChange({ x: Math.round(v), y })}
+                step={step}
+                min={dimMin != null ? Number(dimMin) : undefined}
+                max={dimMax != null ? Number(dimMax) : undefined}
+                format={n => String(Math.round(n))}
+                parse={s => parseInt(s) || 0}
+              />
+            </div>
+          );
+        } else {
+          controlHtml = (
+            <div className="parameter-control-container">
               <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                displayValue={String(y || 0)}
-                onCommit={v => onValueChange({ x, y: parseInt(v) || 0 })}
+                displayValue={String(x || 0)}
+                onCommit={v => onValueChange({ x: parseInt(v) || 0, y })}
                 autoComplete="off"
-                name="octane-number-input-21"
+                name="octane-number-input-20"
               />
-            )}
-          </div>
-        );
+              {dimCount >= 2 && (
+                <DeferredInput
+                  type="text"
+                  className="number-input parameter-control"
+                  displayValue={String(y || 0)}
+                  onCommit={v => onValueChange({ x, y: parseInt(v) || 0 })}
+                  autoComplete="off"
+                  name="octane-number-input-21"
+                />
+              )}
+            </div>
+          );
+        }
       }
       break;
     }
@@ -521,38 +706,57 @@ function ParameterControlComponent({
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 3;
 
-        controlHtml = (
-          <div className="parameter-control-container">
-            <DeferredInput
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(x || 0)}
-              onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z })}
-              autoComplete="off"
-              name="octane-number-input-22"
-            />
-            {dimCount >= 2 && (
+        if (dimCount === 1) {
+          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
+          const dimMin = intInfo?.dimInfos?.[0]?.minValue;
+          const dimMax = intInfo?.dimInfos?.[0]?.maxValue;
+          controlHtml = (
+            <div className="parameter-control-container">
+              <NumberInput
+                value={x}
+                onCommit={v => onValueChange({ x: Math.round(v), y, z })}
+                step={step}
+                min={dimMin != null ? Number(dimMin) : undefined}
+                max={dimMax != null ? Number(dimMax) : undefined}
+                format={n => String(Math.round(n))}
+                parse={s => parseInt(s) || 0}
+              />
+            </div>
+          );
+        } else {
+          controlHtml = (
+            <div className="parameter-control-container">
               <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                displayValue={String(y || 0)}
-                onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z })}
+                displayValue={String(x || 0)}
+                onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z })}
                 autoComplete="off"
-                name="octane-number-input-23"
+                name="octane-number-input-22"
               />
-            )}
-            {dimCount >= 3 && (
-              <DeferredInput
-                type="text"
-                className="number-input parameter-control"
-                displayValue={String(z || 0)}
-                onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0 })}
-                autoComplete="off"
-                name="octane-number-input-24"
-              />
-            )}
-          </div>
-        );
+              {dimCount >= 2 && (
+                <DeferredInput
+                  type="text"
+                  className="number-input parameter-control"
+                  displayValue={String(y || 0)}
+                  onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z })}
+                  autoComplete="off"
+                  name="octane-number-input-23"
+                />
+              )}
+              {dimCount >= 3 && (
+                <DeferredInput
+                  type="text"
+                  className="number-input parameter-control"
+                  displayValue={String(z || 0)}
+                  onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0 })}
+                  autoComplete="off"
+                  name="octane-number-input-24"
+                />
+              )}
+            </div>
+          );
+        }
       }
       break;
     }
@@ -563,61 +767,80 @@ function ParameterControlComponent({
         const intInfo = node.pinInfo?.intInfo;
         const dimCount = intInfo?.dimCount ?? 4;
 
-        const inputs = [];
-        if (dimCount >= 1) {
-          inputs.push(
-            <DeferredInput
-              key="x"
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(x || 0)}
-              onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z, w })}
-              autoComplete="off"
-              name="octane-number-input-25"
-            />
+        if (dimCount === 1) {
+          const step = intInfo?.dimInfos?.[0]?.sliderStep ?? 1;
+          const dimMin = intInfo?.dimInfos?.[0]?.minValue;
+          const dimMax = intInfo?.dimInfos?.[0]?.maxValue;
+          controlHtml = (
+            <div className="parameter-control-container">
+              <NumberInput
+                value={x}
+                onCommit={v => onValueChange({ x: Math.round(v), y, z, w })}
+                step={step}
+                min={dimMin != null ? Number(dimMin) : undefined}
+                max={dimMax != null ? Number(dimMax) : undefined}
+                format={n => String(Math.round(n))}
+                parse={s => parseInt(s) || 0}
+              />
+            </div>
           );
-        }
-        if (dimCount >= 2) {
-          inputs.push(
-            <DeferredInput
-              key="y"
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(y || 0)}
-              onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z, w })}
-              autoComplete="off"
-              name="octane-number-input-26"
-            />
-          );
-        }
-        if (dimCount >= 3) {
-          inputs.push(
-            <DeferredInput
-              key="z"
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(z || 0)}
-              onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0, w })}
-              autoComplete="off"
-              name="octane-number-input-27"
-            />
-          );
-        }
-        if (dimCount >= 4) {
-          inputs.push(
-            <DeferredInput
-              key="w"
-              type="text"
-              className="number-input parameter-control"
-              displayValue={String(w || 0)}
-              onCommit={v => onValueChange({ x, y, z, w: parseInt(v) || 0 })}
-              autoComplete="off"
-              name="octane-number-input-28"
-            />
-          );
-        }
+        } else {
+          const inputs = [];
+          if (dimCount >= 1) {
+            inputs.push(
+              <DeferredInput
+                key="x"
+                type="text"
+                className="number-input parameter-control"
+                displayValue={String(x || 0)}
+                onCommit={v => onValueChange({ x: parseInt(v) || 0, y, z, w })}
+                autoComplete="off"
+                name="octane-number-input-25"
+              />
+            );
+          }
+          if (dimCount >= 2) {
+            inputs.push(
+              <DeferredInput
+                key="y"
+                type="text"
+                className="number-input parameter-control"
+                displayValue={String(y || 0)}
+                onCommit={v => onValueChange({ x, y: parseInt(v) || 0, z, w })}
+                autoComplete="off"
+                name="octane-number-input-26"
+              />
+            );
+          }
+          if (dimCount >= 3) {
+            inputs.push(
+              <DeferredInput
+                key="z"
+                type="text"
+                className="number-input parameter-control"
+                displayValue={String(z || 0)}
+                onCommit={v => onValueChange({ x, y, z: parseInt(v) || 0, w })}
+                autoComplete="off"
+                name="octane-number-input-27"
+              />
+            );
+          }
+          if (dimCount >= 4) {
+            inputs.push(
+              <DeferredInput
+                key="w"
+                type="text"
+                className="number-input parameter-control"
+                displayValue={String(w || 0)}
+                onCommit={v => onValueChange({ x, y, z, w: parseInt(v) || 0 })}
+                autoComplete="off"
+                name="octane-number-input-28"
+              />
+            );
+          }
 
-        controlHtml = <div className="parameter-control-container">{inputs}</div>;
+          controlHtml = <div className="parameter-control-container">{inputs}</div>;
+        }
       }
       break;
     }
@@ -626,33 +849,13 @@ function ParameterControlComponent({
       const longValue = typeof value === 'number' ? value : 0;
       controlHtml = (
         <div className="parameter-control-container">
-          <div className="parameter-number-with-spinner">
-            <input
-              type="number"
-              className="number-input parameter-control"
-              value={longValue || 0}
-              step="1"
-              onChange={e => onValueChange(parseInt(e.target.value))}
-              autoComplete="off"
-              name="octane-number-input-29"
-            />
-            <div className="parameter-spinner-container">
-              <button
-                className="parameter-spinner-btn"
-                onClick={() => onValueChange((longValue || 0) + 1)}
-                title="Increase value"
-              >
-                ▲
-              </button>
-              <button
-                className="parameter-spinner-btn"
-                onClick={() => onValueChange((longValue || 0) - 1)}
-                title="Decrease value"
-              >
-                ▼
-              </button>
-            </div>
-          </div>
+          <NumberInput
+            value={longValue}
+            onCommit={v => onValueChange(Math.round(v))}
+            step={1}
+            format={n => String(Math.round(n))}
+            parse={s => parseInt(s) || 0}
+          />
         </div>
       );
       break;

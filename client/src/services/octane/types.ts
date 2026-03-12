@@ -41,8 +41,10 @@ export interface NodeInfo {
  */
 export interface DimInfo {
   sliderStep?: number;
-  min?: number;
-  max?: number;
+  minValue?: number;
+  maxValue?: number;
+  sliderMinValue?: number;
+  sliderMaxValue?: number;
 }
 
 export interface FloatInfo {
