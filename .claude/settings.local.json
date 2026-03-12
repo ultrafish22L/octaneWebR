@@ -74,7 +74,14 @@
       "Bash(sed 's/.*RES //')",
       "Bash(python3 -m json.tool)",
       "Bash(grep -r \"bg-primary\\\\|bg-secondary\\\\|bg-parameter\" /c/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)",
-      "Bash(find C:otoylaGRPCdevoctaneWebR -type f -name *bug* -o -name *issue*)"
+      "Bash(find C:otoylaGRPCdevoctaneWebR -type f -name *bug* -o -name *issue*)",
+      "mcp__octane__get_octane_version",
+      "mcp__octane-docs__get_octane_properties",
+      "mcp__octane__save_project",
+      "mcp__octane__profile_reset",
+      "mcp__octane__profile_start",
+      "mcp__octane__profile_end",
+      "mcp__octane__profile_report"
     ]
   }
 }

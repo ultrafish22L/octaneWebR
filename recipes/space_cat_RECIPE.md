@@ -76,43 +76,44 @@ _Living values — refined each time the scene is built._
 
 | Setting    | Value                          |
 | ---------- | ------------------------------ |
-| Position   | (-1.5, 2, -9)                  |
-| Target     | (0.5, 0, 0)                    |
+| Position   | (8.17, 13.30, 2.82)            |
+| Target     | (-1.07, 2.72, 6.52)            |
 | Up         | (0, 1, 0) — STANDARD           |
 | FOV        | 39.598°                        |
-| Resolution | 1024x1024 interactive (square) |
-| Beauty     | 1024x1024                      |
+| Resolution | 1000x1000 interactive (square) |
+| Beauty     | 1000x1000                      |
 | DOF        | Off (aperture=0)               |
 
-**NOTE**: Camera up vector is standard (0,1,0). Cat rotation compensates for +Y face direction. `set_camera()` works normally — no workarounds needed.
+**NOTE**: Camera above and to the right, looking down at cat — dramatic hero angle. Up vector is standard (0,1,0). `set_camera()` works normally.
 
 ### Environment
 
 | Setting | Value                     | Notes                    |
 | ------- | ------------------------- | ------------------------ |
 | Texture | ORBX/assets/starfield.jpg | Sparse starfield         |
-| Power   | 0.3–0.5                   | Very low — space is dark |
+| Power   | 0.4                       | Very low — space is dark |
 
 ### Cat Astronaut
 
-| Setting  | Value                                                                    |
-| -------- | ------------------------------------------------------------------------ |
-| Mesh     | cat_astronaut.obj                                                        |
-| Texture  | cat_astronaut_tex.png                                                    |
-| Position | (0, 0, 0) — origin                                                       |
-| Rotation | (-1.5708, -0.2, 0) — X=-90° faces cat toward -Z, Y=-0.2 slight 3/4 angle |
-| Scale    | (5, 5, 5)                                                                |
-| Material | Universal mat + image texture                                            |
-| Face     | Points +Y natively                                                       |
+| Setting  | Value                                                                     |
+| -------- | ------------------------------------------------------------------------- |
+| Mesh     | cat_astronaut.obj                                                         |
+| Texture  | cat_astronaut_tex.png                                                     |
+| Position | (0.03, 2.16, 4.09)                                                        |
+| Rotation | (66.6, 140.4, 16.5) DEGREES — user-tuned in Octane for face-toward-camera |
+| Scale    | (5, 5, 5)                                                                 |
+| Material | Universal mat + image texture                                             |
+| Face     | Points +Y natively. A_ROTATION uses DEGREES, not radians!                 |
 
 ### Earth
 
-| Setting  | Value                         |
-| -------- | ----------------------------- |
-| Mesh     | sphere_hd.obj                 |
-| Position | (8, -35, 25)                  |
-| Scale    | (30, 30, 30)                  |
-| Material | Diffuse + earth_daymap_8k.jpg |
+| Setting  | Value                                                    |
+| -------- | -------------------------------------------------------- |
+| Mesh     | sphere_hd.obj                                            |
+| Position | (2, -18, 5)                                              |
+| Rotation | (314.2, 109.8, 44.5) DEGREES — user-tuned continent view |
+| Scale    | (30, 30, 30)                                             |
+| Material | Diffuse + earth_daymap_8k.jpg                            |
 
 ### Lights
 
@@ -135,37 +136,17 @@ All lights: NT_LIGHT_QUAD, camera-invisible.
 
 ## Handle Map
 
-_Fill as you build. Reference for camera tweaks and material iteration._
+_Handles are session-specific — rebuild by walking the scene tree after loading the orbx. The node structure is:_
 
-| Object     | Mesh    | Placement | Transform | Material | Geo Group Slot |
-| ---------- | ------- | --------- | --------- | -------- | -------------- |
-| Cat        | 1000199 | 1000245   | 1000247   | 1000290  | Input 1        |
-| Earth      | 1000375 | 1000416   | 1000417   | 1000427  | Input 2        |
-| Key Light  | 1000526 | —         | 1000530   | —        | Input 3        |
-| Fill Light | 1000541 | —         | 1000545   | —        | Input 4        |
-| Backlight  | 1000684 | —         | 1000688   | —        | Input 5        |
+| Object     | Node Type        | Geo Group Slot |
+| ---------- | ---------------- | -------------- |
+| Cat        | Mesh + Placement | Input 1        |
+| Earth      | Mesh + Placement | Input 2        |
+| Key Light  | Quad light       | Input 3        |
+| Fill Light | Quad light       | Input 4        |
+| Backlight  | Quad light       | Input 5        |
 
-### Additional Handles
-
-| Node                | Handle  |
-| ------------------- | ------- |
-| RT                  | 1000003 |
-| Camera              | 1000004 |
-| Camera pos          | 1000159 |
-| Camera target       | 1000162 |
-| Camera up           | 1000165 |
-| Kernel              | 1000014 |
-| Env                 | 1000055 |
-| Starfield tex       | 1000099 |
-| Geo group           | 1000157 |
-| Film resolution     | 1000207 |
-| Cat texture         | 1000673 |
-| Earth texture       | 1000479 |
-| Key light power     | 1000574 |
-| Fill light power    | 1000585 |
-| Backlight           | 1000684 |
-| Backlight transform | 1000688 |
-| Backlight power     | 1000705 |
+_Cat material = Universal + RGB image texture. Earth material = Diffuse + RGB image texture. All lights have Diffuse material with Texture emission + Object layer (camera_visibility=false)._
 
 ---
 
@@ -193,8 +174,13 @@ Follow Directions above. The audience watches a 3D scene assemble in real-time f
 - **Eclipse/backlight**: Matte sphere + backlight = no visible corona without bloom post-processing
 - **`set_camera()` resets up vector**: It always resets to (0,1,0). The original workaround (flip up to -1,0 + attribute-based camera) was fragile and caused 180° flips every refresh. **FIX: Don't flip up. Rotate the cat model instead.**
 - **Cat face points +Y**: Original approach flipped camera up to (0,-1,0) — WRONG. Correct approach: rotate cat model to face camera with standard up vector.
-- **Cat rotation 190° on Y**: Shows the correct side of the model to camera.
+- **Cat rotation 190° on Y**: Was only correct for original camera angle. Final user-tuned rotation is (66.6, 140.4, 16.5) degrees.
+- **A_ROTATION uses DEGREES not radians**: Critical — 90 means 90°, not 1.5708. Radians produce negligible rotation.
 - **Atmosphere shell glow**: Emissive thin shell around Earth didn't produce visible horizon glow at this camera distance. Needs different approach (volumetric medium or post-processing bloom).
 - **Flipped up vector was wrong approach**: Cat faces +Y, so I flipped camera up to (0,-1,0). This broke `set_camera()` (always resets to 0,1,0), causing 180° flips every refresh. **FIX: Rotate the cat model instead. Keep standard up vector (0,1,0).** This likely also fixes the inverted Earth.
 - **Earth appears inverted**: Was caused by flipped camera up vector (0,-1,0). **FIXED** — standard up vector (0,1,0) renders Earth correctly. Asia visible and properly oriented.
 - **Deferred eval crash risk**: Too many `evaluate: false` calls (12+) including geo group→RT connection can crash Octane (ECONNRESET). Keep deferred batches smaller or evaluate between structural connections.
+- **Relative texture paths**: `assets/earth_daymap_8k.jpg` failed with `:rgba` suffix error. Always use absolute paths: `C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\assets\\file.ext`.
+- **Starfield texture not reloading**: Must call `A_RELOAD=124` after `A_FILENAME=34` on image textures, same as meshes. Without reload, texture is missing.
+- **Black render in space**: No environment light + no quad lights = pure black. Must create and connect at least one light before adding geometry.
+- **Build timing**: Full DRESS build from empty scene = **3m 51s** (231s wall clock, 2s gRPC, 229s Claude thinking). 99% of time is not Octane.

@@ -14,15 +14,18 @@ Best practices, observed patterns, and reference info for building scenes via th
 RENDER OUTPUT:     C:/otoyla/GRPC/dev/octaneWebR/renders/
                    NEVER save renders to ORBX/. ORBX is for scenes + assets only.
 
-MESH PATH PREFIX:  C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/
+ASSET PATH:        C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/
+                   ALWAYS use absolute paths for A_FILENAME on meshes AND textures.
+                   Relative paths are fragile (depend on Octane working dir).
 MESH FILES:        floor.obj, sphere_hd.obj, sphere.obj, sphere_uv.obj,
                    cube.obj, torus.obj, ring.obj, teapot.obj, quad.obj,
                    diamond.obj, monolith.obj, prism.obj, pillar.obj
 
 TRANSFORM ATTRS:   A_TRANSLATION = 172   A_ROTATION = 137   A_SCALE = 139
                    All AT_FLOAT3 (type 11).  NOT 140/141!
+                   A_ROTATION uses DEGREES (90 = 90°, NOT radians!)
 
-OTHER KEY ATTRS:   A_VALUE = 185   A_FILENAME = 34   A_RELOAD = 92
+OTHER KEY ATTRS:   A_VALUE = 185   A_FILENAME = 34   A_RELOAD = 124
 
 ATTR TYPES:        AT_BOOL=1  AT_INT=3  AT_INT2=4  AT_FLOAT=9
                    AT_FLOAT2=90  AT_FLOAT3=11  AT_STRING=14
@@ -48,12 +51,23 @@ SPEED BUILD:       create ALL nodes quickly (no renders between)
                    → start_render → set_camera → save_render
                    NEVER use evaluate:false. See CRASH RULES below.
 
-CRASH RULES:       1. Connect PT kernel to RT BEFORE start_render().
-                      Swapping kernels on a live render → ECONNRESET crash.
-                   2. NEVER use evaluate:false. Always use evaluate:true
+CRASH RULES:       1. NEVER use evaluate:false. Always use evaluate:true
                       (the default). Deferred batches have caused 3+ crashes.
-                   3. Restart ALL servers (dev, preview) before every build
+                   2. Restart ALL servers (dev, preview) before every build
                       run AND after every Octane crash.
+                   3. NEVER create nodes in parallel. Sequential only.
+
+KERNEL NOTE:       RT has a default DL kernel. Swap to PT anytime — does NOT
+                   crash. Kernel swap is safe even on a live render.
+
+CONNECTION RULE:   Always use pin_id for connect_nodes — no ambiguity.
+                   P_GEOMETRY=59, P_KERNEL=89, P_ENVIRONMENT=43,
+                   P_MESH=111, P_DIFFUSE=30, P_EMISSION=41.
+                   pin_index/pin_name can silently fail.
+                   Geo group dynamic pins still need pin_name: "Input N".
+
+LIVE RENDER:       Most changes (connect, set_attribute) take effect on
+                   the live render. Don't stop render unnecessarily.
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render/restart_render do NOT refresh geometry.
@@ -120,7 +134,7 @@ RenderTarget
   pin 1: Environment     (NT_ENV_TEXTURE — auto-created)
   pin 3: Geometry        (connect NT_GEO_GROUP here)
   pin 4: Film Settings   (auto-created, has resolution child)
-  pin 6: Kernel          (auto-creates DL kernel — MUST replace with PT!)
+  pin 6: Kernel          (auto-creates DL kernel — swap to PT when ready, safe anytime)
 ```
 
 ### Coordinate System
@@ -135,19 +149,24 @@ RenderTarget
 
 ### Must-Do
 
-| Rule                               | Why                                                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Create NT_KERN_PATHTRACING**     | Default DL kernel renders all-white for interior scenes. Connect to RT pin 6.                                                     |
-| **Film resolution on grandchild**  | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`           |
-| **Geo group pin count first**      | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                                  |
-| **Geo group uses pin_name**        | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                         |
-| **Handles are opaque**             | Never guess. Only use values from `create_node` or `get_node_info`.                                                               |
-| **All 24 primitive types work**    | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.       |
-| **RT pin layout varies**           | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                       |
-| **Blackbody efficiency=0.025**     | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.         |
-| **Mesh A_RELOAD after A_FILENAME** | After `set_attribute(mesh, 34, 14, path)`, MUST also `set_attribute(mesh, 124, 1, true)` or mesh loads no geometry.               |
-| **Save .ocs NOT .orbx for MCP**    | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.      |
-| **PT kernel BEFORE start_render**  | Connect NT_KERN_PATHTRACING to RT pin 6 BEFORE calling start_render(). Swapping kernels on a live render causes ECONNRESET crash. |
+| Rule                              | Why                                                                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Create NT_KERN_PATHTRACING**    | Default DL kernel is fine for building. Swap to PT anytime — safe even on live render. Connect via `pin_id: 89` (P_KERNEL).                                                        |
+| **Film resolution on grandchild** | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`                                                            |
+| **Geo group pin count first**     | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                                                                                   |
+| **Geo group uses pin_name**       | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                                                                          |
+| **Handles are opaque**            | Never guess. Only use values from `create_node` or `get_node_info`.                                                                                                                |
+| **All 24 primitive types work**   | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.                                                        |
+| **RT pin layout varies**          | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                                                                        |
+| **Blackbody efficiency=0.025**    | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.                                                          |
+| **A_RELOAD after A_FILENAME**     | After `set_attribute(node, 34, 14, path)`, MUST also `set_attribute(node, 124, 1, true)`. Applies to BOTH meshes AND textures. Without reload, mesh is missing / texture is black. |
+| **Always use absolute paths**     | `set_attribute(node, 34, 14, "C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\assets\\file.obj")`. Relative paths fail when Octane working dir changes.                                   |
+| **A_ROTATION uses DEGREES**       | 90° = 90, NOT 1.5708. Radians produce negligible rotation (~3° instead of 180°). This has caused multiple wasted iterations.                                                       |
+| **Light before geo in space**     | Scenes with no environment light (space/void) need at least one light connected before adding geo, or first render is pure black.                                                  |
+| **Save .ocs NOT .orbx for MCP**   | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.                                                       |
+| **Use pin_id for connections**    | Always use `pin_id` (P_GEOMETRY=59, P_KERNEL=89, P_ENVIRONMENT=43, P_DIFFUSE=30, P_EMISSION=41). pin_index/pin_name can silently fail.                                             |
+| **Connect after create**          | Creating a node does nothing until you connect it. Always follow `create_node` with `connect_nodes`. Don't stop render to do this.                                                 |
+| **Never parallel create_node**    | Parallel `create_node` calls crash Octane. Create nodes ONE AT A TIME. Parallel `set_attribute` on existing nodes is OK.                                                           |
 
 ### Confirmed Crashes
 
@@ -161,6 +180,7 @@ RenderTarget
 | Trigger                                       | Observation                                                                        | Status                            |
 | --------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
 | `evaluate:false` × N + structural connection  | 12 deferred ops + geo group→RT connection = ECONNRESET crash. Reproduced 3+ times. | **CONFIRMED** — never defer evals |
+| Parallel `create_node` calls                  | 4× simultaneous create_node = ECONNRESET crash. Reproduced.                        | **CONFIRMED** — sequential only   |
 | Heavy structural ops (destroy connected node) | Previously reported as crash — not yet reproduced with current MCP                 | Unverified conjecture             |
 | NT_GEO_MESH batched build + `set_camera`      | Previously not reproducible                                                        | Unverified conjecture             |
 
@@ -187,10 +207,11 @@ set_camera(current_position, current_target)   # forces re-render
 
 ### Connection Rules
 
-- **RT pins (0-11)**: `pin_index` works fine
-- **Geo group dynamic pins**: `pin_index` SILENTLY FAILS. Must use `pin_name: "Input N"` (e.g. "Input 1", "Input 2")
-- **Material emission pin 14**: Use `pin_name: "emission"` (pin_index may silently fail)
-- **General rule**: If a connection returns success but `get_node_info` shows handle=0, switch to `pin_name`
+- **Always prefer `pin_id`** — unambiguous, never silently fails. Key IDs from `octaneids.proto`:
+  - `P_DIFFUSE=30`, `P_EMISSION=41`, `P_ENVIRONMENT=43`, `P_GEOMETRY=59`, `P_KERNEL=89`, `P_MESH=111`
+- **Geo group dynamic pins**: Exception — must use `pin_name: "Input N"` (e.g. "Input 1", "Input 2"). `pin_index` silently fails on dynamic pins.
+- **General rule**: If a connection returns success but `get_node_info` shows handle=0, try `pin_id` instead
+- **Don't stop render to connect** — most changes take effect on the live render automatically
 
 ### One Object at a Time — RULE
 
@@ -233,6 +254,16 @@ RT → hero camera → env → film → kernel → geo group. Start rendering ri
 
 Same as demos but start camera wide/back/above. Iterate on framing after objects are in.
 
+### Setup Order (space scenes — no ambient light)
+
+Space scenes have no environment light (texture env at low power provides stars but minimal illumination). **Create at least one light source and connect it to the geo group BEFORE adding geometry.** Otherwise the first render will be pure black and you won't know if geo is correctly placed.
+
+1. RT → hero camera → geo group (connect to RT)
+2. **Key light** → set position/power/size → connect to geo group → start render
+3. First geo object → connect to geo group → quick render (now visible!)
+4. Remaining objects one at a time
+5. Environment (starfield) last — it's backdrop, not illumination
+
 ### 3D Asset Pipeline (OTOY Studio → Octane)
 
 **OTOY Studio** (otoy.studio) provides AI-powered 3D generation:
@@ -250,12 +281,19 @@ Same as demos but start camera wide/back/above. Iterate on framing after objects
 - **Never place a default camera and hope** — have a complete composition plan (camera position, model facing, framing) before creating any nodes
 - If the model faces the wrong way: **rotate the model** (A_ROTATION=137) — NEVER flip the camera up vector
 
+**File loading pattern** (meshes AND textures):
+
+```
+set_attribute(handle, A_FILENAME=34, AT_STRING=14, "C:\\otoyla\\...\\assets\\file.obj")
+set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # CRITICAL — always reload!
+```
+
 **Wiring pattern for external meshes**:
 
 ```
 NT_TEX_IMAGE (texture file) → material albedo pin
 NT_MAT_UNIVERSAL (material) → NT_GEO_MESH pin 0
-NT_GEO_MESH (OBJ file) → NT_GEO_PLACEMENT pin "geometry"
+NT_GEO_MESH (OBJ file) → NT_GEO_PLACEMENT pin "geometry"  (pin_index 1)
 NT_GEO_PLACEMENT (transform) → NT_GEO_GROUP pin "Input N"
 ```
 
@@ -448,22 +486,23 @@ All 24 primitive types (0-23) tested and verified working.
 
 ### Pin Compatibility
 
-| Pin                   | Accepts                     | Rejects              |
-| --------------------- | --------------------------- | -------------------- |
-| diffuse (mat pin 0)   | Texture nodes (NT*TEX*\*)   | Emissions, materials |
-| emission (mat pin 14) | Emission nodes (NT*EMIS*\*) | Raw textures         |
-| material (geo pin 1)  | Material nodes (NT*MAT*\*)  | Textures, emissions  |
-| mesh (RT pin 3)       | Geometry (NT*GEO*\*)        | Materials, textures  |
+| Pin                      | Accepts                     | Rejects              |
+| ------------------------ | --------------------------- | -------------------- |
+| diffuse (P_DIFFUSE=30)   | Texture nodes (NT*TEX*\*)   | Emissions, materials |
+| emission (P_EMISSION=41) | Emission nodes (NT*EMIS*\*) | Raw textures         |
+| material (geo pin 0)     | Material nodes (NT*MAT*\*)  | Textures, emissions  |
+| geometry (P_GEOMETRY=59) | Geometry (NT*GEO*\*)        | Materials, textures  |
 
 ### Verified Connections
 
-- RGB texture → material diffuse pin 0
-- **Image texture → material diffuse pin 0** (replaces auto-created RGB child)
-- Blackbody emission → standalone material `pin_name: "emission"`
-- Geometry objects → geo group `pin_name: "Input N"`
-- Geo group → RT pin 3 (pin_index works)
-- PT kernel → RT pin 6 (pin_index works)
-- Specular material → geo mesh pin 0 (pin_index works)
+- RGB texture → material diffuse `pin_id: 30` (P_DIFFUSE)
+- **Image texture → material diffuse `pin_id: 30`** (replaces auto-created RGB child)
+- Blackbody emission → material `pin_id: 41` (P_EMISSION)
+- Geometry objects → geo group `pin_name: "Input N"` (dynamic pins — pin_name required)
+- Geo group → RT `pin_id: 59` (P_GEOMETRY)
+- PT kernel → RT `pin_id: 89` (P_KERNEL)
+- Environment → RT `pin_id: 43` (P_ENVIRONMENT)
+- Specular material → geo mesh pin 0 (pin_index works for mesh material slot)
 
 ### Image Texture on Material
 

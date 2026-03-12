@@ -31,9 +31,15 @@ Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details
 
 - **NEVER use `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
 - **Restart ALL servers** (dev, preview) before every build run and after every crash.
-- **PT kernel BEFORE `start_render`** — swapping kernels on a live render crashes Octane.
+- **Use `pin_id` for connections** — `pin_id: 59` (P_GEOMETRY), `pin_id: 89` (P_KERNEL), `pin_id: 43` (P_ENVIRONMENT). No ambiguity, no silent failures.
+- **Connect nodes, don't just create them** — creating a node without connecting it does nothing. Always follow `create_node` with `connect_nodes`.
+- **Don't stop render unnecessarily** — most changes (connect, set_attribute) take effect on the live render. Octane picks them up automatically.
+- **Kernel swap is safe anytime** — RT has a default DL kernel. Swap to PT whenever needed, even during a live render.
 - **NEVER flip camera up vector** — rotate the model instead. `set_camera` resets up to (0,1,0).
 - **Renders go in `renders/`** — NEVER save renders to `ORBX/`.
+- **Absolute paths for file loading** — always use full paths for A_FILENAME on meshes and textures. Always A_RELOAD after A_FILENAME.
+- **A_ROTATION uses DEGREES** — 90 means 90°, NOT radians.
+- **Light before geo in space scenes** — no ambient light = black render. Add a light first.
 
 ## Status
 

@@ -200,7 +200,10 @@ export class OctaneGrpcClientBase {
       throw new Error(`Service ${serviceName} not found in proto definitions`);
     }
 
-    const service = new ServiceConstructor(this.address, grpc.credentials.createInsecure());
+    const service = new ServiceConstructor(this.address, grpc.credentials.createInsecure(), {
+      'grpc.max_receive_message_length': 64 * 1024 * 1024,
+      'grpc.max_send_message_length': 64 * 1024 * 1024,
+    });
 
     this.services.set(serviceName, service);
     return service;

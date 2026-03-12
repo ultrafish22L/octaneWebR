@@ -97,13 +97,14 @@ _Living values — refined each time the scene is built._
 
 ### Environment
 
-| Setting      | Value           | Notes                                 |
-| ------------ | --------------- | ------------------------------------- |
-| Hour         | 19.0            | Golden hour sunset                    |
-| Turbidity    | 8               | Atmospheric haze                      |
-| Sky color    | (0.7, 0.5, 0.4) | Warm amber — critical for gold sphere |
-| Sunset color | (1, 0.35, 0.08) | Deep orange-red                       |
-| Sun size     | 5               | Soft shadows                          |
+| Setting      | Value           | Notes                                         |
+| ------------ | --------------- | --------------------------------------------- |
+| Hour         | 19.5            | Late golden hour — deeper warmth than 19.0    |
+| Turbidity    | 8               | Atmospheric haze                              |
+| North offset | 0.35            | Sun behind-left — visible sunset + front fill |
+| Sky color    | (0.7, 0.5, 0.4) | Warm amber — critical for gold sphere         |
+| Sunset color | (1, 0.35, 0.08) | Deep orange-red                               |
+| Sun size     | 5               | Soft shadows                                  |
 
 ### Floor
 
@@ -153,7 +154,12 @@ _Living values — refined each time the scene is built._
 | Setting | Value           |
 | ------- | --------------- |
 | Samples | 5000            |
-| Time    | ~20s @ 1024x576 |
+| Time    | ~22s @ 1024x576 |
+| Kernel  | Path tracing    |
+
+### Sun Direction Note
+
+The daylight env's `sundir` pin connects to an NT_SUN_DIRECTION compound node with child pins: `latitude`, `longitude`, `month`, `day`, `hour`, `gmtoffset`. To set the hour, find the hour child float node and set its A_VALUE. Setting A_VALUE on the sundir node itself does NOT change the time of day.
 
 ---
 
