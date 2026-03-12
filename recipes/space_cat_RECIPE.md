@@ -74,17 +74,17 @@ _Living values — refined each time the scene is built._
 
 ### Camera
 
-| Setting    | Value                          |
-| ---------- | ------------------------------ |
-| Position   | (-3.1591, 13.8815, -4.7097)    |
-| Target     | (-0.9148, -3.3901, -0.0379)    |
-| Up         | (0, -1, 0) — FLIPPED           |
-| FOV        | 39.598°                        |
-| Resolution | 1024x1024 interactive (square) |
-| Beauty     | 1024x1024                      |
-| DOF        | Off (aperture=0)               |
+| Setting    | Value                                              |
+| ---------- | -------------------------------------------------- |
+| Position   | RECALCULATE — old values assumed flipped up vector |
+| Target     | RECALCULATE — old values assumed flipped up vector |
+| Up         | (0, 1, 0) — STANDARD                               |
+| FOV        | 39.598°                                            |
+| Resolution | 1024x1024 interactive (square)                     |
+| Beauty     | 1024x1024                                          |
+| DOF        | Off (aperture=0)                                   |
 
-**CRITICAL**: Do NOT use `set_camera()` — it resets up vector. Set pos/target/up via node attributes directly (handles 1000159, 1000162, 1000165, A_VALUE=185, AT_FLOAT3).
+**NOTE**: Camera up vector is now standard (0,1,0). Cat rotation adjusted to compensate — no need for flipped up. `set_camera()` works normally.
 
 ### Environment
 
@@ -95,15 +95,15 @@ _Living values — refined each time the scene is built._
 
 ### Cat Astronaut
 
-| Setting  | Value                         |
-| -------- | ----------------------------- |
-| Mesh     | cat_astronaut.obj             |
-| Texture  | cat_astronaut_tex.png         |
-| Position | (0, 0, 0) — origin            |
-| Rotation | (0, 3.3161, 0) — 190° on Y    |
-| Scale    | (5, 5, 5)                     |
-| Material | Universal mat + image texture |
-| Face     | Points +Y natively            |
+| Setting  | Value                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------- |
+| Mesh     | cat_astronaut.obj                                                                             |
+| Texture  | cat_astronaut_tex.png                                                                         |
+| Position | (0, 0, 0) — origin                                                                            |
+| Rotation | RECALCULATE — old value assumed flipped up vector. Need new rotation with standard up (0,1,0) |
+| Scale    | (5, 5, 5)                                                                                     |
+| Material | Universal mat + image texture                                                                 |
+| Face     | Points +Y natively                                                                            |
 
 ### Earth
 
@@ -191,7 +191,9 @@ Follow Directions above. The audience watches a 3D scene assemble in real-time f
 - **OBJ orientation**: ALWAYS check facing direction before placing camera
 - **Daylight env**: Ground gradient visible = not space. Use texture env with starfield.
 - **Eclipse/backlight**: Matte sphere + backlight = no visible corona without bloom post-processing
-- **`set_camera()` resets up vector**: NEVER use it. Set camera pos/target/up via node attributes (handles 1000159/1000162/1000165) + `update_scene()` + `restart_render()` instead.
-- **Cat face points +Y**: Camera must be ABOVE looking down. Flip up vector to (0,-1,0) so cat appears face-down in image.
+- **`set_camera()` resets up vector**: It always resets to (0,1,0). The original workaround (flip up to -1,0 + attribute-based camera) was fragile and caused 180° flips every refresh. **FIX: Don't flip up. Rotate the cat model instead.**
+- **Cat face points +Y**: Original approach flipped camera up to (0,-1,0) — WRONG. Correct approach: rotate cat model to face camera with standard up vector.
 - **Cat rotation 190° on Y**: Shows the correct side of the model to camera.
 - **Atmosphere shell glow**: Emissive thin shell around Earth didn't produce visible horizon glow at this camera distance. Needs different approach (volumetric medium or post-processing bloom).
+- **Flipped up vector was wrong approach**: Cat faces +Y, so I flipped camera up to (0,-1,0). This broke `set_camera()` (always resets to 0,1,0), causing 180° flips every refresh. **FIX: Rotate the cat model instead. Keep standard up vector (0,1,0).** This likely also fixes the inverted Earth.
+- **Earth appears inverted**: Continents mirrored/wrong orientation. Could be: (a) flipped camera up vector inverting the view, (b) texture UVs on sphere_hd.obj, (c) earth_daymap_8k.jpg itself mirrored. Investigate after fixing up vector — may resolve automatically.

@@ -50,6 +50,7 @@ octaneWebR/
 │   └── OCTANE_CREATIVE.md - Creative guide
 ├── recipes/              - 17 scene recipes
 ├── ORBX/assets/          - 3D meshes (.obj) and textures
+├── renders/              - Render output images (PNG, EXR)
 ├── api-version.config.js - API version configuration (Alpha 5/Beta 2)
 └── vite-plugin-octane-grpc.ts - Embedded proxy plugin
 ```

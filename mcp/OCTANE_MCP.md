@@ -11,6 +11,9 @@ Best practices, observed patterns, and reference info for building scenes via th
 **DO NOT HALLUCINATE THESE VALUES. They are exact.**
 
 ```
+RENDER OUTPUT:     C:/otoyla/GRPC/dev/octaneWebR/renders/
+                   NEVER save renders to ORBX/. ORBX is for scenes + assets only.
+
 MESH PATH PREFIX:  C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/
 MESH FILES:        floor.obj, sphere_hd.obj, sphere.obj, sphere_uv.obj,
                    cube.obj, torus.obj, ring.obj, teapot.obj, quad.obj,
@@ -49,6 +52,9 @@ CRASH RULE:        Connect PT kernel to RT BEFORE start_render().
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render/restart_render do NOT refresh geometry.
+                   WARNING: set_camera RESETS up vector to (0,1,0).
+                   NEVER flip up vector to compensate for model orientation.
+                   ALWAYS rotate the MODEL instead (A_ROTATION=137).
 
 TIMING RULE:       Call get_render_status after EVERY render.
                    Report: samples, seconds, resolution. Track build time too.
@@ -157,6 +163,12 @@ connect_nodes(...)
 set_camera(current_position, current_target)   # forces re-render
 ```
 
+**WARNING**: `set_camera` always resets the up vector to `(0, 1, 0)`. This means:
+
+- **NEVER flip the camera up vector** to compensate for model orientation (e.g. `(0, -1, 0)`)
+- If a model faces the wrong way, **rotate the model** (`A_ROTATION=137`) instead
+- Flipping up creates an unrecoverable loop: every `set_camera` refresh undoes the flip
+
 ### Connection Rules
 
 - **RT pins (0-11)**: `pin_index` works fine
@@ -220,7 +232,7 @@ Same as demos but start camera wide/back/above. Iterate on framing after objects
 - **ALWAYS determine the model's facing direction BEFORE placing the camera** — do a test render from multiple angles if needed
 - Anticipate orientation from the source image: if the subject faces the viewer in the 2D image, it likely faces +Z or -Z in the OBJ
 - **Never place a default camera and hope** — have a complete composition plan (camera position, model facing, framing) before creating any nodes
-- If the model faces the wrong way: rotate it (A_ROTATION=137) or reposition the camera
+- If the model faces the wrong way: **rotate the model** (A_ROTATION=137) — NEVER flip the camera up vector
 
 **Wiring pattern for external meshes**:
 
