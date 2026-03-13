@@ -80,6 +80,13 @@ REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    NEVER flip up vector to compensate for model orientation.
                    ALWAYS rotate the MODEL instead (A_ROTATION=137).
 
+⚠️ UP VECTOR:     Camera pin 22 (up Float3 node) DEFAULTS TO (0,0,0).
+                   (0,0,0) SILENTLY DESTROYS orientation — broken renders,
+                   no error message. ALWAYS set explicitly to (0,1,0):
+                   set_attribute(up_handle, 185, AT_FLOAT3=11, {x:0,y:1,z:0})
+                   Check this FIRST whenever any camera render looks wrong.
+                   set_camera also resets up to (0,1,0).
+
 TIMING RULE:       Call get_render_status after EVERY render.
                    Report: samples, seconds, resolution. Track build time too.
 ```
@@ -644,6 +651,35 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
   2. **Unpack the .orbx** — use `octane.project.unpackPackage()` Lua API to extract assets to disk, then reload the .ocs inside.
   3. **Use .ocs instead** — save as .ocs during development (assets stay as absolute disk paths). Only package to .orbx for final delivery.
 - **Recommended MCP workflow**: Always save `.ocs` during iteration. Only `.orbx` for final archival.
+
+### Single-Mesh Framing Workflow
+
+When framing a new mesh for a hero shot, always follow this order:
+
+1. **Set all mesh transforms to zero** — rotation (0,0,0), translation (0,0,0), keep scale as needed
+2. **Compute the mesh centroid** — parse OBJ vertices, find bounding box, centroid = (min+max)/2 per axis. Apply scale (no rotation/translation yet).
+3. **Set camera target to centroid** — stable orbit pivot
+4. **⚠️ Set up vector to (0,1,0)** — camera pin 22 defaults to (0,0,0). Check it. Fix it. Always.
+5. **Back the camera way up** — increase Z so the full mesh is visible. Establish orientation.
+6. **Orbit up** — raise camera Y slightly above target for a natural elevated angle
+7. **Refine target** — once mesh is visible, fine-tune target (doesn't have to be exact centroid)
+8. **Zoom in** — reduce Z until mesh fills frame
+
+**Common failure modes:**
+
+- Compound mesh rotations (X+Y+Z) before finding face direction — breaks up alignment
+- Target far from centroid — orbit drifts off-subject
+- Skipping up vector check — silent roll, random orientation
+- Moving camera close before establishing orientation — impossible to recover
+
+### 3D Asset Orientation
+
+When loading models from OTOY Studio or any pipeline:
+
+- The model's facing direction is set by the generation pipeline, not random
+- Use the OTOY Studio preview thumbnail to determine face direction BEFORE downloading
+- Plan camera placement from the source image BEFORE creating any nodes
+- Have a complete composition plan (camera, orientation, framing) ready before building
 
 ### Crash Debugging Protocol
 
