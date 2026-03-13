@@ -81,7 +81,8 @@
       "mcp__octane__profile_reset",
       "mcp__octane__profile_start",
       "mcp__octane__profile_end",
-      "mcp__octane__profile_report"
+      "mcp__octane__profile_report",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(r''C:\\\\otoyla\\\\GRPC\\\\dev\\\\octaneWebR\\\\mcp\\\\data\\\\octane-api-cache.json''\\)\\); keys=list\\(d.keys\\(\\)\\)[:10]; print\\(keys\\)\")"
     ]
   }
 }
