@@ -40,10 +40,11 @@ Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details
 - **Absolute paths for file loading** — always use full paths for A_FILENAME on meshes and textures. Always A_RELOAD after A_FILENAME.
 - **A_ROTATION uses DEGREES** — 90 means 90°, NOT radians.
 - **Light before geo in space scenes** — no ambient light = black render. Add a light first.
+- **DOF is ON by default** — camera aperture defaults to 0.893. Set to 0 after `start_render`: RT pin 0 → camera → pin 14 → aperture child → `set_attribute(child, 185, AT_FLOAT=9, 0)`.
 
 ## Status
 
-- **Version**: 1.5.1
+- **Version**: 1.5.2
 - **0 open bugs** — 4 known Octane API limitations (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken)
 - **Testing**: R1+R2+R3 complete. 181 tests, 16 bugs fixed and verified.
 - **MCP server**: 28 tools, API cache (704 node types), incremental webapp sync

@@ -36,6 +36,11 @@ WIRING PATTERN:    material → mesh (pin 0)
                    NOT: material → placement. NEVER.
 
 RT PIN LAYOUT:     0=camera  1=environment  3=geometry  4=film  6=kernel
+                   Camera pin 14 = aperture child. DEFAULT = 0.893 (DOF ON!).
+                   Set to 0 immediately after start_render to disable DOF:
+                   get_node_info(RT) → pin 0 → camera handle
+                   get_node_info(camera) → pin 14 → aperture child handle
+                   set_attribute(aperture_handle, 185, AT_FLOAT=9, 0)
 
 BUILD MODES:       DRESS = demo for boss (1-by-1, max visual change/sec)
                    SPEED = batch everything, minimize round-trips
@@ -131,6 +136,8 @@ GPU-accelerated unbiased path tracer. Everything is a **node** in a DAG. You cre
 ```
 RenderTarget
   pin 0: Camera         (NT_CAM_THINLENS — auto-created)
+                        ⚠ Camera pin 14 = aperture child. Default = 0.893 (DOF ON).
+                        After start_render: get_node_info(camera) → pin 14 → set_attribute(child, 185, AT_FLOAT=9, 0)
   pin 1: Environment     (NT_ENV_TEXTURE — auto-created)
   pin 3: Geometry        (connect NT_GEO_GROUP here)
   pin 4: Film Settings   (auto-created, has resolution child)
@@ -163,6 +170,7 @@ RenderTarget
 | **Always use absolute paths**     | `set_attribute(node, 34, 14, "C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\assets\\file.obj")`. Relative paths fail when Octane working dir changes.                                   |
 | **A_ROTATION uses DEGREES**       | 90° = 90, NOT 1.5708. Radians produce negligible rotation (~3° instead of 180°). This has caused multiple wasted iterations.                                                       |
 | **Light before geo in space**     | Scenes with no environment light (space/void) need at least one light connected before adding geo, or first render is pure black.                                                  |
+| **DOF off by default**            | Camera defaults to aperture=0.893 (DOF ON). After `start_render`, get RT pin 0 (camera), get_node_info, find pin 14 (aperture child), `set_attribute(child, 185, AT_FLOAT=9, 0)`.  |
 | **Save .ocs NOT .orbx for MCP**   | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.                                                       |
 | **Use pin_id for connections**    | Always use `pin_id` (P_GEOMETRY=59, P_KERNEL=89, P_ENVIRONMENT=43, P_DIFFUSE=30, P_EMISSION=41). pin_index/pin_name can silently fail.                                             |
 | **Connect after create**          | Creating a node does nothing until you connect it. Always follow `create_node` with `connect_nodes`. Don't stop render to do this.                                                 |
@@ -648,19 +656,20 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 
 ### Common Failures
 
-| Symptom                                     | Cause                                                 | Fix                                                 |
-| ------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------- |
-| Render all white                            | DL kernel (need PT), or camera outside scene          | Create PT kernel, connect to RT pin 6               |
-| Render doesn't update after connect         | Used restart_render instead of set_camera             | Call `set_camera` after every structural change     |
-| Connect returns success but nothing changed | Used pin_index on geo group (silently fails)          | Use `pin_name: "Input N"` for geo group             |
-| Wrong aspect ratio                          | Film resolution set with AT_INT=3                     | Use AT_INT2=4 on Image resolution grandchild        |
-| Film resolution won't change                | Set on Film Settings node, not Image Resolution child | get_node_info(film) → pin 0 → child → set_attribute |
-| ECONNRESET/ECONNREFUSED                     | Octane crashed. STOP. User must restart.              | Avoid primitive changes, heavy structural ops       |
-| Render grey/blue                            | Camera looking at sky through open wall               | Check wall positions and camera angle               |
-| Mesh loads but invisible                    | Missing A_RELOAD after setting A_FILENAME             | `set_attribute(mesh, 124, AT_BOOL=1, true)`         |
-| Emission very dim (40x weaker)              | Blackbody efficiency defaults to 0.025                | Set pin 0 child to 1.0                              |
-| Mesh renders impossibly fast, no geo        | Engine corruption from excessive create/delete cycles | Restart Octane completely                           |
-| Glass sphere invisible                      | Clear glass in uniform lighting                       | Use colored transmission for visibility             |
+| Symptom                                     | Cause                                                 | Fix                                                                                 |
+| ------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Render all white                            | DL kernel (need PT), or camera outside scene          | Create PT kernel, connect to RT pin 6                                               |
+| Render doesn't update after connect         | Used restart_render instead of set_camera             | Call `set_camera` after every structural change                                     |
+| Connect returns success but nothing changed | Used pin_index on geo group (silently fails)          | Use `pin_name: "Input N"` for geo group                                             |
+| Wrong aspect ratio                          | Film resolution set with AT_INT=3                     | Use AT_INT2=4 on Image resolution grandchild                                        |
+| Film resolution won't change                | Set on Film Settings node, not Image Resolution child | get_node_info(film) → pin 0 → child → set_attribute                                 |
+| ECONNRESET/ECONNREFUSED                     | Octane crashed. STOP. User must restart.              | Avoid primitive changes, heavy structural ops                                       |
+| Render grey/blue                            | Camera looking at sky through open wall               | Check wall positions and camera angle                                               |
+| Render blurry / soft focus                  | DOF on by default — aperture defaults to 0.893        | RT→pin0(camera)→get_node_info→pin14(aperture)→set_attribute(child,185,AT_FLOAT=9,0) |
+| Mesh loads but invisible                    | Missing A_RELOAD after setting A_FILENAME             | `set_attribute(mesh, 124, AT_BOOL=1, true)`                                         |
+| Emission very dim (40x weaker)              | Blackbody efficiency defaults to 0.025                | Set pin 0 child to 1.0                                                              |
+| Mesh renders impossibly fast, no geo        | Engine corruption from excessive create/delete cycles | Restart Octane completely                                                           |
+| Glass sphere invisible                      | Clear glass in uniform lighting                       | Use colored transmission for visibility                                             |
 
 ### Thread Safety
 
