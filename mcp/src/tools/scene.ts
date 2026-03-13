@@ -10,32 +10,16 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { PIN_TYPE_NAMES } from './node';
-
-function jsonResult(data: any) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function errorResult(error: any) {
-  return {
-    content: [
-      { type: 'text' as const, text: JSON.stringify({ error: String(error?.message || error) }) },
-    ],
-    isError: true as const,
-  };
-}
-
-/** Extract handle from gRPC response — tries result.handle, list.handle, handle, value.handle */
-function extractHandle(result: any): number | undefined {
-  const h =
-    result?.result?.handle ?? result?.list?.handle ?? result?.handle ?? result?.value?.handle;
-  if (h === undefined || h === null || h === 0 || h === '0') return undefined;
-  return Number(h);
-}
-
-/** Extract scalar value from gRPC response — tries result, value */
-function extractValue(result: any): any {
-  return result?.result ?? result?.value ?? result;
-}
+import {
+  jsonResult,
+  errorResult,
+  extractHandle,
+  extractValue,
+  OBJ_API_ITEM,
+  OBJ_API_NODE,
+  OBJ_API_NODE_GRAPH,
+  OBJ_API_ITEM_ARRAY,
+} from './utils';
 
 interface SceneTreeNode {
   handle: number;
@@ -58,7 +42,7 @@ async function traverseGraph(
   try {
     // Get the owned items array for this graph
     const listResult = await client.callMethod('ApiNodeGraph', 'getOwnedItems', {
-      objectPtr: { handle: String(graphHandle), type: 20 }, // ObjectType.ApiNodeGraph = 20
+      objectPtr: { handle: String(graphHandle), type: OBJ_API_NODE_GRAPH },
     });
 
     const listHandle = extractHandle(listResult);
@@ -66,7 +50,7 @@ async function traverseGraph(
 
     // Get count
     const sizeResult = await client.callMethod('ApiItemArray', 'size', {
-      objectPtr: { handle: String(listHandle), type: 31 }, // ObjectType.ApiItemArray = 31
+      objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
     });
     const count = extractValue(sizeResult) ?? 0;
 
@@ -74,7 +58,7 @@ async function traverseGraph(
     for (let i = 0; i < count; i++) {
       try {
         const itemResult = await client.callMethod('ApiItemArray', 'get', {
-          objectPtr: { handle: String(listHandle), type: 31 },
+          objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
           index: i,
         });
 
@@ -83,13 +67,13 @@ async function traverseGraph(
 
         // Get node info
         const nameResult = await client.callMethod('ApiItem', 'name', {
-          objectPtr: { handle: String(itemHandle), type: 16 }, // ObjectType.ApiItem = 16
+          objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
         });
         const typeResult = await client.callMethod('ApiItem', 'outType', {
-          objectPtr: { handle: String(itemHandle), type: 16 },
+          objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
         });
         const graphResult = await client.callMethod('ApiItem', 'isGraph', {
-          objectPtr: { handle: String(itemHandle), type: 16 },
+          objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
         });
 
         const name = extractValue(nameResult) ?? '';
@@ -112,7 +96,7 @@ async function traverseGraph(
         if (!isGraph) {
           try {
             const pinResult = await client.callMethod('ApiNode', 'pinCount', {
-              objectPtr: { handle: String(itemHandle), type: 17 }, // ObjectType.ApiNode = 17
+              objectPtr: { handle: String(itemHandle), type: OBJ_API_NODE },
             });
             node.pinCount = extractValue(pinResult) ?? 0;
           } catch {
@@ -161,13 +145,13 @@ export function registerSceneTools(
     async ({ handle }) => {
       try {
         const nameResult = await client.callMethod('ApiItem', 'name', {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
         const typeResult = await client.callMethod('ApiItem', 'outType', {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
         const graphResult = await client.callMethod('ApiItem', 'isGraph', {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
 
         const info: any = {
@@ -183,7 +167,7 @@ export function registerSceneTools(
         if (cache) {
           try {
             const nodeTypeResult = await client.callMethod('ApiNode', 'type', {
-              objectPtr: { handle: String(handle), type: 17 },
+              objectPtr: { handle: String(handle), type: OBJ_API_NODE },
             });
             const nodeTypeRaw = extractValue(nodeTypeResult);
             // enums: String → returns "NT_MAT_UNIVERSAL" (string), not 130 (number)
@@ -218,7 +202,7 @@ export function registerSceneTools(
               let connectedHandle = 0;
               try {
                 const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                  objectPtr: { handle: String(handle), type: 17 },
+                  objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                   pinIx: cp.index,
                   enterWrapperNode: true,
                 });
@@ -229,7 +213,7 @@ export function registerSceneTools(
               if (!connectedHandle) {
                 try {
                   const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
-                    objectPtr: { handle: String(handle), type: 17 },
+                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                     pinIx: cp.index,
                   });
                   connectedHandle = extractHandle(ownedResult) ?? 0;
@@ -242,7 +226,7 @@ export function registerSceneTools(
               if (connectedHandle && connectedHandle !== 0) {
                 try {
                   const connName = await client.callMethod('ApiItem', 'name', {
-                    objectPtr: { handle: String(connectedHandle), type: 16 },
+                    objectPtr: { handle: String(connectedHandle), type: OBJ_API_ITEM },
                   });
                   pin.connected_name = extractValue(connName) ?? '';
                 } catch {
@@ -255,7 +239,7 @@ export function registerSceneTools(
           } else {
             // FALLBACK: enumerate all pins via gRPC
             const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
-              objectPtr: { handle: String(handle), type: 17 },
+              objectPtr: { handle: String(handle), type: OBJ_API_NODE },
             });
             const pinCount = extractValue(pinCountResult) ?? 0;
 
@@ -265,7 +249,7 @@ export function registerSceneTools(
 
                 try {
                   const pinNameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-                    objectPtr: { handle: String(handle), type: 17 },
+                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                     index: i,
                   });
                   pin.name = extractValue(pinNameResult) ?? '';
@@ -275,7 +259,7 @@ export function registerSceneTools(
 
                 try {
                   const pinTypeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
-                    objectPtr: { handle: String(handle), type: 17 },
+                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                     index: i,
                   });
                   const typeRaw = extractValue(pinTypeResult);
@@ -293,7 +277,7 @@ export function registerSceneTools(
                 let connectedHandle = 0;
                 try {
                   const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                    objectPtr: { handle: String(handle), type: 17 },
+                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                     pinIx: i,
                   });
                   connectedHandle = extractHandle(connResult) ?? 0;
@@ -303,7 +287,7 @@ export function registerSceneTools(
                 if (!connectedHandle) {
                   try {
                     const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
-                      objectPtr: { handle: String(handle), type: 17 },
+                      objectPtr: { handle: String(handle), type: OBJ_API_NODE },
                       pinIx: i,
                     });
                     connectedHandle = extractHandle(ownedResult) ?? 0;
@@ -316,7 +300,7 @@ export function registerSceneTools(
                 if (connectedHandle && connectedHandle !== 0) {
                   try {
                     const connName = await client.callMethod('ApiItem', 'name', {
-                      objectPtr: { handle: String(connectedHandle), type: 16 },
+                      objectPtr: { handle: String(connectedHandle), type: OBJ_API_ITEM },
                     });
                     pin.connected_name = extractValue(connName) ?? '';
                   } catch {

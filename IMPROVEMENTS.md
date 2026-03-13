@@ -4,11 +4,6 @@ Ordered easy → hard within each section. #0 (MCP server) completed.
 
 ---
 
-render save dialogs need all functionality of octane's look for screenshots
-add to doc files for ai to reference https://render.otoy.com/forum/index.php login creds upon request
-
----
-
 ## Major
 
 | #   | Item                                                  | Notes                                                                               |

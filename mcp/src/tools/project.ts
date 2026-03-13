@@ -5,19 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
-
-function jsonResult(data: any) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function errorResult(error: any) {
-  return {
-    content: [
-      { type: 'text' as const, text: JSON.stringify({ error: String(error?.message || error) }) },
-    ],
-    isError: true as const,
-  };
-}
+import { jsonResult, errorResult } from './utils';
 
 export function registerProjectTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(

@@ -5,22 +5,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { USE_ALPHA5_API } = require('../../../api-version.config.js');
-
-function jsonResult(data: any) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function errorResult(error: any) {
-  return {
-    content: [
-      { type: 'text' as const, text: JSON.stringify({ error: String(error?.message || error) }) },
-    ],
-    isError: true as const,
-  };
-}
 
 // AttrType enum values (from OctaneTypes.ts)
 const AT_BOOL = 1;
@@ -133,7 +121,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     async ({ handle, attribute_id, expected_type }) => {
       try {
         const result = await client.callMethod('ApiItem', getMethod, {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
           expected_type,
         });
@@ -175,7 +163,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         // Without this, Octane may double-evaluate (once from the set call's default
         // evaluate=true, once from update()), which can cause render engine crashes.
         await client.callMethod('ApiItem', setMethod, {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
           expected_type,
           ...valueParams,

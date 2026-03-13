@@ -1,6 +1,6 @@
 # OctaneWebR vs Octane Standalone SE — Feature Comparison
 
-Comparison of OctaneWebR (v1.4.3) against the official OTOY Octane Standalone Edition documentation at https://docs.otoy.com/standaloneSE/CoverPage.html.
+Comparison of OctaneWebR (v1.5.2) against the official OTOY Octane Standalone Edition documentation at https://docs.otoy.com/standaloneSE/CoverPage.html.
 
 Date: 2026-03-06
 

@@ -106,10 +106,6 @@ Connect placement → geo group (`pin_name: "Input 3"`).
 
 ---
 
-## Directions (legacy reference)
-
-_7 renders. Each one a visible change. Brisk, not rushed._
-
 ---
 
 ## Ingredients

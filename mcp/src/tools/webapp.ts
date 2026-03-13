@@ -44,18 +44,7 @@ export function isLiveSyncEnabled(): boolean {
   return liveSyncEnabled;
 }
 
-function jsonResult(data: any) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function errorResult(error: any) {
-  return {
-    content: [
-      { type: 'text' as const, text: JSON.stringify({ error: String(error?.message || error) }) },
-    ],
-    isError: true as const,
-  };
-}
+import { jsonResult, errorResult } from './utils';
 
 export function registerWebappTools(server: McpServer) {
   server.tool(

@@ -159,74 +159,27 @@ RenderTarget
 
 ---
 
-## Critical Rules (observed patterns)
+## Observed Patterns
 
-### Must-Do
-
-| Rule                              | Why                                                                                                                                                                                |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Create NT_KERN_PATHTRACING**    | Default DL kernel is fine for building. Swap to PT anytime — safe even on live render. Connect via `pin_id: 89` (P_KERNEL).                                                        |
-| **Film resolution on grandchild** | RT → pin 4 (film settings) → get_node_info → pin 0 ("Image resolution") → `set_attribute(child, 185, AT_INT2=4, {x,y})`                                                            |
-| **Geo group pin count first**     | `set_attribute(group, A_PIN_COUNT=113, AT_INT=3, N)` BEFORE connecting children.                                                                                                   |
-| **Geo group uses pin_name**       | `connectToIx` silently fails on dynamic geo group pins. Must use `pin_name: "Input 1"`, `"Input 2"`, etc.                                                                          |
-| **Handles are opaque**            | Never guess. Only use values from `create_node` or `get_node_info`.                                                                                                                |
-| **All 24 primitive types work**   | Types 0-23 all tested and verified. Set via `set_attribute(enum_handle, 185, AT_INT=3, N)`. See primitive type table below.                                                        |
-| **RT pin layout varies**          | Don't assume RT pin indices. Always `get_node_info(RT)` — kernel may be pin 0 or 6, mesh may be pin 2 or 3.                                                                        |
-| **Blackbody efficiency=0.025**    | New NT_EMIS_BLACKBODY nodes default efficiency to ~0.025, not 1.0. Always set pin 0 child to 1.0 or emission is 40x weak.                                                          |
-| **A_RELOAD after A_FILENAME**     | After `set_attribute(node, 34, 14, path)`, MUST also `set_attribute(node, 124, 1, true)`. Applies to BOTH meshes AND textures. Without reload, mesh is missing / texture is black. |
-| **Always use absolute paths**     | `set_attribute(node, 34, 14, "C:\\otoyla\\GRPC\\dev\\octaneWebR\\ORBX\\assets\\file.obj")`. Relative paths fail when Octane working dir changes.                                   |
-| **A_ROTATION uses DEGREES**       | 90° = 90, NOT 1.5708. Radians produce negligible rotation (~3° instead of 180°). This has caused multiple wasted iterations.                                                       |
-| **Light before geo in space**     | Scenes with no environment light (space/void) need at least one light connected before adding geo, or first render is pure black.                                                  |
-| **DOF off by default**            | Camera defaults to aperture=0.893 (DOF ON). After `start_render`, get RT pin 0 (camera), get_node_info, find pin 14 (aperture child), `set_attribute(child, 185, AT_FLOAT=9, 0)`.  |
-| **Save .ocs NOT .orbx for MCP**   | .orbx embeds assets with relative paths that break on reload. .ocs keeps absolute disk paths. Only .orbx for final delivery.                                                       |
-| **Use pin_id for connections**    | Always use `pin_id` (P_GEOMETRY=59, P_KERNEL=89, P_ENVIRONMENT=43, P_DIFFUSE=30, P_EMISSION=41). pin_index/pin_name can silently fail.                                             |
-| **Connect after create**          | Creating a node does nothing until you connect it. Always follow `create_node` with `connect_nodes`. Don't stop render to do this.                                                 |
-| **Never parallel create_node**    | Parallel `create_node` calls crash Octane. Create nodes ONE AT A TIME. Parallel `set_attribute` on existing nodes is OK.                                                           |
+These patterns supplement the Cheat Sheet with additional detail.
 
 ### Confirmed Crashes
 
-| Trigger                                                 | Result                                              | Mitigation                                     |
-| ------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------- |
-| `resetProject` (any variant)                            | Triggers "Save changes?" dialog — blocks autonomous | Use delete-all-nodes pattern                   |
-| `set_attribute(filename)` on ORBX-packaged texture node | DEADLINE_EXCEEDED — Octane hangs resolving path     | Rebuild fresh with absolute paths, or use .ocs |
+| Trigger                                            | Mitigation                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| `evaluate:false` × N + structural connection       | **NEVER defer evals** — 3+ confirmed ECONNRESET crashes      |
+| Parallel `create_node` calls                       | Sequential only — 4× simultaneous = ECONNRESET               |
+| `resetProject` (any variant)                       | Use delete-all-nodes pattern (avoids "Save changes?" dialog) |
+| `set_attribute(filename)` on ORBX-packaged texture | Rebuild fresh with absolute paths, or use .ocs               |
 
-### Confirmed Crash Patterns (from testing)
+### Refresh After Structural Changes
 
-| Trigger                                       | Observation                                                                        | Status                            |
-| --------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- |
-| `evaluate:false` × N + structural connection  | 12 deferred ops + geo group→RT connection = ECONNRESET crash. Reproduced 3+ times. | **CONFIRMED** — never defer evals |
-| Parallel `create_node` calls                  | 4× simultaneous create_node = ECONNRESET crash. Reproduced.                        | **CONFIRMED** — sequential only   |
-| Heavy structural ops (destroy connected node) | Previously reported as crash — not yet reproduced with current MCP                 | Unverified conjecture             |
-| NT_GEO_MESH batched build + `set_camera`      | Previously not reproducible                                                        | Unverified conjecture             |
-
-**Resolved:** Primitive type changes on NT_GEO_OBJECT — all 24 types (0-23) work. Previous Quad(18) crashes were due to post-crash Octane state, not the type value itself.
-
-**HARD RULE: NEVER use evaluate:false.** The crash pattern is `connect_nodes(evaluate:false)` × N, which accumulates deferred evaluations. When flushed (via `update_scene()` or any evaluating call), the combined load crashes Octane with ECONNRESET. This has happened 3+ times across different scenes. **Always use `evaluate:true` (the default) — never pass `evaluate:false`.** Each call evaluates incrementally (~50ms), which is negligible vs the minutes lost to a crash + restart + full rebuild. This also gives live viewport feedback — the human sees each change appear in real time.
-
-### Refresh Pattern — CRITICAL
-
-**`restart_render` / `start_render` do NOT refresh the viewport after structural changes** (connections, new geometry). Tested and confirmed 2026-03-07.
-
-**`set_camera` is the ONLY reliable AND SAFE way to force a re-render.** Even setting it to the exact same position works. After every structural change:
+`restart_render` / `start_render` do NOT refresh the viewport. **`set_camera` is the only way**:
 
 ```
 connect_nodes(...)
 set_camera(current_position, current_target)   # forces re-render
 ```
-
-**WARNING**: `set_camera` always resets the up vector to `(0, 1, 0)`. This means:
-
-- **NEVER flip the camera up vector** to compensate for model orientation (e.g. `(0, -1, 0)`)
-- If a model faces the wrong way, **rotate the model** (`A_ROTATION=137`) instead
-- Flipping up creates an unrecoverable loop: every `set_camera` refresh undoes the flip
-
-### Connection Rules
-
-- **Always prefer `pin_id`** — unambiguous, never silently fails. Key IDs from `octaneids.proto`:
-  - `P_DIFFUSE=30`, `P_EMISSION=41`, `P_ENVIRONMENT=43`, `P_GEOMETRY=59`, `P_KERNEL=89`, `P_MESH=111`
-- **Geo group dynamic pins**: Exception — must use `pin_name: "Input N"` (e.g. "Input 1", "Input 2"). `pin_index` silently fails on dynamic pins.
-- **General rule**: If a connection returns success but `get_node_info` shows handle=0, try `pin_id` instead
-- **Don't stop render to connect** — most changes take effect on the live render automatically
 
 ### One Object at a Time — RULE
 
@@ -379,29 +332,6 @@ create_node(NT_GEO_OBJECT) → {
 |                  | `NT_KERN_PMC`            | 23  | PMC (difficult caustics)                                            |
 | **Lights**       | `NT_LIGHT_QUAD`          | 148 | Rectangular area light                                              |
 |                  | `NT_LIGHT_SPHERE`        | 149 | Sphere area light                                                   |
-
-## Attribute IDs
-
-| ID  | Name            | Type           | Used For                                |
-| --- | --------------- | -------------- | --------------------------------------- |
-| 185 | `A_VALUE`       | varies         | Generic value (color, float, bool, int) |
-| 34  | `A_FILENAME`    | AT_STRING (14) | File path for mesh/texture              |
-| 113 | `A_PIN_COUNT`   | AT_INT (3)     | Pin count on groups                     |
-| 172 | `A_TRANSLATION` | AT_FLOAT3 (11) | Position {x,y,z}                        |
-| 137 | `A_ROTATION`    | AT_FLOAT3 (11) | Rotation degrees {x,y,z}                |
-| 139 | `A_SCALE`       | AT_FLOAT3 (11) | Scale factors {x,y,z}                   |
-| 124 | `A_RELOAD`      | AT_BOOL (1)    | Reload file node                        |
-
-## Attribute Types
-
-| ID  | Name      | Format                              |
-| --- | --------- | ----------------------------------- |
-| 1   | AT_BOOL   | true/false                          |
-| 3   | AT_INT    | integer                             |
-| 4   | AT_INT2   | {x, y} — resolution                 |
-| 9   | AT_FLOAT  | number                              |
-| 11  | AT_FLOAT3 | {x, y, z} — colors (0-1), positions |
-| 14  | AT_STRING | "string" — file paths               |
 
 ## Pin Value RPCs — UNIMPLEMENTED
 
@@ -604,8 +534,6 @@ For kernel selection strategy, caustics tips, and denoiser settings, see `OCTANE
 
 ---
 
----
-
 ## Discovery Workflow
 
 ### Fresh nodes — use create_node pins
@@ -637,20 +565,13 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 
 ## Scene Wisdom
 
-> **Full creative wisdom is in `OCTANE_CREATIVE.md`** — glass/transparency rules, environment strategy, lighting design, material recipes, camera composition, AI generation tips, and session health. This section retains only technical/API-specific notes.
+> Creative guidance (lighting, materials, composition) is in `OCTANE_CREATIVE.md`. This section covers technical/API-specific patterns.
 
 ### Project File Workflow
 
-- **.ocs** = scene file referencing assets by **absolute disk paths**. **Reloadable** — use during iteration and camera work. Asset paths survive reload.
-- **.orbx** = packaged scene with **embedded assets** (copies textures/meshes inside the package). Portable for delivery, but **breaks MCP workflows** on reload:
-  - Texture/mesh paths become **relative** (e.g. `assets\space_panorama.jpg`) — Octane resolves these inside the ORBX package, NOT from disk. You **cannot** simply re-point them to absolute paths; `set_attribute(filename)` may DEADLINE_EXCEEDED as Octane tries to reload from the broken internal path.
-  - Placement/geo group connections may shift or disconnect.
-  - All node handles reset (must re-query with `get_scene_tree`).
-- **ORBX is NOT a resumable checkpoint for MCP**. If you save .orbx and reload later, you **cannot** patch individual paths — the packaged asset references are internal. Your options:
-  1. **Rebuild fresh** — fastest for MCP. Delete all nodes, recreate with absolute paths. Scene 1 rebuilds in ~8 MCP rounds.
-  2. **Unpack the .orbx** — use `octane.project.unpackPackage()` Lua API to extract assets to disk, then reload the .ocs inside.
-  3. **Use .ocs instead** — save as .ocs during development (assets stay as absolute disk paths). Only package to .orbx for final delivery.
-- **Recommended MCP workflow**: Always save `.ocs` during iteration. Only `.orbx` for final archival.
+- **.ocs** = absolute disk paths → reloadable, use during MCP iteration
+- **.orbx** = embedded assets with relative paths → breaks MCP on reload (DEADLINE_EXCEEDED on path re-set). Only for final delivery.
+- **Recommended**: Always `.ocs` during development. Only `.orbx` for archival.
 
 ### Single-Mesh Framing Workflow
 
@@ -672,19 +593,9 @@ When framing a new mesh for a hero shot, always follow this order:
 - Skipping up vector check — silent roll, random orientation
 - Moving camera close before establishing orientation — impossible to recover
 
-### 3D Asset Orientation
+### Crash Debugging
 
-When loading models from OTOY Studio or any pipeline:
-
-- The model's facing direction is set by the generation pipeline, not random
-- Use the OTOY Studio preview thumbnail to determine face direction BEFORE downloading
-- Plan camera placement from the source image BEFORE creating any nodes
-- Have a complete composition plan (camera, orientation, framing) ready before building
-
-### Crash Debugging Protocol
-
-- **On any crash**: Isolate the exact gRPC call from `mcp-debug.log`. Compare data format with octaneWebR's equivalent call in `grpc-debug.log`. Octane is stable — crashes are almost certainly malformed MCP data. Don't speculate — investigate.
-- **Eclipse/backlight impossible without bloom**: Matte sphere + backlight produces no visible corona in path tracing. Needs post-processing bloom.
+On any crash: isolate the exact gRPC call from `mcp-debug.log`, compare with octaneWebR's `grpc-debug.log`. Crashes are almost certainly malformed MCP data — investigate, don't speculate.
 
 ---
 
@@ -784,16 +695,6 @@ The API cache (`mcp/data/octane-api-cache.json`) contains 704 node types, 3362 p
 - Skip pin enumeration gRPC calls on `create_node` (~90% fewer calls)
 - Validate connection types from cache (0 gRPC calls for `connect_nodes`)
 - Provide pin names/types from cache for `get_node_info` (2 fewer calls per pin)
-
----
-
-## Asset Paths
-
-Save assets to: `C:\otoyla\GRPC\dev\octaneWebR\ORBX\assets\`
-
-Octane requires **absolute paths** with forward slashes: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/file.obj`
-
-For asset sources, generation pipelines, and texture prompts, see `OCTANE_CREATIVE.md` Section 1.
 
 ---
 

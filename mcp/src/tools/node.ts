@@ -10,35 +10,18 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { notifyWebapp } from './webapp';
+import {
+  jsonResult,
+  errorResult,
+  extractHandle,
+  extractValue,
+  OBJ_API_ITEM,
+  OBJ_API_NODE,
+  OBJ_API_NODE_GRAPH,
+} from './utils';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { NodeType } = require('../../../client/src/constants/OctaneTypes');
-
-function jsonResult(data: any) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function errorResult(error: any) {
-  return {
-    content: [
-      { type: 'text' as const, text: JSON.stringify({ error: String(error?.message || error) }) },
-    ],
-    isError: true as const,
-  };
-}
-
-/** Extract handle from gRPC response */
-function extractHandle(result: any): number | undefined {
-  const h =
-    result?.result?.handle ?? result?.list?.handle ?? result?.handle ?? result?.value?.handle;
-  if (h === undefined || h === null || h === 0 || h === '0') return undefined;
-  return Number(h);
-}
-
-/** Extract scalar value from gRPC response */
-function extractValue(result: any): any {
-  return result?.result ?? result?.value ?? result;
-}
 
 // --- Legacy pin type validation (fallback when cache unavailable) ---
 
@@ -98,7 +81,7 @@ async function getOutTypeFallback(
 ): Promise<string | undefined> {
   try {
     const result = await client.callMethod('ApiItem', 'outType', {
-      objectPtr: { handle: String(handle), type: 16 },
+      objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
     });
     const typeRaw = extractValue(result);
     // enums: String → returns "PT_TEXTURE" (string), not 5 (number)
@@ -118,7 +101,7 @@ async function getPinInfoFallback(
   const pins: { index: number; type: string; name: string }[] = [];
   try {
     const countResult = await client.callMethod('ApiNode', 'pinCount', {
-      objectPtr: { handle: String(handle), type: 17 },
+      objectPtr: { handle: String(handle), type: OBJ_API_NODE },
     });
     const count = Number(extractValue(countResult) ?? 0);
     for (let i = 0; i < count; i++) {
@@ -126,7 +109,7 @@ async function getPinInfoFallback(
       let pinName = '';
       try {
         const typeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
-          objectPtr: { handle: String(handle), type: 17 },
+          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           index: i,
         });
         const typeRaw = extractValue(typeResult);
@@ -141,7 +124,7 @@ async function getPinInfoFallback(
       }
       try {
         const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-          objectPtr: { handle: String(handle), type: 17 },
+          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           index: i,
         });
         pinName = String(extractValue(nameResult) ?? '');
@@ -189,7 +172,7 @@ export function registerNodeTools(
 
         const result = await client.callMethod('ApiNode', 'create', {
           type: typeId,
-          ownerGraph: { handle: String(rootHandle), type: 20 },
+          ownerGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
           configurePins: true,
         });
 
@@ -201,7 +184,7 @@ export function registerNodeTools(
 
         // Get the name Octane assigned
         const nameResult = await client.callMethod('ApiItem', 'name', {
-          objectPtr: { handle: String(newHandle), type: 16 },
+          objectPtr: { handle: String(newHandle), type: OBJ_API_ITEM },
         });
 
         // Discover auto-created pin children
@@ -215,7 +198,7 @@ export function registerNodeTools(
             if (cp.defaultNodeType) {
               try {
                 const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                  objectPtr: { handle: String(newHandle), type: 17 },
+                  objectPtr: { handle: String(newHandle), type: OBJ_API_NODE },
                   pinIx: cp.index,
                   enterWrapperNode: true,
                 });
@@ -235,14 +218,14 @@ export function registerNodeTools(
           // FALLBACK: enumerate all pins via gRPC
           try {
             const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
-              objectPtr: { handle: String(newHandle), type: 17 },
+              objectPtr: { handle: String(newHandle), type: OBJ_API_NODE },
             });
             const pinCount = extractValue(pinCountResult) ?? 0;
             for (let i = 0; i < pinCount; i++) {
               let childHandle = 0;
               try {
                 const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                  objectPtr: { handle: String(newHandle), type: 17 },
+                  objectPtr: { handle: String(newHandle), type: OBJ_API_NODE },
                   pinIx: i,
                   enterWrapperNode: true,
                 });
@@ -295,7 +278,7 @@ export function registerNodeTools(
     async ({ handle }) => {
       try {
         await client.callMethod('ApiItem', 'destroy', {
-          objectPtr: { handle: String(handle), type: 16 },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
         client.handleToTypeName.delete(handle);
         await notifyWebapp({ type: 'nodeDeleted', handle });
@@ -397,9 +380,9 @@ export function registerNodeTools(
         // --- Perform the connection ---
         if (pin_id !== undefined) {
           await client.callMethod('ApiNode', 'connectTo', {
-            objectPtr: { handle: String(target_handle), type: 17 },
+            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinId: pin_id,
-            sourceNode: { handle: String(source_handle), type: 17 },
+            sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
             evaluate,
             doCycleCheck: true,
           });
@@ -416,9 +399,9 @@ export function registerNodeTools(
         }
         if (pin_name !== undefined) {
           await client.callMethod('ApiNode', 'connectTo1', {
-            objectPtr: { handle: String(target_handle), type: 17 },
+            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinName: pin_name,
-            sourceNode: { handle: String(source_handle), type: 17 },
+            sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
             evaluate,
             doCycleCheck: true,
           });
@@ -437,9 +420,9 @@ export function registerNodeTools(
           return errorResult('Provide one of: pin_index, pin_name, or pin_id');
         }
         await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(target_handle), type: 17 },
+          objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
-          sourceNode: { handle: String(source_handle), type: 17 },
+          sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
           evaluate,
           doCycleCheck: true,
         });
@@ -470,9 +453,9 @@ export function registerNodeTools(
     async ({ handle, pin_index, evaluate }) => {
       try {
         await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(handle), type: 17 },
+          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
-          sourceNode: { handle: '0', type: 17 },
+          sourceNode: { handle: '0', type: OBJ_API_NODE },
           evaluate,
           doCycleCheck: true,
         });

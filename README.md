@@ -76,7 +76,7 @@ WebSocket: ws://localhost:57341/ws (callbacks, render streaming)
 
 ### Themes
 
-Three CSS variable themes: **Octane** (default dark), **Vibe** (pastel purple), **Debug** (colored layout).
+Three CSS variable themes: **Vibe** (default, pastel purple), **Octane** (dark), **Debug** (colored layout).
 
 ![Octane Theme](docs/screenshots/theme-octane.png) ![Vibe Theme](docs/screenshots/theme-vibe.png) ![Debug Theme](docs/screenshots/theme-debug.png)
 
@@ -90,7 +90,7 @@ MCP server exposes Octane's gRPC API to AI agents. Claude creates/modifies/rende
 cd mcp && npm install    # First time only
 ```
 
-`.mcp.json` already configured in project root. 21 tools: info, project, camera, render, scene, node, attribute.
+`.mcp.json` already configured in project root. 28 tools: info, project, camera, render, scene, node, attribute, webapp.
 
 ```
 Claude Code ←stdio→ MCP Server ←gRPC→ Octane ←gRPC→ octaneWebR (browser)
@@ -117,7 +117,7 @@ octaneWebR/
 │   ├── proto/                    # Beta 2 proto files
 │   ├── proto_old/                # Alpha 5 proto files
 │   └── src/                      # gRPC proxy server
-├── mcp/src/                      # MCP server (21 tools, stdio)
+├── mcp/src/                      # MCP server (28 tools, stdio)
 ├── api-version.config.js         # Alpha 5/Beta 2 switch
 ├── vite-plugin-octane-grpc.ts    # Embedded proxy plugin
 └── package.json
@@ -143,7 +143,7 @@ npm run lint         # ESLint
 - **[QUICKSTART.md](./QUICKSTART.md)** — Setup guide
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Architecture & patterns
 - **[CHANGELOG.md](./CHANGELOG.md)** — Version history
-- **[IMPROVEMENTS.md](./IMPROVEMENTS.md)** — 29-item backlog
+- **[IMPROVEMENTS.md](./IMPROVEMENTS.md)** — Improvement backlog
 - **[OTOY_COMPARISON.md](./OTOY_COMPARISON.md)** — Feature gap analysis vs Octane SE
 - **[PROTO_PLAN.md](./PROTO_PLAN.md)** — Proto API coverage plan
 
@@ -164,4 +164,4 @@ npm run lint         # ESLint
 
 OTOY © 2026 - All rights reserved. Octane Render® and OTOY® are registered trademarks of OTOY Inc.
 
-**Version**: 1.4.6 | **Status**: Active Development
+**Version**: 1.5.2 | **Status**: Active Development

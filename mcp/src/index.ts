@@ -67,7 +67,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('Octane MCP server running on stdio (24 tools registered)');
+  console.error('Octane MCP server running on stdio (28 tools registered)');
 }
 
 main().catch(err => {

@@ -245,11 +245,17 @@ export class OctaneMcpClient {
       await prev; // wait for previous call
       const transformed = transformParams(service, method, params);
       const options = timeoutMs ? { timeout: timeoutMs } : {};
-      mcpLog(`REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`, 'debug');
+      const isDebug = LEVEL_RANK['debug'] >= LEVEL_RANK[LOG_LEVEL];
+      if (isDebug)
+        mcpLog(
+          `REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`,
+          'debug'
+        );
       const endProfile = profileGrpc(service, method);
       const result = await this.base.callMethod(service, method, transformed, options);
       endProfile();
-      mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');
+      if (isDebug)
+        mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');
       return result;
     } catch (error: any) {
       throw enhanceCrashError(error, service, method, this);
