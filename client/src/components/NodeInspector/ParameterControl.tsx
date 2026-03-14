@@ -24,11 +24,23 @@ import { Logger } from '../../utils/Logger';
 import type { ParameterValue } from './hooks/useParameterValue';
 
 /**
- * Format float value for display (minimum 3, maximum 6 decimal places)
- * Examples: 36 → "36.000", 43.45 → "43.450", 43.455845 → "43.455845"
+ * Format float value for display (matches Octane's formatting):
+ * - Very large values (>= 1e9) show as ∞
+ * - Snaps to 3 decimal places when float32 noise is the only extra precision
+ * - Shows up to 6 decimal places for values with real precision
+ * Examples: 36 → "36.000", 50.000004 → "50.000", 0.892857 → "0.892857"
  */
 function formatFloatForDisplay(value: number): string {
-  const str = value.toFixed(6);
+  // Show infinity symbol for very large values (matches Octane)
+  if (Math.abs(value) >= 1e9) return '∞';
+
+  // Try snapping to 3 decimal places — if the difference is just float32 noise
+  // (< 1e-5), use the cleaner 3-decimal value. Otherwise keep full 6 decimals.
+  const round3 = Math.round(value * 1e3) / 1e3;
+  const useClean = Math.abs(value - round3) < 1e-5;
+  const base = useClean ? round3 : value;
+
+  const str = base.toFixed(6);
   const [intPart, decPart] = str.split('.');
 
   // Keep first 3 decimals, then remove trailing zeros from remaining 3
@@ -39,11 +51,30 @@ function formatFloatForDisplay(value: number): string {
 }
 
 /**
+ * Format float as percentage for display (value 0.5 → "50.0%", 1.0 → "100.0%")
+ * Octane stores percentages as 0–1 floats but displays them as 0–100%.
+ */
+function formatPercentForDisplay(value: number): string {
+  const pct = value * 100;
+  // Use 1 decimal place like Octane (e.g., "0.0%", "50.0%", "100.0%")
+  return `${pct.toFixed(1)}%`;
+}
+
+/**
  * Parse float value from input (handles string input)
  */
 function parseFloatValue(value: string | number): number {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Parse percentage input back to 0–1 float ("50%" or "50" → 0.5)
+ */
+function parsePercentValue(value: string | number): number {
+  const str = String(value).replace('%', '').trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num / 100;
 }
 
 /**
@@ -345,17 +376,20 @@ function ParameterControlComponent({
         const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
         const dimMin = floatInfo?.dimInfos?.[0]?.minValue;
         const dimMax = floatInfo?.dimInfos?.[0]?.maxValue;
+        const isPct = !!floatInfo?.displayPercentages;
+        const fmt = isPct ? formatPercentForDisplay : formatFloatForDisplay;
+        const prs = isPct ? parsePercentValue : parseFloatValue;
 
         if (dimCount === 1) {
           controlHtml = (
             <div className="parameter-control-container">
               <NumberInput
-                value={x}
-                onCommit={v => onValueChange({ x: v, y })}
-                step={step}
-                min={dimMin != null ? Number(dimMin) : undefined}
-                max={dimMax != null ? Number(dimMax) : undefined}
-                format={formatFloatForDisplay}
+                value={isPct ? x * 100 : x}
+                onCommit={v => onValueChange({ x: isPct ? v / 100 : v, y })}
+                step={isPct ? 0.1 : step}
+                min={dimMin != null ? Number(dimMin) * (isPct ? 100 : 1) : undefined}
+                max={dimMax != null ? Number(dimMax) * (isPct ? 100 : 1) : undefined}
+                format={isPct ? (v: number) => `${v.toFixed(1)}%` : formatFloatForDisplay}
                 parse={parseFloatValue}
               />
             </div>
@@ -366,8 +400,8 @@ function ParameterControlComponent({
               <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                displayValue={formatFloatForDisplay(x)}
-                onCommit={v => onValueChange({ x: parseFloatValue(v), y })}
+                displayValue={fmt(x)}
+                onCommit={v => onValueChange({ x: prs(v), y })}
                 autoComplete="off"
                 name="octane-number-input-2"
               />
@@ -375,8 +409,8 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(y)}
-                  onCommit={v => onValueChange({ x, y: parseFloatValue(v) })}
+                  displayValue={fmt(y)}
+                  onCommit={v => onValueChange({ x, y: prs(v) })}
                   autoComplete="off"
                   name="octane-number-input-3"
                 />
@@ -425,27 +459,31 @@ function ParameterControlComponent({
           const step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
           const dimMin = floatInfo?.dimInfos?.[0]?.minValue;
           const dimMax = floatInfo?.dimInfos?.[0]?.maxValue;
+          const isPct3 = !!floatInfo?.displayPercentages;
           controlHtml = (
             <div className="parameter-control-container">
               <NumberInput
-                value={x}
-                onCommit={v => onValueChange({ x: v, y, z })}
-                step={step}
-                min={dimMin != null ? Number(dimMin) : undefined}
-                max={dimMax != null ? Number(dimMax) : undefined}
-                format={formatFloatForDisplay}
+                value={isPct3 ? x * 100 : x}
+                onCommit={v => onValueChange({ x: isPct3 ? v / 100 : v, y, z })}
+                step={isPct3 ? 0.1 : step}
+                min={dimMin != null ? Number(dimMin) * (isPct3 ? 100 : 1) : undefined}
+                max={dimMax != null ? Number(dimMax) * (isPct3 ? 100 : 1) : undefined}
+                format={isPct3 ? (v: number) => `${v.toFixed(1)}%` : formatFloatForDisplay}
                 parse={parseFloatValue}
               />
             </div>
           );
         } else {
+          const isPct3 = !!floatInfo?.displayPercentages;
+          const fmt3 = isPct3 ? formatPercentForDisplay : formatFloatForDisplay;
+          const prs3 = isPct3 ? parsePercentValue : parseFloatValue;
           controlHtml = (
             <div className="parameter-control-container">
               <DeferredInput
                 type="text"
                 className="number-input parameter-control"
-                displayValue={formatFloatForDisplay(x)}
-                onCommit={v => onValueChange({ x: parseFloatValue(v), y, z })}
+                displayValue={fmt3(x)}
+                onCommit={v => onValueChange({ x: prs3(v), y, z })}
                 autoComplete="off"
                 name="octane-number-input-5"
               />
@@ -453,8 +491,8 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(y)}
-                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z })}
+                  displayValue={fmt3(y)}
+                  onCommit={v => onValueChange({ x, y: prs3(v), z })}
                   autoComplete="off"
                   name="octane-number-input-6"
                 />
@@ -463,8 +501,8 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(z)}
-                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v) })}
+                  displayValue={fmt3(z)}
+                  onCommit={v => onValueChange({ x, y, z: prs3(v) })}
                   autoComplete="off"
                   name="octane-number-input-7"
                 />
@@ -481,6 +519,9 @@ function ParameterControlComponent({
         const { x = 0, y = 0, z = 0, w = 0 } = value;
         const floatInfo = node.pinInfo?.floatInfo;
         const dimCount = floatInfo?.dimCount ?? 4;
+        const isPct4 = !!floatInfo?.displayPercentages;
+        const fmt4 = isPct4 ? formatPercentForDisplay : formatFloatForDisplay;
+        const prs4 = isPct4 ? parsePercentValue : parseFloatValue;
 
         // Render based on dimension count (matching octaneWeb exactly)
         const f4step = Number(floatInfo?.dimInfos?.[0]?.sliderStep) || 0.001;
@@ -492,12 +533,12 @@ function ParameterControlComponent({
             controlHtml = (
               <div className="parameter-control-container">
                 <NumberInput
-                  value={x}
-                  onCommit={v => onValueChange({ x: v, y, z, w })}
-                  step={f4step}
-                  min={f4min != null ? Number(f4min) : undefined}
-                  max={f4max != null ? Number(f4max) : undefined}
-                  format={formatFloatForDisplay}
+                  value={isPct4 ? x * 100 : x}
+                  onCommit={v => onValueChange({ x: isPct4 ? v / 100 : v, y, z, w })}
+                  step={isPct4 ? 0.1 : f4step}
+                  min={f4min != null ? Number(f4min) * (isPct4 ? 100 : 1) : undefined}
+                  max={f4max != null ? Number(f4max) * (isPct4 ? 100 : 1) : undefined}
+                  format={isPct4 ? (v: number) => `${v.toFixed(1)}%` : formatFloatForDisplay}
                   parse={parseFloatValue}
                 />
               </div>
@@ -509,16 +550,16 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(x)}
-                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
+                  displayValue={fmt4(x)}
+                  onCommit={v => onValueChange({ x: prs4(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-9"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(y)}
-                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
+                  displayValue={fmt4(y)}
+                  onCommit={v => onValueChange({ x, y: prs4(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-10"
                 />
@@ -531,24 +572,24 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(x)}
-                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
+                  displayValue={fmt4(x)}
+                  onCommit={v => onValueChange({ x: prs4(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-11"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(y)}
-                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
+                  displayValue={fmt4(y)}
+                  onCommit={v => onValueChange({ x, y: prs4(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-12"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(z)}
-                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v), w })}
+                  displayValue={fmt4(z)}
+                  onCommit={v => onValueChange({ x, y, z: prs4(v), w })}
                   autoComplete="off"
                   name="octane-number-input-13"
                 />
@@ -562,32 +603,32 @@ function ParameterControlComponent({
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(x)}
-                  onCommit={v => onValueChange({ x: parseFloatValue(v), y, z, w })}
+                  displayValue={fmt4(x)}
+                  onCommit={v => onValueChange({ x: prs4(v), y, z, w })}
                   autoComplete="off"
                   name="octane-number-input-14"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(y)}
-                  onCommit={v => onValueChange({ x, y: parseFloatValue(v), z, w })}
+                  displayValue={fmt4(y)}
+                  onCommit={v => onValueChange({ x, y: prs4(v), z, w })}
                   autoComplete="off"
                   name="octane-number-input-15"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(z)}
-                  onCommit={v => onValueChange({ x, y, z: parseFloatValue(v), w })}
+                  displayValue={fmt4(z)}
+                  onCommit={v => onValueChange({ x, y, z: prs4(v), w })}
                   autoComplete="off"
                   name="octane-number-input-16"
                 />
                 <DeferredInput
                   type="text"
                   className="number-input parameter-control"
-                  displayValue={formatFloatForDisplay(w)}
-                  onCommit={v => onValueChange({ x, y, z, w: parseFloatValue(v) })}
+                  displayValue={fmt4(w)}
+                  onCommit={v => onValueChange({ x, y, z, w: prs4(v) })}
                   autoComplete="off"
                   name="octane-number-input-17"
                 />

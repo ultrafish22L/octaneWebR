@@ -52,6 +52,11 @@ export interface FloatInfo {
   dimCount?: number;
   isColor?: boolean;
   dimInfos?: DimInfo[];
+  displayPercentages?: boolean;
+  allowLog?: boolean;
+  defaultIsLog?: boolean;
+  useAspectRatio?: boolean;
+  alwaysDisplaySign?: boolean;
 }
 
 export interface IntInfo {

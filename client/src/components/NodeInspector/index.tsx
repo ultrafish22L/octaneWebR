@@ -304,7 +304,7 @@ const NodeParameter = React.memo(function NodeParameter({
   const nodeId = `node-${node.handle}`;
   const typeStr = String(node.type || node.outType || 'unknown');
   const icon = node.icon || getIconForType(typeStr, node.name);
-  const name = node.pinInfo?.staticLabel || node.name;
+  let name = node.pinInfo?.staticLabel || node.name;
   let color = node.nodeInfo?.nodeColor ? formatNodeColor(node.nodeInfo.nodeColor) : '#666';
   if (node.pinInfo) {
     const info = getPinTypeInfo(node.pinInfo.type as string);
@@ -312,6 +312,20 @@ const NodeParameter = React.memo(function NodeParameter({
       color = info.color;
     }
   }
+
+  // Prefix movable input pins with "Input N:" (matches Octane's "Input 1: Placement" style)
+  if (movablePinIndex !== undefined && parentNodeType) {
+    const movInfo = MOVABLE_INPUT_TYPES[parentNodeType];
+    if (movInfo) {
+      const prefix = `${movInfo.inputName.charAt(0).toUpperCase()}${movInfo.inputName.slice(1)} ${movablePinIndex + 1}`;
+      if (node.handle && name && name !== 'Unnamed') {
+        name = `${prefix}: ${name}`;
+      } else {
+        name = prefix;
+      }
+    }
+  }
+
   // Check if this node is a movable input pin (parent has movable inputs)
   const isMovable = parentNodeType ? isMovableInputPin(node, parentNodeType) : false;
   const pinIdx = node.pinInfo?.pinId;
@@ -487,7 +501,11 @@ const NodeParameter = React.memo(function NodeParameter({
             tabIndex={hasChildren ? 0 : undefined}
           >
             <div className="node-label-text">
-              {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
+              {collapseIcon ? (
+                <span className="collapse-icon">{collapseIcon}</span>
+              ) : level > 0 ? (
+                <span className="collapse-icon-spacer" />
+              ) : null}
               <span className="node-title" title={buildTooltip()}>
                 {name}:
               </span>

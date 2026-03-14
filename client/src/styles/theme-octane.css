@@ -21,8 +21,8 @@
   --bg-active: #525252; /* Active/pressed */
 
   /* ── Depth shading (Octane-style: deeper = darker) ── */
-  --bg-depth-0: #2a2a2a; /* RT, Scene headers — darkest */
-  --bg-depth-1: #353535; /* Camera, Environment, Geometry */
+  --bg-depth-0: #383838; /* RT, Scene headers — matches Octane's lighter start */
+  --bg-depth-1: #404040; /* Camera, Environment, Geometry */
   --bg-depth-2: #4e4e4e; /* Parameters — consistent lighter shade */
   --bg-depth-3: #555555; /* Deeper section headers */
   --bg-depth-4: #5c5c5c; /* Deeper still */

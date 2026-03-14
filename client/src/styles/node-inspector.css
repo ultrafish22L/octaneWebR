@@ -611,12 +611,10 @@
 .node-box {
   position: relative;
   background-color: var(--bg-secondary);
-  background-image: linear-gradient(
-    180deg,
-    var(--highlight-soft) 0%,
-    transparent 35%,
-    var(--overlay-very-subtle) 100%
-  );
+  background-image: linear-gradient(180deg, var(--highlight-soft) 0%, transparent 40%);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: 1px;
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
@@ -625,13 +623,10 @@
 .node-box-parameter {
   position: relative;
   background-color: var(--bg-parameter);
-  background-image: linear-gradient(
-    180deg,
-    var(--highlight-soft) 0%,
-    transparent 35%,
-    var(--overlay-very-subtle) 100%
-  );
+  background-image: linear-gradient(180deg, var(--highlight-soft) 0%, transparent 40%);
+  border: 1px solid rgba(0, 0, 0, 0.4);
   border-radius: var(--border-radius-lg);
+  margin-bottom: 1px;
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
@@ -656,7 +651,7 @@
 /* Level-based indentation system with consistent 24px increments - ONLY for Node Inspector */
 .node-inspector .node-indent-0 {
   background-color: transparent; /* Depth shading comes from data-depth on toggle-content */
-  border: 1px solid var(--parameter-bg);
+  border: none;
   border-radius: var(--border-radius-lg);
   margin: 0 2px 2px 8px;
   padding: 0 0 0 0;
@@ -664,7 +659,7 @@
 
 .node-inspector .node-indent {
   background-color: transparent; /* Depth shading comes from data-depth */
-  border: 1px solid var(--parameter-bg);
+  border: none;
   border-radius: var(--border-radius-lg);
   margin: 2px 2px 2px 20px;
   padding: 0 0 0 0;
@@ -672,7 +667,7 @@
 
 .node-inspector .node-indent-done {
   background-color: transparent; /* Depth shading comes from data-depth */
-  border: 1px solid var(--parameter-bg);
+  border: none;
   border-radius: var(--border-radius-lg);
   margin: 2px 2px 2px 1px;
   padding: 0 0 0 0;
@@ -682,6 +677,7 @@
   background-color: transparent; /* Depth shading comes from data-depth */
   padding: 0;
   margin: 0;
+  overflow: hidden; /* Prevent child margin collapse creating seams */
 }
 
 /* ─── Depth-based background shading (Octane-style) ─────────── */
@@ -1151,6 +1147,13 @@
 
 .collapse-icon:hover {
   color: var(--text-primary);
+}
+
+/* Invisible spacer matching collapse-icon width for alignment */
+.collapse-icon-spacer {
+  display: inline-block;
+  width: 12px;
+  margin: 0 8px 0 0;
 }
 
 /* Node title */
