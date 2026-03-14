@@ -1,5 +1,9 @@
 # OctaneWebR
 
+## #1 Rule: Docs Live in the Repo
+
+ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved to repo-backed folders (e.g., `docs/`, `mcp/`, `recipes/`). NEVER store project-useful docs only in local/user memory folders. This is a shareable project — if it's useful, it belongs in the repo.
+
 ## Quick Start
 
 - **Dev server**: `npm run dev` (port 57341)
@@ -9,42 +13,43 @@
 
 ## Key Docs
 
-- `ARCHITECTURE.md` — architecture, service layer, gRPC, theming
-- `TEST_PLAN.md` — 181 tests, testing rules (gold standard)
-- `IMPROVEMENTS.md` — improvement backlog (includes MCP resilience items)
-- `mcp/OCTANE_MCP.md` — MCP technical reference: pin layouts, crash prevention, API patterns
-- `mcp/OCTANE_CREATIVE.md` — creative guide: lighting, materials, composition, depth, scale, environments, anti-CG
-- `recipes/` — 5 scene recipes (prose creative briefs with reference values)
+All docs live under `docs/` in subfolders:
+
+- `docs/project/` — ARCHITECTURE, IMPROVEMENTS, TEST_PLAN, CHANGELOG, QUICKSTART
+- `docs/mcp/OCTANE_MCP.md` — MCP technical reference: pin layouts, crash prevention, API patterns
+- `docs/mcp/OCTANE_CREATIVE.md` — creative guide: lighting, materials, composition, anti-CG
+- `docs/mcp/DEMO_SHOW_FLOW.md` — demo script
+- `docs/build/DRESS_BUILD_PROTOCOL.md` — rigorous MCP scene build protocol (19 steps, 4 phases)
+- `docs/build/OCTANE_CHEATSHEET.md` — living quick-reference: sunset, materials, camera, pins, transforms
+- `docs/build/SCENE_BUILDING_TIPS.md` — camera workflow, framing, build order, visual debugging
+- `docs/ui/UI_IMPLEMENTATION.md` — inspector depth shading, float formatting, leaf nodes, movable inputs
+- `docs/recipes/` — 6 scene recipes (prose creative briefs with reference values)
 
 ## Testing Rules
 
-All in `TEST_PLAN.md`. Key points:
+All in `docs/project/TEST_PLAN.md`. Key points:
 
 - Fix one, verify, then next. No batching.
 - Fresh state per test — restart dev server and reload scene.
 - Detect Octane crashes immediately — check for `ECONNRESET`/`ECONNREFUSED`.
 - Lint and build before push — `npm run lint` + `npm run build`.
 
+## Interaction Mode
+
+- **Default: use octaneWebR web UI** via preview tools (click, fill, eval, snapshot, screenshot) for all testing, debugging, and scene interaction — like a human user would.
+- **MCP tools only** when working on MCP server features or when the web UI can't do something yet (e.g., no create-node dialog).
+- **Octane launch**: `C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe` — NEVER use any other Octane exe (launching the wrong one disables gRPC for the correct one).
+- **Node inspector refresh**: when MCP updates a node that's currently selected in octaneWebR, re-select the node to refresh the inspector (or implement smarter code).
+
 ## MCP Scene Building Rules
 
-Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details):
+**Full rules in `docs/mcp/OCTANE_MCP.md`.** The 3 hardest-learned rules:
 
-- **NEVER use `evaluate:false`** — always evaluate immediately. 8× deferred set_attribute crashed Octane.
-- **NEVER use `restart_render`** — crashes Octane. `start_render` keeps render mode active; all changes are picked up live.
-- **Primitive type crash** — setting primitive type on NT_GEO_OBJECT crashes Octane non-deterministically (Alpha 5 bug). **Use NT_GEO_MESH + .obj files for non-box shapes** (100% reliable). Available: sphere.obj, cube.obj, torus.obj, teapot.obj, ring.obj, diamond.obj, monolith.obj, prism.obj, pillar.obj, quad.obj, sphere_hd.obj, sphere_uv.obj, floor.obj. Default Box (no set_attribute on prim) is also safe.
-- **Restart ALL servers** (dev, preview) before every build run and after every crash. Always restart Octane BEFORE Claude Desktop/MCP.
-- **Use `pin_id` for connections** — `pin_id: 89` (P_KERNEL), `pin_id: 43` (P_ENVIRONMENT), `pin_id: 30` (P_DIFFUSE), `pin_id: 41` (P_EMISSION). **EXCEPTION: RT geometry pin — use `pin_index: 3`** (pin_id:59 silently fails, reports success but nothing connects).
-- **Connect nodes, don't just create them** — creating a node without connecting it does nothing. Always follow `create_node` with `connect_nodes`.
-- **VERIFY RT connections** — after connecting to RT, call `get_node_info(RT)` and confirm pin 1/3/6 have `connected_handle != 0`. Never trust `success:true` alone.
-- **Don't stop render unnecessarily** — most changes (connect, set_attribute) take effect on the live render. Octane picks them up automatically.
-- **Kernel swap is safe anytime** — RT has a default DL kernel. Swap to PT whenever needed, even during a live render.
-- **NEVER flip camera up vector** — rotate the model instead. `set_camera` resets up to (0,1,0).
-- **Renders go in `renders/`** — NEVER save renders to `ORBX/`.
-- **Absolute paths for file loading** — always use full paths for A_FILENAME on meshes and textures. Always A_RELOAD after A_FILENAME.
-- **A_ROTATION uses DEGREES** — 90 means 90°, NOT radians.
-- **Light before geo in space scenes** — no ambient light = black render. Add a light first.
-- **Save before reset_project** — `save_project("ORBX/scratch.ocs")` then `reset_project()`. Without the save, Octane pops a blocking "Save scene?" dialog that hangs everything.
-- **DOF is ON by default** — camera aperture defaults to 0.893. Set to 0 after `start_render`: RT pin 0 → camera → pin 14 → aperture child → `set_attribute(child, 185, AT_FLOAT=9, 0)`.
+- **NEVER `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
+- **NEVER `restart_render`** — crashes Octane. Use `start_render` (keeps render live).
+- **`set_camera` is the ONLY geometry refresh** — `start_render` does NOT refresh the geometry tree. After connecting new geometry to RT, always call `set_camera`.
+
+Also see: `docs/build/DRESS_BUILD_PROTOCOL.md` (build order), `docs/build/OCTANE_CHEATSHEET.md` (values), `docs/build/SCENE_BUILDING_TIPS.md` (camera/framing).
 
 ## Status
 

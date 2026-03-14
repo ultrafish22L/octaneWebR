@@ -119,14 +119,15 @@ TIMING RULE:       Call get_render_status after EVERY render.
 
 ### Session Start / Post-Crash Restart Rules
 
-**Exact restart sequence:**
+**Exact restart sequence (always Octane BEFORE servers/MCP):**
 
-1. **Claude stops servers** — `preview_stop` to shut down dev server / preview
-2. **Wait for user** to restart Octane (NEVER try to restart Octane yourself)
-3. **User gives the OK** — "go", "ok", "ready", etc.
-4. **Claude starts servers** — `preview_start` for dev server
-5. **Claude verifies** — `get_octane_version` (gRPC alive?), `preview_screenshot` (webapp live?)
-6. **Build** — only then start creating nodes
+1. **Stop all servers** — `preview_stop` for dev server / preview
+2. **Kill Octane** — `taskkill //IM octane.exe //F` (if running)
+3. **Launch Octane** — `C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe &` (background)
+4. **Wait ~30s** for Octane to boot
+5. **Start dev server** — `npm run dev` or `preview_start`
+6. **Verify** — `get_octane_version` (gRPC alive?), `preview_screenshot` (webapp live?)
+7. **Build** — only then start creating nodes
 
 **Build session rules:**
 
@@ -188,9 +189,13 @@ These patterns supplement the Cheat Sheet with additional detail.
 | `resetProject` (any variant)               | Use delete-all-nodes pattern (avoids "Save changes?" dialog)                                                                                                                                                                                          |
 | Bad A_FILENAME (e.g. `:rgba` suffix)       | Pops Octane dialog blocking gRPC for 30s. Use valid absolute paths only.                                                                                                                                                                              |
 
+### Connections Don't Auto-Render
+
+`connect_nodes` alone does NOT trigger a re-render. The viewport won't update until `set_attribute`, `set_camera`, or `start_render` is called.
+
 ### Refresh After Structural Changes
 
-`start_render` does NOT refresh the viewport. **`set_camera` is the only way** (`restart_render` is deprecated — crashes Octane):
+`start_render` does NOT refresh the geometry tree. **`set_camera` is the only way** to force geometry re-evaluation (`restart_render` crashes Octane):
 
 ```
 connect_nodes(...)
