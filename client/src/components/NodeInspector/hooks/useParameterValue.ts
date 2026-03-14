@@ -54,14 +54,22 @@ export function useParameterValue(
       setParamValue(null);
 
       try {
-        const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
+        // Support transform-specific attributes (synthetic nodes from TransformValueExpander)
+        const attrInfoAny = node.attrInfo as Record<string, unknown>;
+        const transformAttrId = attrInfoAny._transformAttrId as number | undefined;
+        const transformAttrType = attrInfoAny._transformAttrType as number | undefined;
+        const transformComponent = attrInfoAny._transformComponent as number | undefined;
+
+        const attrId = transformAttrId ?? AttributeId.A_VALUE;
+        const expectedType =
+          transformAttrType ?? AttrType[node.attrInfo.type as keyof typeof AttrType];
 
         // Queue the API call to prevent connection pool exhaustion
         // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
         // This queues them with max 4 concurrent requests to stay within browser limits
         const response = await requestQueue.enqueue(() =>
           client.callApi('ApiItem', 'getValueByAttrID', node.handle, {
-            attribute_id: AttributeId.A_VALUE,
+            attribute_id: attrId,
             expected_type: expectedType,
           })
         );
@@ -71,13 +79,25 @@ export function useParameterValue(
         if (response) {
           const responseMap = response as Record<string, unknown>;
           const valueField = (responseMap.value as string) || Object.keys(responseMap)[0];
-          const actualValue = responseMap[valueField];
+          let actualValue =
+            typeof valueField === 'string' && valueField in responseMap
+              ? responseMap[valueField]
+              : responseMap[Object.keys(responseMap).find(k => k !== 'value') || ''];
+
+          // Extract single component from float3 for transform R.X/Y/Z, S.X/Y/Z, T.X/Y/Z
+          if (transformComponent !== undefined && actualValue && typeof actualValue === 'object') {
+            const vec = actualValue as { x?: number; y?: number; z?: number };
+            const components = [vec.x ?? 0, vec.y ?? 0, vec.z ?? 0];
+            actualValue = components[transformComponent];
+          }
 
           Logger.debugV(`ApiItem:getValueByAttrID for ${node.name}: ${actualValue}`);
 
+          // For transform component extracts, report as AT_FLOAT (single value)
+          const reportType = transformComponent !== undefined ? AttrType.AT_FLOAT : expectedType;
           setParamValue({
             value: actualValue,
-            type: expectedType,
+            type: reportType,
           });
         }
       } catch (error: unknown) {

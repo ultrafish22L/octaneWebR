@@ -136,6 +136,10 @@ export const AttributeId = {
   A_PIN_COUNT: 113,
   A_RELOAD: 124,
   A_INPUT_ACTION: 128,
+  A_ROTATION_ORDER: 136,
+  A_ROTATION: 137,
+  A_SCALE: 139,
+  A_TRANSLATION: 172,
 } as const;
 
 /**

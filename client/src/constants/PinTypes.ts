@@ -238,6 +238,15 @@ export const pinTypeToNodeTypes: Record<string, CompatibleNodeType[]> = {
   // Render target pin
   PT_RENDERTARGET: [{ key: 'NT_RENDERTARGET', id: 56 }],
 
+  // Transform pin accepts transform node types
+  PT_TRANSFORM: [
+    { key: 'NT_TRANSFORM_VALUE', id: 10 },
+    { key: 'NT_TRANSFORM_3D', id: 76 },
+    { key: 'NT_TRANSFORM_2D', id: 77 },
+    { key: 'NT_TRANSFORM_ROTATION', id: 78 },
+    { key: 'NT_TRANSFORM_SCALE', id: 79 },
+  ],
+
   // Value types accept value node types
   PT_BOOL: [{ key: 'NT_BOOL', id: 11 }],
   PT_FLOAT: [{ key: 'NT_FLOAT', id: 6 }],

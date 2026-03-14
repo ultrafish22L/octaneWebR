@@ -17,7 +17,13 @@ import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { useStatusMessage } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
-import { FILE_NODE_TYPES, MOVABLE_INPUT_TYPES } from '../../constants/OctaneTypes';
+import {
+  FILE_NODE_TYPES,
+  MOVABLE_INPUT_TYPES,
+  AttributeId,
+  AttrType,
+} from '../../constants/OctaneTypes';
+// requestQueue imported by useParameterValue hook
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
 import { formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
@@ -168,6 +174,189 @@ function MovableInputPinActions({
         )}
       </span>
     </span>
+  );
+}
+
+// Rotation order enum labels (index → name)
+const ROTATION_ORDERS = ['XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', 'ZYX'];
+
+// Transform attribute definitions for building synthetic child nodes
+const TRANSFORM_ATTRS = [
+  {
+    name: 'Rotation order',
+    attrId: AttributeId.A_ROTATION_ORDER,
+    type: 'AT_INT',
+    attrType: AttrType.AT_INT,
+    dimCount: 1,
+  },
+  {
+    name: 'R.X',
+    attrId: AttributeId.A_ROTATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 0,
+  },
+  {
+    name: 'R.Y',
+    attrId: AttributeId.A_ROTATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 1,
+  },
+  {
+    name: 'R.Z',
+    attrId: AttributeId.A_ROTATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 2,
+  },
+  {
+    name: 'S.X',
+    attrId: AttributeId.A_SCALE,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 0,
+  },
+  {
+    name: 'S.Y',
+    attrId: AttributeId.A_SCALE,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 1,
+  },
+  {
+    name: 'S.Z',
+    attrId: AttributeId.A_SCALE,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 2,
+  },
+  {
+    name: 'T.X',
+    attrId: AttributeId.A_TRANSLATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 0,
+  },
+  {
+    name: 'T.Y',
+    attrId: AttributeId.A_TRANSLATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 1,
+  },
+  {
+    name: 'T.Z',
+    attrId: AttributeId.A_TRANSLATION,
+    type: 'AT_FLOAT3',
+    attrType: AttrType.AT_FLOAT3,
+    dimCount: 3,
+    component: 2,
+  },
+] as const;
+
+// Builds synthetic SceneNode children for NT_TRANSFORM_VALUE so they render
+// through the normal NodeParameter → ParameterControl path with full styling.
+function buildTransformChildren(parentHandle: number): SceneNode[] {
+  return TRANSFORM_ATTRS.map((attr, idx) => {
+    const isRotOrder = attr.name === 'Rotation order';
+    // Synthetic node that looks like a real end-node parameter
+
+    const node = {
+      handle: parentHandle, // same handle — we override the attr ID
+      name: attr.name,
+      type: isRotOrder ? 'PT_ENUM' : 'PT_FLOAT',
+      outType: isRotOrder ? 'PT_ENUM' : 'PT_FLOAT',
+      icon: '/icons/EMPTY.png',
+      children: [],
+      attrInfo: {
+        id: isRotOrder
+          ? 'A_ROTATION_ORDER'
+          : attr.name.startsWith('R.')
+            ? 'A_ROTATION'
+            : attr.name.startsWith('S.')
+              ? 'A_SCALE'
+              : 'A_TRANSLATION',
+        type: isRotOrder ? 'AT_INT' : 'AT_FLOAT',
+        dimCount: 1, // each row is a single value
+        description: attr.name,
+        // Tag with transform-specific info for the value hook to use
+        _transformAttrId: attr.attrId,
+        _transformAttrType: attr.attrType,
+        _transformComponent: 'component' in attr ? attr.component : undefined,
+      },
+      // For rotation order, include enum values
+      ...(isRotOrder
+        ? {
+            nodeInfo: {
+              type: 'NT_ENUM',
+              enumLabels: ROTATION_ORDERS,
+            },
+          }
+        : {}),
+      _syntheticIndex: idx,
+    } as unknown as SceneNode;
+    return node;
+  });
+}
+
+// Single transform row — plain label on background + inline parameter control.
+// Rotation Order gets a dropdown; float rows get a full NumberInput with 3D bar.
+function TransformRow({ node }: { node: SceneNode }) {
+  const { client } = useOctane();
+  const { paramValue, handleValueChange } = useParameterValue(node, client, true);
+  const isRotOrder = node.name === 'Rotation order';
+
+  if (isRotOrder) {
+    const currentIdx = typeof paramValue?.value === 'number' ? paramValue.value : 0;
+    return (
+      <div className="transform-row transform-row-rotorder">
+        <span className="transform-label">{node.name}:</span>
+        <select
+          className="transform-rotorder-select"
+          value={currentIdx}
+          onChange={e => handleValueChange(Number(e.target.value))}
+        >
+          {ROTATION_ORDERS.map((label, i) => (
+            <option key={label} value={i}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  // Float row — render full ParameterControl for arrows, scrub, 3D bar
+  return (
+    <div className="transform-row">
+      <span className="transform-label">{node.name}:</span>
+      <div className="transform-param-bar">
+        <ParameterControl node={node} paramValue={paramValue} onValueChange={handleValueChange} />
+      </div>
+    </div>
+  );
+}
+
+// Transform Value expander — creates synthetic SceneNodes and renders them
+// as plain-label rows (matching Octane's compact transform layout).
+function TransformValueExpander({ nodeHandle }: { nodeHandle: number }) {
+  const children = useMemo(() => buildTransformChildren(nodeHandle), [nodeHandle]);
+
+  return (
+    <>
+      {children.map((child, idx) => (
+        <TransformRow key={`transform-${idx}`} node={child} />
+      ))}
+    </>
   );
 }
 
@@ -337,7 +526,12 @@ const NodeParameter = React.memo(function NodeParameter({
   // Empty pin: handle === 0/undefined with a known PT_ type — no connected node yet
   const isEmptyPin = !node.handle && pinType !== null && compatibleNodeTypes.length > 0;
 
-  const showDropdown = (!isEndNode || isEmptyPin) && compatibleNodeTypes.length > 0;
+  // Connected leaf: has a handle + PT_ type but no children and no attrInfo
+  // (e.g., NT_TRANSFORM_VALUE — connected node that isn't a simple value parameter)
+  const isConnectedLeaf = isEndNode && !!node.handle && pinType !== null && !node.attrInfo;
+
+  const showDropdown =
+    (!isEndNode || isEmptyPin || isConnectedLeaf) && compatibleNodeTypes.length > 0;
 
   // Get current node type (for nodes, not pins)
   const currentNodeType = node.nodeInfo?.type || '';
@@ -391,7 +585,8 @@ const NodeParameter = React.memo(function NodeParameter({
     level === 0 ? 'node-indent-0' : hasGroupAtLevel ? 'node-indent-done' : 'node-indent';
 
   // Determine collapse/expand icon
-  const collapseIcon = hasChildren && level > 0 ? (expanded ? '▼' : '▶') : '';
+  const isTransformValue = currentNodeType === 'NT_TRANSFORM_VALUE';
+  const collapseIcon = (hasChildren || isTransformValue) && level > 0 ? (expanded ? '▼' : '▶') : '';
 
   // Build tooltip with detailed description
   const buildTooltip = () => {
@@ -401,8 +596,8 @@ const NodeParameter = React.memo(function NodeParameter({
     return description || name;
   };
 
-  // Render as parameter node (end node) — but not empty pin slots, which need a dropdown
-  if ((!node.children || node.children.length === 0) && !isEmptyPin) {
+  // Render as parameter node (end node) — but not empty pin slots or connected leaf nodes
+  if ((!node.children || node.children.length === 0) && !isEmptyPin && !isConnectedLeaf) {
     //    if (node.attrInfo) {
     return (
       <div className={indentClass} data-depth={level} style={{ display: 'block' }}>
@@ -425,10 +620,10 @@ const NodeParameter = React.memo(function NodeParameter({
           <div className="node-content">
             <div
               className="node-label"
-              onClick={hasChildren ? handleToggle : undefined}
-              onKeyDown={hasChildren ? handleToggleKeyDown : undefined}
-              role={hasChildren ? 'button' : undefined}
-              tabIndex={hasChildren ? 0 : undefined}
+              onClick={hasChildren || isTransformValue ? handleToggle : undefined}
+              onKeyDown={hasChildren || isTransformValue ? handleToggleKeyDown : undefined}
+              role={hasChildren || isTransformValue ? 'button' : undefined}
+              tabIndex={hasChildren || isTransformValue ? 0 : undefined}
             >
               <div className="node-label-text">
                 {collapseIcon && <span className="collapse-icon">{collapseIcon}</span>}
@@ -495,10 +690,10 @@ const NodeParameter = React.memo(function NodeParameter({
         <div className="node-content">
           <div
             className="node-label"
-            onClick={hasChildren ? handleToggle : undefined}
-            onKeyDown={hasChildren ? handleToggleKeyDown : undefined}
-            role={hasChildren ? 'button' : undefined}
-            tabIndex={hasChildren ? 0 : undefined}
+            onClick={hasChildren || isTransformValue ? handleToggle : undefined}
+            onKeyDown={hasChildren || isTransformValue ? handleToggleKeyDown : undefined}
+            role={hasChildren || isTransformValue ? 'button' : undefined}
+            tabIndex={hasChildren || isTransformValue ? 0 : undefined}
           >
             <div className="node-label-text">
               {collapseIcon ? (
@@ -576,6 +771,18 @@ const NodeParameter = React.memo(function NodeParameter({
           level={level}
           hasGroupMap={hasGroupMap}
         />
+      )}
+
+      {/* Transform Value synthetic children */}
+      {isTransformValue && expanded && node.handle && (
+        <div
+          className="node-toggle-content"
+          data-toggle-content={nodeId}
+          data-depth={level}
+          style={{ display: 'block', overflow: 'hidden' }}
+        >
+          <TransformValueExpander nodeHandle={node.handle} />
+        </div>
       )}
     </div>
   );
