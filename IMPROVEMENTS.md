@@ -4,6 +4,15 @@ Ordered easy → hard within each section. #0 (MCP server) completed.
 
 ---
 
+## Priority
+
+| #   | Item                                                           | Difficulty | Notes                                                                                                                                                                                   |
+| --- | -------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1  | **Geo group: add/remove pin operations for dynamic pin nodes** | Medium     | All nodes with dynamic (moveable) pins need add-pin and remove-pin MCP tools. Geo group is the critical case — currently using `connect_nodes` with `pin_index` which may cause issues. |
+| P2  | **Node create context dialog: set all node type icons**        | Medium     | The Add Node context menu needs correct icons mapped for every node type. Currently many show generic/missing icons.                                                                    |
+
+---
+
 ## Major
 
 | #   | Item                                                  | Notes                                                                               |

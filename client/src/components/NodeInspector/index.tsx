@@ -17,7 +17,7 @@ import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { useStatusMessage } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
-import { FILE_NODE_TYPES } from '../../constants/OctaneTypes';
+import { FILE_NODE_TYPES, MOVABLE_INPUT_TYPES } from '../../constants/OctaneTypes';
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
 import { formatNodeColor } from '../../utils/ColorUtils';
 import { NodeInspectorContextMenu } from './NodeInspectorContextMenu';
@@ -70,16 +70,227 @@ function ParameterGroup({
   );
 }
 
+// "Add input" button for movable-input nodes
+function AddInputButton({ nodeHandle }: { nodeHandle: number }) {
+  const { client } = useOctane();
+  const { setTemporaryStatus } = useStatusMessage();
+
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await client.addMovableInput(nodeHandle);
+      setTemporaryStatus('Input added', 2000);
+    } catch {
+      setTemporaryStatus('Failed to add input', 3000);
+    }
+  };
+
+  return (
+    <button className="movable-input-add-btn" onClick={handleAdd} title="Add input">
+      Add input
+    </button>
+  );
+}
+
+// Per-pin action buttons (delete, move up/down) for movable input pins
+function MovableInputPinActions({
+  nodeHandle,
+  pinIdx,
+  isFirst,
+  isLast,
+}: {
+  nodeHandle: number;
+  pinIdx: number;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const { client } = useOctane();
+  const { setTemporaryStatus } = useStatusMessage();
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await client.deleteMovableInput(nodeHandle, pinIdx);
+      setTemporaryStatus('Input deleted', 2000);
+    } catch {
+      setTemporaryStatus('Failed to delete input', 3000);
+    }
+  };
+
+  const handleMove = async (direction: 'up' | 'down') => {
+    setMoveMenuOpen(false);
+    try {
+      await client.moveMovableInput(nodeHandle, pinIdx, direction);
+      setTemporaryStatus(`Input moved ${direction}`, 2000);
+    } catch {
+      setTemporaryStatus(`Failed to move input ${direction}`, 3000);
+    }
+  };
+
+  return (
+    <span
+      className="movable-input-pin-actions"
+      onClick={e => e.stopPropagation()}
+      role="presentation"
+    >
+      <button className="movable-input-delete-btn" onClick={handleDelete} title="Delete input">
+        &#x2715;
+      </button>
+      <span className="movable-input-move-wrapper">
+        <button
+          className="movable-input-move-btn"
+          onClick={e => {
+            e.stopPropagation();
+            setMoveMenuOpen(!moveMenuOpen);
+          }}
+          title="Move input"
+        >
+          &#x2261;
+        </button>
+        {moveMenuOpen && (
+          <div className="movable-input-move-menu">
+            <button
+              className="movable-input-move-option"
+              disabled={isFirst}
+              onClick={() => handleMove('up')}
+            >
+              Move up
+            </button>
+            <button
+              className="movable-input-move-option"
+              disabled={isLast}
+              onClick={() => handleMove('down')}
+            >
+              Move down
+            </button>
+          </div>
+        )}
+      </span>
+    </span>
+  );
+}
+
+// Helper: detect if a child pin is a movable input pin for a given node type.
+// Movable input pins have staticLabel="" and id="P_UNKNOWN" in the scene tree,
+// so we can't rely on the pin name. Instead, we check if the parent is a
+// movable-input node type — all children of such nodes are movable inputs.
+function isMovableInputPin(child: SceneNode, nodeType: string | undefined): boolean {
+  if (!nodeType) return false;
+  const info = MOVABLE_INPUT_TYPES[nodeType];
+  if (!info) return false;
+  // All children of movable-input nodes are movable inputs.
+  // Double-check via pin id string: movable pins typically have id "P_UNKNOWN".
+  // pinInfo.id is typed as number but runtime returns string like "P_UNKNOWN"
+  const pinId = child.pinInfo?.id;
+  if (pinId != null && String(pinId) !== 'P_UNKNOWN') return false;
+  return true;
+}
+
+// Renders children of a node, passing movable input context to child NodeParameters.
+// Extracted to avoid IIFE-in-JSX which confuses Babel's parser.
+function NodeChildrenWithMovable({
+  node,
+  nodeId,
+  expanded,
+  level,
+  hasGroupMap,
+}: {
+  node: SceneNode;
+  nodeId: string;
+  expanded: boolean;
+  level: number;
+  hasGroupMap: Map<number, boolean>;
+}) {
+  const thisNodeType = node.nodeInfo?.type;
+  const thisHandle = node.handle;
+  const movableChildren = thisNodeType
+    ? node.children!.filter(c => isMovableInputPin(c, thisNodeType))
+    : [];
+
+  const renderChild = (child: SceneNode, childIdx: number) => {
+    const childIsMovable = thisNodeType ? isMovableInputPin(child, thisNodeType) : false;
+    const movIdx = childIsMovable ? movableChildren.indexOf(child) : undefined;
+    return (
+      <NodeParameter
+        key={`${child.handle}-${childIdx}`}
+        node={child}
+        level={level + 1}
+        hasGroupMap={hasGroupMap}
+        parentNodeType={thisNodeType}
+        parentHandle={thisHandle}
+        movablePinIndex={movIdx !== undefined && movIdx >= 0 ? movIdx : undefined}
+        movablePinCount={movableChildren.length || undefined}
+      />
+    );
+  };
+
+  return (
+    <div
+      className="node-toggle-content"
+      data-toggle-content={nodeId}
+      data-depth={level}
+      style={{ display: expanded ? 'block' : 'none' }}
+    >
+      {groupChildren(node.children!).map(({ groupName, children }, idx, arr) => {
+        const hasGroups = hasGroupMap.get(level + 1) || false;
+        const prevGroupName = idx > 0 ? arr[idx - 1].groupName : null;
+
+        if (groupName) {
+          return (
+            <ParameterGroup key={`group-${groupName}-${idx}`} groupName={groupName}>
+              {children.map((child, childIdx) => renderChild(child, childIdx))}
+            </ParameterGroup>
+          );
+        } else {
+          if (hasGroups) {
+            if (prevGroupName) {
+              return (
+                <div key={`nogroup-${idx}`} className="inspector-group-indent">
+                  <div className="inspector-group-header">
+                    <span className="inspector-group-label"> </span>
+                  </div>
+                  <div>{children.map((child, childIdx) => renderChild(child, childIdx))}</div>
+                </div>
+              );
+            } else {
+              return (
+                <div key={`nogroup-${idx}`} className="inspector-group-indent">
+                  {children.map((child, childIdx) => renderChild(child, childIdx))}
+                </div>
+              );
+            }
+          } else {
+            return (
+              <React.Fragment key={`nogroup-${idx}`}>
+                {children.map((child, childIdx) => renderChild(child, childIdx))}
+              </React.Fragment>
+            );
+          }
+        }
+      })}
+    </div>
+  );
+}
+
 // Node parameter item component — memoized to avoid re-rendering entire tree
 // when only a sibling's data changes
 const NodeParameter = React.memo(function NodeParameter({
   node,
   level,
   hasGroupMap,
+  parentNodeType,
+  parentHandle,
+  movablePinIndex,
+  movablePinCount,
 }: {
   node: SceneNode;
   level: number;
   hasGroupMap: Map<number, boolean>;
+  parentNodeType?: string;
+  parentHandle?: number;
+  movablePinIndex?: number;
+  movablePinCount?: number;
 }) {
   const { client } = useOctane();
   const { setTemporaryStatus } = useStatusMessage();
@@ -101,6 +312,10 @@ const NodeParameter = React.memo(function NodeParameter({
       color = info.color;
     }
   }
+  // Check if this node is a movable input pin (parent has movable inputs)
+  const isMovable = parentNodeType ? isMovableInputPin(node, parentNodeType) : false;
+  const pinIdx = node.pinInfo?.pinId;
+
   // Determine if we should show dropdown (non-end nodes with a valid pin type)
   const pinType = typeStr.startsWith('PT_') ? typeStr : null;
   const compatibleNodeTypes = pinType ? getCompatibleNodeTypes(pinType) : [];
@@ -176,7 +391,7 @@ const NodeParameter = React.memo(function NodeParameter({
   if ((!node.children || node.children.length === 0) && !isEmptyPin) {
     //    if (node.attrInfo) {
     return (
-      <div className={indentClass} style={{ display: 'block' }}>
+      <div className={indentClass} data-depth={level} style={{ display: 'block' }}>
         <div className="node-box-parameter" data-node-handle={node.handle} data-node-id={nodeId}>
           <div
             className={`node-icon-box${hasChildren && expanded ? ' expanded-parent' : ''}`}
@@ -219,6 +434,7 @@ const NodeParameter = React.memo(function NodeParameter({
           <div
             className="node-toggle-content"
             data-toggle-content={nodeId}
+            data-depth={level}
             style={{ display: expanded ? 'block' : 'none' }}
           >
             {node.children!.map((child, childIdx) => (
@@ -241,7 +457,11 @@ const NodeParameter = React.memo(function NodeParameter({
 
   // Render as node group (non-parameter nodes)
   return (
-    <div className={indentClass} style={{ display: 'block' }}>
+    <div
+      className={`${indentClass}${isMovable ? ' movable-input-row' : ''}`}
+      data-depth={level}
+      style={{ display: 'block' }}
+    >
       <div className="node-box" data-node-handle={node.handle} data-node-id={nodeId}>
         <div
           className={`node-icon-box${hasChildren && expanded ? ' expanded-parent' : ''}`}
@@ -307,97 +527,37 @@ const NodeParameter = React.memo(function NodeParameter({
                     );
                   })}
                 </select>
+                {isMovable && parentHandle !== undefined && pinIdx !== undefined && (
+                  <MovableInputPinActions
+                    nodeHandle={parentHandle}
+                    pinIdx={pinIdx}
+                    isFirst={movablePinIndex === 0}
+                    isLast={movablePinIndex === (movablePinCount ?? 1) - 1}
+                  />
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* File Node Toolbar - Show for file-based node types and nodes with a file path */}
-      {showFileToolbar && <FileNodeToolbar node={node} />}
+      {/* Add input button for movable-input nodes */}
+      {node.handle &&
+        node.nodeInfo?.type &&
+        node.nodeInfo.type in MOVABLE_INPUT_TYPES &&
+        expanded && <AddInputButton nodeHandle={node.handle} />}
+
+      {/* File Node Toolbar - inside collapsed section (matches Octane layout) */}
+      {expanded && showFileToolbar && <FileNodeToolbar node={node} />}
 
       {hasChildren && (
-        <div
-          className="node-toggle-content"
-          data-toggle-content={nodeId}
-          style={{ display: expanded ? 'block' : 'none' }}
-        >
-          {groupChildren(node.children!).map(({ groupName, children }, idx, arr) => {
-            // Check if ANY child at this level has a group (matching octaneWeb's hasGroup[level] logic)
-            const hasGroups = hasGroupMap.get(level + 1) || false;
-            // Check if previous item had a groupName (octaneWeb's lgroup logic)
-            const prevGroupName = idx > 0 ? arr[idx - 1].groupName : null;
-
-            if (groupName) {
-              return (
-                <ParameterGroup key={`group-${groupName}-${idx}`} groupName={groupName}>
-                  {children.map((child, childIdx) => (
-                    <NodeParameter
-                      key={`${child.handle}-${childIdx}`}
-                      node={child}
-                      level={level + 1}
-                      hasGroupMap={hasGroupMap}
-                    />
-                  ))}
-                </ParameterGroup>
-              );
-            } else {
-              // octaneWeb logic: ALL non-grouped items need .inspector-group-indent wrapper when hasGroups is true
-              // - Items BEFORE first group: wrap WITHOUT empty header (no gap, but still indented)
-              // - Items AFTER a group: wrap WITH empty header (maintains alignment after group)
-              if (hasGroups) {
-                if (prevGroupName) {
-                  // After a group ended - include empty header for proper spacing
-                  return (
-                    <div key={`nogroup-${idx}`} className="inspector-group-indent">
-                      <div className="inspector-group-header">
-                        <span className="inspector-group-label"> </span>
-                      </div>
-                      <div>
-                        {children.map((child, childIdx) => (
-                          <NodeParameter
-                            key={`${child.handle}-${childIdx}`}
-                            node={child}
-                            level={level + 1}
-                            hasGroupMap={hasGroupMap}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                } else {
-                  // Before first group - just wrapper for indentation, NO header (no gap)
-                  return (
-                    <div key={`nogroup-${idx}`} className="inspector-group-indent">
-                      {children.map((child, childIdx) => (
-                        <NodeParameter
-                          key={`${child.handle}-${childIdx}`}
-                          node={child}
-                          level={level + 1}
-                          hasGroupMap={hasGroupMap}
-                        />
-                      ))}
-                    </div>
-                  );
-                }
-              } else {
-                // No groups at this level - no wrapper needed
-                return (
-                  <React.Fragment key={`nogroup-${idx}`}>
-                    {children.map((child, childIdx) => (
-                      <NodeParameter
-                        key={`${child.handle}-${childIdx}`}
-                        node={child}
-                        level={level + 1}
-                        hasGroupMap={hasGroupMap}
-                      />
-                    ))}
-                  </React.Fragment>
-                );
-              }
-            }
-          })}
-        </div>
+        <NodeChildrenWithMovable
+          node={node}
+          nodeId={nodeId}
+          expanded={expanded}
+          level={level}
+          hasGroupMap={hasGroupMap}
+        />
       )}
     </div>
   );

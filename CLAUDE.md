@@ -29,10 +29,13 @@ All in `TEST_PLAN.md`. Key points:
 
 Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details):
 
-- **NEVER use `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
-- **Restart ALL servers** (dev, preview) before every build run and after every crash.
-- **Use `pin_id` for connections** — `pin_id: 59` (P_GEOMETRY), `pin_id: 89` (P_KERNEL), `pin_id: 43` (P_ENVIRONMENT). No ambiguity, no silent failures.
+- **NEVER use `evaluate:false`** — always evaluate immediately. 8× deferred set_attribute crashed Octane.
+- **NEVER use `restart_render`** — crashes Octane. `start_render` keeps render mode active; all changes are picked up live.
+- **Primitive type crash** — setting primitive type on NT_GEO_OBJECT crashes Octane non-deterministically (Alpha 5 bug). **Use NT_GEO_MESH + .obj files for non-box shapes** (100% reliable). Available: sphere.obj, cube.obj, torus.obj, teapot.obj, ring.obj, diamond.obj, monolith.obj, prism.obj, pillar.obj, quad.obj, sphere_hd.obj, sphere_uv.obj, floor.obj. Default Box (no set_attribute on prim) is also safe.
+- **Restart ALL servers** (dev, preview) before every build run and after every crash. Always restart Octane BEFORE Claude Desktop/MCP.
+- **Use `pin_id` for connections** — `pin_id: 89` (P_KERNEL), `pin_id: 43` (P_ENVIRONMENT), `pin_id: 30` (P_DIFFUSE), `pin_id: 41` (P_EMISSION). **EXCEPTION: RT geometry pin — use `pin_index: 3`** (pin_id:59 silently fails, reports success but nothing connects).
 - **Connect nodes, don't just create them** — creating a node without connecting it does nothing. Always follow `create_node` with `connect_nodes`.
+- **VERIFY RT connections** — after connecting to RT, call `get_node_info(RT)` and confirm pin 1/3/6 have `connected_handle != 0`. Never trust `success:true` alone.
 - **Don't stop render unnecessarily** — most changes (connect, set_attribute) take effect on the live render. Octane picks them up automatically.
 - **Kernel swap is safe anytime** — RT has a default DL kernel. Swap to PT whenever needed, even during a live render.
 - **NEVER flip camera up vector** — rotate the model instead. `set_camera` resets up to (0,1,0).
@@ -40,6 +43,7 @@ Hard rules for building scenes via MCP (see `mcp/OCTANE_MCP.md` for full details
 - **Absolute paths for file loading** — always use full paths for A_FILENAME on meshes and textures. Always A_RELOAD after A_FILENAME.
 - **A_ROTATION uses DEGREES** — 90 means 90°, NOT radians.
 - **Light before geo in space scenes** — no ambient light = black render. Add a light first.
+- **Save before reset_project** — `save_project("ORBX/scratch.ocs")` then `reset_project()`. Without the save, Octane pops a blocking "Save scene?" dialog that hangs everything.
 - **DOF is ON by default** — camera aperture defaults to 0.893. Set to 0 after `start_render`: RT pin 0 → camera → pin 14 → aperture child → `set_attribute(child, 185, AT_FLOAT=9, 0)`.
 
 ## Status

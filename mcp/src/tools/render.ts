@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
-import { jsonResult, errorResult } from './utils';
+import { jsonResult, errorResult, OBJ_API_NODE } from './utils';
 
 // Maps format name to Octane's imageSaveFormat enum
 const FORMAT_MAP: Record<string, number> = {
@@ -34,7 +34,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
       try {
         if (render_target_handle) {
           await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
-            targetNode: { handle: render_target_handle },
+            targetNode: { handle: String(render_target_handle), type: OBJ_API_NODE },
           });
         }
         await client.callMethod('ApiRenderEngine', 'continueRendering', {});
@@ -56,15 +56,15 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
 
   server.tool(
     'restart_render',
-    'Restart rendering from scratch (resets sample count)',
+    'DEPRECATED — DO NOT USE. Causes Octane crashes (ECONNRESET). Use start_render once; Octane stays in render mode and picks up all changes live.',
     {},
     async () => {
-      try {
-        await client.callMethod('ApiRenderEngine', 'restartRendering', {});
-        return jsonResult({ success: true });
-      } catch (error: any) {
-        return errorResult(error);
-      }
+      return jsonResult({
+        success: false,
+        message:
+          'restart_render is deprecated — it crashes Octane. ' +
+          'start_render keeps render mode active. All changes (connect, set_attribute) are picked up automatically.',
+      });
     }
   );
 

@@ -32,6 +32,14 @@
   --bg-hover: #082828; /* Cyan — hover */
   --bg-active: #280828; /* Magenta — active */
 
+  /* ── Depth shading (deeper = darker) ── */
+  --bg-depth-0: #041010; /* Darkest */
+  --bg-depth-1: #081c1c; /* Slightly lighter */
+  --bg-depth-2: #0c2828; /* Mid */
+  --bg-depth-3: #103434; /* Lighter */
+  --bg-depth-4: #144040; /* Lighter still */
+  --bg-depth-5: #184c4c; /* Lightest depth */
+
   /* ── Text ── white for readability ── */
   --text-primary: #ffffff;
   --text-secondary: #cccccc;

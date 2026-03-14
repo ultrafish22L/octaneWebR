@@ -13,6 +13,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { jsonResult, errorResult } from './utils';
 
 const WEBAPP_URL = process.env.OCTANE_WEBAPP_URL || 'http://127.0.0.1:43929';
 
@@ -43,8 +44,6 @@ export function setLiveSync(enabled: boolean): void {
 export function isLiveSyncEnabled(): boolean {
   return liveSyncEnabled;
 }
-
-import { jsonResult, errorResult } from './utils';
 
 export function registerWebappTools(server: McpServer) {
   server.tool(
@@ -89,7 +88,7 @@ export function registerWebappTools(server: McpServer) {
           live_sync: liveSyncEnabled,
           message:
             result.clients > 0
-              ? `Scene refresh sent to ${result.clients} browser client(s)${live_sync === true ? ' — live sync enabled' : ''}`
+              ? `Scene refresh sent to ${result.clients} browser client(s)${liveSyncEnabled ? ' — live sync enabled' : ''}`
               : 'No browser clients connected — octaneWebR may not be open',
         });
       } catch (error: any) {

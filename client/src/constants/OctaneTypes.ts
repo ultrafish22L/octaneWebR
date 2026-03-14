@@ -133,8 +133,56 @@ export const AttributeId = {
   A_FILENAME: 34,
   A_VERTICES_PER_POLY: 189,
   A_POLY_OBJECT_INDICES: 116,
+  A_PIN_COUNT: 113,
   A_RELOAD: 124,
-  // Add more as needed
+  A_INPUT_ACTION: 128,
+} as const;
+
+/**
+ * InputAction enum values for A_INPUT_ACTION attribute.
+ * Used to add, delete, or reorder movable input pins on nodes
+ * like NT_GEO_GROUP, NT_MAT_COMPOSITE, NT_TEX_GRADIENT, etc.
+ */
+export const InputAction = {
+  NONE: 0,
+  INSERT: 1,
+  DELETE: 2,
+  MOVE_UP: 3,
+  MOVE_DOWN: 4,
+} as const;
+
+/**
+ * Node types that support movable input pins.
+ * Key = NT_ type string, value = { inputName, pinsPerInput }.
+ * - inputName: the base name for movable pins (e.g. "Input" → "Input 1", "Input 2")
+ * - pinsPerInput: number of pins each movable input occupies (from API cache movableInputPinCount)
+ * Generated from mcp/data/octane-api-cache.json movableInputPinCount > 0 entries.
+ */
+export const MOVABLE_INPUT_TYPES: Record<string, { inputName: string; pinsPerInput: number }> = {
+  NT_GEO_GROUP: { inputName: 'input', pinsPerInput: 1 },
+  NT_GEO_JOINT: { inputName: 'input', pinsPerInput: 1 },
+  NT_GEO_DECAL: { inputName: 'input', pinsPerInput: 1 },
+  NT_MAT_COMPOSITE: { inputName: 'input', pinsPerInput: 3 },
+  NT_MAT_LAYER: { inputName: 'layer', pinsPerInput: 1 },
+  NT_MAT_LAYER_GROUP: { inputName: 'layer', pinsPerInput: 1 },
+  NT_TEX_GRADIENT: { inputName: 'control point', pinsPerInput: 2 },
+  NT_TEX_COMPOSITE: { inputName: 'layer', pinsPerInput: 1 },
+  NT_TEX_COMPOSITE_LAYER_GROUP: { inputName: 'layer', pinsPerInput: 1 },
+  NT_VOLUME_RAMP: { inputName: 'control point', pinsPerInput: 2 },
+  NT_VERTEX_DISPLACEMENT_MIXER: { inputName: 'input', pinsPerInput: 2 },
+  NT_RENDER_JOB_GROUP: { inputName: 'render job', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_COMPOSITE: { inputName: 'layer', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_GROUP: { inputName: 'output AOV', pinsPerInput: 1 },
+  NT_RENDER_AOV_GROUP: { inputName: 'render AOV', pinsPerInput: 1 },
+  NT_OUTPUT_AOV: { inputName: 'layer', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_LAYER_BLEND_LAYERS: { inputName: 'layer', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_LAYER_MASK_WITH_LAYERS: { inputName: 'layer', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_LAYER_GROUP: { inputName: 'layer', pinsPerInput: 1 },
+  NT_TEX_COMPOSITE_LAYER_MASK_WITH_LAYERS: { inputName: 'layer', pinsPerInput: 1 },
+  NT_TEX_COMPOSITE_LAYER_APPLY_GRADIENT_MAP: { inputName: 'control point', pinsPerInput: 2 },
+  NT_OUTPUT_AOV_LAYER_BLEND_TEXTURE: { inputName: 'parameter', pinsPerInput: 1 },
+  NT_TRACE_SET_VISIBILITY_RULE_GROUP: { inputName: 'rule', pinsPerInput: 1 },
+  NT_OUTPUT_AOV_LAYER_UNBLEND: { inputName: 'layer', pinsPerInput: 1 },
 } as const;
 
 /**

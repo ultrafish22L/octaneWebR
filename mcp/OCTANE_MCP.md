@@ -57,35 +57,49 @@ SPEED BUILD:       create ALL nodes quickly (no renders between)
                    NEVER use evaluate:false. See CRASH RULES below.
 
 CRASH RULES:       1. NEVER use evaluate:false. Always use evaluate:true
-                      (the default). Deferred batches have caused 3+ crashes.
+                      (the default). 8× deferred set_attribute crashed Octane.
                    2. Restart ALL servers (dev, preview) before every build
                       run AND after every Octane crash.
                    3. NEVER create nodes in parallel. Sequential only.
+                   4. NEVER call restart_render — crashes Octane.
+                   5. NEVER set primitive type on NT_GEO_OBJECT — crashes
+                      Octane non-deterministically (1-2 calls unconnected,
+                      ~10 connected). Use NT_GEO_MESH + .obj files instead.
+                      Available .obj: sphere, cube, torus, teapot, ring,
+                      diamond, monolith, prism, pillar, quad, sphere_hd,
+                      sphere_uv, floor. Default Box (no set_attr) is safe.
 
 KERNEL NOTE:       RT has a default DL kernel. Swap to PT anytime — does NOT
                    crash. Kernel swap is safe even on a live render.
 
-CONNECTION RULE:   Always use pin_id for connect_nodes — no ambiguity.
-                   P_GEOMETRY=59, P_KERNEL=89, P_ENVIRONMENT=43,
+CONNECTION RULE:   Use pin_id for most connections — no ambiguity.
+                   P_KERNEL=89, P_ENVIRONMENT=43,
                    P_MESH=111, P_DIFFUSE=30, P_EMISSION=41.
-                   pin_index/pin_name can silently fail.
+                   ⚠ EXCEPTION: RT geometry pin — use pin_index:3.
+                   pin_id:59 (P_GEOMETRY) SILENTLY FAILS on RT
+                   (reports success but connected_handle stays 0).
                    Geo group dynamic pins still need pin_name: "Input N".
+
+VERIFY RULE:       ALWAYS call get_node_info(RT) after connecting to RT.
+                   Check that pin 3 connected_handle != 0.
+                   If 0 → connection silently failed. Fix before proceeding.
+                   Also verify pin 1 (env) and pin 6 (kernel) after connecting.
+                   NEVER trust "success:true" alone — verify the actual state.
 
 LIVE RENDER:       Most changes (connect, set_attribute) take effect on
                    the live render. Don't stop render unnecessarily.
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
-                   start_render/restart_render do NOT refresh geometry.
+                   start_render does NOT refresh geometry.
+                   NEVER use restart_render — it crashes Octane.
                    WARNING: set_camera RESETS up vector to (0,1,0).
                    NEVER flip up vector to compensate for model orientation.
                    ALWAYS rotate the MODEL instead (A_ROTATION=137).
 
-⚠️ UP VECTOR:     Camera pin 22 (up Float3 node) DEFAULTS TO (0,0,0).
-                   (0,0,0) SILENTLY DESTROYS orientation — broken renders,
-                   no error message. ALWAYS set explicitly to (0,1,0):
-                   set_attribute(up_handle, 185, AT_FLOAT3=11, {x:0,y:1,z:0})
-                   Check this FIRST whenever any camera render looks wrong.
+⚠️ UP VECTOR:     Camera pin 22 (up Float3 node) DEFAULTS TO (0,1,0).
                    set_camera also resets up to (0,1,0).
+                   NEVER set up to (0,0,0) — that destroys orientation.
+                   If renders look wrong, verify up is still (0,1,0).
 
 TIMING RULE:       Call get_render_status after EVERY render.
                    Report: samples, seconds, resolution. Track build time too.
@@ -146,7 +160,7 @@ RenderTarget
                         ⚠ Camera pin 14 = aperture child. Default = 0.893 (DOF ON).
                         After start_render: get_node_info(camera) → pin 14 → set_attribute(child, 185, AT_FLOAT=9, 0)
   pin 1: Environment     (NT_ENV_TEXTURE — auto-created)
-  pin 3: Geometry        (connect NT_GEO_GROUP here)
+  pin 3: Geometry        (connect geo here via pin_index:3 — pin_id:59 silently fails!)
   pin 4: Film Settings   (auto-created, has resolution child)
   pin 6: Kernel          (auto-creates DL kernel — swap to PT when ready, safe anytime)
 ```
@@ -165,16 +179,18 @@ These patterns supplement the Cheat Sheet with additional detail.
 
 ### Confirmed Crashes
 
-| Trigger                                            | Mitigation                                                   |
-| -------------------------------------------------- | ------------------------------------------------------------ |
-| `evaluate:false` × N + structural connection       | **NEVER defer evals** — 3+ confirmed ECONNRESET crashes      |
-| Parallel `create_node` calls                       | Sequential only — 4× simultaneous = ECONNRESET               |
-| `resetProject` (any variant)                       | Use delete-all-nodes pattern (avoids "Save changes?" dialog) |
-| `set_attribute(filename)` on ORBX-packaged texture | Rebuild fresh with absolute paths, or use .ocs               |
+| Trigger                                    | Mitigation                                                                                                                                                                                                                                            |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Primitive type on multiple geo objects** | **Octane Alpha 5 bug.** Setting primitive type enum on >2 DIFFERENT NT_GEO_OBJECT nodes crashes Octane (2-6 objects). Single-object cycling is stable (87+ changes). **Use default Box or accept ~2-5 shapes/session.** See `CRASH_INVESTIGATION.md`. |
+| `evaluate:false` × N (any node op)         | **NEVER defer evals** — 8× deferred set_attribute crashed. Always evaluate:true.                                                                                                                                                                      |
+| `restart_render`                           | **NEVER use.** Causes ECONNRESET. Use `start_render` once — Octane stays in render mode. All changes are picked up live.                                                                                                                              |
+| Parallel `create_node` calls               | Sequential only — 4× simultaneous = ECONNRESET                                                                                                                                                                                                        |
+| `resetProject` (any variant)               | Use delete-all-nodes pattern (avoids "Save changes?" dialog)                                                                                                                                                                                          |
+| Bad A_FILENAME (e.g. `:rgba` suffix)       | Pops Octane dialog blocking gRPC for 30s. Use valid absolute paths only.                                                                                                                                                                              |
 
 ### Refresh After Structural Changes
 
-`restart_render` / `start_render` do NOT refresh the viewport. **`set_camera` is the only way**:
+`start_render` does NOT refresh the viewport. **`set_camera` is the only way** (`restart_render` is deprecated — crashes Octane):
 
 ```
 connect_nodes(...)
@@ -213,10 +229,11 @@ RT → hero camera → env → film → kernel → geo group. Start rendering ri
 1. Clear scene (delete method or `reset_project` if user is present)
 2. `create_node(NT_RENDERTARGET)` → RT handle + pin handles from response
 3. `start_render(RT)` + `set_camera(HERO_POSITION → HERO_TARGET)` — the FINAL camera, not a placeholder
-4. `create_node(NT_ENV_DAYLIGHT)` → connect to RT pin 1 → `set_camera` to refresh
+4. `create_node(NT_ENV_DAYLIGHT)` → connect to RT `pin_id: 43` → `set_camera` to refresh
 5. Film: `get_node_info(film_settings_handle)` → pin 0 → "Image resolution" child → `set_attribute(child, 185, AT_INT2=4, {1024,576})`
-6. `create_node(NT_KERN_PATHTRACING)` → connect to RT pin 6 → `set_camera` to refresh
-7. `create_node(NT_GEO_GROUP)` → `set_attribute(group, 113, AT_INT=3, 8)` → connect to RT pin 3 → `set_camera`
+6. `create_node(NT_KERN_PATHTRACING)` → connect to RT `pin_id: 89` → `set_camera` to refresh
+7. Connect geo to RT `pin_index: 3` (geo group OR direct geo objects — NOT pin_id:59!)
+8. **⚠ VERIFY** — `get_node_info(RT)` → confirm pin 1 (env), pin 3 (geo), pin 6 (kernel) all have `connected_handle != 0`. If any is 0, the connection silently failed — fix before proceeding.
 
 ### Setup Order (for iteration)
 
@@ -271,7 +288,8 @@ Auto-created child materials on NT_GEO_OBJECT **silently reject** emission conne
 
 ### Primitive Default
 
-NT_GEO_OBJECT defaults to primitive=1 (Pill). Must explicitly set to 0 (Box) for box shapes.
+NT_GEO_OBJECT defaults to primitive=1 (Box). Value 0 is invalid (silently treated as Box).
+All 23 primitive types are 1-indexed alphabetical — see "Primitive Types" table below.
 
 ---
 
@@ -345,16 +363,16 @@ The proto defines `setPinValueByIx`, `setPinValueByPinID`, `setPinValueByName` (
 
 `create_node` returns all child handles. Pin indices are fixed:
 
-| Pin | Name        | Child Type       | Notes                                                                                                                                       |
-| --- | ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(0) default. Types 0-17 tested OK. Under investigation for crash on rapid sequential changes. |
-| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                   |
-| 2   | objectLayer | Object layer     |                                                                                                                                             |
-| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                                                    |
-| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                |
-| 5   | Height      | Float value      |                                                                                                                                             |
-| 6   | Depth       | Float value      |                                                                                                                                             |
-| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                            |
+| Pin | Name        | Child Type       | Notes                                                                                                      |
+| --- | ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-23 verified. ⚠ See crash warning below. |
+| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                  |
+| 2   | objectLayer | Object layer     |                                                                                                            |
+| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                   |
+| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                               |
+| 5   | Height      | Float value      |                                                                                                            |
+| 6   | Depth       | Float value      |                                                                                                            |
+| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                           |
 
 ## NT_MAT_SPECULAR Pin Layout (glass/transparent)
 
@@ -406,24 +424,26 @@ set_attribute(RGB_child, 185, AT_FLOAT3=11, {0.65, 0.05, 0.05})  → red
 
 ## Primitive Types (NT_GEO_OBJECT pin 0 enum)
 
-Set via: `set_attribute(enum_child_handle, 185, AT_INT=3, N)`
+Set via: `set_attribute(enum_child_handle, 185, AT_INT=3, N)` then `update_scene()`.
 
-| Val | Shape         | Val | Shape          |
-| --- | ------------- | --- | -------------- |
-| 0   | Box (DEFAULT) | 12  | Hyperboloid    |
-| 1   | Pill          | 13  | Icosahedron    |
-| 2   | Capsule       | 14  | Octahedron     |
-| 3   | Cone          | 15  | Plane          |
-| 4   | Cylinder      | 16  | Pentagon       |
-| 5   | Dreidel       | 17  | Prism          |
-| 6   | Disc          | 18  | Quad           |
-| 7   | Dodecahedron  | 19  | Saddle         |
-| 8   | Hemisphere    | 20  | Sphere         |
-| 9   | Ellipsoid     | 21  | Tetrahedron    |
-| 10  | Torus (fat)   | 22  | Torus          |
-| 11  | Hourglass     | 23  | Truncated Cone |
+**IMPORTANT:** `update_scene()` is REQUIRED after setting primitive type — without it the render won't update.
 
-All 24 primitive types (0-23) tested and verified working.
+| Val | Shape          | Val | Shape          |
+| --- | -------------- | --- | -------------- |
+| 1   | Box (DEFAULT)  | 13  | Icosahedron    |
+| 2   | Capsule        | 14  | Octahedron     |
+| 3   | Cone           | 15  | Plane          |
+| 4   | Cylinder       | 16  | Polygon        |
+| 5   | Ding dong      | 17  | Prism          |
+| 6   | Disc           | 18  | Quad           |
+| 7   | Dodecahedron   | 19  | Saddle         |
+| 8   | Dome           | 20  | Sphere         |
+| 9   | Ellipsoid      | 21  | Tetrahedron    |
+| 10  | Elliptic torus | 22  | Torus          |
+| 11  | Figure eight   | 23  | Truncated cone |
+| 12  | Hyperboloid    |     |                |
+
+IDs are 1-indexed alphabetical (0 is invalid, defaults to Box). All 23 types (1-23) empirically verified.
 
 ---
 
@@ -444,7 +464,8 @@ All 24 primitive types (0-23) tested and verified working.
 - **Image texture → material diffuse `pin_id: 30`** (replaces auto-created RGB child)
 - Blackbody emission → material `pin_id: 41` (P_EMISSION)
 - Geometry objects → geo group `pin_name: "Input N"` (dynamic pins — pin_name required)
-- Geo group → RT `pin_id: 59` (P_GEOMETRY)
+- Geo group → RT `pin_index: 3` (⚠ pin_id:59 silently fails on RT!)
+- Geo objects → RT `pin_index: 3` directly (Octane auto-creates a geometry group)
 - PT kernel → RT `pin_id: 89` (P_KERNEL)
 - Environment → RT `pin_id: 43` (P_ENVIRONMENT)
 - Specular material → geo mesh pin 0 (pin_index works for mesh material slot)
@@ -570,8 +591,9 @@ Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
 ### Project File Workflow
 
 - **.ocs** = absolute disk paths → reloadable, use during MCP iteration
-- **.orbx** = embedded assets with relative paths → breaks MCP on reload (DEADLINE_EXCEEDED on path re-set). Only for final delivery.
-- **Recommended**: Always `.ocs` during development. Only `.orbx` for archival.
+- **.orbx** = embedded assets with relative paths → works fine with MCP. Can reload and set valid A_FILENAME paths.
+- **Warning**: Bad filenames (e.g. `:rgba` suffix) pop Octane native dialogs that block gRPC for 30s (DEADLINE_EXCEEDED).
+- **Recommended**: `.ocs` during development (absolute paths, faster iteration). `.orbx` for archival/sharing.
 
 ### Single-Mesh Framing Workflow
 
@@ -580,7 +602,7 @@ When framing a new mesh for a hero shot, always follow this order:
 1. **Set all mesh transforms to zero** — rotation (0,0,0), translation (0,0,0), keep scale as needed
 2. **Compute the mesh centroid** — parse OBJ vertices, find bounding box, centroid = (min+max)/2 per axis. Apply scale (no rotation/translation yet).
 3. **Set camera target to centroid** — stable orbit pivot
-4. **⚠️ Set up vector to (0,1,0)** — camera pin 22 defaults to (0,0,0). Check it. Fix it. Always.
+4. **Verify up vector is (0,1,0)** — camera pin 22 defaults to (0,1,0). set_camera resets it. Only check if renders look tilted.
 5. **Back the camera way up** — increase Z so the full mesh is visible. Establish orientation.
 6. **Orbit up** — raise camera Y slightly above target for a natural elevated angle
 7. **Refine target** — once mesh is visible, fine-tune target (doesn't have to be exact centroid)
@@ -603,20 +625,21 @@ On any crash: isolate the exact gRPC call from `mcp-debug.log`, compare with oct
 
 ### Common Failures
 
-| Symptom                                     | Cause                                                 | Fix                                                                                 |
-| ------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Render all white                            | DL kernel (need PT), or camera outside scene          | Create PT kernel, connect to RT pin 6                                               |
-| Render doesn't update after connect         | Used restart_render instead of set_camera             | Call `set_camera` after every structural change                                     |
-| Connect returns success but nothing changed | Used pin_index on geo group (silently fails)          | Use `pin_name: "Input N"` for geo group                                             |
-| Wrong aspect ratio                          | Film resolution set with AT_INT=3                     | Use AT_INT2=4 on Image resolution grandchild                                        |
-| Film resolution won't change                | Set on Film Settings node, not Image Resolution child | get_node_info(film) → pin 0 → child → set_attribute                                 |
-| ECONNRESET/ECONNREFUSED                     | Octane crashed. STOP. User must restart.              | Avoid primitive changes, heavy structural ops                                       |
-| Render grey/blue                            | Camera looking at sky through open wall               | Check wall positions and camera angle                                               |
-| Render blurry / soft focus                  | DOF on by default — aperture defaults to 0.893        | RT→pin0(camera)→get_node_info→pin14(aperture)→set_attribute(child,185,AT_FLOAT=9,0) |
-| Mesh loads but invisible                    | Missing A_RELOAD after setting A_FILENAME             | `set_attribute(mesh, 124, AT_BOOL=1, true)`                                         |
-| Emission very dim (40x weaker)              | Blackbody efficiency defaults to 0.025                | Set pin 0 child to 1.0                                                              |
-| Mesh renders impossibly fast, no geo        | Engine corruption from excessive create/delete cycles | Restart Octane completely                                                           |
-| Glass sphere invisible                      | Clear glass in uniform lighting                       | Use colored transmission for visibility                                             |
+| Symptom                                      | Cause                                                                                      | Fix                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Render all white                             | DL kernel (need PT), camera outside scene, OR geo/env not actually connected (silent fail) | Verify RT connections first: `get_node_info(RT)` → check pin 1, 3, 6 all have connected_handle != 0      |
+| Render doesn't update after connect          | Used restart_render instead of set_camera                                                  | Call `set_camera` after every structural change                                                          |
+| Connect returns success but nothing changed  | Used pin_index on geo group (silently fails)                                               | Use `pin_name: "Input N"` for geo group                                                                  |
+| Geo connected to RT but render shows nothing | Used pin_id:59 for RT geometry (silently fails)                                            | Use `pin_index: 3` for RT geometry. ALWAYS verify with `get_node_info(RT)` → pin 3 connected_handle != 0 |
+| Wrong aspect ratio                           | Film resolution set with AT_INT=3                                                          | Use AT_INT2=4 on Image resolution grandchild                                                             |
+| Film resolution won't change                 | Set on Film Settings node, not Image Resolution child                                      | get_node_info(film) → pin 0 → child → set_attribute                                                      |
+| ECONNRESET/ECONNREFUSED                      | Octane crashed. STOP. User must restart.                                                   | Common cause: primitive type on >2 geo objects, restart_render, or evaluate:false batching               |
+| Render grey/blue                             | Camera looking at sky through open wall                                                    | Check wall positions and camera angle                                                                    |
+| Render blurry / soft focus                   | DOF on by default — aperture defaults to 0.893                                             | RT→pin0(camera)→get_node_info→pin14(aperture)→set_attribute(child,185,AT_FLOAT=9,0)                      |
+| Mesh loads but invisible                     | Missing A_RELOAD after setting A_FILENAME                                                  | `set_attribute(mesh, 124, AT_BOOL=1, true)`                                                              |
+| Emission very dim (40x weaker)               | Blackbody efficiency defaults to 0.025                                                     | Set pin 0 child to 1.0                                                                                   |
+| Mesh renders impossibly fast, no geo         | Stale engine state (create/delete cycles tested safe)                                      | Restart Octane completely                                                                                |
+| Glass sphere invisible                       | Clear glass in uniform lighting                                                            | Use colored transmission for visibility                                                                  |
 
 ### Thread Safety
 

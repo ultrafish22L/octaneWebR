@@ -58,6 +58,8 @@ interface CacheData {
 export class ApiCache {
   private data: CacheData;
   private typeIdToName: Map<number, string>; // reverse lookup: numeric type ID → "NT_..."
+  private pinByIndexCache = new Map<string, Map<number, CachedPinInfo>>(); // lazy O(1) pin-by-index
+  private pinByNameCache = new Map<string, Map<string, CachedPinInfo>>(); // lazy O(1) pin-by-name
 
   /** Load cache from default path. Returns null if file missing. */
   static load(): ApiCache | null {
@@ -107,23 +109,46 @@ export class ApiCache {
     return this.data.nodeTypes[typeName]?.pins;
   }
 
-  /** Get a specific pin by index */
-  getPinByIndex(typeName: string, index: number): CachedPinInfo | undefined {
-    return this.data.nodeTypes[typeName]?.pins?.find(p => p.index === index);
+  /** Build (or retrieve) the index→pin Map for a node type */
+  private getIndexMap(typeName: string): Map<number, CachedPinInfo> | undefined {
+    const cached = this.pinByIndexCache.get(typeName);
+    if (cached) return cached;
+    const pins = this.data.nodeTypes[typeName]?.pins;
+    if (!pins) return undefined;
+    const map = new Map<number, CachedPinInfo>();
+    for (const p of pins) map.set(p.index, p);
+    this.pinByIndexCache.set(typeName, map);
+    return map;
   }
 
-  /** Get a specific pin by name */
+  /** Build (or retrieve) the name→pin Map for a node type */
+  private getNameMap(typeName: string): Map<string, CachedPinInfo> | undefined {
+    const cached = this.pinByNameCache.get(typeName);
+    if (cached) return cached;
+    const pins = this.data.nodeTypes[typeName]?.pins;
+    if (!pins) return undefined;
+    const map = new Map<string, CachedPinInfo>();
+    for (const p of pins) map.set(p.staticName, p);
+    this.pinByNameCache.set(typeName, map);
+    return map;
+  }
+
+  /** Get a specific pin by index (O(1) via lazy Map) */
+  getPinByIndex(typeName: string, index: number): CachedPinInfo | undefined {
+    return this.getIndexMap(typeName)?.get(index);
+  }
+
+  /** Get a specific pin by name (O(1) via lazy Map) */
   getPinByName(typeName: string, name: string): CachedPinInfo | undefined {
-    return this.data.nodeTypes[typeName]?.pins?.find(p => p.staticName === name);
+    return this.getNameMap(typeName)?.get(name);
   }
 
   /** Check if a source node type can connect to a target node type's pin */
   isCompatible(sourceTypeName: string, targetTypeName: string, pinIndex: number): boolean {
     const sourceInfo = this.data.nodeTypes[sourceTypeName];
-    const targetInfo = this.data.nodeTypes[targetTypeName];
-    if (!sourceInfo || !targetInfo) return true; // unknown = allow (let Octane decide)
+    if (!sourceInfo) return true; // unknown = allow (let Octane decide)
 
-    const pin = targetInfo.pins?.find(p => p.index === pinIndex);
+    const pin = this.getPinByIndex(targetTypeName, pinIndex);
     if (!pin) return true;
 
     return (

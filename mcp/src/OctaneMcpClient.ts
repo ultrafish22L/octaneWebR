@@ -33,8 +33,16 @@ export interface ProfileEntry {
   durationMs?: number;
 }
 
-/** All profile spans, in chronological order */
+/** All profile spans, in chronological order. Auto-trimmed at MAX_PROFILE_SPANS. */
 const profileSpans: ProfileEntry[] = [];
+const MAX_PROFILE_SPANS = 10_000;
+
+/** Drop oldest half of spans when the buffer is full */
+function trimSpansIfNeeded(): void {
+  if (profileSpans.length >= MAX_PROFILE_SPANS) {
+    profileSpans.splice(0, profileSpans.length >> 1);
+  }
+}
 /** Open spans keyed by label (for start/end pairs) */
 const openSpans = new Map<string, ProfileEntry>();
 /** Session wall-clock start (set on first profileStart or first gRPC call) */
@@ -44,6 +52,7 @@ export function profileStart(label: string): void {
   const now = performance.now();
   if (!sessionStartMs) sessionStartMs = now;
   const entry: ProfileEntry = { label, startMs: now };
+  trimSpansIfNeeded();
   profileSpans.push(entry);
   openSpans.set(label, entry);
   mcpLog(`PROFILE START: ${label}`);
@@ -69,6 +78,7 @@ function profileGrpc(service: string, method: string): () => void {
   if (!sessionStartMs) sessionStartMs = now;
   const label = `gRPC:${service}.${method}`;
   const entry: ProfileEntry = { label, startMs: now };
+  trimSpansIfNeeded();
   profileSpans.push(entry);
   return () => {
     entry.endMs = performance.now();
@@ -99,10 +109,13 @@ export function profileReport(): {
   const byMethod = new Map<string, { count: number; totalMs: number }>();
   for (const s of grpcSpans) {
     const key = s.label.replace('gRPC:', '');
-    const agg = byMethod.get(key) || { count: 0, totalMs: 0 };
+    let agg = byMethod.get(key);
+    if (!agg) {
+      agg = { count: 0, totalMs: 0 };
+      byMethod.set(key, agg);
+    }
     agg.count++;
     agg.totalMs += s.durationMs || 0;
-    byMethod.set(key, agg);
   }
   const grpcByMethod = [...byMethod.entries()]
     .map(([method, { count, totalMs }]) => ({
@@ -163,7 +176,8 @@ function enhanceCrashError(
     // Clear cached handles — they're all invalid after a crash
     if (client) {
       client.clearRootGraphCache();
-      mcpLog('Cleared root graph cache and handle maps after crash', 'warn');
+      client.resetGrpcChannels();
+      mcpLog('Cleared root graph cache, handle maps, and gRPC channels after crash', 'warn');
     }
     return new Error(
       `OCTANE CRASHED (${service}.${method}): ${msg}\n` +
@@ -208,10 +222,6 @@ export class OctaneMcpClient {
 
   // Handle-to-type tracking — shared across all tools
   readonly handleToTypeName = new Map<number, string>();
-
-  // Primitive enum handles — tracks pin 0 enum children of NT_GEO_OBJECT nodes.
-  // Populated by create_node(NT_GEO_OBJECT). Used for diagnostics only.
-  readonly primitiveEnumHandles = new Set<number>();
 
   // Deferred evaluation tracking — warns when evaluate:false calls pile up.
   // Batching deferred changes + update_scene() crashed a 10-object emissive scene.
@@ -279,8 +289,21 @@ export class OctaneMcpClient {
   clearRootGraphCache(): void {
     this.rootGraphHandle = null;
     this.handleToTypeName.clear();
-    this.primitiveEnumHandles.clear();
     this.sessionInfo = { deviceNames: new Map() };
+  }
+
+  /**
+   * Reset gRPC channels after a crash. Closes all cached service stubs so
+   * they get recreated with fresh connections on the next call.
+   * Without this, the poisoned channels degrade across crash/restart cycles.
+   */
+  resetGrpcChannels(): void {
+    try {
+      this.base.close();
+      mcpLog('Reset gRPC channels — all service stubs closed and cleared', 'warn');
+    } catch (e: any) {
+      mcpLog(`Error resetting gRPC channels: ${e.message}`, 'error');
+    }
   }
 
   /** Get cached Octane version + name (lazy-populated on first call) */

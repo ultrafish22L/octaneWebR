@@ -28,6 +28,14 @@
   --bg-hover: #3a3555; /* Hover state */
   --bg-active: #433e60; /* Active/pressed */
 
+  /* ── Depth shading (deeper = darker) ── */
+  --bg-depth-0: #1a1630; /* Darkest */
+  --bg-depth-1: #252040; /* Slightly lighter */
+  --bg-depth-2: #302b4e; /* Mid */
+  --bg-depth-3: #3b365c; /* Lighter */
+  --bg-depth-4: #464068; /* Lighter still */
+  --bg-depth-5: #504a74; /* Lightest depth */
+
   /* ── Text ── warm lavender-whites ── */
   --text-primary: #e8e4f0; /* Primary text — soft lavender white */
   --text-secondary: #c4bfd6; /* Secondary — muted lavender */

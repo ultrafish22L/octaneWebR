@@ -76,34 +76,6 @@ function buildValueParams(value: any, expectedType: number): Record<string, any>
   }
 }
 
-// Primitive type names for error messages
-const PRIMITIVE_NAMES: Record<number, string> = {
-  0: 'Box',
-  1: 'Pill',
-  2: 'Capsule',
-  3: 'Cone',
-  4: 'Cylinder',
-  5: 'Dreidel',
-  6: 'Disc',
-  7: 'Dodecahedron',
-  8: 'Hemisphere',
-  9: 'Ellipsoid',
-  10: 'Torus(fat)',
-  11: 'Hourglass',
-  12: 'Hyperboloid',
-  13: 'Icosahedron',
-  14: 'Octahedron',
-  15: 'Plane',
-  16: 'Pentagon',
-  17: 'Prism',
-  18: 'Quad',
-  19: 'Saddle',
-  20: 'Sphere',
-  21: 'Tetrahedron',
-  22: 'Torus',
-  23: 'TruncatedCone',
-};
-
 export function registerAttributeTools(server: McpServer, client: OctaneMcpClient) {
   const getMethod = USE_ALPHA5_API ? 'getByAttrID' : 'getValueByAttrID';
   const setMethod = USE_ALPHA5_API ? 'setByAttrID' : 'setValueByAttrID';
@@ -152,26 +124,30 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .boolean()
         .default(true)
         .describe(
-          'Trigger scene evaluation after setting. Set false to batch multiple attribute changes, then call update_scene.'
+          'Trigger scene evaluation after setting. KEEP TRUE (default) — deferred batching (evaluate:false) has caused crashes. Only use false for non-structural attrs like transform, then call update_scene.'
         ),
     },
     async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
         const valueParams = buildValueParams(value, expected_type);
-        // Always send evaluate: false in gRPC params (matching octaneWebR pattern).
-        // Then explicitly call ApiChangeManager.update() to trigger re-evaluation.
-        // Without this, Octane may double-evaluate (once from the set call's default
-        // evaluate=true, once from update()), which can cause render engine crashes.
+        // Alpha 5 setValueByIDRequest has NO evaluate field — Octane auto-evaluates.
+        // ApiItem.evaluate() is used as a sync barrier after each set to ensure
+        // Octane finishes processing before the next call.
+        // NOTE: Setting primitive type on multiple DIFFERENT geo objects crashes
+        // Octane after 2-6 objects — this is an Octane Alpha 5 server bug, NOT
+        // fixable by any MCP-side pattern. See CRASH_INVESTIGATION.md.
         await client.callMethod('ApiItem', setMethod, {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
           expected_type,
           ...valueParams,
-          evaluate: false,
         });
 
         if (evaluate) {
-          await client.callMethod('ApiChangeManager', 'update', {});
+          // Sync barrier: wait for Octane to finish evaluating this node
+          await client.callMethod('ApiItem', 'evaluate', {
+            objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          });
           client.resetDeferredEvalCount();
         } else {
           const warning = client.trackDeferredEval();

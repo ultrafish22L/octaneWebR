@@ -85,7 +85,9 @@
       "Bash(python3 -c \"import json; d=json.load\\(open\\(r''C:\\\\otoyla\\\\GRPC\\\\dev\\\\octaneWebR\\\\mcp\\\\data\\\\octane-api-cache.json''\\)\\); keys=list\\(d.keys\\(\\)\\)[:10]; print\\(keys\\)\")",
       "Bash(find /c/otoyla/GRPC/dev/octaneWebR -type f \\\\\\( -name \"*.md\" \\\\\\) -not -path \"*/node_modules/*\" -not -path \"*/.git/*\" -exec wc -c {} +)",
       "Bash(wc -l /c/otoyla/GRPC/dev/octaneWebR/CLAUDE.md /c/otoyla/GRPC/dev/octaneWebR/ARCHITECTURE.md /c/otoyla/GRPC/dev/octaneWebR/IMPROVEMENTS.md /c/otoyla/GRPC/dev/octaneWebR/TEST_PLAN.md /c/otoyla/GRPC/dev/octaneWebR/mcp/OCTANE_MCP.md /c/otoyla/GRPC/dev/octaneWebR/mcp/OCTANE_CREATIVE.md /c/otoyla/GRPC/dev/octaneWebR/mcp/DEMO_SHOW_FLOW.md /c/otoyla/GRPC/dev/octaneWebR/README.md /c/otoyla/GRPC/dev/octaneWebR/CHANGELOG.md /c/otoyla/GRPC/dev/octaneWebR/OTOY_COMPARISON.md /c/otoyla/GRPC/dev/octaneWebR/PROTO_PLAN.md /c/otoyla/GRPC/dev/octaneWebR/QUICKSTART.md /c/otoyla/GRPC/dev/octaneWebR/recipes/*.md)",
-      "mcp__octane-docs__list_octane_modules"
+      "mcp__octane-docs__list_octane_modules",
+      "Bash(grep -n \"??\" mcp/src/tools/*.ts)",
+      "mcp__octane-docs__search_examples"
     ]
   }
 }

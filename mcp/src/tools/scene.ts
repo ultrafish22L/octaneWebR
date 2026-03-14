@@ -105,8 +105,8 @@ async function traverseGraph(
         }
 
         nodes.push(node);
-      } catch {
-        // Skip items that fail to query
+      } catch (e: any) {
+        console.error(`traverseGraph: skipping item ${i} in graph ${graphHandle}: ${e.message}`);
         continue;
       }
     }
@@ -162,19 +162,23 @@ export function registerSceneTools(
           pins: [],
         };
 
-        // Try to get node type for cache lookup
+        // Try to get node type for cache lookup — check handleToTypeName first to
+        // avoid a redundant ApiNode.type() gRPC call for nodes created via MCP.
         let cachedNodeInfo = null;
         if (cache) {
           try {
-            const nodeTypeResult = await client.callMethod('ApiNode', 'type', {
-              objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-            });
-            const nodeTypeRaw = extractValue(nodeTypeResult);
-            // enums: String → returns "NT_MAT_UNIVERSAL" (string), not 130 (number)
-            const nodeTypeName =
-              typeof nodeTypeRaw === 'string'
-                ? nodeTypeRaw
-                : cache.getNodeTypeName(Number(nodeTypeRaw));
+            let nodeTypeName = client.handleToTypeName.get(handle);
+            if (!nodeTypeName) {
+              const nodeTypeResult = await client.callMethod('ApiNode', 'type', {
+                objectPtr: { handle: String(handle), type: OBJ_API_NODE },
+              });
+              const nodeTypeRaw = extractValue(nodeTypeResult);
+              // enums: String → returns "NT_MAT_UNIVERSAL" (string), not 130 (number)
+              nodeTypeName =
+                typeof nodeTypeRaw === 'string'
+                  ? nodeTypeRaw
+                  : cache.getNodeTypeName(Number(nodeTypeRaw));
+            }
             if (nodeTypeName) {
               cachedNodeInfo = cache.getNodeType(nodeTypeName);
               if (cachedNodeInfo) {
@@ -189,7 +193,14 @@ export function registerSceneTools(
 
         // Get pin information
         try {
-          if (cachedNodeInfo) {
+          // Nodes with only movable inputs (e.g. NT_GEO_GROUP) have pins:[] in the
+          // cache because all their input pins are dynamic.  Fall through to the gRPC
+          // path so we discover runtime movable pins instead of returning an empty list.
+          const useCache =
+            cachedNodeInfo &&
+            !(cachedNodeInfo.pins.length === 0 && cachedNodeInfo.movableInputPinCount > 0);
+
+          if (useCache && cachedNodeInfo) {
             // FAST PATH: pin names and types from cache, only query runtime connections
             for (const cp of cachedNodeInfo.pins) {
               const pin: any = {

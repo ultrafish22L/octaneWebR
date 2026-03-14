@@ -8,7 +8,7 @@ import { BaseService } from './BaseService';
 import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { SceneNode } from './types';
 import { SceneService } from './SceneService';
-import { ObjectType } from '../../constants/OctaneTypes';
+import { ObjectType, AttributeId, AttrType, InputAction } from '../../constants/OctaneTypes';
 import { Logger } from '../../utils/Logger';
 
 export class NodeService extends BaseService {
@@ -592,6 +592,132 @@ export class NodeService extends BaseService {
       Logger.error('Failed to replace node:', error);
       this.emitUserError('Failed to replace node');
       return null;
+    }
+  }
+
+  // ─── Movable input operations ────────────────────────────────────
+
+  /**
+   * Add a movable input pin to a node (e.g. NT_GEO_GROUP, NT_MAT_COMPOSITE).
+   * Increments A_PIN_COUNT and refreshes the scene subtree.
+   */
+  async addMovableInput(nodeHandle: number): Promise<boolean> {
+    Logger.debug('Adding movable input to node:', nodeHandle);
+    try {
+      const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', nodeHandle, {
+        attribute_id: AttributeId.A_PIN_COUNT,
+        expected_type: AttrType.AT_INT,
+      });
+      const currentCount = asNumber(response?.int_value, 0);
+
+      await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
+        attribute_id: AttributeId.A_PIN_COUNT,
+        expected_type: AttrType.AT_INT,
+        int_value: currentCount + 1,
+        evaluate: true,
+      });
+
+      Logger.debug(`Movable input added (${currentCount} → ${currentCount + 1})`);
+
+      await this.sceneService.refreshNodeChildren(nodeHandle);
+      this.emit('sceneUpdated', this.sceneService.getScene());
+      return true;
+    } catch (error) {
+      Logger.error(
+        'Failed to add movable input:',
+        error instanceof Error ? error.message : String(error)
+      );
+      this.emitUserError('Failed to add input');
+      return false;
+    }
+  }
+
+  /**
+   * Delete a movable input pin from a node.
+   * Uses A_INPUT_ACTION = DELETE after selecting the target pin index.
+   * Falls back to decrementing A_PIN_COUNT if A_INPUT_ACTION fails.
+   */
+  async deleteMovableInput(nodeHandle: number, pinIdx: number): Promise<boolean> {
+    Logger.debug(`Deleting movable input: node=${nodeHandle}, pin=${pinIdx}`);
+    try {
+      // Disconnect the pin first
+      await this.disconnectPin(nodeHandle, pinIdx, false);
+
+      // Try A_INPUT_ACTION = DELETE
+      // The pin index is communicated by setting A_INPUT_ACTION on the pin's handle
+      // If that doesn't work, fall back to decrementing A_PIN_COUNT
+      try {
+        await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
+          attribute_id: AttributeId.A_INPUT_ACTION,
+          expected_type: AttrType.AT_INT,
+          int_value: (pinIdx << 16) | InputAction.DELETE,
+          evaluate: true,
+        });
+      } catch {
+        // Fallback: decrement pin count
+        Logger.debug('A_INPUT_ACTION failed, falling back to A_PIN_COUNT decrement');
+        const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', nodeHandle, {
+          attribute_id: AttributeId.A_PIN_COUNT,
+          expected_type: AttrType.AT_INT,
+        });
+        const currentCount = asNumber(response?.int_value, 1);
+        if (currentCount > 0) {
+          await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
+            attribute_id: AttributeId.A_PIN_COUNT,
+            expected_type: AttrType.AT_INT,
+            int_value: currentCount - 1,
+            evaluate: true,
+          });
+        }
+      }
+
+      Logger.debug('Movable input deleted');
+
+      await this.sceneService.refreshNodeChildren(nodeHandle);
+      this.emit('sceneUpdated', this.sceneService.getScene());
+      return true;
+    } catch (error) {
+      Logger.error(
+        'Failed to delete movable input:',
+        error instanceof Error ? error.message : String(error)
+      );
+      this.emitUserError('Failed to delete input');
+      return false;
+    }
+  }
+
+  /**
+   * Move a movable input pin up or down.
+   * Uses A_INPUT_ACTION = MOVE_UP or MOVE_DOWN.
+   */
+  async moveMovableInput(
+    nodeHandle: number,
+    pinIdx: number,
+    direction: 'up' | 'down'
+  ): Promise<boolean> {
+    Logger.debug(`Moving movable input ${direction}: node=${nodeHandle}, pin=${pinIdx}`);
+    try {
+      const action = direction === 'up' ? InputAction.MOVE_UP : InputAction.MOVE_DOWN;
+
+      await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
+        attribute_id: AttributeId.A_INPUT_ACTION,
+        expected_type: AttrType.AT_INT,
+        int_value: (pinIdx << 16) | action,
+        evaluate: true,
+      });
+
+      Logger.debug(`Movable input moved ${direction}`);
+
+      await this.sceneService.refreshNodeChildren(nodeHandle);
+      this.emit('sceneUpdated', this.sceneService.getScene());
+      return true;
+    } catch (error) {
+      Logger.error(
+        'Failed to move movable input:',
+        error instanceof Error ? error.message : String(error)
+      );
+      this.emitUserError(`Failed to move input ${direction}`);
+      return false;
     }
   }
 

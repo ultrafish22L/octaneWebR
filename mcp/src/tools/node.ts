@@ -119,8 +119,10 @@ async function getPinInfoFallback(
           const typeNum = Number(typeRaw ?? 0);
           typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
         }
-      } catch {
-        /* */
+      } catch (e: any) {
+        console.error(
+          `getPinInfoFallback: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`
+        );
       }
       try {
         const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
@@ -128,13 +130,15 @@ async function getPinInfoFallback(
           index: i,
         });
         pinName = String(extractValue(nameResult) ?? '');
-      } catch {
-        /* */
+      } catch (e: any) {
+        console.error(
+          `getPinInfoFallback: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`
+        );
       }
       pins.push({ index: i, type: typeName, name: pinName });
     }
-  } catch {
-    /* */
+  } catch (e: any) {
+    console.error(`getPinInfoFallback: pinCount failed for handle ${handle}: ${e.message}`);
   }
   return pins;
 }
@@ -240,16 +244,6 @@ export function registerNodeTools(
           }
         }
 
-        // Track primitive enum handles for crash prevention.
-        // ALL NT_GEO_OBJECT primitive type changes crash Octane (Sphere=20, Torus=22,
-        // Cone=3, Capsule=2 confirmed). Pin 0 child is the primitive enum.
-        if (node_type === 'NT_GEO_OBJECT') {
-          const pin0 = pins.find(p => p.index === 0);
-          if (pin0 && pin0.handle) {
-            client.primitiveEnumHandles.add(pin0.handle);
-          }
-        }
-
         await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
 
         // Only return pins with auto-created children (handle != 0).
@@ -311,6 +305,57 @@ export function registerNodeTools(
         // --- Pin type validation (cache-first, gRPC fallback) ---
         const sourceTypeName = client.handleToTypeName.get(source_handle);
         const targetTypeName = client.handleToTypeName.get(target_handle);
+
+        // --- Auto-materialize dynamic pins on movable-input nodes (e.g. NT_GEO_GROUP) ---
+        // These nodes start with 0 pins; A_PIN_COUNT (113) must be set to create
+        // dynamic input slots before connecting.  When using pin_name like "Input 1",
+        // parse the index N and ensure at least N pins exist.
+        if (targetTypeName && cache && pin_id === undefined) {
+          const targetInfo = cache.getNodeType(targetTypeName);
+          if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
+            // Determine how many pins we need
+            let neededCount = 1;
+            if (pin_name !== undefined) {
+              // Parse "Input N" → N
+              const match = pin_name.match(/(\d+)$/);
+              if (match) neededCount = parseInt(match[1], 10);
+            } else if (pin_index !== undefined) {
+              neededCount = pin_index + 1;
+            }
+            // Read current pin count
+            try {
+              const curResult = await client.callMethod('ApiNode', 'pinCount', {
+                objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+              });
+              const curCount = Number(extractValue(curResult) ?? 0);
+              if (curCount < neededCount) {
+                // A_PIN_COUNT = 113, AT_INT = 3
+                await client.callMethod('ApiItem', 'setByAttrID', {
+                  objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
+                  attribute_id: 113,
+                  expected_type: 3,
+                  int_value: neededCount,
+                  evaluate: false,
+                });
+                await client.callMethod('ApiChangeManager', 'update', {});
+                // Verify pins materialized — connectTo1 fails silently if
+                // the pin doesn't exist yet.  Poll pinCount up to 3 times.
+                for (let attempt = 0; attempt < 3; attempt++) {
+                  const verifyResult = await client.callMethod('ApiNode', 'pinCount', {
+                    objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+                  });
+                  const newCount = Number(extractValue(verifyResult) ?? 0);
+                  if (newCount >= neededCount) break;
+                  // Another update() nudge — sometimes Octane needs a second kick
+                  await client.callMethod('ApiChangeManager', 'update', {});
+                }
+              }
+            } catch {
+              // Best-effort: if we can't materialize pins, the connect call
+              // will proceed anyway and may succeed or fail on its own.
+            }
+          }
+        }
 
         let sourceType: string | undefined;
         let targetPinType: string | undefined;
@@ -378,6 +423,11 @@ export function registerNodeTools(
         }
 
         // --- Perform the connection ---
+        // NOTE: Unlike set_attribute (which always sends evaluate:false then calls
+        // ApiChangeManager.update() to avoid double-evaluation crashes specific to
+        // setByAttrID), connect_nodes passes evaluate directly to the gRPC call.
+        // The connectTo/connectToIx/connectTo1 RPCs don't exhibit the double-eval
+        // issue, so the extra round-trip to update() is unnecessary here.
         if (pin_id !== undefined) {
           await client.callMethod('ApiNode', 'connectTo', {
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },

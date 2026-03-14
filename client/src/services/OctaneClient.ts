@@ -485,6 +485,22 @@ export class OctaneClient extends EventEmitter {
     return this.nodeService.createNodeForPin(parentHandle, pinIdx, nodeType, nodeTypeId);
   }
 
+  async addMovableInput(nodeHandle: number): Promise<boolean> {
+    return this.nodeService.addMovableInput(nodeHandle);
+  }
+
+  async deleteMovableInput(nodeHandle: number, pinIdx: number): Promise<boolean> {
+    return this.nodeService.deleteMovableInput(nodeHandle, pinIdx);
+  }
+
+  async moveMovableInput(
+    nodeHandle: number,
+    pinIdx: number,
+    direction: 'up' | 'down'
+  ): Promise<boolean> {
+    return this.nodeService.moveMovableInput(nodeHandle, pinIdx, direction);
+  }
+
   async connectPinByIndex(
     targetNodeHandle: number,
     pinIdx: number,
