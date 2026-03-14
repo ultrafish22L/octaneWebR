@@ -20,10 +20,11 @@ When lost, confused about placement, or starting a new build phase:
 
 Set `set_camera(target: {x, y, z})` to the centroid or center of interest. The camera then orbits around that point naturally.
 
-1. **Set target FIRST** — before adjusting position/distance
-2. **Pull back from target** — move camera position far away, keeping target fixed
-3. **Orbit by moving position** — raise Y for elevated angle, shift X/Z for side views
-4. **Zoom = change distance from target** — predictable, no guessing
+1. **Set target to scene centroid** — center of bounding box of all objects
+2. **Compute zoom from bounds** — derive camera distance from bounding box extents + FOV/focal length. Don't guess pull-back distance.
+3. **Pull back from target** — move camera position far away, keeping target fixed
+4. **Orbit by moving position** — raise Y for elevated angle, shift X/Z for side views
+5. **Zoom = change distance from target** — predictable, no guessing
 
 ### Single-Mesh Framing Workflow
 

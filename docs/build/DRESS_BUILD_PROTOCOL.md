@@ -140,14 +140,12 @@ NT_GEO_OBJECT (geometric primitive) can be used instead of NT_GEO_MESH + .obj fi
 - **Multi-object:** For multiple NT_GEO_OBJECT nodes, create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
 - **Default is Box.** No set_attribute needed for a box.
 
-### Primitive Type Change (disconnect pattern)
+### Primitive Type Change
 
-**Changing primitive type while connected to RT crashes Octane** (confirmed Alpha 5 bug — both MCP and UI paths crash).
+Setting primitive types 1-17, 19-23 is **safe** — works while connected to RT/group, no disconnect needed (verified 2026-03-14 with 22 distinct shapes in a grid).
 
-**Safe workaround:**
-1. Disconnect geo from geo group (or RT): `disconnect_pin(group, pin_index:N)`
-2. Set primitive type: `set_attribute(enum_handle, 185, AT_INT=3, new_value)`
-3. Reconnect: `connect_nodes(geo, group, pin_index:N)`
-4. `set_camera` to refresh geometry tree
+**Type 18 (Quad) crashes Octane — NEVER use it.** Workaround: flat Box (A_SCALE Y≈0.001) or NT_GEO_MESH + `quad.obj`.
+
+After setting type + connecting to RT, call `set_camera` to refresh the geometry tree.
 
 Primitive values: Box=1, Capsule=2, Cone=3, Cylinder=4, Sphere=20, Torus=22 (see `docs/build/OCTANE_CHEATSHEET.md` for full list).

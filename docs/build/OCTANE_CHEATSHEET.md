@@ -58,6 +58,8 @@ Sundir node (NT_SUN_DIRECTION) children: latitude(0), longitude(1), month(2), da
 | Single object | `{0, 0.5, 4}` | `{0, 0, 0}` | Centered, slightly above |
 | Pull-back debug | `{0, 5, 20}` | `{0, 0, 0}` | Way back, see everything |
 
+**Framing technique:** Set `target` to scene centroid (center of bounding box of all objects). Then compute camera `position` distance based on bounding box extents — pull back far enough to fit the full extent in frame, accounting for FOV/focal length. Don't guess zoom; derive it from bounds.
+
 **DOF off:** camera → pin 14 (aperture) → child handle → `set_attribute(handle, 185, AT_FLOAT=9, 0)`
 
 ## Transforms (on Placement or NT_TRANSFORM_VALUE)
@@ -89,6 +91,10 @@ Sundir node (NT_SUN_DIRECTION) children: latitude(0), longitude(1), month(2), da
 | Mesh material | `pin_index: 0` | `pin_id: 30` |
 | RT kernel | `pin_id: 89` | — |
 | RT environment | `pin_id: 43` | — |
+
+## Primitive Types (NT_GEO_OBJECT enum pin 0)
+
+Types 1-17, 19-23 all work. **Type 18 (Quad) crashes Octane — NEVER use it.** Workarounds: use a very flat Box (scale Y near zero), or `NT_GEO_MESH` + `quad.obj`.
 
 ## .obj Assets (absolute path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`)
 

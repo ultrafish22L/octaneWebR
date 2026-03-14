@@ -62,12 +62,13 @@ CRASH RULES:       1. NEVER use evaluate:false. Always use evaluate:true
                       run AND after every Octane crash.
                    3. NEVER create nodes in parallel. Sequential only.
                    4. NEVER call restart_render — crashes Octane.
-                   5. NEVER set primitive type on NT_GEO_OBJECT — crashes
-                      Octane non-deterministically (1-2 calls unconnected,
-                      ~10 connected). Use NT_GEO_MESH + .obj files instead.
-                      Available .obj: sphere, cube, torus, teapot, ring,
-                      diamond, monolith, prism, pillar, quad, sphere_hd,
-                      sphere_uv, floor. Default Box (no set_attr) is safe.
+                   5. Primitive types 1-17, 19-23 on NT_GEO_OBJECT are SAFE
+                      (visually verified 2026-03-14 with 22 distinct shapes).
+                      Type 18 (Quad) CRASHES Octane — NEVER use it.
+                      Workaround: flat Box (A_SCALE Y≈0.001) or NT_GEO_MESH
+                      + quad.obj. Available .obj: sphere, cube, torus, teapot,
+                      ring, diamond, monolith, prism, pillar, quad, sphere_hd,
+                      sphere_uv, floor.
 
 KERNEL NOTE:       RT has a default DL kernel. Swap to PT anytime — does NOT
                    crash. Kernel swap is safe even on a live render.
@@ -180,14 +181,14 @@ These patterns supplement the Cheat Sheet with additional detail.
 
 ### Confirmed Crashes
 
-| Trigger                                    | Mitigation                                                                                                                                                                                                                                            |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Primitive type on multiple geo objects** | **Octane Alpha 5 bug.** Setting primitive type enum on >2 DIFFERENT NT_GEO_OBJECT nodes crashes Octane (2-6 objects). Single-object cycling is stable (87+ changes). **Use default Box or accept ~2-5 shapes/session.** See `CRASH_INVESTIGATION.md`. |
-| `evaluate:false` × N (any node op)         | **NEVER defer evals** — 8× deferred set_attribute crashed. Always evaluate:true.                                                                                                                                                                      |
-| `restart_render`                           | **NEVER use.** Causes ECONNRESET. Use `start_render` once — Octane stays in render mode. All changes are picked up live.                                                                                                                              |
-| Parallel `create_node` calls               | Sequential only — 4× simultaneous = ECONNRESET                                                                                                                                                                                                        |
-| `resetProject` (any variant)               | Use delete-all-nodes pattern (avoids "Save changes?" dialog)                                                                                                                                                                                          |
-| Bad A_FILENAME (e.g. `:rgba` suffix)       | Pops Octane dialog blocking gRPC for 30s. Use valid absolute paths only.                                                                                                                                                                              |
+| Trigger                              | Mitigation                                                                                                                                                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Quad primitive (type 18)**         | **Octane Alpha 5 bug.** Type 18 (Quad) crashes Octane on set_attribute. Types 1-17, 19-23 are all safe (22 verified in grid, 2026-03-14). Workaround: flat Box (A_SCALE Y≈0.001) or NT_GEO_MESH + `quad.obj`. |
+| `evaluate:false` × N (any node op)   | **NEVER defer evals** — 8× deferred set_attribute crashed. Always evaluate:true.                                                                                                                              |
+| `restart_render`                     | **NEVER use.** Causes ECONNRESET. Use `start_render` once — Octane stays in render mode. All changes are picked up live.                                                                                      |
+| Parallel `create_node` calls         | Sequential only — 4× simultaneous = ECONNRESET                                                                                                                                                                |
+| `resetProject` (any variant)         | Use delete-all-nodes pattern (avoids "Save changes?" dialog)                                                                                                                                                  |
+| Bad A_FILENAME (e.g. `:rgba` suffix) | Pops Octane dialog blocking gRPC for 30s. Use valid absolute paths only.                                                                                                                                      |
 
 ### Connections Don't Auto-Render
 
@@ -368,16 +369,16 @@ The proto defines `setPinValueByIx`, `setPinValueByPinID`, `setPinValueByName` (
 
 `create_node` returns all child handles. Pin indices are fixed:
 
-| Pin | Name        | Child Type       | Notes                                                                                                      |
-| --- | ----------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-23 verified. ⚠ See crash warning below. |
-| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                  |
-| 2   | objectLayer | Object layer     |                                                                                                            |
-| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                   |
-| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                               |
-| 5   | Height      | Float value      |                                                                                                            |
-| 6   | Depth       | Float value      |                                                                                                            |
-| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                           |
+| Pin | Name        | Child Type       | Notes                                                                                                                                                  |
+| --- | ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-17, 19-23 safe. ⚠ Type 18 (Quad) crashes Octane — use flat Box or quad.obj instead. |
+| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                              |
+| 2   | objectLayer | Object layer     |                                                                                                                                                        |
+| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                                                               |
+| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                           |
+| 5   | Height      | Float value      |                                                                                                                                                        |
+| 6   | Depth       | Float value      |                                                                                                                                                        |
+| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                                       |
 
 ## NT_MAT_SPECULAR Pin Layout (glass/transparent)
 
@@ -638,7 +639,7 @@ On any crash: isolate the exact gRPC call from `mcp-debug.log`, compare with oct
 | Geo connected to RT but render shows nothing | Used pin_id:59 for RT geometry (silently fails)                                            | Use `pin_index: 3` for RT geometry. ALWAYS verify with `get_node_info(RT)` → pin 3 connected_handle != 0 |
 | Wrong aspect ratio                           | Film resolution set with AT_INT=3                                                          | Use AT_INT2=4 on Image resolution grandchild                                                             |
 | Film resolution won't change                 | Set on Film Settings node, not Image Resolution child                                      | get_node_info(film) → pin 0 → child → set_attribute                                                      |
-| ECONNRESET/ECONNREFUSED                      | Octane crashed. STOP. User must restart.                                                   | Common cause: primitive type on >2 geo objects, restart_render, or evaluate:false batching               |
+| ECONNRESET/ECONNREFUSED                      | Octane crashed. STOP. User must restart.                                                   | Common cause: Quad primitive (type 18), restart_render, or evaluate:false batching                       |
 | Render grey/blue                             | Camera looking at sky through open wall                                                    | Check wall positions and camera angle                                                                    |
 | Render blurry / soft focus                   | DOF on by default — aperture defaults to 0.893                                             | RT→pin0(camera)→get_node_info→pin14(aperture)→set_attribute(child,185,AT_FLOAT=9,0)                      |
 | Mesh loads but invisible                     | Missing A_RELOAD after setting A_FILENAME                                                  | `set_attribute(mesh, 124, AT_BOOL=1, true)`                                                              |
