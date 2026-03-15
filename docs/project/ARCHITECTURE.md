@@ -43,12 +43,12 @@ octaneWebR/
 │   ├── proto/            - Beta 2 protobuf definitions (2026.1)
 │   ├── proto_old/        - Alpha 5 protobuf definitions (2026.1)
 │   └── src/              - gRPC proxy server
-├── mcp/
-│   ├── src/              - MCP server source (28 tools)
+├── mcp/                  - MCP server source (28 tools)
+│   ├── src/
 │   ├── data/             - API cache (octane-api-cache.json)
 │   ├── OCTANE_MCP.md     - MCP technical reference
 │   └── OCTANE_CREATIVE.md - Creative guide
-├── recipes/              - 5 scene recipes
+├── recipes/              - 6 scene recipes
 ├── ORBX/assets/          - 3D meshes (.obj) and textures
 ├── renders/              - Render output images (PNG, EXR)
 ├── api-version.config.js - API version configuration (Alpha 5/Beta 2)

@@ -51,12 +51,18 @@ When loading 3D models from OTOY Studio or any source:
 
 ## Build Order
 
+### Materials From Geo 1
+
+**Every geometry object gets a material from the moment it's created** — even in test scenes. Default grey is never acceptable. Use color variants at minimum (cycle through a palette), or apply distinct material types (diffuse, glossy, metallic) where relevant. This:
+- Makes renders readable (22 grey boxes = useless; 22 colored shapes = instant visual ID)
+- Tests material assignment per object as a bonus
+- Costs almost nothing (one extra `set_attribute` on the auto-created material's RGB child)
+
 ### Geo Before Lighting
 
 Place geometry BEFORE setting lighting:
-1. Geometry (all objects placed and positioned)
-2. Materials (dress the geo)
-3. Lighting (environment, emitters, etc.)
+1. Geometry (all objects placed and positioned — **with materials**)
+2. Lighting (environment, emitters, etc.)
 
 This ensures clear preview during the build process.
 
@@ -74,6 +80,26 @@ When building from a recipe, all values are pre-calculated. Assemble ASAP:
 - Use **1920x1080 preview screenshots** for verification, not the default small viewport
 - For a second opinion, send screenshots to `mcp__otoy-studio__chat_completion` for visual comparison
 - After any CSS/layout change: resize preview → screenshot → verify
+
+---
+
+## AA/CM Workflow (Artistic Agent + Camera Math)
+
+AA and CM work as a team during scene builds:
+
+1. **AA reviews every render** — flags clipping, bad framing, ugly lighting, wrong materials
+2. **CM computes camera positions** using calibrated FOV values from `docs/build/CAMERA_MATH.md`
+3. **Start far, inch forward** — pure math framing has failed repeatedly. Always verify with a render.
+4. **AA gives CM HARD requirements** — "ALL objects visible, zero clipping, 10% margin" not "pull back a bit"
+5. **Cache what works** — proven camera positions and FOV calibrations go in CAMERA_MATH.md
+6. **AA directs lighting and materials** — sunset environment should be set early, not after all geo is placed. Grey boxes on white background = immediate AA fail.
+
+### AA Quick Checklist (Every Render)
+- All objects fully visible? (no clipping)
+- Lighting creates mood? (not flat/grey)
+- Materials readable? (not default grey)
+- Background interesting? (not white void)
+- Composition balanced? (not skewed/asymmetric)
 
 ---
 

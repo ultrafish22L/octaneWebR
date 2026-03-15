@@ -70,7 +70,7 @@ Two-act demo: Act 1 fakes the OTOY Studio asset pipeline, Act 2 builds the scene
 - Always A_RELOAD (124) after A_FILENAME (34)
 - Always ABSOLUTE paths
 - A_ROTATION uses DEGREES (not radians)
-- Geo group pins → `pin_name` ("Input 1", "Input 2", …)
+- Geo group pins → `pin_index` (0, 1, 2, …) — ⚠ `pin_name` silently fails
 - RT connections → `pin_id` (59=geo, 89=kernel, 43=env)
 - `get_render_status` after every render — report timing
 

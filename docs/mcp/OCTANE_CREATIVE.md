@@ -152,30 +152,30 @@ Light sources visible through glass show as refracted shapes. Move lights out of
 | Crystal  | 1.8-2.0 | Quartz, gemstones     |
 | Diamond  | 2.4     | Maximum sparkle       |
 
-### Material Recipes
+### Material Recipes (Universal Material)
 
-**Gold (Glossy)**: Diffuse `(1, 0.84, 0)`, specular 1.0, roughness 0.1-0.2, **IOR 100** (critical — default 1.5 looks like plastic)
+**Gold**: Albedo `(1.0, 0.78, 0.34)` (pin 2), metallic 1.0 (pin 4), roughness 0.15 (pin 8)
 
-**Chrome/Mirror (Glossy)**: Diffuse `(0.9, 0.9, 0.92)`, specular 1.0, roughness 0.01, IOR 100
+**Chrome/Mirror**: Albedo `(0.9, 0.9, 0.9)` (pin 2), metallic 1.0 (pin 4), roughness 0.02 (pin 8)
 
-**Polished Marble (Glossy)**: Diffuse `(0.9, 0.88, 0.85)`, specular 0.6-0.8, roughness 0.03-0.08
+**Polished Marble**: Albedo `(0.9, 0.88, 0.85)` (pin 2), metallic 0 (pin 4), roughness 0.03-0.08 (pin 8)
 
-**Blue Glass (Specular)**: Transmission `(0.3, 0.5, 1.0)`, IOR 1.5, smooth enabled
+**Glass**: Transmission type 1/specular (pin 1), IOR 1.5 (pin 15), albedo `(0.85, 0.95, 1.0)` (pin 2)
 
 ### Glass Visibility Decision Tree
 
-| Want This          | Material   | Key Settings                              |
-| ------------------ | ---------- | ----------------------------------------- |
-| Tinted glass       | Specular   | Transmission color, IOR 1.5               |
-| Rainbow dispersion | Specular   | IOR 1.8+, dispersion on, fake shadows off |
-| Frosted glass      | Specular   | Roughness 0.1-0.3, transmission white     |
-| Gold metallic      | **Glossy** | Diffuse `(1, 0.84, 0)`, **IOR 100**       |
+| Want This          | Key Settings                                     |
+| ------------------ | ------------------------------------------------ |
+| Tinted glass       | Transmission color on albedo (pin 2), IOR 1.5    |
+| Rainbow dispersion | IOR 1.8+, dispersion on, fake shadows off        |
+| Frosted glass      | Roughness 0.1-0.3 (pin 8), transmission white    |
+| Gold metallic      | Albedo `(1.0, 0.78, 0.34)`, metallic 1.0 (pin 4) |
 
 ### Key Material Rules
 
+- **Use Universal Material for everything** — simpler, one type covers metals and glass
 - Clear glass is **invisible** in uniform lighting — always tint transmission
 - Amber glass absorbs cool light — pair with warm lighting
-- Metal = **Glossy**, never Specular (Specular = glass/transmission)
 - Roughness: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 ---

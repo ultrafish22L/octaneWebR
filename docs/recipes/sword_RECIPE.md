@@ -44,7 +44,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Set size child (pin 0) to **1.5**
 - Connect emission → diffuse (`pin_id: 41`), diffuse → quad (`pin_index: 1`)
 - Set translation on transform child: **(0, 8, -6)** (above and behind)
-- Connect quad → geo group (`pin_name: "Input 1"`)
+- Connect quad → geo group (`pin_index: 0`)
 
 Create `NT_GEO_GROUP`. Set `A_PIN_COUNT = 8`. Connect geo group → RT (`pin_index: 3`).
 
@@ -66,7 +66,7 @@ Create `NT_GEO_PLACEMENT`. Connect mesh → placement (`pin_name: "geometry"`). 
 - Rotation: (0, 45, 0) **DEGREES** — diagonal in frame
 - Scale: (5, 5, 5)
 
-Connect placement → geo group (`pin_name: "Input 2"`).
+Connect placement → geo group (`pin_index: 1`).
 
 `set_camera` to trigger refresh.
 
@@ -80,7 +80,7 @@ Create second `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`
 - Set power child to **3000**
 - Set size child to **4**
 - Translation: **(2, 1, 3)** — in front, slightly right, close to blade
-- Connect to geo group (`pin_name: "Input 3"`)
+- Connect to geo group (`pin_index: 2`)
 
 `set_camera` to trigger refresh.
 

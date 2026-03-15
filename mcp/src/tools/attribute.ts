@@ -133,9 +133,8 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         // Alpha 5 setValueByIDRequest has NO evaluate field — Octane auto-evaluates.
         // ApiItem.evaluate() is used as a sync barrier after each set to ensure
         // Octane finishes processing before the next call.
-        // NOTE: Setting primitive type on multiple DIFFERENT geo objects crashes
-        // Octane after 2-6 objects — this is an Octane Alpha 5 server bug, NOT
-        // fixable by any MCP-side pattern. See CRASH_INVESTIGATION.md.
+        // NOTE: Primitive type 18 (Quad) crashes Octane — skip it.
+        // Types 1-17 and 19-23 all work (verified 2026-03-14).
         await client.callMethod('ApiItem', setMethod, {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,

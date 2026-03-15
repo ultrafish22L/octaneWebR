@@ -44,7 +44,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Set power to **30000**
 - Set size to **2**
 - Translation: **(12, 5, -8)** — far right, low, behind and to the side
-- Connect → geo group (`pin_name: "Input 1"`)
+- Connect → geo group (`pin_index: 0`)
 
 **Robot head mesh** (Input 2):
 
@@ -60,7 +60,7 @@ Create `NT_GEO_PLACEMENT`. Connect mesh → placement (`pin_name: "geometry"`). 
 - Rotation: (0, 15, -5) **DEGREES** — slight tilt, fallen
 - Scale: (5, 5, 5)
 
-Connect placement → geo group (`pin_name: "Input 2"`).
+Connect placement → geo group (`pin_index: 1`).
 
 `set_camera` to trigger refresh.
 
@@ -76,7 +76,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Set power to **5000**
 - Set size to **10** — large diffuse fill
 - Translation: **(-10, 8, 5)** — high left, opposite the sun
-- Connect → geo group (`pin_name: "Input 3"`)
+- Connect → geo group (`pin_index: 2`)
 
 `set_camera` to trigger refresh.
 

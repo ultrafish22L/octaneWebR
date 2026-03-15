@@ -32,7 +32,7 @@ ATTR TYPES:        AT_BOOL=1  AT_INT=3  AT_INT2=4  AT_FLOAT=9
 
 WIRING PATTERN:    material → mesh (pin 0)
                    mesh → placement (pin_name "geometry")
-                   placement → geo group (pin_name "Input N")
+                   placement → geo group (pin_index N, 0-based)
                    NOT: material → placement. NEVER.
 
 RT PIN LAYOUT:     0=camera  1=environment  3=geometry  4=film  6=kernel
@@ -79,7 +79,8 @@ CONNECTION RULE:   Use pin_id for most connections — no ambiguity.
                    ⚠ EXCEPTION: RT geometry pin — use pin_index:3.
                    pin_id:59 (P_GEOMETRY) SILENTLY FAILS on RT
                    (reports success but connected_handle stays 0).
-                   Geo group dynamic pins still need pin_name: "Input N".
+                   Geo group dynamic pins: use pin_index N (0-based).
+                   ⚠ pin_name "Input N" SILENTLY FAILS on geo group.
 
 VERIFY RULE:       ALWAYS call get_node_info(RT) after connecting to RT.
                    Check that pin 3 connected_handle != 0.
@@ -120,12 +121,14 @@ TIMING RULE:       Call get_render_status after EVERY render.
 
 ### Session Start / Post-Crash Restart Rules
 
-**Exact restart sequence (always Octane BEFORE servers/MCP):**
+**Exact shutdown/restart sequence — SERVERS DIE FIRST, OCTANE DIES LAST:**
 
-1. **Stop all servers** — `preview_stop` for dev server / preview
-2. **Kill Octane** — `taskkill //IM octane.exe //F` (if running)
+⚠ Killing Octane while servers are still connected causes zombie processes that resist `taskkill`. Always stop servers before touching Octane.
+
+1. **Stop all servers FIRST** — `preview_stop` for dev server / preview (MUST be before Octane kill)
+2. **Kill Octane** — `taskkill //IM octane.exe //F` (if it resists: `powershell -Command "Stop-Process -Name octane -Force"`)
 3. **Launch Octane** — `C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe &` (background)
-4. **Wait ~30s** for Octane to boot
+4. **Wait for Octane to boot** — typically ~5s, use 15s if unsure, experiment
 5. **Start dev server** — `npm run dev` or `preview_start`
 6. **Verify** — `get_octane_version` (gRPC alive?), `preview_screenshot` (webapp live?)
 7. **Build** — only then start creating nodes
@@ -196,12 +199,15 @@ These patterns supplement the Cheat Sheet with additional detail.
 
 ### Refresh After Structural Changes
 
-`start_render` does NOT refresh the geometry tree. **`set_camera` is the only way** to force geometry re-evaluation (`restart_render` crashes Octane):
+`start_render` does NOT refresh the geometry tree. **Connections require both `update_scene()` AND a camera change** (e.g. `set_camera`) to force geometry re-evaluation (`restart_render` crashes Octane). Empirically, `update_scene()` alone is not sufficient after connections — a camera trigger is also needed.
 
 ```
 connect_nodes(...)
-set_camera(current_position, current_target)   # forces re-render
+update_scene()                                 # required but not sufficient alone
+set_camera(current_position, current_target)   # triggers geometry re-evaluation
 ```
+
+**Note:** This two-step requirement (update_scene + camera) needs a dedicated test rig to prove definitively — see IMPROVEMENTS.md.
 
 ### One Object at a Time — RULE
 
@@ -412,10 +418,10 @@ Use `get_node_info(specular)` to discover child handles, then `set_attribute(chi
 
 ## NT_GEO_PLACEMENT Pin Layout (mesh wrapper)
 
-| Pin | Name      | Type            | Notes                                                                   |
-| --- | --------- | --------------- | ----------------------------------------------------------------------- |
-| 0   | transform | Transform value | `A_TRANSLATION=172`, `A_ROTATION=137`, `A_SCALE=139` (all AT_FLOAT3=11) |
-| 1   | geometry  | —               | Connect mesh here via `pin_name: "geometry"` (NOT pin_index 0!)         |
+| Pin | Name      | Type            | Notes                                                                                  |
+| --- | --------- | --------------- | -------------------------------------------------------------------------------------- |
+| 0   | transform | Transform value | `A_TRANSLATION=172`, `A_ROTATION=137`, `A_SCALE=139` (all AT_FLOAT3=11)                |
+| 1   | geometry  | —               | Connect mesh here via `pin_name: "geometry"` (pin_index 1, not 0 — pin 0 is transform) |
 
 **OBJ scale is multiplicative**: If the .obj defines 0.3×3×0.3 geometry, placement scale (0.3, 3, 0.3) = 0.09×9×0.09. Check the mesh's native size before scaling.
 
@@ -469,7 +475,7 @@ IDs are 1-indexed alphabetical (0 is invalid, defaults to Box). All 23 types (1-
 - RGB texture → material diffuse `pin_id: 30` (P_DIFFUSE)
 - **Image texture → material diffuse `pin_id: 30`** (replaces auto-created RGB child)
 - Blackbody emission → material `pin_id: 41` (P_EMISSION)
-- Geometry objects → geo group `pin_name: "Input N"` (dynamic pins — pin_name required)
+- Geometry objects → geo group `pin_index: N` (0-based; ⚠ `pin_name: "Input N"` silently fails!)
 - Geo group → RT `pin_index: 3` (⚠ pin_id:59 silently fails on RT!)
 - Geo objects → RT `pin_index: 3` directly (Octane auto-creates a geometry group)
 - PT kernel → RT `pin_id: 89` (P_KERNEL)
@@ -497,7 +503,7 @@ NT_GEO_MESH (load sphere.obj via A_FILENAME=34)
   → NT_GEO_PLACEMENT pin 1 (geometry)
     → placement transform child: A_TRANSLATION=172 for position, A_SCALE=139 for size
 NT_MAT_SPECULAR → NT_GEO_MESH pin 0 (material)
-NT_GEO_PLACEMENT → geo_group pin_name "Input N"
+NT_GEO_PLACEMENT → geo_group pin_index N (0-based; pin_name silently fails!)
 ```
 
 Files (must be **absolute paths** — relative paths don't resolve):
@@ -521,7 +527,7 @@ All require `get_node_info` to discover child handles first, then `set_attribute
 | **Green wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.12, 0.45, 0.15})`                                        |
 | **Glass**      | NT_MAT_SPECULAR       | IOR child → `(185, 9, 1.5)` + smooth child → `(185, 1, true)`                      |
 | **Gold**       | NT_MAT_GLOSSY         | Diffuse=(1, 0.84, 0), Specular=1.0, Roughness=0.15, **IOR=100** (metallic Fresnel) |
-| **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0, Albedo=white                                              |
+| **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0.02, Albedo={0.9,0.9,0.9}                                   |
 | **Plastic**    | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.2, Specular=0.5                                            |
 | **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                                               |
 | **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)                                  |
@@ -542,7 +548,7 @@ For IOR values and material creative guidance, see `OCTANE_CREATIVE.md` Section 
 NT_GEO_OBJECT (thin box: H=0.01)
   → pin 1: standalone NT_MAT_DIFFUSE
               → pin_name "emission": NT_EMIS_BLACKBODY (power=200)
-  → connect to geo_group via pin_name "Input N"
+  → connect to geo_group via pin_index N (0-based; pin_name silently fails!)
 ```
 
 For lighting design, mood recipes, and environment strategy, see `OCTANE_CREATIVE.md` Sections 2 and 8.
@@ -629,13 +635,17 @@ On any crash: isolate the exact gRPC call from `mcp-debug.log`, compare with oct
 
 ## Debug
 
+### Verification Read-Back (get_attribute after set_attribute)
+
+Using `get_attribute` to read back values after `set_attribute` is a useful debug technique — confirms the value actually landed. This applies to **any** attribute: transforms, material properties, camera settings, etc. Currently ON for debug builds. This is a debug feature that can be optimized out with a production flag when performance matters.
+
 ### Common Failures
 
 | Symptom                                      | Cause                                                                                      | Fix                                                                                                      |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | Render all white                             | DL kernel (need PT), camera outside scene, OR geo/env not actually connected (silent fail) | Verify RT connections first: `get_node_info(RT)` → check pin 1, 3, 6 all have connected_handle != 0      |
 | Render doesn't update after connect          | Used restart_render instead of set_camera                                                  | Call `set_camera` after every structural change                                                          |
-| Connect returns success but nothing changed  | Used pin_index on geo group (silently fails)                                               | Use `pin_name: "Input N"` for geo group                                                                  |
+| Connect returns success but nothing changed  | Used `pin_name: "Input N"` on geo group (silently fails)                                   | Use `pin_index: N` (0-based) for geo group                                                               |
 | Geo connected to RT but render shows nothing | Used pin_id:59 for RT geometry (silently fails)                                            | Use `pin_index: 3` for RT geometry. ALWAYS verify with `get_node_info(RT)` → pin 3 connected_handle != 0 |
 | Wrong aspect ratio                           | Film resolution set with AT_INT=3                                                          | Use AT_INT2=4 on Image resolution grandchild                                                             |
 | Film resolution won't change                 | Set on Film Settings node, not Image Resolution child                                      | get_node_info(film) → pin 0 → child → set_attribute                                                      |

@@ -58,7 +58,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Connect diffuse → quad light (`pin_index: 1`)
 - Set size child (pin 0 of quad light) to **3**
 - Set translation on transform child (pin 3 of quad light): **(10, 18, -15)**
-- Connect quad light → geo group (`pin_name: "Input 1"`)
+- Connect quad light → geo group (`pin_index: 0`)
 
 `set_camera` (same hero values) to trigger refresh.
 
@@ -78,7 +78,7 @@ Create `NT_GEO_PLACEMENT`. Connect mesh → placement (`pin_name: "geometry"`). 
 - Rotation: (66.6, 140.4, 16.5) **DEGREES**
 - Scale: (5, 5, 5)
 
-Connect placement → geo group (`pin_name: "Input 2"`).
+Connect placement → geo group (`pin_index: 1`).
 
 `set_camera` (same hero values) to trigger refresh.
 
@@ -98,7 +98,7 @@ Create `NT_GEO_PLACEMENT`. Connect mesh → placement (`pin_name: "geometry"`). 
 - Rotation: (314.2, 109.8, 44.5) **DEGREES**
 - Scale: (30, 30, 30)
 
-Connect placement → geo group (`pin_name: "Input 3"`).
+Connect placement → geo group (`pin_index: 2`).
 
 > **Render 4**: Earth curves below. Scale. Color contrast. The shot.
 

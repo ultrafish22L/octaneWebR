@@ -44,7 +44,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Set power to **5000**
 - Set size to **8**
 - Translation: **(0, 0, 2)** — close and large, right in front of creature
-- Connect → geo group (`pin_name: "Input 1"`)
+- Connect → geo group (`pin_index: 0`)
 
 **Creature mesh** (Input 2):
 
@@ -60,7 +60,7 @@ Create `NT_GEO_PLACEMENT`. Connect mesh → placement (`pin_name: "geometry"`). 
 - Rotation: (0, 0, 0) **DEGREES** — check orientation first
 - Scale: (5, 5, 5)
 
-Connect placement → geo group (`pin_name: "Input 2"`).
+Connect placement → geo group (`pin_index: 1`).
 
 `set_camera` to trigger refresh.
 
@@ -76,7 +76,7 @@ Create `NT_LIGHT_QUAD`. Create `NT_MAT_DIFFUSE`. Create `NT_EMIS_TEXTURE`.
 - Set power to **20000**
 - Set size to **0.3** — tiny bright point
 - Translation: position near creature's lure antenna tip (above and forward)
-- Connect → geo group (`pin_name: "Input 3"`)
+- Connect → geo group (`pin_index: 2`)
 
 `set_camera` to trigger refresh.
 

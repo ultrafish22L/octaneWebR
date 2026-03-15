@@ -73,7 +73,7 @@ Every step produces a visible change. Every step tests something specific. Never
     - *Visual:* Object transforms from flat matte red to realistic surface. **Satisfying moment** — same shape, completely different feel.
     - *Tests:* Material attribute changes on live render, auto-refresh.
 
-13. **Add second geo** — new mesh → material → placement → connect to geo group `pin_name:"Input 2"`
+13. **Add second geo** — new mesh → material → placement → connect to geo group `pin_index: 1`
     - Use contrasting shape (if first was organic/round, use angular; if small, use large).
     - Give it a visually distinct material — different color or different material type.
     - *Verify:* Screenshot shows two objects. Both visible, both have correct materials.
