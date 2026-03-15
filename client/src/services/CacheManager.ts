@@ -125,6 +125,10 @@ export class CacheManager {
     this.updateHitRate();
     Logger.debugV(`Cache MISS: ${key}`);
 
+    // Set inflight BEFORE calling fetcher() to prevent stampede.
+    // JavaScript is single-threaded so the .then() won't resolve until this
+    // synchronous block completes, but setting early is safer if fetcher()
+    // synchronously triggers re-entrant get() calls (e.g. via event handlers).
     const promise = fetcher().then(
       data => {
         this.inflight.delete(key);
@@ -136,8 +140,6 @@ export class CacheManager {
         throw err;
       }
     );
-
-    // Set inflight immediately after creating the promise (before any microtask can resolve it)
     this.inflight.set(key, promise);
     return promise;
   }
@@ -269,8 +271,8 @@ export class CacheManager {
     const config = this.getConfig(key);
     const ttl = customTtl ?? config.ttl;
 
-    // Evict if memory cache is full
-    if (this.memoryCache.size >= this.maxMemoryCacheSize) {
+    // Evict until there's space for the new entry
+    while (this.memoryCache.size >= this.maxMemoryCacheSize) {
       this.evictLeastAccessed();
     }
 

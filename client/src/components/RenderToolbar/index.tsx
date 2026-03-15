@@ -88,7 +88,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
   // Note: System info endpoint removed (was calling non-existent Express server on port 45769)
   // GPU data (version, GPU name, memory) is already fetched via fetchGPUData above using gRPC
   // Primitive/mesh counts remain at default values (0 pri, 1 mesh) until implemented via gRPC
-  // TODO: If needed, implement primitive/mesh count fetching using ApiRenderEngine gRPC methods
+  // Future: primitive/mesh count fetching via ApiRenderEngine gRPC (currently shows defaults)
 
   // Official Octane render viewport controls based on documentation
   const toolbarIcons = [

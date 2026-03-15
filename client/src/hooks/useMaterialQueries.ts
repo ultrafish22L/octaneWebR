@@ -54,7 +54,7 @@ export function useMaterialCategories(dbType: DBType, enabled = true) {
         dbType: dbType === 'livedb' ? 0 : 1, // 0 = LiveDB, 1 = LocalDB
       });
 
-      if (response?.categories) {
+      if (response?.categories && Array.isArray(response.categories)) {
         const categories = response.categories as unknown as MaterialCategory[];
         Logger.debug(`Fetched ${categories.length} ${dbType} categories`);
         return categories;
@@ -109,7 +109,7 @@ export function useMaterialsForCategory(categoryId: number | null, dbType: DBTyp
         dbType: dbType === 'livedb' ? 0 : 1,
       });
 
-      if (response?.materials) {
+      if (response?.materials && Array.isArray(response.materials)) {
         const materials = response.materials as unknown as Material[];
         Logger.debug(`Fetched ${materials.length} materials`);
         return materials;

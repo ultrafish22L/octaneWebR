@@ -72,7 +72,7 @@ export function NodeGraphToolbar({
       Logger.debug(`Render Target Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
-    // TODO: Show/hide render target preview
+    // Future: wire to Octane render target preview toggle
   }, []);
 
   // 5. View/Hide Mesh Preview Scene
@@ -82,7 +82,7 @@ export function NodeGraphToolbar({
       Logger.debug(`Mesh Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
-    // TODO: Show/hide mesh preview
+    // Future: wire to Octane mesh preview toggle
   }, []);
 
   // 6. View/Hide Material Preview Scene
@@ -92,7 +92,7 @@ export function NodeGraphToolbar({
       Logger.debug(`Material Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
-    // TODO: Show/hide material preview
+    // Future: wire to Octane material preview toggle
   }, []);
 
   // 7. View/Hide Texture Preview Scene
@@ -102,7 +102,7 @@ export function NodeGraphToolbar({
       Logger.debug(`Texture Preview: ${newState ? 'SHOW' : 'HIDE'}`);
       return newState;
     });
-    // TODO: Show/hide texture preview
+    // Future: wire to Octane texture preview toggle
   }, []);
 
   // 8. Snap Items To Grid

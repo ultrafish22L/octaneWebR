@@ -20,8 +20,7 @@ import {
   OBJ_API_NODE_GRAPH,
 } from './utils';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { NodeType } = require('../../../client/src/constants/OctaneTypes');
+import { NodeType } from '../../../client/src/constants/OctaneTypes';
 
 // --- Legacy pin type validation (fallback when cache unavailable) ---
 

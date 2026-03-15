@@ -14,14 +14,12 @@ import {
   profileEnd,
 } from '../OctaneMcpClient';
 
-// Import node type constants from client
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const {
+import {
   NodeType,
   AttrType,
   AttributeId,
   ObjectType,
-} = require('../../../client/src/constants/OctaneTypes');
+} from '../../../client/src/constants/OctaneTypes';
 
 import { jsonResult, errorResult } from './utils';
 

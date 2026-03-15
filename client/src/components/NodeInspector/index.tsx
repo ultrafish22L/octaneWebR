@@ -848,27 +848,27 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
 
   const handleRender = useCallback(() => {
     Logger.debug('Render action for node:', node?.name);
-    // TODO: Implement render action
+    // Future: render selected node
   }, [node]);
 
   const handleSave = useCallback(() => {
     Logger.debug('Save action for node:', node?.name);
-    // TODO: Implement save action
+    // Future: save selected node
   }, [node]);
 
   const handleCut = useCallback(() => {
     Logger.debug('Cut action for node:', node?.name);
-    // TODO: Implement cut action
+    // Future: cut to clipboard
   }, [node]);
 
   const handleCopy = useCallback(() => {
     Logger.debug('Copy action for node:', node?.name);
-    // TODO: Implement copy action
+    // Future: copy to clipboard
   }, [node]);
 
   const handlePaste = useCallback(() => {
     Logger.debug('Paste action for node:', node?.name);
-    // TODO: Implement paste action
+    // Future: paste from clipboard
   }, [node]);
 
   const handleDelete = useCallback(async () => {
@@ -889,22 +889,22 @@ export const NodeInspector = React.memo(function NodeInspector({ node }: NodeIns
 
   const handleExpand = useCallback(() => {
     Logger.debug('Expand action for node:', node?.name);
-    // TODO: Implement expand all children action
+    // Future: expand all children in tree
   }, [node]);
 
   const handleShowInOutliner = useCallback(() => {
     Logger.debug('Show in Outliner:', node?.name);
-    // TODO: Implement outliner navigation
+    // Future: navigate to node in outliner panel
   }, [node]);
 
   const handleShowInGraphEditor = useCallback(() => {
     Logger.debug('Show in Graph Editor:', node?.name);
-    // TODO: Implement graph editor navigation
+    // Future: navigate to node in graph editor
   }, [node]);
 
   const handleShowInLuaBrowser = useCallback(() => {
     Logger.debug('Show in Lua Browser:', node?.name);
-    // TODO: Implement Lua browser navigation
+    // Future: navigate to node in Lua browser
   }, [node]);
 
   // Build hasGroup map for all levels (matches octaneWeb's hasGroup[] array logic)

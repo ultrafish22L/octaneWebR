@@ -31,6 +31,15 @@ import {
 } from './octane';
 import type { ParameterRawValue, ParameterValue, ReferencePackageSettings } from './octane';
 
+/** Validate that all numeric arguments are finite (not NaN or ±Infinity). */
+function assertFinite(...values: number[]): void {
+  for (const v of values) {
+    if (!Number.isFinite(v)) {
+      throw new Error(`Invalid coordinate value: ${v} (expected finite number)`);
+    }
+  }
+}
+
 // Re-export types for backward compatibility
 export type {
   RenderState,
@@ -135,10 +144,12 @@ export class OctaneClient extends EventEmitter {
   }
 
   async setCameraPosition(x: number, y: number, z: number): Promise<void> {
+    assertFinite(x, y, z);
     return this.cameraService.setCameraPosition(x, y, z);
   }
 
   async setCameraTarget(x: number, y: number, z: number): Promise<void> {
+    assertFinite(x, y, z);
     return this.cameraService.setCameraTarget(x, y, z);
   }
 
@@ -151,6 +162,7 @@ export class OctaneClient extends EventEmitter {
     targetZ: number,
     silent = false
   ): Promise<void> {
+    assertFinite(posX, posY, posZ, targetX, targetY, targetZ);
     return this.cameraService.setCameraPositionAndTarget(
       posX,
       posY,
@@ -380,14 +392,17 @@ export class OctaneClient extends EventEmitter {
   // ==================== Viewport Methods ====================
 
   async pick(x: number, y: number): Promise<Record<string, unknown>[]> {
+    assertFinite(x, y);
     return this.renderService.pick(x, y);
   }
 
   async pickWhitePoint(x: number, y: number): Promise<{ x: number; y: number; z: number } | null> {
+    assertFinite(x, y);
     return this.renderService.pickWhitePoint(x, y);
   }
 
   async pickSceneInfo(x: number, y: number): Promise<Record<string, unknown>> {
+    assertFinite(x, y);
     return this.renderService.pickSceneInfo(x, y);
   }
 

@@ -1,29 +1,42 @@
 /**
- * Simple EventEmitter for TypeScript
+ * Typed EventEmitter for TypeScript
  *
- * EventHandler uses Function to allow typed callbacks at call sites
- * (e.g. `client.on('event', (data: SomeType) => ...)`).
- * The Function type accepts any callable without using `any` and is
- * intentional for a generic event-emitter pattern.
+ * Uses a generic EventMap to provide compile-time checking of event names
+ * and payload types. Callers define their event map interface and get
+ * type-safe `on`, `off`, and `emit` calls.
+ *
+ * Example:
+ *   interface MyEvents {
+ *     'connected': [url: string];
+ *     'error': [error: Error];
+ *     'data': [payload: { id: number }];
+ *   }
+ *   const emitter = new EventEmitter<MyEvents>();
+ *   emitter.on('connected', (url) => { ... }); // url: string
+ *   emitter.emit('connected', 'ws://localhost'); // type-checked
  */
 
 import { Logger } from './Logger';
 
-// TODO: Replace with a typed event map generic (e.g. EventEmitter<EventMap>)
-// to get compile-time checking on event names and payload types. Currently
-// any string is accepted as an event name and payloads are untyped.
-type EventHandler = Function;
+/**
+ * Default event map: accepts any string key with unknown[] args.
+ * Used when no explicit event map is provided (backwards-compatible).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DefaultEventMap = Record<string, any[]>;
 
-export class EventEmitter {
+type EventHandler<Args extends unknown[] = unknown[]> = (...args: Args) => void;
+
+export class EventEmitter<EventMap extends DefaultEventMap = DefaultEventMap> {
   private events: Map<string, EventHandler[]> = new Map();
   private maxListeners = 20;
 
-  on(event: string, handler: EventHandler): void {
+  on<K extends string & keyof EventMap>(event: K, handler: EventHandler<EventMap[K]>): void {
     if (!this.events.has(event)) {
       this.events.set(event, []);
     }
     const handlers = this.events.get(event)!;
-    handlers.push(handler);
+    handlers.push(handler as EventHandler);
 
     if (handlers.length > this.maxListeners) {
       Logger.warn(
@@ -32,17 +45,17 @@ export class EventEmitter {
     }
   }
 
-  off(event: string, handler: EventHandler): void {
+  off<K extends string & keyof EventMap>(event: K, handler: EventHandler<EventMap[K]>): void {
     const handlers = this.events.get(event);
     if (handlers) {
-      const index = handlers.indexOf(handler);
+      const index = handlers.indexOf(handler as EventHandler);
       if (index > -1) {
         handlers.splice(index, 1);
       }
     }
   }
 
-  emit(event: string, ...args: unknown[]): void {
+  emit<K extends string & keyof EventMap>(event: K, ...args: EventMap[K]): void {
     const handlers = this.events.get(event);
     if (handlers) {
       // Iterate a copy so handlers that call off() during emit don't skip entries.
@@ -51,7 +64,7 @@ export class EventEmitter {
       const snapshot = [...handlers];
       for (const handler of snapshot) {
         try {
-          (handler as (...a: unknown[]) => void)(...args);
+          handler(...args);
         } catch (error) {
           Logger.error(`EventEmitter: handler error for "${event}":`, error);
         }
@@ -59,7 +72,7 @@ export class EventEmitter {
     }
   }
 
-  removeAllListeners(event?: string): void {
+  removeAllListeners<K extends string & keyof EventMap>(event?: K): void {
     if (event) {
       this.events.delete(event);
     } else {

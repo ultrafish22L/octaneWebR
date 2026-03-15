@@ -16,6 +16,18 @@ import { useStatusMessage } from '../../../contexts/StatusMessageContext';
 import { getPinColor } from '../../../utils/PinColorUtils';
 import { OctaneClient } from '../../../services/OctaneClient';
 
+/**
+ * Safely parse a pin index from a handle string (format: "input-N" or "output-N").
+ * Returns 0 if the format is malformed or the index is not a valid number.
+ */
+function parsePinIndex(handleStr: string | null | undefined): number {
+  if (!handleStr) return 0;
+  const parts = handleStr.split('-');
+  if (parts.length < 2) return 0;
+  const idx = parseInt(parts[1], 10);
+  return isNaN(idx) ? 0 : idx;
+}
+
 interface UseConnectionOperationsProps {
   client: OctaneClient;
   nodes: Node<OctaneNodeData>[];
@@ -176,9 +188,7 @@ export function useConnectionOperations({
 
       const newTargetHandle = parseInt(newConnection.target!);
       const newSourceHandle = parseInt(newConnection.source!);
-      const newPinIdx = newConnection.targetHandle
-        ? parseInt(newConnection.targetHandle.split('-')[1])
-        : 0;
+      const newPinIdx = parsePinIndex(newConnection.targetHandle);
 
       const targetItem = client.lookupItem(newTargetHandle);
       const sourceItem = client.lookupItem(newSourceHandle);
@@ -194,7 +204,7 @@ export function useConnectionOperations({
         return;
       }
 
-      if (targetPin.pinInfo.type != sourceItem.outType) {
+      if (targetPin.pinInfo.type !== sourceItem.outType) {
         Logger.error(
           'Reconnection rejected: pin type mismatch',
           targetPin.pinInfo.type,
@@ -208,11 +218,11 @@ export function useConnectionOperations({
       setEdges(eds => reconnectEdge(oldEdge, newConnection, eds));
 
       // Sync reconnection with Octane (disconnect old, connect new)
-      (async () => {
+      void (async () => {
         try {
           // Disconnect old connection
           const oldTargetHandle = parseInt(oldEdge.target);
-          const oldPinIdx = oldEdge.targetHandle ? parseInt(oldEdge.targetHandle.split('-')[1]) : 0;
+          const oldPinIdx = parsePinIndex(oldEdge.targetHandle);
 
           Logger.debug(`Disconnecting old: node=${oldTargetHandle}, pin=${oldPinIdx}`);
           await client.disconnectPin(oldTargetHandle, oldPinIdx);
@@ -264,8 +274,8 @@ export function useConnectionOperations({
       }
 
       // Validate pin exists before disconnecting
-      const targetHandle = parseInt(edge.target);
-      const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
+      const targetHandle = parseInt(edge.target, 10);
+      const pinIdx = parsePinIndex(edge.targetHandle);
       const targetItem = client.lookupItem(targetHandle);
 
       if (!targetItem?.children?.[pinIdx]?.pinInfo) {
@@ -276,7 +286,7 @@ export function useConnectionOperations({
       }
 
       // Disconnect in Octane and remove from UI
-      (async () => {
+      void (async () => {
         try {
           Logger.debug(`Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
           await client.disconnectPin(targetHandle, pinIdx);
@@ -323,9 +333,7 @@ export function useConnectionOperations({
           );
 
           const targetHandle = parseInt(connection.target);
-          const pinIdx = connection.targetHandle
-            ? parseInt(connection.targetHandle.split('-')[1])
-            : 0;
+          const pinIdx = parsePinIndex(connection.targetHandle);
 
           // Connect each selected node to the target pin
           for (const sourceNodeId of multiConnectSourcesRef.current) {
@@ -416,9 +424,7 @@ export function useConnectionOperations({
         const targetHandle = parseInt(connection.target);
 
         // Extract pin index from targetHandle (format: "input-N")
-        const pinIdx = connection.targetHandle
-          ? parseInt(connection.targetHandle.split('-')[1])
-          : 0;
+        const pinIdx = parsePinIndex(connection.targetHandle);
 
         Logger.debug('Calling ApiNode.connectToIx:', {
           targetHandle,
@@ -443,7 +449,7 @@ export function useConnectionOperations({
           Logger.error('Input item has no pin', pinIdx);
           return;
         }
-        if (child.pinInfo.type != outputItem.outType) {
+        if (child.pinInfo.type !== outputItem.outType) {
           Logger.error(
             'Input pin does not match output type',
             child.pinInfo.type,
@@ -588,8 +594,8 @@ export function useConnectionOperations({
 
       for (const edge of deletedEdges) {
         try {
-          const targetHandle = parseInt(edge.target);
-          const pinIdx = edge.targetHandle ? parseInt(edge.targetHandle.split('-')[1]) : 0;
+          const targetHandle = parseInt(edge.target, 10);
+          const pinIdx = parsePinIndex(edge.targetHandle);
 
           Logger.debug(`Disconnecting in Octane: node=${targetHandle}, pin=${pinIdx}`);
           await client.disconnectPin(targetHandle, pinIdx);

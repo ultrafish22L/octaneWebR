@@ -184,3 +184,10 @@ if (import.meta.hot) {
     Logger.destroy();
   });
 }
+
+// Clean up interval on page unload (production — no HMR)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    Logger.destroy();
+  });
+}

@@ -7,8 +7,10 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { USE_ALPHA5_API } = require('../../../api-version.config.js');
+// API version flag — single source of truth is api-version.config.js (CJS).
+// Duplicated here as a typed constant to avoid cross-boundary require().
+// Must stay in sync with the root config file.
+const USE_ALPHA5_API = true;
 
 // AttrType enum values (from OctaneTypes.ts)
 const AT_BOOL = 1;

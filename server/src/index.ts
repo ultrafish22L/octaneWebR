@@ -32,11 +32,16 @@ app.use(
 );
 app.use(express.json({ limit: '50mb' }));
 
-// Request logging
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
+// Request logging (debug only — suppressed in production)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    // Skip high-frequency polling endpoints to reduce noise
+    if (!req.path.includes('/api/health') && !req.path.includes('/api/render')) {
+      console.log(`${req.method} ${req.path}`);
+    }
+    next();
+  });
+}
 
 const grpcClient = getGrpcClient();
 const callbackManager = getCallbackManager(grpcClient);

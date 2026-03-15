@@ -9,7 +9,7 @@
  * - Platform-specific handling (Cmd on Mac, Ctrl on Windows/Linux)
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 
 export interface KeyboardShortcut {
   key: string;
@@ -25,6 +25,11 @@ export interface KeyboardShortcut {
 interface UseKeyboardShortcutsOptions {
   enabled?: boolean;
   preventDefault?: boolean;
+}
+
+/** Build a composite key for O(1) shortcut lookup: "ctrl+shift+key" */
+function shortcutKey(key: string, ctrl: boolean, shift: boolean, alt: boolean): string {
+  return `${ctrl ? 'c' : ''}${shift ? 's' : ''}${alt ? 'a' : ''}:${key.toLowerCase()}`;
 }
 
 /**
@@ -44,6 +49,20 @@ export function useKeyboardShortcuts(
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
+  // Build O(1) lookup map, rebuilt when shortcuts array identity changes
+  const shortcutMap = useMemo(() => {
+    const map = new Map<string, KeyboardShortcut>();
+    for (const s of shortcuts) {
+      const k = shortcutKey(s.key, s.ctrl ?? false, s.shift ?? false, s.alt ?? false);
+      map.set(k, s);
+    }
+    return map;
+  }, [shortcuts]);
+  const shortcutMapRef = useRef(shortcutMap);
+  useEffect(() => {
+    shortcutMapRef.current = shortcutMap;
+  }, [shortcutMap]);
+
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       // Skip if disabled or if typing in an input field
@@ -54,29 +73,29 @@ export function useKeyboardShortcuts(
         target &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
-      // Find matching shortcut
-      for (const shortcut of shortcutsRef.current) {
-        const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
-        const ctrlMatch = (shortcut.ctrl ?? false) === (event.ctrlKey || event.metaKey);
-        const shiftMatch = (shortcut.shift ?? false) === event.shiftKey;
-        const altMatch = (shortcut.alt ?? false) === event.altKey;
+      // O(1) lookup by composite key
+      const k = shortcutKey(
+        event.key,
+        event.ctrlKey || event.metaKey,
+        event.shiftKey,
+        event.altKey
+      );
+      const shortcut = shortcutMapRef.current.get(k);
 
-        if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
-          // Allow input fields to use their native shortcuts unless explicitly overridden
-          if (isInputField && !shortcut.preventDefault) {
-            continue;
-          }
-
-          // Prevent default browser behavior if requested
-          if (preventDefault || shortcut.preventDefault) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-
-          // Call the handler
-          shortcut.handler(event);
-          break; // Only trigger first matching shortcut
+      if (shortcut) {
+        // Allow input fields to use their native shortcuts unless explicitly overridden
+        if (isInputField && !shortcut.preventDefault) {
+          return;
         }
+
+        // Prevent default browser behavior if requested
+        if (preventDefault || shortcut.preventDefault) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+
+        // Call the handler
+        shortcut.handler(event);
       }
     },
     [enabled, preventDefault]

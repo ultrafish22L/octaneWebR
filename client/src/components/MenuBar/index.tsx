@@ -237,7 +237,7 @@ function MenuBar({
   const showNotification = useCallback(
     (message: string, type: 'success' | 'error' | 'info' = 'info') => {
       Logger.debug(`[${type.toUpperCase()}] ${message}`);
-      // TODO: Implement toast notification system
+      // Future: toast notification UI (currently logs only)
     },
     []
   );
