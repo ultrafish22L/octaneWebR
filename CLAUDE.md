@@ -8,12 +8,13 @@
 
 **CRITICAL MENTAL MODEL — Read This First:**
 
-OTOY Studio is NOT a texture factory. It is the **entire creative supply chain**:
+OTOY Studio is NOT a texture factory. It is a **massive AI aggregator with 1000s of endpoints**:
 
-- **3D Geometry**: OTOY Studio has state-of-the-art text/image-to-3D (Rodin AI). Generate ANY mesh you need — characters, vehicles, architecture, creatures, props. Output GLB → convert to OBJ (`npx gltf-pipeline -i model.glb -o model.obj`) → load into Octane. **You are NOT limited to 10 pre-made .obj files.** The geometry library is infinite.
-- **Textures & Environments**: 3 image gen engines, 2 editing engines, 4x upscaling
-- **Video & Animation**: 3 video gen engines (Veo3 has audio!), image-to-video
+- **3D Geometry**: Text/image-to-3D (Rodin AI, etc.). Generate ANY mesh. GLB → OBJ (`npx gltf-pipeline -i model.glb -o model.obj`) → Octane. **Geometry is infinite.**
+- **Textures & Environments**: Multiple image gen engines, editing, 4x upscaling
+- **Video & Animation**: Multiple video gen engines (Veo3 has audio!), image-to-video
 - **Music**: Original soundtracks from lyrics + reference
+- **And more you haven't discovered yet.** The MCP tools you know are a fraction of what's available. When you need a capability, search for the best model online, then check if OTOY Studio has it — it probably does. Test and discover.
 
 **The stack: OTOY Studio + Octane MCP + Claude = autonomous film production.**
 Start every scene by asking "what do I want to create?" — then generate whatever assets you need. Never ask "what can I do with these .obj files?"

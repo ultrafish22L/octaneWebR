@@ -12,7 +12,7 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 
 ## 1. OTOY Studio — Full Creative Supply Chain
 
-**OTOY Studio is NOT a texture factory.** It is the entire creative supply chain: 3D geometry, textures, environments, video, music. Start every scene by asking "what do I want to create?" then generate whatever you need.
+**OTOY Studio is NOT a texture factory.** It is a **massive AI aggregator with 1000s of endpoints** — 3D geometry, textures, environments, video, music, and capabilities you haven't discovered yet. The MCP tools listed below are just what's been surfaced so far. When you need a new capability, search for the best model online, then check if OTOY Studio has it — it probably does. Test and discover. Start every scene by asking "what do I want to create?" then generate whatever you need.
 
 ### 3D Asset Generation (The Game Changer)
 
