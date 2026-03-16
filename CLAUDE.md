@@ -2,40 +2,43 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 4: AA-Directed Cinematic Marathon — Full OTOY Studio Pipeline**
+**Phase 5: AA-Directed Autonomous Creative Marathon**
 
-**Directive:** AA (Artistic Agent) directs every scene as creative director. No scene ships without AA approval. CM computes camera, TA researches materials. Autonomous all night — no asking permission.
+**Directive:** You are a creative BEAST. AA directs every scene. Full autonomy all night — no asking permission. Think short film, not test renders. You could make a short film overnight.
+
+**CRITICAL MENTAL MODEL — Read This First:**
+
+OTOY Studio is NOT a texture factory. It is the **entire creative supply chain**:
+
+- **3D Geometry**: OTOY Studio has state-of-the-art text/image-to-3D (Rodin AI). Generate ANY mesh you need — characters, vehicles, architecture, creatures, props. Output GLB → convert to OBJ (`npx gltf-pipeline -i model.glb -o model.obj`) → load into Octane. **You are NOT limited to 10 pre-made .obj files.** The geometry library is infinite.
+- **Textures & Environments**: 3 image gen engines, 2 editing engines, 4x upscaling
+- **Video & Animation**: 3 video gen engines (Veo3 has audio!), image-to-video
+- **Music**: Original soundtracks from lyrics + reference
+
+**The stack: OTOY Studio + Octane MCP + Claude = autonomous film production.**
+Start every scene by asking "what do I want to create?" — then generate whatever assets you need. Never ask "what can I do with these .obj files?"
 
 **OTOY Studio Full Pipeline (use for EVERY scene):**
 
-1. `generate_image_pro` → hero textures + environment art
-2. `edit_image` → refine ("make gold veins thicker", "add more detail")
-3. `upscale_image` → 4x resolution for crisp materials
-4. Apply to Octane → NT_TEX_IMAGE on materials + environment
-5. Render in Octane → photorealistic 3D with path tracing
-6. `save_render` → PNG
-7. `request_upload_url` → upload the render
-8. `image_to_video_kling` → animate render into cinematic clip
-9. `generate_music` → original soundtrack
-10. Output: render + video + music = **complete cinematic package**
+1. **Concept** → AA writes creative brief (mood, story, what assets needed)
+2. **3D Assets** → Generate custom meshes via OTOY Studio web UI (Rodin AI) if needed, or use existing .obj library for known shapes
+3. `generate_image_pro` → hero textures + environment art
+4. `edit_image` → refine ("make gold veins thicker", "add more detail")
+5. `upscale_image` → 4x resolution for crisp materials
+6. Apply to Octane → NT_TEX_IMAGE on materials + environment
+7. Render in Octane → photorealistic 3D with path tracing
+8. `save_render` → PNG
+9. `request_upload_url` → upload the render
+10. `image_to_video_kling` → animate render into cinematic clip
+11. `generate_music` → original soundtrack
+12. Output: render + video + music = **complete cinematic package**
 
 **AA Quality Standard:**
 
 - Every render gets honest grade (A/B/C/D). Below B = iterate or pivot.
-- Concept must match geometry — don't force wrong shapes into wrong roles
 - Light for mood FIRST, materials second
 - Environment is a character, not wallpaper
 - If 3 iterations don't hit B+, pivot the concept
-
-**Scene history (30 scenes across prior sessions):**
-
-- Scenes 1-7: Early experiments (teapot, primitives)
-- Scenes 8-14: Multi-object compositions (Space Cat, Monolith, Crystal Forge, etc.)
-- Scenes 15-17: Transform breakthrough (A_TRANSLATION=172)
-- Scenes 18-22: NT_MAT_SPECULAR breakthrough (gems, glass, chrome)
-- Scenes 23-30: Metallic materials, scene repurposing pipeline, colored gems
-- Scene 31: "20,000 Leagues Under the Sea" (in progress — OTOY Studio textures, multi-object underwater scene)
-- Scene 32: "The Jeweler's Sanctum" (in progress — diamond on black marble, OTOY Studio env)
 
 **Known MCP limitations:**
 
@@ -48,8 +51,9 @@
 - **Universal material transmissionType unreliable** — use NT_MAT_SPECULAR for glass
 - **reset_project can crash Octane** — use load_project + repurpose instead
 - **Changing mesh filename after load_project doesn't reload geo** — create new mesh node instead
+- **GLB-to-OBJ conversion needed** for OTOY Studio 3D assets: `npx gltf-pipeline -i model.glb -o model.obj`
 
-**Next session:** Continue Phase 4 cinematic marathon. Finish Jeweler's Sanctum, then keep building with full AA direction + OTOY Studio pipeline. Every scene = render + animated video + music. Target: portfolio-quality cinematic moments.
+**Next session:** Phase 5 autonomous creative marathon. AA directs. Generate custom 3D assets via OTOY Studio as needed — you are not limited to pre-made .obj files. Think short film, not demos. Full pipeline: concept → 3D assets → textures → render → video → music.
 
 ## Project Vocabulary
 

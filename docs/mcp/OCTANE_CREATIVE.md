@@ -6,11 +6,24 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 
 **OctaneRender** — spectrally correct GPU path tracer. Full spectral dispersion, caustics, and blackbody emission are physically accurate by default. The viewport IS the final render. Trust the physics — set real-world IOR, dispersion, emission temperature and let the spectral renderer do its thing.
 
-**Your toolkit:** 28 MCP tools, OTOY Studio (full creative suite — see Section 1), Poly Haven (free HDRIs/textures/models), and the full Octane node graph.
+**Your toolkit:** 28 MCP tools, OTOY Studio (full creative supply chain — 3D generation, textures, video, music — see Section 1), Poly Haven (free HDRIs/textures/models), and the full Octane node graph. **You can generate any 3D asset you need** — geometry is not a constraint.
 
 ---
 
-## 1. OTOY Studio Asset Pipeline
+## 1. OTOY Studio — Full Creative Supply Chain
+
+**OTOY Studio is NOT a texture factory.** It is the entire creative supply chain: 3D geometry, textures, environments, video, music. Start every scene by asking "what do I want to create?" then generate whatever you need.
+
+### 3D Asset Generation (The Game Changer)
+
+OTOY Studio integrates **Rodin AI (Hyper3D)** — state-of-the-art text/image-to-3D mesh generation:
+
+- Generate ANY 3D model from text or image prompt
+- Outputs GLB with PBR textures (albedo, normal, roughness, metallic), proper UVs, quad mesh topology
+- Convert to OBJ for Octane: `npx gltf-pipeline -i model.glb -o model.obj`
+- Load into Octane via `NT_GEO_MESH` + `set_attribute(A_FILENAME=34, path)`
+
+**You are NOT limited to pre-made .obj files.** The geometry library is infinite. Need a dragon? Generate it. A Victorian submarine? Generate it. A crystalline throne? Generate it.
 
 ### Full MCP Tool Arsenal
 
@@ -33,16 +46,18 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 
 ### Full Cinematic Pipeline (per scene)
 
-1. `generate_image_pro` → textures + environment
-2. `edit_image` → refine specific aspects
-3. `upscale_image` → 4x resolution for crisp materials
-4. Apply to Octane → `NT_TEX_IMAGE` on materials + environment
-5. Render in Octane → path tracing
-6. `save_render` → PNG
-7. `request_upload_url` → upload render
-8. `image_to_video_kling` → animate into cinematic clip
-9. `generate_music` → original soundtrack
-10. **Output: render + video + music = complete cinematic package**
+1. **Concept** → AA writes creative brief (mood, story, what assets needed)
+2. **3D Assets** → Generate custom meshes via OTOY Studio (Rodin AI) if needed, convert GLB→OBJ
+3. `generate_image_pro` → textures + environment
+4. `edit_image` → refine specific aspects
+5. `upscale_image` → 4x resolution for crisp materials
+6. Apply to Octane → `NT_TEX_IMAGE` on materials + environment
+7. Render in Octane → path tracing
+8. `save_render` → PNG
+9. `request_upload_url` → upload render
+10. `image_to_video_kling` → animate into cinematic clip
+11. `generate_music` → original soundtrack
+12. **Output: render + video + music = complete cinematic package**
 
 ### Texture Prompt Templates (Copy-Paste Ready)
 
@@ -420,7 +435,7 @@ Post should enhance a good render, never rescue a bad one.
 - **Save .ocs during iteration**, .orbx for final delivery.
 - **Be an honest critic** — if it looks like a dark blob, say "dark blob."
 - **Recipes are creative direction, not scripts** — improve, adapt, deviate.
-- **Assets are never a blocker** — OTOY Studio, Poly Haven, web search.
+- **Geometry is never a constraint** — generate any mesh via OTOY Studio (Rodin AI), convert GLB→OBJ, load into Octane. Don't think "what can I do with these .obj files?" — think "what do I want to create?"
 
 ---
 
