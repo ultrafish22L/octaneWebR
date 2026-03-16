@@ -145,7 +145,6 @@ npm run lint         # ESLint
 - **[CHANGELOG.md](./CHANGELOG.md)** — Version history
 - **[IMPROVEMENTS.md](./IMPROVEMENTS.md)** — Improvement backlog
 - **[OTOY_COMPARISON.md](./OTOY_COMPARISON.md)** — Feature gap analysis vs Octane SE
-- **[PROTO_PLAN.md](./PROTO_PLAN.md)** — Proto API coverage plan
 
 ### External
 
