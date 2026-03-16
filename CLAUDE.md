@@ -54,7 +54,17 @@ Start every scene by asking "what do I want to create?" — then generate whatev
 - **Changing mesh filename after load_project doesn't reload geo** — create new mesh node instead
 - **GLB-to-OBJ conversion needed** for OTOY Studio 3D assets: `npx gltf-pipeline -i model.glb -o model.obj`
 
-**Next session:** Phase 5 autonomous creative marathon. AA directs. Generate custom 3D assets via OTOY Studio as needed — you are not limited to pre-made .obj files. Think short film, not demos. Full pipeline: concept → 3D assets → textures → render → video → music.
+**Next session — THE BRIEF:**
+
+**"20,000 Leagues Under the Sea — Cat Captain Nemo"** — A cinematic storyboard.
+
+8-12 hero renders that tell a narrative story. Each frame is a standalone beauty shot, but together they read as a visual storyboard for an animated film. Like concept art for a Pixar pitch deck.
+
+- **No video, no music** — just renders so good they look like film frames
+- **Each scene**: OTOY Studio textures + environments, Octane path-traced rendering, AA-directed lighting/composition
+- **Generate custom 3D assets** via OTOY Studio as needed — Nautilus submarine, underwater ruins, treasure, creatures. You are NOT limited to pre-made .obj files.
+- **Narrative arc**: Establish world → introduce hero → adventure → climax → resolution
+- **AA grades every frame.** Below B+ = iterate. These are portfolio pieces.
 
 ## Project Vocabulary
 
