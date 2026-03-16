@@ -275,6 +275,27 @@ Shared Falloff map (normal=0, grazing=1, index=3) × Marble via Multiply texture
 - **Fill light:** NT_EMIS_BLACKBODY, 5500K neutral, power 20-30, opposite side. Set `camera_visibility: false` on object layer (NOTE: MCP can't reliably set this bool — disconnect fill geo if it shows in frame)
 - **Environment:** Use neutral gray RGB (0.28-0.32) as env texture for calibration. Low env power (0.4-0.6) so area light dominates. High env power washes out coating reflections.
 
+## Lighting — Cinematic Two-Light Setup (sphere lights)
+
+**Sphere light pipeline:** NT_EMIS_BLACKBODY → connect to NT_MAT_DIFFUSE via `pin_id: 41` (P_EMISSION) → connect diffuse to NT_LIGHT_SPHERE `pin_index: 1` (material1)
+
+**CRITICAL: Sphere light transform uses A_TRANSLATION=172, NOT A_VALUE=185!**
+The transform child on NT_LIGHT_SPHERE is an NT_TRANSFORM_VALUE node. Set position with:
+`set_attribute(transform_handle, A_TRANSLATION=172, AT_FLOAT3=11, {x, y, z})`
+Using A_VALUE=185 silently fails — the value appears to set but reads back as {0,0,0}.
+
+**Emission defaults that kill output:**
+- `efficiency` (pin 0) defaults to 0.025 — set to 1.0 or lights will be 40x dimmer than expected
+- `surfaceBrightness` (pin 2) normalizes by area — disable for small spheres (set to false)
+
+**Power ranges (with efficiency=1.0, surfaceBrightness=false):**
+| Scenario | Key power | Fill power | Notes |
+|----------|-----------|------------|-------|
+| Product/close-up | 200-400 | 100-200 | Lights 3-5 units from subject |
+| Room/enclosed | 4000-8000 | 2000-4000 | Lights far from surfaces |
+
+**Temperatures:** Warm key 2800-3500K, cool fill 7000-9000K. Or neutral key 4500K + cool fill 8500K.
+
 **Ebony/dark material trick:** Dark environment + bright key light. Dark env means coating reflects dark = material reads as black. Bright neutral env makes dark glossy surfaces look gray (physically correct but not desired).
 
 **Calibration workflow:** Switch env between neutral gray (for tuning materials) and workshop IBL (for final beauty). Neutral reveals true material response; IBL adds production mood.

@@ -263,12 +263,23 @@ Space scenes have no environment light (texture env at low power provides stars 
 
 ### 3D Asset Pipeline (OTOY Studio → Octane)
 
-**OTOY Studio** (otoy.studio) provides AI-powered 3D generation:
+**OTOY Studio** (otoy.studio) provides AI-powered creative tools via MCP:
 
-1. **Text-to-Image**: Seedream v4.5 — generate concept art
-2. **Image-to-3D**: Hunyuan-3d v3.1 [Pro] Image — 56 credits, needs front image, optional back/left/right views
-3. **Download**: OBJ + texture PNG → save to `ORBX/assets/`
-4. **Load in Octane**: `NT_GEO_MESH` → set `A_FILENAME` → material with `NT_TEX_IMAGE` for texture
+**Image:** `generate_image` (Flux/Schnell, fast), `generate_image_pro` (Flux/Pro, hero quality), `generate_image_nano` (Google Nano-Banana)
+**Edit:** `edit_image` (Flux Kontext — refine textures), `edit_image_nano` (multi-reference blend)
+**Upscale:** `upscale_image` / `upscale_video` (SeedVR, up to 4x)
+**Video:** `generate_video_veo3` (with audio!), `generate_video_kling`, `generate_video_seedance`
+**Animate:** `image_to_video_kling` (animate Octane renders into clips)
+**Music:** `generate_music` (lyrics + reference audio)
+**Upload:** `request_upload_url` (upload local files for edit/animate)
+
+See `docs/mcp/OCTANE_CREATIVE.md` Section 1 for full pipeline and prompt templates.
+
+**3D via OTOY Studio web UI** (otoy.studio, not MCP):
+
+1. **Image-to-3D**: Hunyuan-3d v3.1 [Pro] Image — 56 credits, needs front image
+2. **Download**: OBJ + texture PNG → save to `ORBX/assets/`
+3. **Load in Octane**: `NT_GEO_MESH` → set `A_FILENAME` → material with `NT_TEX_IMAGE` for texture
 
 **Model orientation — CRITICAL**:
 

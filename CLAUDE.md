@@ -2,39 +2,54 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 0: Wood Chips Demo — v9 punchup (AA-tuned, final)**
+**Phase 4: AA-Directed Cinematic Marathon — Full OTOY Studio Pipeline**
 
-Scene: 7 procedural wood chip samples on pine plank — red oak, white oak, purpleheart, ebony, maple, walnut, zebrawood. Current: `ORBX/woodchips_demo_v9_punchup.orbx`. Full recipe in `docs/recipes/woodchips_RECIPE.md`.
+**Directive:** AA (Artistic Agent) directs every scene as creative director. No scene ships without AA approval. CM computes camera, TA researches materials. Autonomous all night — no asking permission.
 
-**v9 punchup (this session):**
+**OTOY Studio Full Pipeline (use for EVERY scene):**
 
-- **AA punch-up**: flattened blocks to real sample proportions (0.5×0.15×0.8), added Y-rotation jitter and X-position jitter to break CG array look
-- **Specular/bump balance solved**: bump 0.01 + specular 0.2 gives visible grain texture on top/side faces without white hotspots on end grain. Coating layer handles most sheen independently.
-- **Ebony special treatment**: near-zero bump (0.001), high specular (0.5) — mirror-smooth dark wood, no grain texture
-- **Key insight: specular × bump = end grain artifacts**. Marble bumps all faces equally; end grain (perpendicular cut) shouldn't have surface relief. Low specular lets bump show in diffuse only.
+1. `generate_image_pro` → hero textures + environment art
+2. `edit_image` → refine ("make gold veins thicker", "add more detail")
+3. `upscale_image` → 4x resolution for crisp materials
+4. Apply to Octane → NT_TEX_IMAGE on materials + environment
+5. Render in Octane → photorealistic 3D with path tracing
+6. `save_render` → PNG
+7. `request_upload_url` → upload the render
+8. `image_to_video_kling` → animate render into cinematic clip
+9. `generate_music` → original soundtrack
+10. Output: render + video + music = **complete cinematic package**
 
-**Scene version history:**
-| Version | File | Nodes | Key feature |
-|---------|------|-------|-------------|
-| v5 | woodchips_demo_v5_mirror_ends.orbx | 100 | Full-featured: roughness-by-grain, falloff bump, warm coatings, cosmic blue env |
-| v6 rebuild | woodchips_demo_v6_rebuild.orbx | 64 | Clean rebuild after crash |
-| v7 hybrid | woodchips_demo_v7_hybrid.orbx | 64 | v6 + v5 material values |
-| v8 tuned | woodchips_demo_v8_tuned.orbx | 64 | Reduced Z-scales, bump, increased gamma |
-| v9 punchup | woodchips_demo_v9_punchup.orbx | 64 | Flat blocks, rotation jitter, specular/bump balance, ebony mirror |
+**AA Quality Standard:**
+
+- Every render gets honest grade (A/B/C/D). Below B = iterate or pivot.
+- Concept must match geometry — don't force wrong shapes into wrong roles
+- Light for mood FIRST, materials second
+- Environment is a character, not wallpaper
+- If 3 iterations don't hit B+, pivot the concept
+
+**Scene history (30 scenes across prior sessions):**
+
+- Scenes 1-7: Early experiments (teapot, primitives)
+- Scenes 8-14: Multi-object compositions (Space Cat, Monolith, Crystal Forge, etc.)
+- Scenes 15-17: Transform breakthrough (A_TRANSLATION=172)
+- Scenes 18-22: NT_MAT_SPECULAR breakthrough (gems, glass, chrome)
+- Scenes 23-30: Metallic materials, scene repurposing pipeline, colored gems
+- Scene 31: "20,000 Leagues Under the Sea" (in progress — OTOY Studio textures, multi-object underwater scene)
+- Scene 32: "The Jeweler's Sanctum" (in progress — diamond on black marble, OTOY Studio env)
 
 **Known MCP limitations:**
 
-- `camera_visibility` bool on Object Layer doesn't stick (reverts to true)
-- `transparentEmission` on blackbody doesn't hide geo from camera either
-- Flat AI-generated images don't work as equirectangular env maps (stretch badly)
+- `camera_visibility` bool on Object Layer doesn't stick
+- `transparentEmission` on blackbody doesn't hide geo from camera
+- Flat AI images don't work as equirectangular env maps
+- **NT_GEO_MESH has no transform pins** — meshes render at .obj coordinates
+- **Primitive type changes crash Octane** — Box-only + .obj meshes
+- **Sphere light transforms need A_TRANSLATION=172** (not A_VALUE=185)
+- **Universal material transmissionType unreliable** — use NT_MAT_SPECULAR for glass
+- **reset_project can crash Octane** — use load_project + repurpose instead
+- **Changing mesh filename after load_project doesn't reload geo** — create new mesh node instead
 
-**Remaining work (wood chips — optional polish):**
-
-- Add roughness-by-grain (create Mix + 2 Grayscale nodes per species, wire to roughness pin)
-- Add Falloff map + Multiply textures for view-dependent bump
-- Env Mix texture (cosmic blue turbulence env) — currently flat gray
-
-**Next session:** Build a new scene from recipes (Alchemist's Table or Sword recommended). Or Phase 1 MCP debug (7 bugs + 7 resilience items). Full details in `docs/project/SESSION.md`.
+**Next session:** Continue Phase 4 cinematic marathon. Finish Jeweler's Sanctum, then keep building with full AA direction + OTOY Studio pipeline. Every scene = render + animated video + music. Target: portfolio-quality cinematic moments.
 
 ## Project Vocabulary
 

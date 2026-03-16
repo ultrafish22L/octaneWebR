@@ -6,11 +6,43 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 
 **OctaneRender** — spectrally correct GPU path tracer. Full spectral dispersion, caustics, and blackbody emission are physically accurate by default. The viewport IS the final render. Trust the physics — set real-world IOR, dispersion, emission temperature and let the spectral renderer do its thing.
 
-**Your toolkit:** 28 MCP tools, OTOY Studio (Seedream v4.5 text-to-image, Seed3D image-to-3D), Poly Haven (free HDRIs/textures/models), and the full Octane node graph.
+**Your toolkit:** 28 MCP tools, OTOY Studio (full creative suite — see Section 1), Poly Haven (free HDRIs/textures/models), and the full Octane node graph.
 
 ---
 
 ## 1. OTOY Studio Asset Pipeline
+
+### Full MCP Tool Arsenal
+
+| Category   | Tool                      | Model              | Use For                                             |
+| ---------- | ------------------------- | ------------------ | --------------------------------------------------- |
+| Image Gen  | `generate_image`          | Flux/Schnell       | Fast texture drafts, iteration                      |
+| Image Gen  | `generate_image_pro`      | Flux/Pro           | Hero textures, environments, concept art            |
+| Image Gen  | `generate_image_nano`     | Google Nano-Banana | Quick experiments                                   |
+| Image Edit | `edit_image`              | Flux Kontext       | Refine textures ("add more veins", "darken edges")  |
+| Image Edit | `edit_image_nano`         | Google Nano-Banana | Blend multiple reference images                     |
+| Upscale    | `upscale_image`           | SeedVR             | 4x resolution on textures or renders                |
+| Video Gen  | `generate_video_veo3`     | Google Veo3        | Video **with audio**, up to 1080p                   |
+| Video Gen  | `generate_video_kling`    | Kling 2.1 Master   | 5-10 sec cinematic clips                            |
+| Video Gen  | `generate_video_seedance` | ByteDance Seedance | 3-12 sec, shot type annotations                     |
+| Animate    | `image_to_video_kling`    | Kling 2.1          | Animate any still image (including Octane renders!) |
+| Upscale    | `upscale_video`           | SeedVR             | 4x video upscale                                    |
+| Music      | `generate_music`          | —                  | Original music from lyrics + reference audio        |
+| Upload     | `request_upload_url`      | —                  | Upload local files for use in edit/animate tools    |
+| LLM        | `chat_completion`         | Gemini Flash       | Text research, prompt refinement                    |
+
+### Full Cinematic Pipeline (per scene)
+
+1. `generate_image_pro` → textures + environment
+2. `edit_image` → refine specific aspects
+3. `upscale_image` → 4x resolution for crisp materials
+4. Apply to Octane → `NT_TEX_IMAGE` on materials + environment
+5. Render in Octane → path tracing
+6. `save_render` → PNG
+7. `request_upload_url` → upload render
+8. `image_to_video_kling` → animate into cinematic clip
+9. `generate_music` → original soundtrack
+10. **Output: render + video + music = complete cinematic package**
 
 ### Texture Prompt Templates (Copy-Paste Ready)
 
