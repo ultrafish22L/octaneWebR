@@ -22,10 +22,12 @@ export const TOOLBAR_ICON_MAP: ToolbarIconMapping = {
   'realtime-mode': 'RENDER TARGET node.png',
   'real-time-render': 'real_time.png',
   'clay-mode': 'CLAY window.png',
-  'clay-mode-off': 'CLAY OFF window.png',
-  'subsampling-menu': 'SUBSAMPLING window.png',
-  'subsample-2x2': '2x.png',
-  'subsample-4x4': '4x.png',
+  'clay-mode-none': 'CLAY OFF window.png',
+  'clay-mode-colored': 'CLAY COLOUR window.png',
+  'subsample-mode': 'SAMPLE 1x.png',
+  'subsample-none': 'SAMPLE 1x.png',
+  'subsample-2x2': 'SAMPLE 2x.png',
+  'subsample-4x4': 'SAMPLE 4x.png',
   'decal-wireframe': 'draw_decal_wireframe.png',
 
   // Camera Tools

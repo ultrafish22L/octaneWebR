@@ -51,22 +51,36 @@ export class RenderService extends BaseService {
     this.emit('renderStateChanged', this.renderState);
   }
 
-  async getClayMode(): Promise<number> {
+  // Clay mode — API returns enum string: CLAY_MODE_NONE, CLAY_MODE_GREY, CLAY_MODE_COLOURED
+  async getClayMode(): Promise<string> {
     const response = await this.apiService.callApi('ApiRenderEngine', 'clayMode', {});
-    return asNumber(response?.result, 0);
+    return String(response?.result ?? 'CLAY_MODE_NONE');
   }
 
   async setClayMode(mode: number): Promise<void> {
     await this.apiService.callApi('ApiRenderEngine', 'setClayMode', null, { mode });
   }
 
-  async getSubSampleMode(): Promise<number> {
+  // Sub-sample mode — API returns: SUBSAMPLEMODE_NONE, SUBSAMPLEMODE_2X2, SUBSAMPLEMODE_4X4
+  async getSubSampleMode(): Promise<string> {
     const response = await this.apiService.callApi('ApiRenderEngine', 'getSubSampleMode', {});
-    return asNumber(response?.result, 1);
+    return String(response?.result ?? 'SUBSAMPLEMODE_NONE');
   }
 
   async setSubSampleMode(mode: number): Promise<void> {
     await this.apiService.callApi('ApiRenderEngine', 'setSubSampleMode', null, { mode });
+  }
+
+  // Render priority — API returns: PRIORITY_LOW, PRIORITY_MEDIUM, PRIORITY_HIGH
+  async getRenderPriority(): Promise<string> {
+    const response = await this.apiService.callApi('ApiRenderEngine', 'renderPriority', {});
+    return String(response?.result ?? 'PRIORITY_MEDIUM');
+  }
+
+  // Real-time mode — API returns { result: bool }
+  async getRealTime(): Promise<boolean> {
+    const response = await this.apiService.callApi('ApiRenderEngine', 'getRealTime', {});
+    return asBool(response?.result, false);
   }
 
   async getRenderStatistics(): Promise<Record<string, unknown> | null> {

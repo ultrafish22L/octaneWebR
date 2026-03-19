@@ -113,11 +113,9 @@ export function useToolbarActions({
         case 'lock-viewport':
           return state.viewportLocked ? 'active' : '';
         case 'clay-mode':
-          return state.clayMode ? 'active' : '';
-        case 'subsample-2x2':
-          return state.subSampling === '2x2' ? 'active' : '';
-        case 'subsample-4x4':
-          return state.subSampling === '4x4' ? 'active' : '';
+          return state.clayMode !== 'none' ? 'active' : '';
+        case 'subsample-mode':
+          return state.subSampling !== 'none' ? 'active' : '';
         case 'decal-wireframe':
           return state.decalWireframe ? 'active' : '';
         case 'viewport-resolution-lock':
@@ -180,8 +178,14 @@ export function useToolbarActions({
             });
           break;
         case 'camera-presets':
-          setState(prev => ({ ...prev, showCameraPresetsMenu: !prev.showCameraPresetsMenu }));
-          Logger.debug('Camera presets menu:', !state.showCameraPresetsMenu ? 'OPEN' : 'CLOSED');
+          setState(prev => ({
+            ...prev,
+            showCameraPresetsMenu: !prev.showCameraPresetsMenu,
+            showRenderPriorityMenu: false,
+            showGizmoModeMenu: false,
+            showClayModeMenu: false,
+            showSubSampleMenu: false,
+          }));
           break;
 
         // Render Controls
@@ -287,59 +291,27 @@ export function useToolbarActions({
           togglePickingMode('filmRegion');
           break;
 
-        // Rendering Settings
-        case 'clay-mode': {
-          const newClayMode = !state.clayMode;
-          setState(prev => ({ ...prev, clayMode: newClayMode }));
-          Logger.debug(`Clay mode: ${newClayMode ? 'ON' : 'OFF'}`);
-          // CLAY_MODE_NONE = 0, CLAY_MODE_GREY = 1
-          client
-            .setClayMode(newClayMode ? 1 : 0)
-            .then(() => {
-              Logger.debug('Clay mode updated in Octane');
-            })
-            .catch(err => {
-              Logger.error('Failed to set clay mode:', err);
-              setTemporaryStatus('Failed to set clay mode', 3000);
-              // Revert UI state on error
-              setState(prev => ({ ...prev, clayMode: !newClayMode }));
-            });
+        // Rendering Settings — dropdowns
+        case 'clay-mode':
+          setState(prev => ({
+            ...prev,
+            showClayModeMenu: !prev.showClayModeMenu,
+            showSubSampleMenu: false,
+            showCameraPresetsMenu: false,
+            showRenderPriorityMenu: false,
+            showGizmoModeMenu: false,
+          }));
           break;
-        }
-        case 'subsample-2x2': {
-          const new2x2Mode = state.subSampling === '2x2' ? 'none' : '2x2';
-          setState(prev => ({ ...prev, subSampling: new2x2Mode }));
-          Logger.debug(`Sub-sampling 2x2: ${new2x2Mode === '2x2' ? 'ON' : 'OFF'}`);
-          // SUBSAMPLEMODE_NONE = 1, SUBSAMPLEMODE_2X2 = 2
-          client
-            .setSubSampleMode(new2x2Mode === '2x2' ? 2 : 1)
-            .then(() => {
-              Logger.debug('Sub-sampling mode updated in Octane');
-            })
-            .catch(err => {
-              Logger.error('Failed to set sub-sampling mode:', err);
-              setTemporaryStatus('Failed to set sub-sampling mode', 3000);
-              setState(prev => ({ ...prev, subSampling: state.subSampling }));
-            });
+        case 'subsample-mode':
+          setState(prev => ({
+            ...prev,
+            showSubSampleMenu: !prev.showSubSampleMenu,
+            showClayModeMenu: false,
+            showCameraPresetsMenu: false,
+            showRenderPriorityMenu: false,
+            showGizmoModeMenu: false,
+          }));
           break;
-        }
-        case 'subsample-4x4': {
-          const new4x4Mode = state.subSampling === '4x4' ? 'none' : '4x4';
-          setState(prev => ({ ...prev, subSampling: new4x4Mode }));
-          Logger.debug(`Sub-sampling 4x4: ${new4x4Mode === '4x4' ? 'ON' : 'OFF'}`);
-          // SUBSAMPLEMODE_NONE = 1, SUBSAMPLEMODE_4X4 = 4
-          client
-            .setSubSampleMode(new4x4Mode === '4x4' ? 4 : 1)
-            .then(() => {
-              Logger.debug('Sub-sampling mode updated in Octane');
-            })
-            .catch(err => {
-              Logger.error('Failed to set sub-sampling mode:', err);
-              setTemporaryStatus('Failed to set sub-sampling mode', 3000);
-              setState(prev => ({ ...prev, subSampling: state.subSampling }));
-            });
-          break;
-        }
         case 'decal-wireframe':
           setState(prev => ({ ...prev, decalWireframe: !prev.decalWireframe }));
           Logger.debug(
@@ -350,8 +322,14 @@ export function useToolbarActions({
           // UI state tracked for future implementation when API becomes available
           break;
         case 'render-priority':
-          setState(prev => ({ ...prev, showRenderPriorityMenu: !prev.showRenderPriorityMenu }));
-          Logger.debug('Render priority menu:', !state.showRenderPriorityMenu ? 'OPEN' : 'CLOSED');
+          setState(prev => ({
+            ...prev,
+            showRenderPriorityMenu: !prev.showRenderPriorityMenu,
+            showCameraPresetsMenu: false,
+            showGizmoModeMenu: false,
+            showClayModeMenu: false,
+            showSubSampleMenu: false,
+          }));
           break;
 
         // Output Controls
@@ -414,8 +392,14 @@ export function useToolbarActions({
 
         // Object Manipulation
         case 'object-control-alignment':
-          setState(prev => ({ ...prev, showGizmoModeMenu: !prev.showGizmoModeMenu }));
-          Logger.debug('Gizmo mode menu:', !state.showGizmoModeMenu ? 'OPEN' : 'CLOSED');
+          setState(prev => ({
+            ...prev,
+            showGizmoModeMenu: !prev.showGizmoModeMenu,
+            showCameraPresetsMenu: false,
+            showRenderPriorityMenu: false,
+            showClayModeMenu: false,
+            showSubSampleMenu: false,
+          }));
           break;
         case 'translate-gizmo':
           toggleGizmo('translate');

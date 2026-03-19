@@ -111,7 +111,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
       <div className="scene-outliner-button-bar">
         <button
           className="outliner-btn"
-          title="Expand all nodes"
+          title="Uncollapses all the items in the outliner."
           data-action="expand-tree"
           onClick={handleExpandAll}
           disabled={loading || !connected || sceneTree.length === 0}
@@ -128,7 +128,7 @@ export const SceneOutliner = React.memo(function SceneOutliner({
         </button>
         <button
           className="outliner-btn"
-          title="Collapse all nodes"
+          title="Collapses all the items in the outliner."
           data-action="collapse-tree"
           onClick={handleCollapseAll}
           disabled={loading || !connected || sceneTree.length === 0}

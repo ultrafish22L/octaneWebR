@@ -4,13 +4,11 @@ Ordered easy → hard within each section. Done items purged.
 
 ## Easy
 
-| #   | Item                                       | Notes                                                                                 |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
-| 1   | Lazy logging (Logger accepts callbacks)    | 463 calls across 52 files. Biggest perf win — avoids JSON.stringify when debug is off |
-| 2   | MCP RT auto-select doesn't expand outliner | Expand tree node on auto-select                                                       |
-| 3   | Empty nodes not selectable in outliner     | Show and make clickable                                                               |
-| 4   | Inspector incomplete after MCP add         | buildNewNode depth issue — deferred loadSceneTree or deeper recursion                 |
-| 5   | Panel title menu icon                      | Icon element left of each panel title                                                 |
+| #   | Item                                    | Notes                                                                                 |
+| --- | --------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | Lazy logging (Logger accepts callbacks) | 463 calls across 52 files. Biggest perf win — avoids JSON.stringify when debug is off |
+| 2   | Inspector incomplete after MCP add      | buildNewNode depth issue — deferred loadSceneTree or deeper recursion                 |
+| 3   | Panel title menu icon                   | Icon element left of each panel title                                                 |
 
 ## Medium
 

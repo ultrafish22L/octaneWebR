@@ -16,7 +16,7 @@ import { Logger } from '../../../utils/Logger';
 export interface ToolbarState {
   realTimeMode: boolean;
   viewportLocked: boolean;
-  clayMode: boolean;
+  clayMode: 'none' | 'grey' | 'colored';
   subSampling: 'none' | '2x2' | '4x4';
   renderPriority: 'low' | 'normal' | 'high';
   currentPickingMode:
@@ -36,6 +36,8 @@ export interface ToolbarState {
   showCameraPresetsMenu: boolean;
   showRenderPriorityMenu: boolean;
   showGizmoModeMenu: boolean;
+  showClayModeMenu: boolean;
+  showSubSampleMenu: boolean;
 }
 
 interface UseRenderSettingsProps {
@@ -50,18 +52,20 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
   const [state, setState] = useState<ToolbarState>({
     realTimeMode: false,
     viewportLocked: false,
-    clayMode: false,
+    clayMode: 'none',
     subSampling: 'none',
     renderPriority: 'normal',
     currentPickingMode: 'none',
     decalWireframe: false,
     worldCoordinateDisplay: true,
-    objectControlMode: 'world',
+    objectControlMode: 'local',
     activeGizmo: 'none',
     viewportResolutionLock: false,
     showCameraPresetsMenu: false,
     showRenderPriorityMenu: false,
     showGizmoModeMenu: false,
+    showClayModeMenu: false,
+    showSubSampleMenu: false,
   });
 
   // Initialize rendering settings from Octane on connect
@@ -70,17 +74,41 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
 
     const initializeRenderSettings = async () => {
       try {
-        // Initialize clay mode
-        const clayModeValue = await client.getClayMode();
-        setState(prev => ({ ...prev, clayMode: clayModeValue !== 0 }));
-        Logger.debug('Clay mode initialized:', clayModeValue === 0 ? 'OFF' : 'ON');
+        // Initialize clay mode — API returns enum strings
+        const clayEnum = await client.getClayMode();
+        const clayModeState =
+          clayEnum.includes('COLOR') || clayEnum.includes('COLOUR')
+            ? 'colored'
+            : clayEnum.includes('GREY')
+              ? 'grey'
+              : 'none';
+        setState(prev => ({ ...prev, clayMode: clayModeState }));
+        Logger.debug('Clay mode initialized:', clayModeState, `(${clayEnum})`);
 
         // Initialize sub-sampling mode
-        const subSampleValue = await client.getSubSampleMode();
-        const subSamplingMode =
-          subSampleValue === 2 ? '2x2' : subSampleValue === 4 ? '4x4' : 'none';
+        const subEnum = await client.getSubSampleMode();
+        const subSamplingMode = subEnum.includes('4X4')
+          ? '4x4'
+          : subEnum.includes('2X2')
+            ? '2x2'
+            : 'none';
         setState(prev => ({ ...prev, subSampling: subSamplingMode }));
-        Logger.debug('Sub-sampling initialized:', subSamplingMode.toUpperCase());
+        Logger.debug('Sub-sampling initialized:', subSamplingMode, `(${subEnum})`);
+
+        // Initialize render priority
+        const priEnum = await client.getRenderPriority();
+        const priorityState = priEnum.includes('LOW')
+          ? 'low'
+          : priEnum.includes('HIGH')
+            ? 'high'
+            : 'normal';
+        setState(prev => ({ ...prev, renderPriority: priorityState }));
+        Logger.debug('Render priority initialized:', priorityState, `(${priEnum})`);
+
+        // Initialize real-time mode
+        const realTimeValue = await client.getRealTime();
+        setState(prev => ({ ...prev, realTimeMode: realTimeValue }));
+        Logger.debug('Real-time mode initialized:', realTimeValue ? 'ON' : 'OFF');
 
         // Initialize viewport resolution lock
         const resolutionLock = await client.getViewportResolutionLock();

@@ -10,7 +10,7 @@
  * - useToolbarActions: Toolbar button handlers
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useOctane } from '../../hooks/useOctane';
 import { GPUStatisticsDialog } from '../dialogs/GPUStatisticsDialog';
 import { getToolbarIconPath } from '../../constants/ToolbarIconMapping';
@@ -95,11 +95,11 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     // Camera & View Controls
     {
       id: 'recenter-view',
-      tooltip: 'Recenter View - Centers the render view display area in the Render Viewport.',
+      tooltip: 'Centers the rendered image in the viewport. Use Ctrl to also reset the zoom.',
     },
     {
       id: 'reset-camera',
-      tooltip: 'Reset Camera - Resets the camera back to the original position.',
+      tooltip: 'Resets the camera to its initial position and target.',
     },
     {
       id: 'camera-presets',
@@ -111,12 +111,12 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     // Render Controls
     {
       id: 'stop-render',
-      tooltip: 'Stop Render - Aborts the rendering process and frees all resources.',
+      tooltip: 'Stops the current render.',
       important: true,
     },
     {
       id: 'restart-render',
-      tooltip: 'Restart Render - Halts and restarts the rendering process at zero samples.',
+      tooltip: 'Restarts the current render.',
       important: true,
     },
 
@@ -124,7 +124,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
 
     {
       id: 'pause-render',
-      tooltip: 'Pause Render - Pauses the rendering without losing rendered data.',
+      tooltip: 'Pauses the current render.',
       important: true,
     },
     {
@@ -137,7 +137,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
 
     {
       id: 'real-time-render',
-      tooltip: 'Real Time Rendering - Uses more GPU memory for interactive experience.',
+      tooltip: 'Toggle real-time rendering.',
     },
 
     { type: 'separator' },
@@ -145,39 +145,41 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     // Picking Tools
     {
       id: 'focus-picker',
-      tooltip: 'Auto Focus Picking Mode - Click on scene to focus camera on that point.',
+      tooltip: 'Toggles the camera focus picker of the render viewport.',
     },
     {
       id: 'white-balance-picker',
-      tooltip: 'White Balance Picking Mode - Select part of scene for white point colors.',
+      tooltip: 'Toggles the imager white point picker of the viewport.',
     },
     {
       id: 'material-picker',
-      tooltip: 'Material Picker - Select rendered scene to inspect material.',
+      tooltip: 'Toggles the material picker of the render viewport.',
     },
-    { id: 'object-picker', tooltip: 'Object Picker - Select objects to inspect attributes.' },
+    { id: 'object-picker', tooltip: 'Toggles the object picker of the render viewport.' },
     {
       id: 'camera-target-picker',
-      tooltip: 'Camera Target Picker - Set center of rotation and zooming.',
+      tooltip: 'Toggles the camera target picker of the render viewport.',
     },
     {
       id: 'render-region-picker',
-      tooltip: 'Render Region Picker - Specify a region in viewport to view changes.',
+      tooltip: 'Toggles the render region lasso in the viewport.',
     },
     {
       id: 'film-region-picker',
-      tooltip: 'Film Region Picker - Set region for Film Settings parameters.',
+      tooltip: 'Toggles the film region settings lasso in the viewport.',
     },
 
     { type: 'separator' },
 
-    // Rendering Settings
-    { id: 'clay-mode', tooltip: 'Clay Mode - Shows model details without complex texturing.' },
+    // Rendering Settings — dropdowns
     {
-      id: 'subsample-2x2',
-      tooltip: 'Sub-Sampling 2×2 - Smoother navigation by reducing render resolution.',
+      id: 'clay-mode',
+      tooltip: 'The clay mode that should be used for rendering.',
     },
-    { id: 'subsample-4x4', tooltip: 'Sub-Sampling 4×4 - Maximum navigation smoothness.' },
+    {
+      id: 'subsample-mode',
+      tooltip: 'The subsample mode that should be used for rendering.',
+    },
 
     { type: 'separator' },
 
@@ -186,7 +188,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     { type: 'separator' },
 
     // Output Controls
-    { id: 'copy-clipboard', tooltip: 'Copy to Clipboard - Copies current render in LDR format.' },
+    { id: 'copy-clipboard', tooltip: 'Copy to clipboard.' },
     { id: 'save-render', tooltip: 'Save Render - Saves current render to disk.' },
     {
       id: 'export-passes',
@@ -194,7 +196,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     },
     {
       id: 'background-image',
-      tooltip: 'Set Background Image - Places background image in viewport.',
+      tooltip: 'Shows a dialog to change the background image of the render viewport.',
     },
 
     { type: 'separator' },
@@ -212,9 +214,9 @@ export const RenderToolbar = React.memo(function RenderToolbar({
       id: 'object-control-alignment',
       tooltip: 'Toggle the current gizmo mode',
     },
-    { id: 'translate-gizmo', tooltip: 'Placement Translation Tool - Move objects along axes.' },
-    { id: 'rotate-gizmo', tooltip: 'Placement Rotation Tool - Rotate objects around axes.' },
-    { id: 'scale-gizmo', tooltip: 'Placement Scale Tool - Scale objects uniformly or per axis.' },
+    { id: 'translate-gizmo', tooltip: 'Toggle the move gizmo frame.' },
+    { id: 'rotate-gizmo', tooltip: 'Toggle the rotate gizmo frame.' },
+    { id: 'scale-gizmo', tooltip: 'Toggle the scale gizmo frame.' },
     {
       id: 'world-coordinate',
       tooltip: 'Display World Coordinate - Shows world axis in viewport corner.',
@@ -258,6 +260,59 @@ export const RenderToolbar = React.memo(function RenderToolbar({
   const handleWorldModeClick = useCallback(() => {
     setState(prev => ({ ...prev, objectControlMode: 'world', showGizmoModeMenu: false }));
   }, [setState]);
+
+  // Clay mode handlers — CLAY_MODE_NONE = 0, CLAY_MODE_GREY = 1, CLAY_MODE_COLORED = 2
+  const handleClayMode = useCallback(
+    (mode: 'none' | 'grey' | 'colored') => {
+      const prev = state.clayMode;
+      const modeValue = mode === 'colored' ? 2 : mode === 'grey' ? 1 : 0;
+      setState(p => ({ ...p, clayMode: mode, showClayModeMenu: false }));
+      client.setClayMode(modeValue).catch(() => {
+        setState(p => ({ ...p, clayMode: prev }));
+      });
+    },
+    [state.clayMode, setState, client]
+  );
+
+  // Sub-sample mode handlers — SUBSAMPLEMODE_NONE = 1, SUBSAMPLEMODE_2X2 = 2, SUBSAMPLEMODE_4X4 = 4
+  const handleSubSampleMode = useCallback(
+    (mode: 'none' | '2x2' | '4x4') => {
+      const prev = state.subSampling;
+      const modeValue = mode === '4x4' ? 4 : mode === '2x2' ? 2 : 1;
+      setState(p => ({ ...p, subSampling: mode, showSubSampleMenu: false }));
+      client.setSubSampleMode(modeValue).catch(() => {
+        setState(p => ({ ...p, subSampling: prev }));
+      });
+    },
+    [state.subSampling, setState, client]
+  );
+
+  // Close all toolbar dropdowns on any click outside
+  const anyDropdownOpen =
+    state.showClayModeMenu ||
+    state.showSubSampleMenu ||
+    state.showRenderPriorityMenu ||
+    state.showCameraPresetsMenu ||
+    state.showGizmoModeMenu;
+
+  useEffect(() => {
+    if (!anyDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't close if clicking on a dropdown button or inside a dropdown
+      if (target.closest('.toolbar-dropdown') || target.closest('.has-dropdown')) return;
+      setState(prev => ({
+        ...prev,
+        showClayModeMenu: false,
+        showSubSampleMenu: false,
+        showRenderPriorityMenu: false,
+        showCameraPresetsMenu: false,
+        showGizmoModeMenu: false,
+      }));
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [anyDropdownOpen, setState]);
 
   // Handle right-click on render progress indicator or GPU info bar
   const handleStatsContextMenu = useCallback(
@@ -349,7 +404,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
               important?: boolean;
             };
 
-            // Dynamic icons: gizmo alignment and lock switch based on state
+            // Dynamic icons: switch icon based on current state
             const iconKey =
               id === 'object-control-alignment'
                 ? `object-control-alignment-${state.objectControlMode}`
@@ -357,14 +412,36 @@ export const RenderToolbar = React.memo(function RenderToolbar({
                   ? state.viewportLocked
                     ? 'lock-viewport'
                     : 'unlock-viewport'
-                  : id;
+                  : id === 'clay-mode'
+                    ? state.clayMode === 'colored'
+                      ? 'clay-mode-colored'
+                      : state.clayMode === 'grey'
+                        ? 'clay-mode'
+                        : 'clay-mode-none'
+                    : id === 'subsample-mode'
+                      ? state.subSampling === '4x4'
+                        ? 'subsample-4x4'
+                        : state.subSampling === '2x2'
+                          ? 'subsample-2x2'
+                          : 'subsample-none'
+                      : id === 'render-priority'
+                        ? `render-priority-${state.renderPriority === 'normal' ? 'normal' : state.renderPriority}`
+                        : id;
             const iconPath = getToolbarIconPath(iconKey);
+
+            const hasDropdown = [
+              'clay-mode',
+              'subsample-mode',
+              'render-priority',
+              'camera-presets',
+              'object-control-alignment',
+            ].includes(id);
 
             return (
               <button
                 key={id}
                 id={id}
-                className={`toolbar-icon-btn ${important ? 'important' : ''} ${getButtonActiveClass(id)}`}
+                className={`toolbar-icon-btn ${important ? 'important' : ''} ${getButtonActiveClass(id)} ${hasDropdown ? 'has-dropdown' : ''}`}
                 title={tooltip}
                 onClick={() => handleToolbarAction(id)}
               >
@@ -403,64 +480,146 @@ export const RenderToolbar = React.memo(function RenderToolbar({
           </div>
         )}
 
-        {/* Render Priority Menu - Dropdown for GPU render priority */}
-        {state.showRenderPriorityMenu && (
-          <div className="render-priority-menu">
-            <div className="render-priority-menu-header">Render Priority Settings</div>
-            <div className="render-priority-menu-items">
-              <button
-                onClick={handleLowPriorityClick}
-                className={`render-priority-item ${state.renderPriority === 'low' ? 'active' : ''}`}
-              >
-                Low Priority
-              </button>
-              <button
-                onClick={handleNormalPriorityClick}
-                className={`render-priority-item ${state.renderPriority === 'normal' ? 'active' : ''}`}
-              >
-                Normal Priority
-              </button>
-              <button
-                onClick={handleHighPriorityClick}
-                className={`render-priority-item ${state.renderPriority === 'high' ? 'active' : ''}`}
-              >
-                High Priority
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Render Priority Menu — positioned below button using fixed coords */}
+        {state.showRenderPriorityMenu &&
+          (() => {
+            const btn = document.getElementById('render-priority');
+            const rect = btn?.getBoundingClientRect();
+            const left = rect ? rect.left : 0;
+            const top = rect ? rect.bottom : 0;
+            return (
+              <div className="toolbar-dropdown context-menu" style={{ left, top }}>
+                <button
+                  onClick={handleLowPriorityClick}
+                  className={`context-menu-item ${state.renderPriority === 'low' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('render-priority-low')} alt="" draggable={false} />
+                  Low priority
+                </button>
+                <button
+                  onClick={handleNormalPriorityClick}
+                  className={`context-menu-item ${state.renderPriority === 'normal' ? 'active' : ''}`}
+                >
+                  <img
+                    src={getToolbarIconPath('render-priority-normal')}
+                    alt=""
+                    draggable={false}
+                  />
+                  Medium priority
+                </button>
+                <button
+                  onClick={handleHighPriorityClick}
+                  className={`context-menu-item ${state.renderPriority === 'high' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('render-priority-high')} alt="" draggable={false} />
+                  High priority
+                </button>
+              </div>
+            );
+          })()}
 
-        {/* Gizmo Mode Menu - Dropdown for world/local coordinate mode */}
-        {state.showGizmoModeMenu && (
-          <div className="gizmo-mode-menu">
-            <div className="gizmo-mode-menu-items">
-              <button
-                onClick={handleLocalModeClick}
-                className={`gizmo-mode-item ${state.objectControlMode === 'local' ? 'active' : ''}`}
-              >
-                <img
-                  src={getToolbarIconPath('object-control-alignment-local')}
-                  alt=""
-                  className="gizmo-mode-icon"
-                  draggable={false}
-                />
-                Local mode
-              </button>
-              <button
-                onClick={handleWorldModeClick}
-                className={`gizmo-mode-item ${state.objectControlMode === 'world' ? 'active' : ''}`}
-              >
-                <img
-                  src={getToolbarIconPath('object-control-alignment-world')}
-                  alt=""
-                  className="gizmo-mode-icon"
-                  draggable={false}
-                />
-                World mode
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Gizmo Mode Menu — positioned below button using fixed coords */}
+        {state.showGizmoModeMenu &&
+          (() => {
+            const btn = document.getElementById('object-control-alignment');
+            const rect = btn?.getBoundingClientRect();
+            const left = rect ? rect.left : 0;
+            const top = rect ? rect.bottom : 0;
+            return (
+              <div className="toolbar-dropdown context-menu" style={{ left, top }}>
+                <button
+                  onClick={handleLocalModeClick}
+                  className={`context-menu-item ${state.objectControlMode === 'local' ? 'active' : ''}`}
+                >
+                  <img
+                    src={getToolbarIconPath('object-control-alignment-local')}
+                    alt=""
+                    draggable={false}
+                  />
+                  Local mode
+                </button>
+                <button
+                  onClick={handleWorldModeClick}
+                  className={`context-menu-item ${state.objectControlMode === 'world' ? 'active' : ''}`}
+                >
+                  <img
+                    src={getToolbarIconPath('object-control-alignment-world')}
+                    alt=""
+                    draggable={false}
+                  />
+                  World mode
+                </button>
+              </div>
+            );
+          })()}
+
+        {/* Clay Mode Menu — positioned below button using fixed coords */}
+        {state.showClayModeMenu &&
+          (() => {
+            const btn = document.getElementById('clay-mode');
+            const rect = btn?.getBoundingClientRect();
+            const left = rect ? rect.left : 0;
+            const top = rect ? rect.bottom : 0;
+            return (
+              <div className="toolbar-dropdown context-menu" style={{ left, top }}>
+                <button
+                  onClick={() => handleClayMode('none')}
+                  className={`context-menu-item ${state.clayMode === 'none' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('clay-mode-none')} alt="" draggable={false} />
+                  Normal rendering
+                </button>
+                <button
+                  onClick={() => handleClayMode('grey')}
+                  className={`context-menu-item ${state.clayMode === 'grey' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('clay-mode')} alt="" draggable={false} />
+                  Clay mode
+                </button>
+                <button
+                  onClick={() => handleClayMode('colored')}
+                  className={`context-menu-item ${state.clayMode === 'colored' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('clay-mode-colored')} alt="" draggable={false} />
+                  Colored clay mode
+                </button>
+              </div>
+            );
+          })()}
+
+        {/* Sub-Sample Mode Menu — positioned below button using fixed coords */}
+        {state.showSubSampleMenu &&
+          (() => {
+            const btn = document.getElementById('subsample-mode');
+            const rect = btn?.getBoundingClientRect();
+            const left = rect ? rect.left : 0;
+            const top = rect ? rect.bottom : 0;
+            return (
+              <div className="toolbar-dropdown context-menu" style={{ left, top }}>
+                <button
+                  onClick={() => handleSubSampleMode('none')}
+                  className={`context-menu-item ${state.subSampling === 'none' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('subsample-none')} alt="" draggable={false} />
+                  No subsampling
+                </button>
+                <button
+                  onClick={() => handleSubSampleMode('2x2')}
+                  className={`context-menu-item ${state.subSampling === '2x2' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('subsample-2x2')} alt="" draggable={false} />
+                  2x2 subsampling
+                </button>
+                <button
+                  onClick={() => handleSubSampleMode('4x4')}
+                  className={`context-menu-item ${state.subSampling === '4x4' ? 'active' : ''}`}
+                >
+                  <img src={getToolbarIconPath('subsample-4x4')} alt="" draggable={false} />
+                  4x4 subsampling
+                </button>
+              </div>
+            );
+          })()}
       </div>
 
       {/* GPU Statistics Dialog */}

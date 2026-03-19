@@ -266,7 +266,7 @@ export class OctaneClient extends EventEmitter {
     return this.renderService.restartRender();
   }
 
-  async getClayMode(): Promise<number> {
+  async getClayMode(): Promise<string> {
     return this.renderService.getClayMode();
   }
 
@@ -274,12 +274,20 @@ export class OctaneClient extends EventEmitter {
     return this.renderService.setClayMode(mode);
   }
 
-  async getSubSampleMode(): Promise<number> {
+  async getSubSampleMode(): Promise<string> {
     return this.renderService.getSubSampleMode();
   }
 
   async setSubSampleMode(mode: number): Promise<void> {
     return this.renderService.setSubSampleMode(mode);
+  }
+
+  async getRenderPriority(): Promise<string> {
+    return this.renderService.getRenderPriority();
+  }
+
+  async getRealTime(): Promise<boolean> {
+    return this.renderService.getRealTime();
   }
 
   async getRenderStatistics(): Promise<Record<string, unknown> | null> {
