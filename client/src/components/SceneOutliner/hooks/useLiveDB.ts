@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 
 export interface LiveDBCategory {
   id: number;
@@ -32,7 +32,7 @@ interface UseLiveDBProps {
 
 export function useLiveDB({ activeTab }: UseLiveDBProps) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [liveDBCategories, setLiveDBCategories] = useState<LiveDBCategory[]>([]);
   const [liveDBLoading, setLiveDBLoading] = useState(false);
 

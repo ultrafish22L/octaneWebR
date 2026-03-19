@@ -555,35 +555,73 @@ export function octaneGrpcPlugin(): Plugin {
           return;
         }
         // File listing endpoint for remote file browser
+        // Path restricted to OCTANE_FILE_ROOTS (default: C:\otoyla). Set to "*" for unrestricted.
         if (url?.startsWith('/api/files/list')) {
+          const fileRoots: string[] = (process.env.OCTANE_FILE_ROOTS || 'C:\\otoyla')
+            .split(',')
+            .map(r => path.resolve(r.trim()))
+            .filter(Boolean);
+          const unrestricted = fileRoots.length === 1 && fileRoots[0] === path.resolve('*');
+
+          const isAllowed = (p: string): boolean => {
+            if (unrestricted) return true;
+            const resolved = path.resolve(p);
+            return fileRoots.some(
+              root => resolved === root || resolved.startsWith(root + path.sep)
+            );
+          };
+
           const urlObj = new URL(url, 'http://localhost');
           const dirPath = urlObj.searchParams.get('path') || '';
           res.setHeader('Content-Type', 'application/json');
 
           try {
             if (!dirPath) {
-              // List drive roots (Windows) or filesystem root
-              const entries: {
-                name: string;
-                isDirectory: boolean;
-                size: number;
-                extension: string;
-              }[] = [];
-              if (process.platform === 'win32') {
-                // Check common drive letters
-                for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
-                  const drive = `${letter}:\\`;
-                  if (fs.existsSync(drive)) {
-                    entries.push({ name: drive, isDirectory: true, size: 0, extension: '' });
+              // No path → show allowed roots (or all drives if unrestricted)
+              if (unrestricted) {
+                const entries: {
+                  name: string;
+                  isDirectory: boolean;
+                  size: number;
+                  extension: string;
+                }[] = [];
+                if (process.platform === 'win32') {
+                  for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+                    const drive = `${letter}:\\`;
+                    if (fs.existsSync(drive)) {
+                      entries.push({ name: drive, isDirectory: true, size: 0, extension: '' });
+                    }
                   }
+                } else {
+                  entries.push({ name: '/', isDirectory: true, size: 0, extension: '' });
                 }
+                res.statusCode = 200;
+                res.end(JSON.stringify({ path: '', parent: null, entries }));
               } else {
-                entries.push({ name: '/', isDirectory: true, size: 0, extension: '' });
+                const entries = fileRoots
+                  .filter(r => fs.existsSync(r))
+                  .map(r => ({
+                    name: r,
+                    isDirectory: true,
+                    size: 0,
+                    extension: '',
+                  }));
+                res.statusCode = 200;
+                res.end(JSON.stringify({ path: '', parent: null, entries }));
               }
-              res.statusCode = 200;
-              res.end(JSON.stringify({ path: '', parent: null, entries }));
             } else {
-              const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
+              const resolved = path.resolve(dirPath);
+              if (!isAllowed(resolved)) {
+                res.statusCode = 403;
+                res.end(
+                  JSON.stringify({
+                    error: `Access denied. Allowed roots: ${fileRoots.join(', ')}`,
+                    path: dirPath,
+                  })
+                );
+                return;
+              }
+              const dirents = fs.readdirSync(resolved, { withFileTypes: true });
               const entries = dirents
                 .filter(d => !d.name.startsWith('.'))
                 .map(d => {
@@ -591,7 +629,7 @@ export function octaneGrpcPlugin(): Plugin {
                   let size = 0;
                   if (!isDir) {
                     try {
-                      size = fs.statSync(path.join(dirPath, d.name)).size;
+                      size = fs.statSync(path.join(resolved, d.name)).size;
                     } catch {
                       /* ignore */
                     }
@@ -603,11 +641,11 @@ export function octaneGrpcPlugin(): Plugin {
                   if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
                   return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
                 });
-              const parentDir = path.dirname(dirPath);
-              // Drive roots (C:\) → parent is '' (root list); filesystem root → null
-              const parent = parentDir === dirPath ? (dirPath.length <= 3 ? '' : null) : parentDir;
+              const parentDir = path.dirname(resolved);
+              // If parent is outside allowed roots, navigate back to root list
+              const parent = isAllowed(parentDir) ? parentDir : '';
               res.statusCode = 200;
-              res.end(JSON.stringify({ path: dirPath, parent, entries }));
+              res.end(JSON.stringify({ path: resolved, parent, entries }));
             }
           } catch (error: any) {
             res.statusCode = 400;

@@ -5,9 +5,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import fs from 'fs';
-import path from 'path';
 import {
   OctaneMcpClient,
+  MCP_LOG_PATH,
   profileReport,
   profileReset,
   profileStart,
@@ -159,8 +159,6 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
       return jsonResult({ reset: true });
     }
   );
-
-  const MCP_LOG_PATH = path.resolve(__dirname, '../../../mcp-debug.log');
 
   server.tool(
     'clear_log',

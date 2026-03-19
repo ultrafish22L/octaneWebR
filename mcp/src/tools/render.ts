@@ -27,6 +27,8 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       render_target_handle: z
         .number()
+        .int()
+        .nonnegative()
         .optional()
         .describe('Handle of the RenderTarget node to select for rendering'),
     },
@@ -54,19 +56,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   });
 
-  server.tool(
-    'restart_render',
-    'DEPRECATED — DO NOT USE. Causes Octane crashes (ECONNRESET). Use start_render once; Octane stays in render mode and picks up all changes live.',
-    {},
-    async () => {
-      return jsonResult({
-        success: false,
-        message:
-          'restart_render is deprecated — it crashes Octane. ' +
-          'start_render keeps render mode active. All changes (connect, set_attribute) are picked up automatically.',
-      });
-    }
-  );
+  // restart_render removed — it crashes Octane (ECONNRESET). Use start_render instead.
 
   server.tool(
     'get_render_status',

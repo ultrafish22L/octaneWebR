@@ -267,7 +267,7 @@ export function registerNodeTools(
   server.tool(
     'delete_node',
     'Delete a node from the scene. WARNING: Deleting a recently-disconnected node can crash Octane. Disconnect pins first and wait briefly before deleting.',
-    { handle: z.number().describe('Node handle to delete') },
+    { handle: z.number().int().nonnegative().describe('Node handle to delete') },
     async ({ handle }) => {
       try {
         await client.callMethod('ApiItem', 'destroy', {
@@ -286,7 +286,11 @@ export function registerNodeTools(
     'connect_nodes',
     "Connect a source node to a target node's input pin. Use get_node_info to find pin indices. Provide exactly one of: pin_index (connectToIx), pin_name (connectTo1), or pin_id (connectTo). If connectToIx silently fails (e.g. emission pins), try pin_name or pin_id.",
     {
-      target_handle: z.number().describe('Target node handle (the node receiving the connection)'),
+      target_handle: z
+        .number()
+        .int()
+        .nonnegative()
+        .describe('Target node handle (the node receiving the connection)'),
       pin_index: z.number().optional().describe('Pin index on the target node (uses connectToIx)'),
       pin_name: z
         .string()
@@ -296,7 +300,11 @@ export function registerNodeTools(
         .number()
         .optional()
         .describe('PinId enum value (uses connectTo). E.g. P_EMISSION=41'),
-      source_handle: z.number().describe('Source node handle (the node being connected)'),
+      source_handle: z
+        .number()
+        .int()
+        .nonnegative()
+        .describe('Source node handle (the node being connected)'),
       evaluate: z.boolean().default(true).describe('Trigger scene evaluation after connecting'),
     },
     async ({ target_handle, pin_index, pin_name, pin_id, source_handle, evaluate }) => {
@@ -495,7 +503,7 @@ export function registerNodeTools(
     'disconnect_pin',
     'Disconnect a pin on a node (sets it to null/handle 0)',
     {
-      handle: z.number().describe('Node handle'),
+      handle: z.number().int().nonnegative().describe('Node handle'),
       pin_index: z.number().describe('Pin index to disconnect'),
       evaluate: z.boolean().default(true).describe('Trigger scene evaluation after disconnecting'),
     },

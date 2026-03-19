@@ -6,9 +6,11 @@ Ordered easy → hard. Done items removed.
 
 ## Priority
 
-| #   | Item                                                | Difficulty |
-| --- | --------------------------------------------------- | ---------- |
-| P2  | Node create context dialog: set all node type icons | Medium     |
+| #   | Item                                                                        | Difficulty | Source     |
+| --- | --------------------------------------------------------------------------- | ---------- | ---------- |
+| P1  | Camera framing from bounds — use centroid for target, zoom based on extents | Medium     | BUGLIST #5 |
+| P1  | "Materials from geo 1" rule — every geo gets at least a color variant       | Easy       | BUGLIST #6 |
+| P2  | Node create context dialog: set all node type icons                         | Medium     | —          |
 
 ## Easy — CSS / one-file
 

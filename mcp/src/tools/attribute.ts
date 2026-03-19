@@ -7,10 +7,8 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 
-// API version flag — single source of truth is api-version.config.js (CJS).
-// Duplicated here as a typed constant to avoid cross-boundary require().
-// Must stay in sync with the root config file.
-const USE_ALPHA5_API = true;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { USE_ALPHA5_API } = require('../../../api-version.config.js');
 
 // AttrType enum values (from OctaneTypes.ts)
 const AT_BOOL = 1;
@@ -86,7 +84,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     'get_attribute',
     'Get a node attribute value by attribute ID. Use list_node_types to find attribute IDs and types. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
     {
-      handle: z.number().describe('Node handle'),
+      handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID (e.g. 185 for A_VALUE, 34 for A_FILENAME)'),
       expected_type: z
         .number()
@@ -111,7 +109,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     'set_attribute',
     'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
     {
-      handle: z.number().describe('Node handle'),
+      handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
       expected_type: z.number().describe('AttrType enum value'),
       value: z

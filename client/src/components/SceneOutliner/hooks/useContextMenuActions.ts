@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { useOctane } from '../../../hooks/useOctane';
 import { SceneNode } from '../../../services/OctaneClient';
 import { EditCommands } from '../../../commands/EditCommands';
@@ -16,7 +16,7 @@ interface UseContextMenuActionsProps {
 
 export function useContextMenuActions({ onNodeSelect }: UseContextMenuActionsProps) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [contextMenuNode, setContextMenuNode] = useState<SceneNode | null>(null);

@@ -11,7 +11,7 @@
 import path from 'path';
 import fs from 'fs';
 
-const MCP_LOG_PATH = path.resolve(__dirname, '../../mcp-debug.log');
+export const MCP_LOG_PATH = path.resolve(__dirname, '../../mcp-debug.log');
 
 // Log levels: 'debug' = everything, 'warn' = warnings+errors, 'error' = errors only, 'off' = silent
 type LogLevel = 'debug' | 'warn' | 'error' | 'off';
@@ -22,7 +22,7 @@ const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, warn: 1, error: 2, off:
 function mcpLog(msg: string, level: LogLevel = 'debug'): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
   const ts = new Date().toISOString().substring(11, 23);
-  fs.appendFileSync(MCP_LOG_PATH, `[${ts}] ${msg}\n`);
+  fs.appendFile(MCP_LOG_PATH, `[${ts}] ${msg}\n`, () => {});
 }
 
 // ── Quick & dirty profiler ──────────────────────────────────────────

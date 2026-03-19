@@ -12,10 +12,10 @@
  */
 
 import { Logger } from '../../utils/Logger';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
-import { useStatusMessage } from '../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
 import {
   FILE_NODE_TYPES,
@@ -79,7 +79,7 @@ function ParameterGroup({
 // "Add input" button for movable-input nodes
 function AddInputButton({ nodeHandle }: { nodeHandle: number }) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,8 +111,21 @@ function MovableInputPinActions({
   isLast: boolean;
 }) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLSpanElement>(null);
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (!moveMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMoveMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [moveMenuOpen]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -143,7 +156,7 @@ function MovableInputPinActions({
       <button className="movable-input-delete-btn" onClick={handleDelete} title="Delete input">
         &#x2715;
       </button>
-      <span className="movable-input-move-wrapper">
+      <span className="movable-input-move-wrapper" ref={menuRef}>
         <button
           className="movable-input-move-btn"
           onClick={e => {
@@ -482,8 +495,9 @@ const NodeParameter = React.memo(function NodeParameter({
   movablePinCount?: number;
 }) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [expanded, setExpanded] = useState(level < 2);
+  const [nodeTypeChanging, setNodeTypeChanging] = useState(false);
 
   const hasChildren = node.children && node.children.length > 0;
   const isEndNode = !hasChildren; // && !!node.attrInfo;
@@ -537,32 +551,31 @@ const NodeParameter = React.memo(function NodeParameter({
   const currentNodeType = node.nodeInfo?.type || '';
 
   // Handler for node type change — value is "key:id" to carry both pieces
+  // Guard prevents concurrent changes (multiple API calls can create orphaned nodes)
   const handleNodeTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = compatibleNodeTypes.find(t => t.key === event.target.value);
-    if (!selected || selected.key === currentNodeType) return;
+    if (!selected || selected.key === currentNodeType || nodeTypeChanging) return;
 
-    if (isEmptyPin) {
-      const parentHandle = node.pinInfo?.pinOwner?.handle;
-      const pinIdx = node.pinInfo?.pinId;
-      if (!parentHandle || pinIdx === undefined) {
-        Logger.error('Could not find parent or pin index for empty pin');
-        setTemporaryStatus('Failed to create node for this parameter', 3000);
-        return;
-      }
-      try {
+    setNodeTypeChanging(true);
+    try {
+      if (isEmptyPin) {
+        const parentHandle = node.pinInfo?.pinOwner?.handle;
+        const pinIdx = node.pinInfo?.pinId;
+        if (!parentHandle || pinIdx === undefined) {
+          Logger.error('Could not find parent or pin index for empty pin');
+          setTemporaryStatus('Failed to create node for this parameter', 3000);
+          return;
+        }
         await client.createNodeForPin(parentHandle, pinIdx, selected.key, selected.id);
-      } catch (error) {
-        Logger.error('Failed to create node for empty pin:', error);
-        setTemporaryStatus('Failed to create node for this parameter', 3000);
-      }
-    } else {
-      if (!node.handle) return;
-      try {
+      } else {
+        if (!node.handle) return;
         await client.replaceNode(node.handle, selected.key, selected.id);
-      } catch (error) {
-        Logger.error('Failed to replace node:', error);
-        setTemporaryStatus('Failed to replace node', 3000);
       }
+    } catch (error) {
+      Logger.error('Failed to change node type:', error);
+      setTemporaryStatus('Failed to change node type', 3000);
+    } finally {
+      setNodeTypeChanging(false);
     }
   };
 
@@ -723,6 +736,7 @@ const NodeParameter = React.memo(function NodeParameter({
                   value={currentNodeType}
                   onChange={handleNodeTypeChange}
                   onClick={e => e.stopPropagation()}
+                  disabled={nodeTypeChanging}
                 >
                   {isEmptyPin && (
                     <option value="" disabled>

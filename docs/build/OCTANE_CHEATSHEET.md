@@ -126,6 +126,9 @@ Sundir node (NT_SUN_DIRECTION) children: latitude(0), longitude(1), month(2), da
 | **Geo group inputs** | **`pin_index: N` (0-based)** | **`pin_name: "Input N"`** |
 | RT kernel | `pin_id: 89` | — |
 | RT environment | `pin_id: 43` | — |
+| **Env medium pin** | **Create standalone `NT_ENV_TEXTURE`, connect medium FIRST, then connect env to RT** | `pin_index: 4` on auto-created env (pin not materialized) |
+| **Env mediumRadius** | **Set to 1000+ (default is 1!)** — medium only extends this many units from origin. At default 1, nothing visible. | — |
+| **Geo group (fresh)** | **Set `A_PIN_COUNT=113` to 4+ BEFORE connecting children** — fresh groups have 0 pins | `connect_nodes` to pin 0 reports success but nothing happens |
 
 ## Primitive Types (NT_GEO_OBJECT enum pin 0)
 
@@ -167,106 +170,9 @@ Types 1-17, 19-23 all work. **Type 18 (Quad) crashes Octane — NEVER use it.** 
 
 ### NT_TEX_RGB — set color via `set_attribute(handle, A_VALUE=185, AT_FLOAT3=11, {r,g,b})`
 
-### Procedural Hardwood Recipe (PROVEN v3 — coating + anisotropy + roughness-by-grain)
+### Procedural Hardwood Recipe
 
-**CRITICAL: Use TURBULENCE for color, MARBLE for bump only.**
-Marble creates sine bands = plywood. Turbulence stretched on one axis = organic hardwood grain.
-
-**Base setup:**
-1. Two NT_TEX_RGB: species-accurate light + dark colors (see table below)
-2. **NT_TEX_TURBULENCE** → NT_TEX_MIX amount (pin 0) — NOT marble!
-3. Light → MIX texture1 (pin 1), Dark → MIX texture2 (pin 2)
-4. MIX → Universal Mat albedo (pin 2)
-5. NT_TEX_MARBLE → Universal Mat bump (pin 36, via pin_name "bump") — surface relief only
-6. Stretch turbulence transform: Z scale very small (0.01-0.05), X/Y larger (2-10)
-
-**Pro features (Universal Material):**
-7. **Coating** (pin 19): white or partial gray for lacquer. Coating roughness (pin 20): 0.01-0.04. Coating IOR (pin 21): 1.5 (polyurethane)
-8. **GGX BRDF** (pin 7 enum): value `2` = GGX. Required for anisotropy.
-9. **Anisotropy** (pin 9 float): 0.1 (ebony) to 0.5 (zebrawood). Stretches reflections along grain.
-10. **Roughness-by-grain**: NT_TEX_MIX with turbulence as amount, two grayscale floats as min/max roughness → connect to roughness pin 8. Dark grain = rougher, light = smoother.
-
-**Pore structure determines polish level (TA research):**
-| Pore Type | Species | Max Polish | Coating Rough | Base Roughness | Bump |
-|-----------|---------|------------|---------------|----------------|------|
-| Ring-porous (open) | Red Oak | Satin | 0.03 | 0.25-0.45 (grain-driven) | 0.06-0.10 |
-| Ring-porous (tyloses) | White Oak | Semi-gloss | 0.03 | 0.20-0.38 (grain-driven) | 0.04-0.07 |
-| Diffuse-porous (fine) | Purpleheart | High gloss | 0.02 | 0.12 | 0.015 |
-| Diffuse-porous (ultra) | Ebony | Mirror | 0.03 | 0.25 | 0.005 |
-| Diffuse-porous (small) | Maple | Very smooth | 0.02 | 0.10 | 0.01-0.05 |
-| Semi-ring-porous | Walnut | Moderate-good | 0.03 | 0.15-0.32 (grain-driven) | 0.03-0.06 |
-| Diffuse-porous (HUGE) | Zebrawood | Satin | 0.04 | 0.20-0.45 (grain-driven) | 0.07-0.08 |
-
-**Species parameter table (v5 FINAL — validated via scene dump comparison):**
-
-**Turbulence (color grain):**
-| Species | Light RGB | Dark RGB | Turb Scale X,Y,Z | Gamma | Omega | Octaves | Aniso |
-|---------|-----------|----------|-------------------|-------|-------|---------|-------|
-| Red Oak | {0.48, 0.30, 0.20} | {0.30, 0.17, 0.10} | {7, 9, 0.08} | 1.2 | 0.6 | 10 | 0.4 |
-| White Oak | {0.42, 0.33, 0.22} | {0.28, 0.20, 0.13} | {5, 7, 0.07} | 1.5 | 0.55 | 10 | 0.35 |
-| Purpleheart | {0.20, 0.06, 0.22} | {0.08, 0.015, 0.09} | {5, 5, 0.015} | 1.5 | 0.45 | 8 | 0.3 |
-| Ebony | {0.02, 0.018, 0.018} | {0.015, 0.012, 0.012} | {3, 3, 0.01} | 20.0 | 0.5 | 12 | 0.1 |
-| Maple | {0.75, 0.65, 0.50} | {0.40, 0.28, 0.15} | {5, 7, 0.06} | 0.8 | 0.5 | 10 | 0.2 |
-| Walnut | {0.22, 0.14, 0.08} | {0.10, 0.06, 0.035} | {6, 8, 0.07} | 1.0 | 0.6 | 10 | 0.35 |
-| Zebrawood | {0.55, 0.38, 0.12} | {0.05, 0.025, 0.005} | {8, 12, 0.1} | 0.6 | 0.35 | 6 | 0.5 |
-
-**Coating (warm-tinted — NOT neutral gray!):**
-| Species | Coating RGB | Coat Rough | Bump Height |
-|---------|------------|------------|-------------|
-| Red Oak | {0.45, 0.3, 0.3} | 0.005 | 0.04 |
-| White Oak | {0.45, 0.3, 0.3} | 0.005 | 0.03 |
-| Purpleheart | {0.4, 0.25, 0.25} | 0.003 | 0.008 |
-| Ebony | {0.25, 0.15, 0.15} | 0.003 | 0.003 |
-| Maple | {0.4, 0.25, 0.25} | 0.003 | 0.02 |
-| Walnut | {0.45, 0.3, 0.3} | 0.005 | 0.025 |
-| Zebrawood | {0.45, 0.3, 0.3} | 0.008 | 0.03 |
-
-**Marble (bump only — HIGH Z-scale for grain direction):**
-| Species | Marble Scale X,Y,Z |
-|---------|-------------------|
-| Red Oak | {3, 3, 30} |
-| White Oak | {2, 2, 35} |
-| Purpleheart | {1.5, 1.5, 40} |
-| Ebony | {1, 1, 45} |
-| Maple | {1.5, 1.5, 35} |
-| Walnut | {2.5, 2.5, 30} |
-| Zebrawood | {4, 4, 20} |
-
-**⚠ CRITICAL LESSONS (from v5 vs v6 scene dump comparison):**
-- **Marble Z-scale must be 20-45** (not 0.015-0.04!) — this is the sine band frequency along grain. Low Z = no visible grain bump.
-- **Coating colors must be WARM-TINTED** `{0.45, 0.3, 0.3}` not neutral `{0.3, 0.3, 0.3}`. Warm tint gives lacquer realism.
-- **Coating roughness 0.003-0.008** (not 0.02-0.04). Lower = shinier = more realistic lacquer finish.
-- **Purpleheart colors are DEEP** — {0.2, 0.06, 0.22} not {0.45, 0.18, 0.5}. Much darker and more saturated.
-- **Zebrawood colors need contrast** — light {0.55, 0.38, 0.12} dark {0.05, 0.025, 0.005}. Very dark stripes.
-- **Turbulence X/Y must be ASYMMETRIC** — e.g., {7,9} not {8,8}. Breaks up perfectly straight grain lines.
-
-**Roughness-by-grain (v5 had, v6 rebuild missing):**
-| Species | Rough Min (light grain) | Rough Max (dark grain) |
-|---------|------------------------|----------------------|
-| Red Oak | 0.25 | 0.45 |
-| White Oak | 0.20 | 0.38 |
-| Purpleheart | 0.08 | 0.15 |
-| Maple | 0.06 | 0.14 |
-| Walnut | 0.15 | 0.32 |
-| Zebrawood | 0.20 | 0.45 |
-Wire: Mix(same turbulence as albedo → amount, min_rough_grayscale → tex1, max_rough_grayscale → tex2) → mat roughness pin 8.
-
-**Falloff × Marble bump (v5 had, v6 rebuild missing):**
-Shared Falloff map (normal=0, grazing=1, index=3) × Marble via Multiply texture → mat bump pin. Gives bump=0 on top faces (flat), bump=1 on side/end faces (grain texture).
-
-**Ebony special:** Gamma 20 crushes grain nearly flat. Coating {0.25, 0.15, 0.15} (warm tint). Base roughness 0.25. Under dark studio env, ebony reads jet black. Under bright/neutral env, coating reflection can make it look gray — use darker env or lower coating.
-
-**Turbulence offsets:** Each species needs dramatically different offsets (50+ apart per axis) to prevent identical noise patterns. E.g., {0,0,0}, {50,30,10}, {100,70,25}, {150,120,40}, {200,160,55}, {250,200,70}, {300,250,85}.
-
-**Pine plank (base surface):** coating RGB(0,0,0) = none, coatRough 0.6, base roughness 0.5 (matte unfinished), bumpH 0.3. Uses marble for BOTH color mix and bump (not turbulence). Colors: {0.68, 0.56, 0.4} / {0.58, 0.46, 0.32}.
-
-### OLD: Procedural Oak Wood Recipe (marble-based — creates plywood look)
-1. Two NT_TEX_RGB: light `{0.76, 0.6, 0.42}`, dark `{0.45, 0.28, 0.14}`
-2. NT_TEX_MARBLE → NT_TEX_MIX amount (pin 0)
-3. Light → MIX texture1 (pin 1), Dark → MIX texture2 (pin 2)
-4. MIX → Universal Mat albedo (pin 2)
-5. Stretch marble transform on one axis for grain direction
-6. **WARNING: This creates plywood bands. Use turbulence recipe above instead.**
+**Moved to `docs/recipes/HARDWOOD_RECIPE.md`** — full species tables, coating values, turbulence params, critical lessons. Too large for a cheatsheet.
 
 ## Lighting — Product Photography Setup
 
@@ -302,6 +208,36 @@ Using A_VALUE=185 silently fails — the value appears to set but reads back as 
 
 **Known MCP limitation:** `camera_visibility` bool on Object Layer does not stick when set via MCP (reverts to true). `transparentEmission` on blackbody also doesn't hide geo from camera. Workaround: disconnect from geo group or position behind camera.
 
+## Underwater Volumetric Medium — Purple Ocean
+
+**Working recipe (Phase 5d confirmed):**
+
+| Property | Handle/Node | Value | Notes |
+|----------|-------------|-------|-------|
+| Medium type | NT_MED_SCATTERING | — | Must use path tracing kernel |
+| Scale | pin 0 child | `0.007` | 0.002 = invisible, 0.015 = opaque |
+| Absorption | pin 8 (RGB) | `{0.3, 0.3, 0.3}` | Neutral! Don't rely on absorption for color |
+| invertAbsorption | pin 9 | `true` (default) | With invert=true, values→transmittance. {low_G}→green. Unintuitive! |
+| Scattering | pin 10 (RGB) | `{0.3, 0.05, 0.4}` | Purple scatter (R+B heavy, low G) |
+| Env color | env pin 0 (RGB) | `{0.45, 0.05, 0.5}` | Saturated purple |
+| Env power | env pin 1 | `35` | Balances with sphere lights |
+| mediumRadius | env pin 5 | `5000` | Default 1 = nothing visible! |
+| Kernel | NT_KERN_PATHTRACING | — | Required for volumetric |
+
+**Key insight:** Medium absorption color is counterintuitive with `invertAbsorption`. Keep absorption NEUTRAL ({0.3,0.3,0.3}) and use scattering color + env color for the purple look. The purple comes from: (1) purple env emitting purple light, (2) purple scattering coefficients tinting the fog.
+
+**Sphere light power in medium (efficiency=1.0, surfaceBrightness=false):**
+| Role | Power | Temp | Notes |
+|------|-------|------|-------|
+| Overhead key | 10-20 | 2800-5500K | Warm for underwater contrast |
+| Fill | 6-8 | 8000-9000K | Cool blue, opposite side |
+| Accent (red) | 8-20 | 1800K | Catraken bioluminescence |
+| Accent (amber) | 3-8 | 2800K | Nautilus running lights |
+
+**⚠ transparentEmission does NOT reliably hide sphere lights from camera.** Workaround: use tiny radius (0.05) but then power drops (area scales). Best: position lights behind subjects or behind camera.
+
 ## .obj Assets (absolute path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`)
 
-sphere.obj, sphere_hd.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, floor.obj, quad.obj
+**Primitives:** sphere.obj, sphere_hd.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, floor.obj, quad.obj
+**Hero meshes:** nautilus.obj (40MB), cat_captain_hindu.obj (40MB), catraken.obj (39MB)
+**Textures:** nautilus_diffuse.png, cat_captain_hindu_diffuse.png, catraken_diffuse.png (all 4096×4096)

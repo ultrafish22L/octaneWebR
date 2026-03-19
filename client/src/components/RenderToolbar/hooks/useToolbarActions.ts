@@ -17,7 +17,7 @@
 import { useCallback, Dispatch, SetStateAction } from 'react';
 import { OctaneClient } from '../../../services/OctaneClient';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { ToolbarState } from './useRenderSettings';
 import { RenderStats } from './useGPUData';
 
@@ -60,7 +60,7 @@ export function useToolbarActions({
   onPickingModeChange,
   onToggleWorldCoord,
 }: UseToolbarActionsProps) {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
 
   // ========================================
   // TOGGLE FUNCTIONS

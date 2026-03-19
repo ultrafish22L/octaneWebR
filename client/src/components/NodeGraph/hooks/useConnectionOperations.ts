@@ -12,7 +12,7 @@ import {
 import { OnReconnectEnd } from '@xyflow/system';
 import { OctaneNodeData } from '../OctaneNode';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { getPinColor } from '../../../utils/PinColorUtils';
 import { OctaneClient } from '../../../services/OctaneClient';
 
@@ -61,7 +61,7 @@ export function useConnectionOperations({
   connectionLineColor,
   setConnectionLineColor,
 }: UseConnectionOperationsProps) {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
 
   /**
    * Handle connection start - track source, set line color, enable multi-connect

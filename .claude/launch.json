@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "server:dev"],
       "port": 45769
+    },
+    {
+      "name": "gallery",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["http-server", "renders/storyboard", "-p", "8765", "-c-1"],
+      "port": 8765
     }
   ]
 }

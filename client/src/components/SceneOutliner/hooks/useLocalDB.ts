@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useOctane } from '../../../hooks/useOctane';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 
 export interface LocalDBCategory {
   handle: number;
@@ -27,7 +27,7 @@ interface UseLocalDBProps {
 
 export function useLocalDB({ activeTab }: UseLocalDBProps) {
   const { client } = useOctane();
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [localDBRoot, setLocalDBRoot] = useState<LocalDBCategory | null>(null);
   const [localDBLoading, setLocalDBLoading] = useState(false);
 

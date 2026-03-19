@@ -6,7 +6,7 @@
 import { Logger } from '../../utils/Logger';
 import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
-import { ApiService, asObject } from './ApiService';
+import { ApiService, asObject, asNumber, asString, asBool } from './ApiService';
 
 export class DeviceService extends BaseService {
   private apiService: ApiService;
@@ -19,7 +19,7 @@ export class DeviceService extends BaseService {
   async getDeviceCount(): Promise<number> {
     try {
       const response = await this.apiService.callApi('ApiRenderEngine', 'getDeviceCount', {});
-      return (response?.result as number) ?? 0;
+      return asNumber(response?.result);
     } catch (error) {
       Logger.error(
         'Failed to get device count:',
@@ -34,7 +34,7 @@ export class DeviceService extends BaseService {
       const response = await this.apiService.callApi('ApiRenderEngine', 'getDeviceName', null, {
         deviceIndex,
       });
-      return (response?.result as string) ?? 'Unknown Device';
+      return asString(response?.result, 'Unknown Device');
     } catch (error) {
       Logger.error(
         `Failed to get device name for device ${deviceIndex}:`,
@@ -186,7 +186,7 @@ export class DeviceService extends BaseService {
   async getOctaneVersion(): Promise<string> {
     try {
       const response = await this.apiService.callApi('ApiInfo', 'octaneVersion', {});
-      return (response?.result as string) ?? 'Unknown';
+      return asString(response?.result, 'Unknown');
     } catch (error) {
       Logger.error(
         'Failed to get Octane version:',
@@ -209,10 +209,10 @@ export class DeviceService extends BaseService {
       this.apiService.callApi('ApiInfo', 'tierIdx', {}).catch(() => null),
     ]);
     return {
-      name: (nameRes?.result as string) ?? '',
-      isDemo: (demoRes?.result as boolean) ?? false,
-      isSubscription: (subRes?.result as boolean) ?? false,
-      tier: (tierRes?.result as number) ?? -1,
+      name: asString(nameRes?.result),
+      isDemo: asBool(demoRes?.result),
+      isSubscription: asBool(subRes?.result),
+      tier: asNumber(tierRes?.result, -1),
     };
   }
 }

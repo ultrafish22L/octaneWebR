@@ -19,7 +19,9 @@ export default defineConfig({
   },
   server: {
     port: parseInt(process.env.WORKER_1 || '43929'),
-    host: '0.0.0.0',
+    // 0.0.0.0 by default for Docker/sandbox/Claude Code compatibility.
+    // Set OCTANE_BIND_HOST=127.0.0.1 to restrict to localhost on open networks.
+    host: process.env.OCTANE_BIND_HOST || '0.0.0.0',
     strictPort: false,
     cors: { origin: /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/ },
     // Note: octaneGrpcPlugin handles all /api routes directly

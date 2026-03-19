@@ -32,6 +32,9 @@ export function useFileBrowser(
   const internalPathRef = useRef<string>('');
   const lastPathRef = externalPathRef || internalPathRef;
 
+  // Keep ref in sync with latest callback (intentionally no deps — must run every render
+  // to avoid stale closures when onResult is an inline function)
+
   useEffect(() => {
     onResultRef.current = onResult;
   });

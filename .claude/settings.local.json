@@ -94,7 +94,18 @@
       "Bash(cmd /c \"taskkill /F /IM octane.exe\")",
       "Bash(cmd /c \"start C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe\")",
       "Read(//c/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/**)",
-      "Bash(start octane.exe)"
+      "Bash(start octane.exe)",
+      "mcp__otoy-studio__generate_image_pro",
+      "mcp__otoy-studio__list_jobs",
+      "Bash(cmd /c start \"\" \"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe\")",
+      "Bash(cmd /c \"cd /d C:\\\\otoyla\\\\GRPC\\\\dev\\\\octaneGRPC-2026.1-Alpha5 && start octane.exe\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,State,OwningProcess\")",
+      "Bash(npm ls:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(find /c/otoyla/GRPC/dev/octaneWebR/server/src -type f -name *.ts -o -name *.js)",
+      "Bash(grep -r from.*server /c/otoyla/GRPC/dev/octaneWebR/client/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r server/ /c/otoyla/GRPC/dev/octaneWebR --include=*.json --include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=dist)"
     ]
   }
 }

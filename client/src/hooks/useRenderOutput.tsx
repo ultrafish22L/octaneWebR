@@ -8,7 +8,7 @@ import { useState, useCallback, useRef, useEffect, type RefObject } from 'react'
 import { OctaneClient } from '../services/OctaneClient';
 import { CallbackRenderViewportHandle } from '../components/CallbackRenderViewport';
 import { useFileBrowser } from './useFileBrowser';
-import { useStatusMessage } from '../contexts/StatusMessageContext';
+import { useStatusActions } from '../contexts/StatusMessageContext';
 import { Logger } from '../utils/Logger';
 import type { FileBrowserDialogProps } from '../components/dialogs/FileBrowserDialog';
 
@@ -16,7 +16,7 @@ export function useRenderOutput(
   client: OctaneClient,
   viewportRef: RefObject<CallbackRenderViewportHandle | null>
 ) {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus, setStatusMessage } = useStatusActions();
   const [exportFormat, setExportFormat] = useState<'PNG' | 'JPG' | 'EXR' | 'TIFF'>('PNG');
   const exportFormatRef = useRef(exportFormat);
   useEffect(() => {
@@ -27,7 +27,7 @@ export function useRenderOutput(
   // Save render file browser
   const { browse: browseSaveRender, dialogProps: saveRenderDialogProps } = useFileBrowser(
     useCallback(
-      (path: string | null) => {
+      async (path: string | null) => {
         if (!path) return;
         const ext = path.split('.').pop()?.toLowerCase() || '';
         const formatMap: Record<string, 'PNG' | 'JPG' | 'EXR' | 'TIFF'> = {
@@ -40,9 +40,18 @@ export function useRenderOutput(
         };
         const format = formatMap[ext] || 'PNG';
         Logger.debug(`Saving render: ${path} (format: ${format})`);
-        client.saveRender(path, format, 0);
+        try {
+          setStatusMessage(`Saving render to ${path}...`);
+          await client.saveRender(path, format, 0);
+          setStatusMessage(`Render saved: ${path}`);
+        } catch (error) {
+          Logger.error('Failed to save render:', error);
+          setStatusMessage(
+            `Failed to save render: ${error instanceof Error ? error.message : error}`
+          );
+        }
       },
-      [client]
+      [client, setStatusMessage]
     ),
     renderPathRef
   );
@@ -50,14 +59,23 @@ export function useRenderOutput(
   // Export passes file browser
   const { browse: browseExportPasses, dialogProps: exportPassesDialogProps } = useFileBrowser(
     useCallback(
-      (path: string | null) => {
+      async (path: string | null) => {
         if (!path) return;
         const dotIdx = path.lastIndexOf('.');
         const basePath = dotIdx > 0 ? path.slice(0, dotIdx) : path;
         Logger.debug(`Exporting render passes: ${basePath} (format: ${exportFormatRef.current})`);
-        client.exportRenderPasses(basePath, exportFormatRef.current);
+        try {
+          setStatusMessage(`Exporting render passes to ${basePath}...`);
+          await client.exportRenderPasses(basePath, exportFormatRef.current);
+          setStatusMessage(`Render passes exported: ${basePath}`);
+        } catch (error) {
+          Logger.error('Failed to export render passes:', error);
+          setStatusMessage(
+            `Failed to export passes: ${error instanceof Error ? error.message : error}`
+          );
+        }
       },
-      [client]
+      [client, setStatusMessage]
     ),
     renderPathRef
   );

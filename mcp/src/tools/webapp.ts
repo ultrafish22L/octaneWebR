@@ -31,6 +31,7 @@ export async function notifyWebapp(event: { type: string; handle?: number }): Pr
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(event),
+      signal: AbortSignal.timeout(2000),
     });
   } catch {
     // Silent — webapp may not be running

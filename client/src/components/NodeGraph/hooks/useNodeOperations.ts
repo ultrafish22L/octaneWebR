@@ -20,7 +20,7 @@ import { OctaneNodeData } from '../OctaneNode';
 import { NodeType, FILE_NODE_TYPES, AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { EditCommands } from '../../../commands/EditCommands';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import type { EditActionsContextType } from '../../../contexts/EditActionsContext';
 import { useFileBrowser } from '../../../hooks/useFileBrowser';
 import type { FileBrowserDialogProps } from '../../../components/dialogs/FileBrowserDialog';
@@ -91,7 +91,7 @@ export function useNodeOperations({
   onNodeSelect,
   editActions,
 }: UseNodeOperationsParams): NodeOperationsHandlers {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
 
   // Stable refs for values that change frequently but shouldn't cause handler churn
   const sceneTreeRef = useRef(sceneTree);

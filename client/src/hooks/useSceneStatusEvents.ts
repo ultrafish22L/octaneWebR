@@ -7,12 +7,12 @@
 import { useCallback } from 'react';
 import { EventEmitter } from '../utils/EventEmitter';
 import { useEmitterEvent } from './useEmitterEvent';
-import { useStatusMessage } from '../contexts/StatusMessageContext';
+import { useStatusActions } from '../contexts/StatusMessageContext';
 import { Logger } from '../utils/Logger';
 import { SceneNode } from '../services/OctaneClient';
 
 export function useSceneStatusEvents(client: EventEmitter): void {
-  const { setStatusMessage, setTemporaryStatus } = useStatusMessage();
+  const { setStatusMessage, setTemporaryStatus } = useStatusActions();
 
   useEmitterEvent(
     client,

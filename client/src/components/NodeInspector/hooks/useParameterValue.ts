@@ -17,7 +17,7 @@ import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { requestQueue } from '../../../utils/RequestQueue';
 import type { ParameterRawValue, ParameterValue } from '../../../services/octane/ItemService';
 export type { ParameterRawValue, ParameterValue };
@@ -35,7 +35,7 @@ export function useParameterValue(
   client: OctaneClient,
   isEndNode: boolean
 ): UseParameterValueReturn {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
   const [paramValue, setParamValue] = useState<ParameterValue | null>(null);
 
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
@@ -114,7 +114,8 @@ export function useParameterValue(
     };
   }, [isEndNode, node, node.handle, node.attrInfo, node.name, node.outType, client]);
 
-  // Handle parameter value change (memoized with useCallback)
+  // Handle parameter value change — delegates to ItemService (single source of truth
+  // for AttrType→protobuf mapping, cache invalidation, and ApiChangeManager.update)
   const handleValueChange = useCallback(
     async (newValue: ParameterRawValue) => {
       if (!node.handle || !node.attrInfo) return;
@@ -122,87 +123,18 @@ export function useParameterValue(
       try {
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-        // Determine the correct value field name for the setValueByAttrID request.
-        // These field names must exactly match the protobuf oneof field names in
-        // apiitem.proto — e.g., bool_value, float_value, float3_value, etc.
-        let valueField: string;
-        let formattedValue: ParameterRawValue;
+        Logger.debug(`Setting ${node.name} = ${JSON.stringify(newValue)}`);
 
-        switch (expectedType) {
-          case AttrType.AT_BOOL:
-            valueField = 'bool_value';
-            formattedValue = Boolean(newValue);
-            break;
-          case AttrType.AT_INT:
-            valueField = 'int_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_INT2:
-            valueField = 'int2_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_INT3:
-            valueField = 'int3_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_INT4:
-            valueField = 'int4_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_LONG:
-            valueField = 'long_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_LONG2:
-            valueField = 'long2_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_FLOAT:
-            valueField = 'float_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_FLOAT2:
-            valueField = 'float2_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_FLOAT3:
-            valueField = 'float3_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_FLOAT4:
-            valueField = 'float4_value';
-            formattedValue = newValue;
-            break;
-          case AttrType.AT_STRING:
-            valueField = 'string_value';
-            formattedValue = String(newValue);
-            break;
-          default:
-            Logger.warn(`Unsupported type for setValue: ${node.attrInfo.type}`);
-            return;
-        }
+        await client.setParameterValue(node.handle, expectedType, newValue);
 
-        Logger.debug(`Setting ${node.name} = ${JSON.stringify(formattedValue)}`);
-
-        // Call setValueByAttrID to update the value in Octane
-        // Note: evaluate: false is required (matches octaneWeb behavior)
-        await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
-          attribute_id: AttributeId.A_VALUE,
-          expected_type: expectedType,
-          [valueField]: formattedValue,
-          evaluate: false, // Required parameter from octaneWeb
-        });
-
-        // Update local state to reflect the change
+        // Optimistic local state update — reflects the change in the UI immediately
+        // without waiting for a re-fetch from Octane
         setParamValue({
-          value: formattedValue,
+          value: newValue,
           type: expectedType,
         });
 
         Logger.debug(`Successfully updated ${node.name}`);
-
-        // Trigger render update to see changes
-        await client.callApi('ApiChangeManager', 'update', {});
       } catch (error: unknown) {
         Logger.error(
           `Failed to update ${node.name}:`,

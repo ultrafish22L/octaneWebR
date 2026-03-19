@@ -25,7 +25,9 @@ export class CameraService extends BaseService {
     if (!state || typeof state !== 'object' || !('position' in state || 'target' in state)) {
       throw new Error('GetCamera returned unexpected shape');
     }
-    return state as unknown as CameraState;
+    // Safe: CameraState has index signature [key: string]: unknown,
+    // and we validated position/target exist above
+    return state as CameraState;
   }
 
   async setCameraPosition(x: number, y: number, z: number): Promise<void> {

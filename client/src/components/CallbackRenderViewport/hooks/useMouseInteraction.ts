@@ -19,7 +19,7 @@
 
 import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
-import { useStatusMessage } from '../../../contexts/StatusMessageContext';
+import { useStatusActions } from '../../../contexts/StatusMessageContext';
 
 interface CameraState {
   radius: number;
@@ -129,7 +129,7 @@ export function useMouseInteraction({
   setContextMenuPos,
   setContextMenuVisible,
 }: UseMouseInteractionParams) {
-  const { setTemporaryStatus } = useStatusMessage();
+  const { setTemporaryStatus } = useStatusActions();
 
   // Phase 3: Drag state for viewport throttling
   // Tracks if ANY camera manipulation is in progress (orbit, pan, 2D pan)

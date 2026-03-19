@@ -141,7 +141,7 @@ export function registerSceneTools(
   server.tool(
     'get_node_info',
     'Get detailed information about a specific node including its name, type, and pin connections',
-    { handle: z.number().describe('Node handle') },
+    { handle: z.number().int().nonnegative().describe('Node handle') },
     async ({ handle }) => {
       try {
         const nameResult = await client.callMethod('ApiItem', 'name', {

@@ -145,6 +145,7 @@ function NumberInput({
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef(0);
   const dragStartValue = useRef(0);
+  const cleanupDragRef = useRef<(() => void) | null>(null);
 
   // Auto-hide arrows when container is narrow
   useEffect(() => {
@@ -157,6 +158,13 @@ function NumberInput({
     });
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Clean up window listeners if component unmounts mid-drag
+  useEffect(() => {
+    return () => {
+      cleanupDragRef.current?.();
+    };
   }, []);
 
   // Compute scrub bar fill percentage
@@ -191,9 +199,14 @@ function NumberInput({
         }
       };
 
-      const onUp = () => {
+      const cleanup = () => {
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
+        cleanupDragRef.current = null;
+      };
+
+      const onUp = () => {
+        cleanup();
         if (didDrag) {
           setDragging(false);
         } else {
@@ -209,6 +222,7 @@ function NumberInput({
 
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
+      cleanupDragRef.current = cleanup;
     },
     [value, step, scrubMin, range, onCommit, format]
   );
