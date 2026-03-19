@@ -1,7 +1,6 @@
 /**
- * Node Inspector Controls Component (React TypeScript)
+ * Node Inspector Toolbar (React TypeScript)
  * Vertical column of quick-access buttons for jumping to specific nodes
- * Port of octaneWeb/js/components/NodeInspectorControls.js
  */
 
 import { Logger } from '../../utils/Logger';
@@ -9,7 +8,7 @@ import { useState, useCallback } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
 import { getNodeInspectorIcon } from '../../constants/UIIconMapping';
 
-interface NodeInspectorControlsProps {
+interface NodeInspectorToolbarProps {
   sceneTree: SceneNode[];
   onNodeSelect: (node: SceneNode) => void;
   onExpandAll?: () => void;
@@ -43,12 +42,12 @@ function findNodeByName(nodes: SceneNode[], namePattern: string): SceneNode | nu
   return null;
 }
 
-export function NodeInspectorControls({
+export function NodeInspectorToolbar({
   sceneTree,
   onNodeSelect,
   onExpandAll,
   onCollapseAll,
-}: NodeInspectorControlsProps) {
+}: NodeInspectorToolbarProps) {
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
   /**
@@ -185,14 +184,14 @@ export function NodeInspectorControls({
       {/* Expand/Collapse group */}
       <button
         className={`quick-btn ${activeButton === 'expand-all' ? 'active' : ''}`}
-        title="Expand All Nodes"
+        title="Uncollapses all the items in the node stack."
         onClick={handleExpandAll}
       >
         <img src={getNodeInspectorIcon('EXPAND_ALL_NODES')} alt="Expand all" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'collapse-all' ? 'active' : ''}`}
-        title="Collapse All Nodes"
+        title="Collapses all the items in the node stack."
         onClick={handleCollapseAll}
       >
         <img src={getNodeInspectorIcon('COLLAPSE_ALL_NODES')} alt="Collapse all" />
@@ -203,14 +202,14 @@ export function NodeInspectorControls({
       {/* Render Target / Camera group */}
       <button
         className={`quick-btn ${activeButton === 'rendertarget' ? 'active' : ''}`}
-        title="Render Target"
+        title="Selects the render target node and shows it in the node inspector."
         onClick={handleRenderTargetClick}
       >
         <img src={getNodeInspectorIcon('RENDER_TARGET')} alt="Render target" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'camera' ? 'active' : ''}`}
-        title="Camera Settings"
+        title="Selects the camera node and shows it in the node inspector."
         onClick={handleCameraClick}
       >
         <img src={getNodeInspectorIcon('CAMERA_SETTINGS')} alt="Camera" />
@@ -221,14 +220,14 @@ export function NodeInspectorControls({
       {/* Environment group */}
       <button
         className={`quick-btn ${activeButton === 'environment' ? 'active' : ''}`}
-        title="Environment Settings"
+        title="Selects the environment node and shows it in the node inspector."
         onClick={handleEnvironmentClick}
       >
         <img src={getNodeInspectorIcon('ENVIRONMENT_SETTINGS')} alt="Environment" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'visible-environment' ? 'active' : ''}`}
-        title="Visible Environment Settings"
+        title="Selects the visible environment node and shows it in the node inspector."
         onClick={handleVisibleEnvironmentClick}
       >
         <img src={getNodeInspectorIcon('VISIBLE_ENVIRONMENT_SETTINGS')} alt="Visible environment" />
@@ -239,7 +238,7 @@ export function NodeInspectorControls({
       {/* Geometry */}
       <button
         className={`quick-btn ${activeButton === 'geometry' ? 'active' : ''}`}
-        title="Current Geometry"
+        title="Selects the geometry node and shows it in the node inspector."
         onClick={handleGeometryClick}
       >
         <img src={getNodeInspectorIcon('CURRENT_GEOMETRY')} alt="Geometry" />
@@ -250,14 +249,14 @@ export function NodeInspectorControls({
       {/* Film / Animation group */}
       <button
         className={`quick-btn ${activeButton === 'film' ? 'active' : ''}`}
-        title="Film Settings"
+        title="Selects the film settings node and shows it in the node inspector."
         onClick={handleFilmClick}
       >
         <img src={getNodeInspectorIcon('FILM_SETTINGS')} alt="Film" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'animation' ? 'active' : ''}`}
-        title="Animation Settings"
+        title="Selects the animation settings node and shows it in the node inspector."
         onClick={handleAnimationClick}
       >
         <img src={getNodeInspectorIcon('ANIMATION_SETTINGS')} alt="Animation" />
@@ -268,7 +267,7 @@ export function NodeInspectorControls({
       {/* Kernel */}
       <button
         className={`quick-btn ${activeButton === 'kernel' ? 'active' : ''}`}
-        title="Current Kernel"
+        title="Selects the kernel node and shows it in the node inspector."
         onClick={handleKernelClick}
       >
         <img src={getNodeInspectorIcon('CURRENT_KERNEL')} alt="Kernel" />
@@ -279,21 +278,21 @@ export function NodeInspectorControls({
       {/* Render Layer / Passes / AOV group */}
       <button
         className={`quick-btn ${activeButton === 'render-layer' ? 'active' : ''}`}
-        title="Active Render Layer"
+        title="Selects the render layers node and shows it in the node inspector."
         onClick={handleRenderLayerClick}
       >
         <img src={getNodeInspectorIcon('ACTIVE_RENDER_LAYER')} alt="Render layer" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'render-passes' ? 'active' : ''}`}
-        title="Render Passes"
+        title="Selects the output AOV group node and shows it in the node inspector."
         onClick={handleRenderPassesClick}
       >
         <img src={getNodeInspectorIcon('RENDER_PASSES')} alt="Render passes" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'aov-group' ? 'active' : ''}`}
-        title="AOV Group"
+        title="Selects the render AOV node and shows it in the node inspector."
         onClick={handleAovGroupClick}
       >
         <img src={getNodeInspectorIcon('AOV_GROUP')} alt="AOV group" />
@@ -304,14 +303,14 @@ export function NodeInspectorControls({
       {/* Imager / Post Processing group */}
       <button
         className={`quick-btn ${activeButton === 'camera-imager' ? 'active' : ''}`}
-        title="Camera Imager"
+        title="Selects the imager node and shows it in the node inspector."
         onClick={handleCameraImagerClick}
       >
         <img src={getNodeInspectorIcon('CAMERA_IMAGER')} alt="Imager" />
       </button>
       <button
         className={`quick-btn ${activeButton === 'post-processing' ? 'active' : ''}`}
-        title="Post Processing"
+        title="Selects the post-processing node and shows it in the node inspector."
         onClick={handlePostProcessingClick}
       >
         <img src={getNodeInspectorIcon('POST_PROCESSING')} alt="Post processing" />

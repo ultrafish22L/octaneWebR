@@ -95,8 +95,9 @@ export function useGPUData({ connected, client }: UseGPUDataProps) {
 
           if (memoryUsage) {
             usedMemoryGB = memoryUsage.usedDeviceMemory / (1024 * 1024 * 1024);
-            freeMemoryGB = memoryUsage.freeDeviceMemory / (1024 * 1024 * 1024);
             totalMemoryGB = memoryUsage.totalDeviceMemory / (1024 * 1024 * 1024);
+            // Match Octane: show (total - used) not freeDeviceMemory (which excludes OS/driver memory)
+            freeMemoryGB = totalMemoryGB - usedMemoryGB;
             totalMemory = `${usedMemoryGB.toFixed(2)}/${freeMemoryGB.toFixed(1)}/${totalMemoryGB.toFixed(1)} GB`;
           }
         }

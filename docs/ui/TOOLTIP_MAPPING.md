@@ -117,11 +117,53 @@ Cross-reference between OctaneWebR button IDs and Octane's official strings (fro
 | About                | About OCTANE_PRODUCT_NAME...                        |       |
 | Manage crash reports | _(crash report dialog)_                             |       |
 
+## Node Inspector Toolbar
+
+| Action                              | Octane Official                                                      | Notes                |
+| ----------------------------------- | -------------------------------------------------------------------- | -------------------- |
+| Collapse all                        | Collapses all the items in the node stack.                           |                      |
+| Uncollapse all                      | Uncollapses all the items in the node stack.                         |                      |
+| Collapse/expand inline node preview | _(tooltip on preview toggle)_                                        |                      |
+| Show in Graph Editor                | Show in Graph Editor                                                 | Context menu item    |
+| Show in Outliner                    | Show an item in the outliner.                                        | Context menu item    |
+| Inspect render target node          | Selects the render target node and shows it in the node inspector.   | Quick-inspect button |
+| Inspect camera node                 | Selects the camera node and shows it in the node inspector.          | Quick-inspect button |
+| Inspect environment node            | Selects the environment node and shows it in the node inspector.     | Quick-inspect button |
+| Inspect kernel node                 | Selects the kernel node and shows it in the node inspector.          | Quick-inspect button |
+| Inspect film settings               | Selects the film settings node and shows it in the node inspector.   | Quick-inspect button |
+| Inspect imager node                 | Selects the imager node and shows it in the node inspector.          | Quick-inspect button |
+| Inspect post-processing node        | Selects the post-processing node and shows it in the node inspector. | Quick-inspect button |
+| Inspect render AOVs                 | Selects the render AOV node and shows it in the node inspector.      | Quick-inspect button |
+| Inspect render layers node          | Selects the render layers node and shows it in the node inspector.   | Quick-inspect button |
+
+**Not in Octane:** pin/unpin node, back/forward history navigation.
+
+## Node Graph Editor Toolbar
+
+| Action                  | Octane Official                                                        | Notes            |
+| ----------------------- | ---------------------------------------------------------------------- | ---------------- |
+| Recenter view           | Centers the nodes in the graph editor.                                 |                  |
+| Rearrange graph         | Rearranges the items in this graph to make it look tidier.             | Auto-layout      |
+| Rearrange recursively   | Rearranges the items in this graph and all the sub-graphs.             | Deep auto-layout |
+| Render geometry         | Toggles rendering of geometry nodes when selected in the graph editor. | Toggle           |
+| Render materials        | Toggles rendering of material nodes when selected in the graph editor. | Toggle           |
+| Render textures         | Toggles rendering of texture nodes when selected in the graph editor.  | Toggle           |
+| Snap grid               | Toggles snapping of items to the grid in the graph editor.             | Toggle           |
+| Show grid               | Toggles displaying of the grid in the node graph editor.               | Toggle           |
+| Collapse selected items | Collapse selected items in the node graph editor.                      |                  |
+| Expand selected items   | Expand selected items in the node graph editor.                        |                  |
+| Group items             | Group the selected items into a node graph.                            |                  |
+| Ungroup                 | Ungroup the selected node graph.                                       |                  |
+| Find node type          | Find a node or graph type for creating a new item.                     | Search/create    |
+
+**Not in Octane:** minimap, zoom in/out buttons, align nodes, frame selection.
+
 ---
 
 ## Summary
 
-- **17 buttons need tooltip text updates** to match Octane's official strings
+- **Render toolbar:** 17 tooltips updated to match Octane's official strings
+- **4 dropdowns** converted from toggle buttons: clay mode, subsample, render priority, gizmo mode
+- **Node inspector:** 14 tooltip strings available from strings.xml
+- **Node graph editor:** 13 tooltip strings available from strings.xml
 - **2 buttons** have no official string (world-coordinate, decal-wireframe) — keep current text
-- **9 buttons** already match or are close enough
-- Key pattern: Octane uses "Toggles the X of the render viewport" for picker modes, not "X Mode - description"

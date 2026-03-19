@@ -122,21 +122,26 @@ export function NodeGraphToolbar({
   return (
     <div className="node-graph-toolbar">
       {/* Layout / Arrange group */}
-      <button className="toolbar-button" onClick={handleRecenterView} title="Recenter View">
-        <img src={getWindowControlIcon('RECENTER')} alt="Recenter" />
+      <button
+        className="toolbar-button"
+        onClick={handleRecenterView}
+        title="Centers the nodes in the graph editor."
+      >
+        <img src={getWindowControlIcon('RECENTER')} alt="Recenter view" />
       </button>
-      <button className="toolbar-button" onClick={handleRearrangeGraph} title="Re-arrange Graph">
-        <img src={getWindowControlIcon('UNFOLD_GRAPH')} alt="Re-arrange graph" />
+      <button
+        className="toolbar-button"
+        onClick={handleRearrangeGraph}
+        title="Rearranges the items in this graph to make it look tidier."
+      >
+        <img src={getWindowControlIcon('UNFOLD_GRAPH')} alt="Rearrange graph" />
       </button>
       <button
         className="toolbar-button"
         onClick={handleRearrangeWithSubgraph}
-        title="Re-arrange Graph with Sub-graph"
+        title="Rearranges the items in this graph and all the sub-graphs."
       >
-        <img
-          src={getWindowControlIcon('UNFOLD_GRAPH_RECURSIVELY')}
-          alt="Re-arrange with subgraphs"
-        />
+        <img src={getWindowControlIcon('UNFOLD_GRAPH_RECURSIVELY')} alt="Rearrange recursively" />
       </button>
 
       <div className="controls-spacer-vertical" />
@@ -145,30 +150,30 @@ export function NodeGraphToolbar({
       <button
         className={`toolbar-button ${renderTargetPreview ? 'active' : ''}`}
         onClick={handleToggleRenderTargetPreview}
-        title="View/Hide Render Target Preview Scene"
+        title="Toggles rendering of render target nodes when selected in the graph editor."
       >
-        <img src={getPreviewModeIcon('RENDER_TARGET_PREVIEW')} alt="Render target preview" />
+        <img src={getPreviewModeIcon('RENDER_TARGET_PREVIEW')} alt="Render render target" />
       </button>
       <button
         className={`toolbar-button ${meshPreview ? 'active' : ''}`}
         onClick={handleToggleMeshPreview}
-        title="View/Hide Mesh Preview Scene"
+        title="Toggles rendering of geometry nodes when selected in the graph editor."
       >
-        <img src={getPreviewModeIcon('MESH_PREVIEW')} alt="Mesh preview" />
+        <img src={getPreviewModeIcon('MESH_PREVIEW')} alt="Render geometry" />
       </button>
       <button
         className={`toolbar-button ${materialPreview ? 'active' : ''}`}
         onClick={handleToggleMaterialPreview}
-        title="View/Hide Material Preview Scene"
+        title="Toggles rendering of material nodes when selected in the graph editor."
       >
-        <img src={getPreviewModeIcon('MATERIAL_PREVIEW')} alt="Material preview" />
+        <img src={getPreviewModeIcon('MATERIAL_PREVIEW')} alt="Render materials" />
       </button>
       <button
         className={`toolbar-button ${texturePreview ? 'active' : ''}`}
         onClick={handleToggleTexturePreview}
-        title="View/Hide Texture Preview Scene"
+        title="Toggles rendering of texture nodes when selected in the graph editor."
       >
-        <img src={getPreviewModeIcon('TEXTURE_PREVIEW')} alt="Texture preview" />
+        <img src={getPreviewModeIcon('TEXTURE_PREVIEW')} alt="Render textures" />
       </button>
 
       <div className="controls-spacer-vertical" />
@@ -177,16 +182,16 @@ export function NodeGraphToolbar({
       <button
         className={`toolbar-button ${snapToGrid ? 'active' : ''}`}
         onClick={handleToggleGridSnap}
-        title="Snap Items To Grid"
+        title="Toggles snapping of items to the grid in the graph editor."
       >
-        <img src={getWindowControlIcon('SNAP_TO_GRID')} alt="Snap to grid" />
+        <img src={getWindowControlIcon('SNAP_TO_GRID')} alt="Snap grid" />
       </button>
       <button
         className={`toolbar-button ${gridVisible ? 'active' : ''}`}
         onClick={handleToggleGrid}
-        title="View/Hide Graph Editor Grid"
+        title="Toggles displaying of the grid in the node graph editor."
       >
-        <img src={getWindowControlIcon('GRID_TOGGLE')} alt="Toggle grid" />
+        <img src={getWindowControlIcon('GRID_TOGGLE')} alt="Show grid" />
       </button>
     </div>
   );

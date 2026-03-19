@@ -41,7 +41,7 @@ import {
 import { RenderToolbar } from './components/RenderToolbar';
 import { SceneOutliner } from './components/SceneOutliner';
 import { NodeInspector } from './components/NodeInspector';
-import { NodeInspectorControls } from './components/NodeInspector/NodeInspectorControls';
+import { NodeInspectorToolbar } from './components/NodeInspector/NodeInspectorToolbar';
 import { NodeGraphToolbar } from './components/NodeGraph/NodeGraphToolbar';
 import { FileBrowserDialog } from './components/dialogs/FileBrowserDialog';
 import { SceneNode, NodeDeletedEvent } from './services/OctaneClient';
@@ -367,7 +367,7 @@ function AppContent() {
               <div className="panel-content">
                 <ErrorBoundary>
                   <div className="node-inspector-layout">
-                    <NodeInspectorControls sceneTree={sceneTree} onNodeSelect={handleNodeSelect} />
+                    <NodeInspectorToolbar sceneTree={sceneTree} onNodeSelect={handleNodeSelect} />
                     <div className="node-inspector-main">
                       <NodeInspector node={selectedNode} />
                     </div>
