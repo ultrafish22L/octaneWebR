@@ -33,6 +33,7 @@ export const getNodeIcon = (node: SceneNode): string => {
 export interface VirtualTreeRowProps {
   flattenedNodes: FlattenedNode[];
   selectedHandle: number | null;
+  selectedNodeName: string | null; // Fallback for nodes with no handle (empty pins)
   onSelect: (node: SceneNode) => void;
   onContextMenu: (node: SceneNode, event: React.MouseEvent) => void;
   onToggle: (nodeKey: string) => void;
@@ -53,7 +54,16 @@ function VirtualTreeRowComponent(
     style: React.CSSProperties;
   } & VirtualTreeRowProps
 ): React.ReactElement | null {
-  const { index, style, flattenedNodes, selectedHandle, onSelect, onContextMenu, onToggle } = props;
+  const {
+    index,
+    style,
+    flattenedNodes,
+    selectedHandle,
+    selectedNodeName,
+    onSelect,
+    onContextMenu,
+    onToggle,
+  } = props;
   const flatNode = flattenedNodes[index];
 
   if (!flatNode) return null;
@@ -68,7 +78,11 @@ function VirtualTreeRowComponent(
     isLastChild,
     ancestorIsLast,
   } = flatNode;
-  const isSelected = selectedHandle === node.handle;
+  // Match by handle, or by name for handle-less nodes (empty pins like Visible Environment)
+  const isSelected =
+    node.handle != null
+      ? selectedHandle === node.handle
+      : selectedNodeName != null && selectedNodeName === node.name;
 
   // Connector X position: tree-node padding (6) + content padding (4) + guides (d*20) + toggle center (7)
   const connectorStyle =
@@ -138,16 +152,23 @@ function VirtualTreeRowComponent(
         )}
 
         <span className="node-label-area">
-          <img
-            src={getNodeIcon(node)}
-            alt=""
-            className="node-icon"
-            width={16}
-            height={16}
-            onError={e => {
-              (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
-            }}
-          />
+          {node.handle != null ? (
+            <img
+              src={getNodeIcon(node)}
+              alt=""
+              className="node-icon"
+              width={16}
+              height={16}
+              onError={e => {
+                (e.target as HTMLImageElement).src = '/icons/EMPTY.png';
+              }}
+            />
+          ) : (
+            <span
+              className="node-icon-spacer"
+              style={{ width: 14, marginRight: 4, display: 'inline-block' }}
+            />
+          )}
           <span className="node-name">{node.name}</span>
         </span>
       </div>
@@ -208,12 +229,20 @@ function arePropsEqual(
   }
 
   // Compare selection state
-  if (prevProps.selectedHandle !== nextProps.selectedHandle) {
+  if (
+    prevProps.selectedHandle !== nextProps.selectedHandle ||
+    prevProps.selectedNodeName !== nextProps.selectedNodeName
+  ) {
     // Only re-render if this row is selected or was selected
-    const isAffected =
-      prevProps.selectedHandle === prevNode.node.handle ||
-      nextProps.selectedHandle === nextNode.node.handle;
-    if (isAffected) {
+    const prevSelected =
+      prevNode.node.handle != null
+        ? prevProps.selectedHandle === prevNode.node.handle
+        : prevProps.selectedNodeName != null && prevProps.selectedNodeName === prevNode.node.name;
+    const nextSelected =
+      nextNode.node.handle != null
+        ? nextProps.selectedHandle === nextNode.node.handle
+        : nextProps.selectedNodeName != null && nextProps.selectedNodeName === nextNode.node.name;
+    if (prevSelected || nextSelected) {
       return false;
     }
   }

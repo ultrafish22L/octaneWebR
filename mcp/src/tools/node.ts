@@ -284,7 +284,7 @@ export function registerNodeTools(
 
   server.tool(
     'connect_nodes',
-    "Connect a source node to a target node's input pin. Use get_node_info to find pin indices. Provide exactly one of: pin_index (connectToIx), pin_name (connectTo1), or pin_id (connectTo). If connectToIx silently fails (e.g. emission pins), try pin_name or pin_id.",
+    "Connect a source node to a target node's input pin. PREFERRED: use pin_index (most reliable, from get_node_info). pin_name works for named pins like 'emission', 'diffuse'. pin_id is least reliable — pin_id:30 (P_DIFFUSE) and pin_id:59 (P_GEOMETRY) silently fail on some node types. Always verify connections with get_node_info after connecting.",
     {
       target_handle: z
         .number()

@@ -92,12 +92,21 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
         .describe('Image format'),
       render_pass_id: z.number().default(0).describe('Render pass ID (0 = beauty pass)'),
     },
-    async ({ path, format, render_pass_id }) => {
+    async ({ path: savePath, format, render_pass_id }) => {
       try {
+        // Validate parent directory exists
+        const parentDir = savePath.replace(/[\\/][^\\/]*$/, '');
+        if (parentDir && parentDir !== savePath) {
+          const fs = await import('fs');
+          if (!fs.existsSync(parentDir)) {
+            return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
+          }
+        }
+
         const imageSaveFormat = FORMAT_MAP[format] ?? 0;
         await client.callMethod('ApiRenderEngine', 'saveImage1', {
           renderPassId: render_pass_id,
-          fullPath: path,
+          fullPath: savePath,
           imageSaveFormat,
           colorSpace: 1,
           premultipliedAlphaType: 0,
@@ -105,7 +114,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
           exrCompressionLevel: 4.5,
           asynchronous: false,
         });
-        return jsonResult({ success: true, path, format });
+        return jsonResult({ success: true, path: savePath, format });
       } catch (error: any) {
         return errorResult(error);
       }

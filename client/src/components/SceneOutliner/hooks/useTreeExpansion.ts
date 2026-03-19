@@ -86,7 +86,8 @@ export function useTreeExpansion({
   const rowProps = useMemo<VirtualTreeRowProps>(
     () => ({
       flattenedNodes,
-      selectedHandle: selectedNode?.handle || null,
+      selectedHandle: selectedNode?.handle ?? null,
+      selectedNodeName: selectedNode?.handle == null ? (selectedNode?.name ?? null) : null,
       onSelect: onNodeSelect || (() => {}),
       onContextMenu: onNodeContextMenu,
       onToggle: handleToggleExpansion,

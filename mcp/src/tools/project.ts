@@ -52,13 +52,16 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
 
   server.tool(
     'reset_project',
-    'Clear the current scene and reset to a blank project. This can take up to 120 seconds.',
+    'Clear the current scene and reset to a blank project. WARNING: This is destructive — all unsaved changes are lost. Save first with save_project if needed. Can take up to 120 seconds.',
     {},
     async () => {
       try {
         await client.callMethod('ApiProjectManager', 'resetProject', { suppressUI: true }, 120000);
         client.clearRootGraphCache();
-        return jsonResult({ success: true });
+        return jsonResult({
+          success: true,
+          warning: 'Scene reset to blank. All previous nodes and connections are gone.',
+        });
       } catch (error: any) {
         return errorResult(error);
       }

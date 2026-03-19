@@ -36,8 +36,11 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
     {
       position: Vec3Schema.optional().describe('Camera position in world coordinates'),
       target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
+      up: Vec3Schema.optional().describe(
+        'Camera up vector (default: {0,1,0}). Set to maintain roll orientation.'
+      ),
     },
-    async ({ position, target }) => {
+    async ({ position, target, up }) => {
       if (!position && !target) {
         return errorResult('Provide position, target, or both');
       }
@@ -45,6 +48,7 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
         const params: any = {};
         if (position) params.position = position;
         if (target) params.target = target;
+        if (up) params.up = up;
         await client.callMethod('LiveLink', 'SetCamera', params);
         return jsonResult({ success: true });
       } catch (error: any) {

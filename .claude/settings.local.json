@@ -112,7 +112,11 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\) if False else None\")",
       "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''mcp/data/octane-api-cache.json'',''utf8''\\)\\); const ct=d.compatibleTypes; console.log\\(''Pin types with compatible nodes:'', Object.keys\\(ct\\).length\\); for\\(const [k,v] of Object.entries\\(ct\\).slice\\(0,5\\)\\) console.log\\(k, '':'', v.nodes.length, ''nodes''\\); console.log\\(''---''\\); console.log\\(''PT_TEXTURE:'', ct.PT_TEXTURE?.nodes?.length, ''nodes''\\); console.log\\(''PT_MATERIAL:'', ct.PT_MATERIAL?.nodes?.length, ''nodes''\\); console.log\\(''PT_GEOMETRY:'', ct.PT_GEOMETRY?.nodes?.length, ''nodes''\\);\")",
       "Bash(node -e \":*)",
-      "Bash(node scripts/fetch-api-cache.js)"
+      "Bash(node scripts/fetch-api-cache.js)",
+      "Bash(find C:/otoyla/GRPC/dev/octaneWebR -name *VectorInput* -o -name *vector*input*)",
+      "Bash(grep -l \"vector\\\\|Vector\" C:/otoyla/GRPC/dev/octaneWebR/client/src/components/*.tsx)",
+      "Bash(grep -n \"menuIcon\\\\|icon.*menu\\\\|panel.*icon\\\\|panel-title\" C:/otoyla/GRPC/dev/octaneWebR/client/src/components/**/*.tsx)",
+      "Bash(grep -n \"panel-title\\\\|panel-header\\\\|menuIcon\\\\|menu.*icon\" C:/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)"
     ]
   }
 }
