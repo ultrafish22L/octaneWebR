@@ -1,6 +1,8 @@
-# Wood Chips Display (Scene 7)
+# Wood Chips Display
 
 > These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
+
+> **Before building:** Read `CLAUDE.md` (Current Session + MCP Rules) and `docs/mcp/REFERENCE.md`. Don't improvise what's already documented. Don't improvise what's already documented.
 
 ## The Vision
 
@@ -18,53 +20,50 @@ Behind the plank, a soft backdrop (glen landscape, studio gradient, or AI-genera
 
 ---
 
-## Directions
+## Ingredients
 
-_10 renders. Procedural materials are the star._
+_Living values — refined each time the scene is built._
 
-### Prep
+### Camera
 
-Clear the scene. Create render target + path tracing kernel. Connect kernel BEFORE starting render.
+| Setting  | Value                                                  |
+| -------- | ------------------------------------------------------ |
+| Position | {0, 4.2, 7.5}                                          |
+| Target   | {0, 0, 0}                                              |
+| DOF      | OFF (aperture = 0) — sharp focus across all blocks     |
+| Angle    | ~29° elevation, slightly above looking down            |
+| Framing  | All 7 blocks visible with breathing room on both sides |
 
-### 1. Plank down
+### Environment
 
-> "Pine plank. Warm surface catching the light."
+| Setting     | Value                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| Type        | Texture environment, neutral gray {0.3, 0.3, 0.3}                                                          |
+| Power       | 0.5                                                                                                        |
+| Panel light | Large box (30 x 20 x 0.01) at {0, 2, -5}, blackbody 350 power, 4000K, surface brightness ON                |
+| Backdrop    | Optional: glen backdrop plane behind scene, emissive with AI-generated landscape texture, illumination OFF |
 
-Flat box geo (5 x 0.15 x 2), position at {0, -0.075, 0} so top surface is at Y=0. Diffuse material with turbulence color mix — light pine {0.72, 0.58, 0.38} / dark pine {0.5, 0.35, 0.2}. Connect to geo group pin 0, connect group to RT. Start render, set camera.
+### Objects
 
-### 2. Seven blocks
+**Plank (pine)**
 
-> "Wood blocks in a row. Shape first, materials later."
+- Box: 5 x 0.15 x 2, position {0, -0.075, 0} (top surface at Y=0)
+- Diffuse material, Turbulence color mix
 
-Seven box geos, scale 0.5 x 0.15 x 0.8 each. Spaced 0.7 apart along X, centered at X=0. Y position = 0.075 (sitting on plank — half of block height). Add slight Y-rotation jitter per block (3°, -5°, 7°, 0°, -2°, 4°, -3°) and subtle X-position jitter (±0.03-0.05) — they shouldn't look machine-placed.
+**Seven blocks**
 
-### 3. First wood material — Red Oak
+- Box: 0.5 x 0.15 x 0.8 each
+- Spaced 0.7 apart along X, centered at X=0
+- Y position = 0.075 (sitting on plank)
+- Y-rotation jitter per block: 3°, -5°, 7°, 0°, -2°, 4°, -3°
+- X-position jitter: ±0.03-0.05 — they shouldn't look machine-placed
 
-> "Red oak. Open pore, visible grain, warm lacquer."
+### Species Materials
 
-Universal material, GGX BRDF. Albedo = Mix texture: turbulence drives mix between light {0.48, 0.3, 0.2} and dark {0.3, 0.17, 0.1}. Turbulence scale {8, 9, 0.03}, gamma 4.0, omega 0.5. Bump = marble texture, scale {3, 3, 14}, bump height 0.01. **Specular = 0.2** (low specular + coating layer — enough grain sheen on top/side faces without white hotspots on end grain). Coating color {0.45, 0.3, 0.3} (warm tint), coating roughness 0.005, coating amount 0.3. Anisotropy 0.4, roughness 0.063.
+All blocks use Universal material with GGX BRDF. Albedo = Mix texture (Turbulence drives mix between light and dark grain colors). Bump = Marble texture. Coating = warm-tinted lacquer.
 
-### 4. Remaining six species
-
-> "Each block gets its own character."
-
-Clone the red oak material pattern for each species, adjusting per the tables below. The key differentiators: ebony is nearly black and mirror-smooth, purpleheart is violet, zebrawood has dramatic contrast, maple is pale and subtle, walnut is rich dark brown.
-
-### 5. Light it
-
-> "Studio overhead. Warm but neutral."
-
-Environment: texture environment with neutral gray {0.3, 0.3, 0.3}, power 0.5. Panel light: large box geo (30 x 20 x 0.01) at {0, 2, -5}, blackbody emission 350 power, 4000K, surface brightness ON. Optional: glen backdrop plane behind scene, emissive with AI-generated landscape texture, illumination OFF.
-
-### 6. Frame it
-
-> "Product shot. Clean, everything visible."
-
-Camera at {0, 4.2, 7.5} looking at {0, 0, 0}. ~29° elevation. Aperture 0 (no DOF) for sharp focus across all blocks. Adjust until all 7 blocks are visible with breathing room on sides.
-
----
-
-## Species Reference — v9 Punchup Values
+**Red Oak** (reference material — other species follow the same pattern):
+Albedo light {0.48, 0.3, 0.2} / dark {0.3, 0.17, 0.1}. Specular 0.2. Coating color {0.45, 0.3, 0.3}, coating roughness 0.005, coating amount 0.3. Anisotropy 0.4, roughness 0.063.
 
 ### Albedo Colors (Turbulence Mix)
 
@@ -122,13 +121,18 @@ Warm-tinted, not neutral gray. Low roughness = wet polish.
 | Walnut      | 0.3    | {0.4, 0.28, 0.28}  | 0.008     | GGX  | 0.35  |
 | Zebrawood   | 0.3    | {0.4, 0.28, 0.28}  | 0.006     | GGX  | 0.5   |
 
+### Render
+
+- Path Tracing kernel
+- Connect kernel before starting render
+
 ---
 
 ## Critical Lessons (earned the hard way)
 
-1. **Turbulence for color, marble for bump.** Never use marble for color mix — it creates plywood stripes. Turbulence gives organic color variation, marble gives directional grain relief.
+1. **Turbulence for color, Marble for bump.** Never use Marble for color mix — it creates plywood stripes. Turbulence gives organic color variation, Marble gives directional grain relief.
 
-2. **Gamma > 2.0 on turbulence.** Below 2.0, the color grain looks like it was printed by a laser. Real wood grain transitions are soft.
+2. **Gamma > 2.0 on Turbulence.** Below 2.0, the color grain looks like it was printed by a laser. Real wood grain transitions are soft.
 
 3. **Marble Z-scale sweet spot: 2-28.** Z=0.03 = smooth plastic. Z=45 = CNC carved. The right range depends on species: ebony ~2, zebrawood ~28.
 
@@ -136,7 +140,7 @@ Warm-tinted, not neutral gray. Low roughness = wet polish.
 
 5. **Coating roughness < 0.01.** Wet lacquer finish. Above 0.01 looks like the block was sanded but not polished.
 
-6. **Bump height ~0.01, specular ~0.2.** High specular + bump creates white hotspots on end grain (marble bumps all faces equally). Keep specular low (0.2) so the coating layer does most of the sheen work. You get visible grain texture on top/side faces without harsh end grain artifacts.
+6. **Bump height ~0.01, specular ~0.2.** High specular + bump creates white hotspots on end grain (Marble bumps all faces equally). Keep specular low (0.2) so the coating layer does most of the sheen work. You get visible grain texture on top/side faces without harsh end grain artifacts.
 
 7. **Block proportions matter.** 0.5 x 0.15 x 0.8 reads as real wood samples. Default cubes scream CG. Add Y-rotation jitter (3-7°) and X-position jitter (±0.03-0.05) to break the array.
 

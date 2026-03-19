@@ -10,9 +10,9 @@ import { createPortal } from 'react-dom';
 import {
   getCategoriesInOrder,
   getNodeTypesForCategory,
-  OCTANE_NODE_TYPES,
   getNodeIconPath,
 } from '../../constants/NodeTypes';
+import { octaneCacheService } from '../../services/OctaneCacheService';
 
 interface NodeTypeContextMenuProps {
   x: number;
@@ -280,11 +280,13 @@ export function NodeTypeContextMenu({ x, y, onSelectNodeType, onClose }: NodeTyp
           // Handle "All items" - show all nodes from all categories
           let nodeTypes: Record<string, { name: string; color: string }> | undefined;
           if (hoveredCategory === '__ALL_ITEMS__') {
-            nodeTypes = {};
-            // Collect all nodes from all categories
-            Object.values(OCTANE_NODE_TYPES).forEach(categoryNodes => {
-              Object.assign(nodeTypes!, categoryNodes);
-            });
+            const hierarchy = octaneCacheService.getNodeTypeHierarchy();
+            if (hierarchy) {
+              nodeTypes = {};
+              Object.values(hierarchy).forEach(categoryNodes => {
+                Object.assign(nodeTypes!, categoryNodes);
+              });
+            }
           } else {
             nodeTypes = getNodeTypesForCategory(hoveredCategory);
           }

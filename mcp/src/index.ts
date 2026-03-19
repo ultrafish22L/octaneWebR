@@ -54,7 +54,7 @@ async function main() {
   }
 
   // Register all tool groups
-  registerInfoTools(server, client);
+  registerInfoTools(server, client, cache);
   registerProjectTools(server, client);
   registerCameraTools(server, client);
   registerRenderTools(server, client);

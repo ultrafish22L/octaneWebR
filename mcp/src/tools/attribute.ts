@@ -10,7 +10,7 @@ import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { USE_ALPHA5_API } = require('../../../api-version.config.js');
 
-// AttrType enum values (from OctaneTypes.ts)
+// AttrType enum values (from OctaneProtocol.ts)
 const AT_BOOL = 1;
 const AT_INT = 3;
 const AT_INT2 = 4;

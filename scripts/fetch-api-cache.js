@@ -8,6 +8,9 @@
  *   - nodePinInfo(type, i) → ObjectRef per pin
  *   - getApiNodePinInfo()  → full ApiNodePinInfo struct
  *
+ * Uses enums:Number (not String) to avoid string↔int roundtrip through grpc-js.
+ * Proto descriptor provides number↔name mapping for JSON output.
+ *
  * Output: mcp/data/octane-api-cache.json
  *
  * Usage:
@@ -68,22 +71,39 @@ function extractHandle(objRef) {
   return isNaN(n) || n === 0 ? null : n;
 }
 
+// ---------- enum maps ----------
+
+/** Build name↔number maps from a proto enum descriptor */
+function buildEnumMaps(descriptor, enumPath) {
+  const enumDef = enumPath.split('.').reduce((o, k) => o?.[k], descriptor);
+  const enumValues = enumDef?.type?.value || {};
+  const nameToId = {};
+  const idToName = {};
+  for (const def of Object.values(enumValues)) {
+    if (def && typeof def === 'object' && def.name && def.number !== undefined) {
+      nameToId[def.name] = def.number;
+      idToName[def.number] = def.name;
+    }
+  }
+  return { nameToId, idToName };
+}
+
 // ---------- main ----------
 
 async function main() {
   console.log(`\nOctane API Cache Generator\n${'='.repeat(40)}\n`);
 
-  // Load protos
+  // Load protos — enums as NUMBERS (no string roundtrip)
   const protos = ['apiinfo.proto', 'apinodepininfohelper.proto'];
   const packageDefinition = protoLoader.loadSync(
     protos.map(p => path.join(PROTO_PATH, p)),
     {
       keepCase: true,
       longs: String,
-      enums: String,
       defaults: true,
       oneofs: true,
       includeDirs: [PROTO_PATH],
+      // No enums option — defaults to numbers
     }
   );
   const descriptor = grpc.loadPackageDefinition(packageDefinition);
@@ -105,16 +125,19 @@ async function main() {
   console.log(`Waiting ${startDelay}s for Octane to stabilize...\n`);
   await sleep(startDelay * 1000);
 
-  // Extract numeric enum values from proto descriptor for NodeType
-  // Proto-loader stores enums as { 0: {name: "NT_UNKNOWN", number: 0}, 1: {name: "NT_GEO_MESH", number: 1}, ... }
-  const nodeTypeEnum = descriptor.octaneapi?.NodeType?.type?.value || {};
-  const enumNameToId = {};
-  for (const def of Object.values(nodeTypeEnum)) {
-    if (def && typeof def === 'object' && def.name && def.number !== undefined) {
-      enumNameToId[def.name] = def.number;
-    }
-  }
-  console.log(`  Enum map: ${Object.keys(enumNameToId).length} NodeType entries\n`);
+  // Build enum reverse maps from proto descriptor
+  const nodeTypeMap = buildEnumMaps(descriptor, 'octaneapi.NodeType');
+  const pinTypeMap = buildEnumMaps(descriptor, 'octaneapi.NodePinType');
+  const pinIdMap = buildEnumMaps(descriptor, 'octaneapi.NodePinId');
+  const attrTypeMap = buildEnumMaps(descriptor, 'octaneapi.AttributeType');
+
+  console.log(`  Enum maps: ${Object.keys(nodeTypeMap.nameToId).length} NodeType, ${Object.keys(pinTypeMap.nameToId).length} PinType, ${Object.keys(pinIdMap.nameToId).length} PinId, ${Object.keys(attrTypeMap.nameToId).length} AttrType\n`);
+
+  // Helper: resolve numeric enum to string name, with fallback
+  const ntName = (id) => nodeTypeMap.idToName[id] || `NT_${id}`;
+  const ptName = (id) => pinTypeMap.idToName[id] || `PT_${id}`;
+  const pinName = (id) => pinIdMap.idToName[id] || `P_${id}`;
+  const atName = (id) => attrTypeMap.idToName[id] || `AT_${id}`;
 
   // ---- Meta ----
   const versionRes = await makeCall(apiInfo, 'octaneVersion');
@@ -124,18 +147,13 @@ async function main() {
   console.log(`Octane: ${octaneName} (version ${octaneVersion})\n`);
 
   // ---- Pin types ----
-  // Proto: NodePinTypeArrayT { repeated NodePinType data = 1; }
-  // With enums:String, values come as strings like "PT_BOOL"
+  // With enums:Number, values come as integers
   console.log('Fetching pin types...');
   const pinTypesRes = await makeCall(apiInfo, 'getPinTypes');
   const pinTypeRaw = pinTypesRes.pinTypes?.data || [];
   const pinTypes = {};
   for (const pt of pinTypeRaw) {
-    // With enums:String, pt is the enum name like "PT_BOOL"
-    // We need the numeric value — call getPinTypeName with the enum string
-    // Actually, we need to resolve enum string → number. Let's store by name and build reverse map.
-    // For now, store the string values and resolve to numbers via getPinTypeName
-    const name = String(pt);
+    const name = ptName(pt);
     try {
       const colorRes = await makeCall(apiInfo, 'getPinTypeColor', { type: pt });
       pinTypes[name] = { color: colorRes.result || 0 };
@@ -151,7 +169,7 @@ async function main() {
   const attrTypeRaw = attrTypesRes.attributeTypes?.data || [];
   const attributeTypes = {};
   for (const at of attrTypeRaw) {
-    const name = String(at);
+    const name = atName(at);
     try {
       const nameRes = await makeCall(apiInfo, 'getAttributeTypeName', { type: at });
       attributeTypes[name] = nameRes.result || name;
@@ -174,23 +192,27 @@ async function main() {
   let errorCount = 0;
   let totalPins = 0;
 
-  // Filter: skip NT_UNKNOWN (crashes Octane) and _NT_* (deprecated internals)
-  const nodeTypeFiltered = nodeTypeRaw.filter(t => {
-    const name = String(t);
-    return name !== 'NT_UNKNOWN' && !name.startsWith('_NT_');
+  // Skip types that crash Octane on nodeInfo() — see docs/mcp/GRPC_CRASHES.md
+  const CRASH_IDS = new Set([0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]);
+  const nodeTypeFiltered = nodeTypeRaw.filter(typeId => {
+    if (CRASH_IDS.has(typeId)) return false;
+    const name = ntName(typeId);
+    if (name.startsWith('_NT_')) return false;
+    if (!name || name.startsWith('NT_')) return true;  // known to proto
+    return false;  // unknown to proto — skip
   });
-  console.log(`  ${nodeTypeFiltered.length} after filtering (skipped NT_UNKNOWN and _NT_*)\n`);
+  console.log(`  ${nodeTypeFiltered.length} after filtering (skipped ${nodeTypeRaw.length - nodeTypeFiltered.length} crash/deprecated/unknown)\n`);
 
   for (let i = 0; i < nodeTypeFiltered.length; i++) {
-    const typeEnum = nodeTypeFiltered[i];
-    const typeName = String(typeEnum);
+    const typeId = nodeTypeFiltered[i];
+    const typeName = ntName(typeId);
 
     process.stdout.write(`[${i + 1}/${nodeTypeFiltered.length}] ${typeName}... `);
 
-    // Get node info — pass enum string directly
+    // Get node info — pass numeric enum directly (no string resolution)
     let info;
     try {
-      const infoRes = await makeCall(apiInfo, 'nodeInfo', { type: typeEnum });
+      const infoRes = await makeCall(apiInfo, 'nodeInfo', { type: typeId });
       info = infoRes.result;
     } catch (err) {
       console.log(`SKIP (nodeInfo failed: ${err.message})`);
@@ -204,8 +226,7 @@ async function main() {
       continue;
     }
 
-    // With enums:String, outType comes as "PT_MATERIAL" etc.
-    const outTypeName = String(info.outType || 'PT_UNKNOWN');
+    const outTypeName = ptName(info.outType || 0);
     const pinInfoCount = info.pinInfoCount || 0;
 
     // Fetch pin info for each pin
@@ -214,7 +235,7 @@ async function main() {
       try {
         // Step 1: get ObjectRef from nodePinInfo
         const pinRefRes = await makeCall(apiInfo, 'nodePinInfo', {
-          nodeType: typeEnum,
+          nodeType: typeId,
           pinIx,
         });
         const objRef = pinRefRes.result;
@@ -236,14 +257,14 @@ async function main() {
           continue;
         }
 
-        // With enums:String, pi.type = "PT_TEXTURE", pi.id = "P_DIFFUSE", pi.defaultNodeType = "NT_TEX_RGB"
+        // With enums:Number, pi.type/pi.id/pi.defaultNodeType are integers — resolve to names
         pins.push({
           index: pinIx,
-          id: String(pi.id || 'P_UNKNOWN'),
-          type: String(pi.type || 'PT_UNKNOWN'),
+          id: pinName(pi.id || 0),
+          type: ptName(pi.type || 0),
           staticName: pi.staticName || '',
           staticLabel: pi.staticLabel || '',
-          defaultNodeType: pi.defaultNodeType && String(pi.defaultNodeType) !== 'NT_UNKNOWN' ? String(pi.defaultNodeType) : undefined,
+          defaultNodeType: pi.defaultNodeType && pi.defaultNodeType !== 0 ? ntName(pi.defaultNodeType) : undefined,
           description: pi.description || undefined,
           pinColor: pi.pinColor || undefined,
         });
@@ -271,11 +292,7 @@ async function main() {
     };
 
     nodeTypes[typeName] = entry;
-    // Store name → numeric enum ID for reverse lookup in ApiCache
-    const numericId = enumNameToId[typeName];
-    if (numericId !== undefined) {
-      nodeTypesByName[typeName] = String(numericId);
-    }
+    nodeTypesByName[typeName] = String(typeId);
     successCount++;
 
     console.log(`OK (${pinInfoCount} pins)`);
@@ -299,13 +316,16 @@ async function main() {
   // ---- Compatible types per pin type ----
   console.log('\nFetching pin type compatibility...');
   const compatibleTypes = {};
-  for (const ptName of Object.keys(pinTypes)) {
+  for (const [ptNameKey, ptData] of Object.entries(pinTypes)) {
+    // Resolve name back to numeric ID for the gRPC call
+    const ptId = pinTypeMap.nameToId[ptNameKey];
+    if (ptId === undefined) continue;
     try {
-      const res = await makeCall(apiInfo, 'getCompatibleTypes', { outType: ptName });
-      const compatNodes = (res.compatNodes?.data || []).map(v => String(v));
-      const compatGraphs = (res.compatGraphs?.data || []).map(v => String(v));
+      const res = await makeCall(apiInfo, 'getCompatibleTypes', { outType: ptId });
+      const compatNodes = (res.compatNodes?.data || []).map(v => ntName(v));
+      const compatGraphs = (res.compatGraphs?.data || []).map(v => ntName(v));
       if (compatNodes.length > 0 || compatGraphs.length > 0) {
-        compatibleTypes[ptName] = { nodes: compatNodes, graphs: compatGraphs };
+        compatibleTypes[ptNameKey] = { nodes: compatNodes, graphs: compatGraphs };
       }
     } catch {
       // Some pin types may not have compatibility info

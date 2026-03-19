@@ -4,6 +4,23 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.0.0] - 2026-03-19
+
+### Changed - Doc Consolidation + MCP Integration Test
+
+- **Doc consolidation**: 8 MCP docs → 4 (REFERENCE.md, BUILD.md, CREATIVE.md, TROUBLESHOOTING.md)
+- **Inline MCP rules**: 18 gate rules in CLAUDE.md — crash prevention, connection gotchas, workflow gates
+- **Recipe style guide**: all 8 recipes converted to creative briefs (Vision + Ingredients only, no build steps)
+- MCP server bundling: esbuild `--bundle` for cross-package imports from client/src
+- Generated OBJ assets: sphere_hd.obj (32×16 UV sphere), floor.obj (quad plane)
+- Glass metal scene v5 built via MCP (3 smooth spheres on floor, golden hour)
+
+### Deleted
+
+- OCTANE_MCP.md, OCTANE_CHEATSHEET.md, SCENE_BUILDING_TIPS.md, CAMERA_MATH.md, GRPC_CRASHES.md, DRESS_BUILD_PROTOCOL.md, DEMO_SHOW_FLOW.md (all absorbed into new docs)
+
+---
+
 ## [Unreleased]
 
 ### Changed - Beta 2 Proto Cleanup + ESLint Fix (2026-02-24)

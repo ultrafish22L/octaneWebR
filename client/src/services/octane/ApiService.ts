@@ -3,7 +3,7 @@
  * Handles all API calls to the Octane server
  */
 
-import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneTypes';
+import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneProtocol';
 import { BaseService } from './BaseService';
 import { Logger, LogLevel } from '../../utils/Logger';
 import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
@@ -141,7 +141,7 @@ export class ApiService extends BaseService {
      * - Some services (ApiItem, ApiNode, etc.) require an objectPtr wrapper:
      *   { objectPtr: { handle: "123", type: ObjectType.NODE } }
      * - Others accept the handle directly: { handle: 123 }
-     * - OctaneTypes.ts maps service names to their required ObjectType
+     * - OctaneProtocol.ts maps service names to their required ObjectType
      */
     let body: ApiRequestBody = {};
 

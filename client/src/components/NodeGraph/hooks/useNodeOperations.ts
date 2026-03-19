@@ -17,7 +17,8 @@ import { Node } from '@xyflow/react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { OctaneNodeData } from '../OctaneNode';
-import { NodeType, FILE_NODE_TYPES, AttributeId, AttrType } from '../../../constants/OctaneTypes';
+import { AttributeId, AttrType } from '../../../constants/OctaneProtocol';
+import { octaneCacheService } from '../../../services/OctaneCacheService';
 import { EditCommands } from '../../../commands/EditCommands';
 import { Logger } from '../../../utils/Logger';
 import { useStatusActions } from '../../../contexts/StatusMessageContext';
@@ -204,7 +205,7 @@ export function useNodeOperations({
 
   const handleSelectNodeType = useCallback(
     async (nodeType: string) => {
-      const nodeTypeId = NodeType[nodeType];
+      const nodeTypeId = octaneCacheService.getNodeTypeId(nodeType);
       if (nodeTypeId === undefined) {
         Logger.error('Unknown node type:', nodeType);
         setTemporaryStatus('Unknown node type', 3000);
@@ -213,13 +214,13 @@ export function useNodeOperations({
 
       // File-based nodes: open file browser BEFORE creating the node.
       // If user cancels, no node is created.
-      const fileNodeConfig = FILE_NODE_TYPES[nodeType];
-      if (fileNodeConfig) {
+      const fileExtensions = octaneCacheService.getFileNodeExtensions(nodeType);
+      if (fileExtensions) {
         pendingFileNodeRef.current = { nodeType, nodeTypeId };
         fileBrowser.browse({
           mode: 'open',
           title: `Select file for ${nodeType.replace('NT_', '').replace(/_/g, ' ')}`,
-          filePatterns: fileNodeConfig.extensions,
+          filePatterns: fileExtensions,
         });
         return; // Node creation happens in the fileBrowser onResult callback
       }

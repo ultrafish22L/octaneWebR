@@ -1,4 +1,4 @@
-# octaneWebR Quick Start (v1.5.8)
+# octaneWebR Quick Start (v2.0.0)
 
 ## Prerequisites
 

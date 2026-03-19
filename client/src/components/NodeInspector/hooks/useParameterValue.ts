@@ -15,7 +15,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
-import { AttributeId, AttrType } from '../../../constants/OctaneTypes';
+import { AttributeId, AttrType } from '../../../constants/OctaneProtocol';
 import { Logger } from '../../../utils/Logger';
 import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { requestQueue } from '../../../utils/RequestQueue';

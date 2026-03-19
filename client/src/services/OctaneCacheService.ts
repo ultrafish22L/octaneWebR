@@ -17,6 +17,7 @@ export interface ClientCachePayload {
   nodeTypes: Record<
     string,
     {
+      id: number;
       name: string;
       category: string;
       color: string;
@@ -81,10 +82,16 @@ class OctaneCacheServiceImpl {
   /** Get node type info from the cache */
   getNodeTypeInfo(
     nodeType: string
-  ): { name: string; category: string; color: string; outType: string } | undefined {
+  ): { id: number; name: string; category: string; color: string; outType: string } | undefined {
     const nt = this.data?.nodeTypes[nodeType];
     if (!nt || nt.isHidden) return undefined;
     return nt;
+  }
+
+  /** Get numeric node type ID (e.g., NT_MAT_UNIVERSAL → 130) */
+  getNodeTypeId(nodeType: string): number | undefined {
+    const nt = this.data?.nodeTypes[nodeType];
+    return nt ? nt.id : undefined;
   }
 
   /** Get all non-hidden node types grouped by top-level category */
@@ -110,8 +117,58 @@ class OctaneCacheServiceImpl {
     if (!nt || nt.movableInputPinCount <= 0) return undefined;
     return {
       inputName: nt.movableInputName || 'input',
-      pinsPerInput: 1, // Default; cache doesn't have pinsPerInput directly
+      pinsPerInput: nt.movableInputPinCount,
     };
+  }
+
+  /** Check if a node type requires a file path (has A_FILENAME attribute).
+   *  Returns the file extension filter if true, undefined if not a file node.
+   *  Uses prefix-based heuristic — covers all known file node types. */
+  getFileNodeExtensions(nodeType: string): string | undefined {
+    if (!this.inferFileNodeFromPrefix(nodeType)) return undefined;
+
+    // Infer extensions from node type prefix
+    if (nodeType.includes('_OSL')) return '*.osl;*.oso';
+    if (nodeType.includes('_VDB') || nodeType.includes('_VOLUME')) return '*.vdb;*.nvdb';
+    if (nodeType.includes('_ALEMBIC')) return '*.abc';
+    if (nodeType.includes('_SPLAT')) return '*.ply;*.splat';
+    if (
+      nodeType.startsWith('NT_TEX_IMAGE') ||
+      nodeType === 'NT_TEX_ALPHAIMAGE' ||
+      nodeType === 'NT_TEX_FLOATIMAGE' ||
+      nodeType === 'NT_TEX_BAKED_IMAGE'
+    )
+      return '*.png;*.jpg;*.jpeg;*.tiff;*.tif;*.exr;*.hdr;*.bmp';
+    if (nodeType.startsWith('NT_GEO_MESH') || nodeType === 'NT_GEO_VOLUME')
+      return '*.obj;*.ply;*.stl;*.fbx';
+    // Fallback for unknown file types
+    return '*.*';
+  }
+
+  /** Prefix-based heuristic for file node detection */
+  private inferFileNodeFromPrefix(nodeType: string): boolean {
+    const FILE_PREFIXES = [
+      'NT_GEO_MESH',
+      'NT_GEO_VOLUME',
+      'NT_GEO_GAUSSIAN_SPLAT',
+      'NT_TEX_IMAGE',
+      'NT_TEX_ALPHAIMAGE',
+      'NT_TEX_FLOATIMAGE',
+      'NT_TEX_BAKED_IMAGE',
+      'NT_TEX_IMAGE_TILES',
+      'NT_TEX_IMAGE_TILE_SET',
+      'NT_TEX_READ_VDB',
+      'NT_MAT_OSL',
+      'NT_TEX_OSL',
+      'NT_PROJ_OSL',
+      'NT_CAM_OSL',
+      'NT_GEO_OSL',
+      'NT_PROJ_OSL_UV',
+      'NT_CAM_OSL_BAKING',
+      'NT_IMPORT_ALEMBIC_PREFS',
+      'NT_IMPORT_VDB_PREFS',
+    ];
+    return FILE_PREFIXES.some(p => nodeType === p || nodeType.startsWith(p + '_'));
   }
 
   /** Get pin type color (hex string) */

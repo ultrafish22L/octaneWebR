@@ -9,7 +9,7 @@ import { Logger } from '../../utils/Logger';
 import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
 import { ApiService } from './ApiService';
-import { AttributeId, AttrType } from '../../constants/OctaneTypes';
+import { AttributeId, AttrType } from '../../constants/OctaneProtocol';
 import { cacheManager } from '../CacheManager';
 
 export type ParameterRawValue =

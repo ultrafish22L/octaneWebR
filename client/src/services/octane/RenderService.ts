@@ -8,7 +8,7 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
 import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { RenderState, RenderRegion } from './types';
-import { PinId, PinTypeId } from '../../constants/OctaneTypes';
+import { PinId, PinTypeId } from '../../constants/OctaneProtocol';
 
 export class RenderService extends BaseService {
   private apiService: ApiService;
@@ -268,7 +268,7 @@ export class RenderService extends BaseService {
         return false;
       }
 
-      // Get boolean value directly using PinId (from OctaneTypes.PinId)
+      // Get boolean value directly using PinId (from OctaneProtocol.PinId)
       const valueResponse = await this.apiService.callApi(
         'ApiNode',
         'getPinValueByPinID',
@@ -295,7 +295,7 @@ export class RenderService extends BaseService {
         throw new Error('Film Settings node not found');
       }
 
-      // Set boolean value directly using PinId (from OctaneTypes.PinId)
+      // Set boolean value directly using PinId (from OctaneProtocol.PinId)
       await this.apiService.callApi('ApiNode', 'setPinValueByPinID', filmSettingsHandle, {
         pin_id: PinId.P_LOCK_RENDER_AOVS, // 2672
         bool_value: locked,

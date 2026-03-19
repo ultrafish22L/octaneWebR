@@ -88,6 +88,12 @@ export class ApiCache {
     return this.data.nodeTypes[typeName];
   }
 
+  /** Get numeric type ID from node type name (e.g. "NT_MAT_UNIVERSAL" → 130) */
+  getNodeTypeId(typeName: string): number | undefined {
+    const id = this.data.nodeTypesByName[typeName];
+    return id !== undefined ? Number(id) : undefined;
+  }
+
   /** Get node type name from numeric type ID (e.g. 130 → "NT_MAT_UNIVERSAL") */
   getNodeTypeName(typeId: number): string | undefined {
     return this.typeIdToName.get(typeId);

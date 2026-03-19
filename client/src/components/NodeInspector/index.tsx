@@ -17,12 +17,8 @@ import { SceneNode } from '../../services/OctaneClient';
 import { useOctane } from '../../hooks/useOctane';
 import { useStatusActions } from '../../contexts/StatusMessageContext';
 import { getIconForType, getCompatibleNodeTypes } from '../../constants/PinTypes';
-import {
-  FILE_NODE_TYPES,
-  MOVABLE_INPUT_TYPES,
-  AttributeId,
-  AttrType,
-} from '../../constants/OctaneTypes';
+import { AttributeId, AttrType } from '../../constants/OctaneProtocol';
+import { octaneCacheService } from '../../services/OctaneCacheService';
 // requestQueue imported by useParameterValue hook
 import { getNodeTypeInfo } from '../../constants/NodeTypes';
 import { formatNodeColor } from '../../utils/ColorUtils';
@@ -379,7 +375,7 @@ function TransformValueExpander({ nodeHandle }: { nodeHandle: number }) {
 // movable-input node type — all children of such nodes are movable inputs.
 function isMovableInputPin(child: SceneNode, nodeType: string | undefined): boolean {
   if (!nodeType) return false;
-  const info = MOVABLE_INPUT_TYPES[nodeType];
+  const info = octaneCacheService.getMovableInputInfo(nodeType);
   if (!info) return false;
   // All children of movable-input nodes are movable inputs.
   // Double-check via pin id string: movable pins typically have id "P_UNKNOWN".
@@ -518,7 +514,7 @@ const NodeParameter = React.memo(function NodeParameter({
 
   // Prefix movable input pins with "Input N:" (matches Octane's "Input 1: Placement" style)
   if (movablePinIndex !== undefined && parentNodeType) {
-    const movInfo = MOVABLE_INPUT_TYPES[parentNodeType];
+    const movInfo = octaneCacheService.getMovableInputInfo(parentNodeType);
     if (movInfo) {
       const prefix = `${movInfo.inputName.charAt(0).toUpperCase()}${movInfo.inputName.slice(1)} ${movablePinIndex + 1}`;
       if (node.handle && name && name !== 'Unnamed') {
@@ -690,7 +686,9 @@ const NodeParameter = React.memo(function NodeParameter({
   }
 
   // Show file toolbar for file-based nodes (even without a file loaded yet) or nodes with a file path
-  const isFileNode = !!(node.nodeInfo?.type && node.nodeInfo.type in FILE_NODE_TYPES);
+  const isFileNode = !!(
+    node.nodeInfo?.type && octaneCacheService.getFileNodeExtensions(node.nodeInfo.type)
+  );
   const showFileToolbar = isFileNode || !!node.filePath;
 
   // Render as node group (non-parameter nodes)
@@ -793,7 +791,7 @@ const NodeParameter = React.memo(function NodeParameter({
       {/* Add input button for movable-input nodes */}
       {node.handle &&
         node.nodeInfo?.type &&
-        node.nodeInfo.type in MOVABLE_INPUT_TYPES &&
+        !!octaneCacheService.getMovableInputInfo(node.nodeInfo.type) &&
         expanded && <AddInputButton nodeHandle={node.handle} />}
 
       {/* File Node Toolbar - inside collapsed section (matches Octane layout) */}

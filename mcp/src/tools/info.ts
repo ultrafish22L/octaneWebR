@@ -14,16 +14,16 @@ import {
   profileEnd,
 } from '../OctaneMcpClient';
 
-import {
-  NodeType,
-  AttrType,
-  AttributeId,
-  ObjectType,
-} from '../../../client/src/constants/OctaneTypes';
+import { AttrType, AttributeId, ObjectType } from '../../../client/src/constants/OctaneProtocol';
+import { ApiCache } from '../ApiCache';
 
 import { jsonResult, errorResult } from './utils';
 
-export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
+export function registerInfoTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  cache: ApiCache | null
+) {
   server.tool(
     'get_octane_version',
     'Get the Octane version and license information',
@@ -72,14 +72,21 @@ export function registerInfoTools(server: McpServer, client: OctaneMcpClient) {
     },
     async ({ category }) => {
       try {
-        let nodeTypes = NodeType as Record<string, number>;
+        // Build node type → id map from cache
+        let nodeTypes: Record<string, number> = {};
+        if (cache) {
+          for (const name of cache.getNodeTypeNames()) {
+            const id = cache.getNodeTypeId(name);
+            if (id !== undefined) nodeTypes[name] = id;
+          }
+        }
 
         if (category) {
           const prefix = `NT_${category.toUpperCase()}`;
           const filtered: Record<string, number> = {};
           for (const [key, value] of Object.entries(nodeTypes)) {
             if (key.startsWith(prefix)) {
-              filtered[key] = value as number;
+              filtered[key] = value;
             }
           }
           nodeTypes = filtered;

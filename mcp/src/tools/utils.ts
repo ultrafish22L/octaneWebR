@@ -35,7 +35,7 @@ export function extractValue(result: GrpcResponse): unknown {
 }
 
 // ── Octane ObjectType constants ──────────────────────────────────────
-// These match the ObjectType enum in OctaneTypes.ts. Used in objectPtr
+// These match the ObjectType enum in OctaneProtocol.ts. Used in objectPtr
 // params for gRPC calls. Named constants prevent magic-number bugs.
 
 export const OBJ_API_ITEM = 16;

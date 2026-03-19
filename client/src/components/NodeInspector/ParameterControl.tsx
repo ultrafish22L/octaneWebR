@@ -18,7 +18,7 @@
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { SceneNode } from '../../services/OctaneClient';
-import { AttrType } from '../../constants/OctaneTypes';
+import { AttrType } from '../../constants/OctaneProtocol';
 import { formatColorValue } from '../../utils/ColorUtils';
 import { Logger } from '../../utils/Logger';
 import type { ParameterValue } from './hooks/useParameterValue';

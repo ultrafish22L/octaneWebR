@@ -1,6 +1,6 @@
 # Octane Creative Guide
 
-How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (technical/API reference).
+How to make scenes look _good_, not just work. Companion to `REFERENCE.md` (technical/API reference).
 
 ## What You're Working With
 

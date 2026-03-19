@@ -20,8 +20,6 @@ import {
   OBJ_API_NODE_GRAPH,
 } from './utils';
 
-import { NodeType } from '../../../client/src/constants/OctaneTypes';
-
 // --- Legacy pin type validation (fallback when cache unavailable) ---
 
 /** NodePinType enum → human-readable name */
@@ -163,7 +161,7 @@ export function registerNodeTools(
     },
     async ({ node_type, node_type_id }) => {
       try {
-        const typeId = node_type_id ?? (NodeType as Record<string, number>)[node_type];
+        const typeId = node_type_id ?? cache?.getNodeTypeId(node_type);
         if (typeId === undefined) {
           return errorResult(
             `Unknown node type: ${node_type}. Use list_node_types to see available types.`

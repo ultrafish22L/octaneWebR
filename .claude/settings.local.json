@@ -122,7 +122,18 @@
       "Bash(node -e \"const d = require\\(''./client/public/data/octane-api-cache.json''\\); console.log\\(JSON.stringify\\(d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,5\\)\\)\\)\")",
       "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); const nodes = d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,3\\); console.log\\(JSON.stringify\\(nodes\\)\\); console.log\\(''types:'', typeof nodes[0].id, typeof nodes[0].key\\)\")",
       "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(''NT_CAM_OSL:'', d.nodeTypesByName?.NT_CAM_OSL\\); console.log\\(''NT_CAM_PANORAMIC:'', d.nodeTypesByName?.NT_CAM_PANORAMIC\\); console.log\\(''sample compat:'', JSON.stringify\\(d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,3\\)\\)\\)\")",
-      "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(typeof d.nodeTypesByName?.NT_CAM_OSL\\)\")"
+      "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(typeof d.nodeTypesByName?.NT_CAM_OSL\\)\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue\")",
+      "Bash(cmd /c 'taskkill /F /IM node.exe')",
+      "Bash(cmd /c 'taskkill /F /IM octane.exe')",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue; Stop-Process -Name octane -Force -ErrorAction SilentlyContinue\")",
+      "Bash(node -e \"const c = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(''NT_MAT_OSL:'', JSON.stringify\\(c.nodeTypes?.NT_MAT_OSL\\)?.substring\\(0,300\\)\\); console.log\\(''Total node types:'', Object.keys\\(c.nodeTypes || {}\\).length\\)\")",
+      "Bash(node -e \"const c = require\\(''./mcp/data/octane-api-cache.json''\\); const keys = Object.keys\\(c.nodeTypes || {}\\); console.log\\(''First 5:'', keys.slice\\(0,5\\)\\); console.log\\(''Last 5:'', keys.slice\\(-5\\)\\); console.log\\(''Total:'', keys.length\\); console.log\\(''Has NT_MAT_OSL:'', !!c.nodeTypes?.NT_MAT_OSL\\); console.log\\(''Has NT_TEX_OSL:'', !!c.nodeTypes?.NT_TEX_OSL\\)\")",
+      "Bash(node -e \"const c = require\\(''./mcp/data/octane-api-cache.json''\\); const keys = Object.keys\\(c.nodeTypes || {}\\); const idx = keys.indexOf\\(''NT_GEO_PLANE''\\); console.log\\(''NT_GEO_PLANE at cache pos:'', idx\\); const around = keys.slice\\(108, 120\\); console.log\\(''Cache keys 108-119:'', around\\)\")",
+      "Bash(START_DELAY=2 node scripts/fetch-api-cache.js)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -RemotePort 51022 -ErrorAction SilentlyContinue | Select-Object OwningProcess,State | Format-Table\")",
+      "Bash(mv OCTANE_CREATIVE.md CREATIVE.md)",
+      "Bash(echo \"Renamed OCTANE_CREATIVE.md -> CREATIVE.md\")"
     ]
   }
 }

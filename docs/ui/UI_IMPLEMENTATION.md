@@ -6,7 +6,7 @@ Lessons learned and patterns established while building the octaneWebR node insp
 
 ## Inspector Depth Shading
 
-**Status: DONE** — Implemented across all 3 themes (octane, vibe, debug).
+Implemented across all 3 themes (octane, vibe, debug).
 
 ### Pattern
 

@@ -4,7 +4,7 @@
  * showing file operations and the currently loaded file path.
  */
 import type { SceneNode } from '../../services/OctaneClient';
-import { AttributeId, AttrType } from '../../constants/OctaneTypes';
+import { AttributeId, AttrType } from '../../constants/OctaneProtocol';
 import { Logger } from '../../utils/Logger';
 import { useOctane } from '../../hooks/useOctane';
 import { useFileBrowser } from '../../hooks/useFileBrowser';

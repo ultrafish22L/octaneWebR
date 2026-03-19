@@ -2,52 +2,29 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 8: Code Review + UI Polish + Cleanup — v1.5.9**
+**Phase 9: Doc Consolidation + MCP Integration Test — v2.0.0**
 
 **What happened this session:**
 
-- Full strict code review (see `review.md`) — security, TypeScript, React, MCP, config
-- Removed legacy Express server (standalone `server/src/index.ts` and related files)
-- File browser restricted to configurable `OCTANE_FILE_ROOTS` (default `C:\otoyla`)
-- Bind host configurable via `OCTANE_BIND_HOST` (default `127.0.0.1`)
-- Removed `restart_render` MCP tool (crashed Octane) — now 27 tools
-- Fixed handle-0 selection bug in SceneOutliner (`||` → `??`)
-- Empty pin nodes (Visible Environment) show no icon, matching Octane
-- Clay mode + subsample mode → 3-item dropdown menus matching Octane
-- Render priority + gizmo mode dropdowns converted to fixed positioning
-- Toolbar tooltip text updated from `reference/strings.xml`
-- Node inspector + node graph toolbar tooltips from strings.xml
-- Gold selection highlight for all dropdown menus (theme-aware)
-- MCP: added `up` param to `set_camera`, improved `connect_nodes` description
-- MCP: `reset_project` warning in description and response
-- MCP: `save_render` validates parent directory exists
-- MCP: graceful shutdown handler (SIGINT/SIGTERM)
-- MCP: async debug logging (appendFile instead of appendFileSync)
-- Dependencies cleaned: removed `@improbable-eng/grpc-web`, `eslint-plugin-react`
-- Lazy logging: Logger accepts `() => string` callbacks, 17 hot-path calls converted
-- setValue dedup: useParameterValue now delegates to ItemService.setParameterValue()
-- saveRender/exportPasses: proper error handling with statusMessage feedback
-- NumberInput: window listener cleanup on unmount
-- Node-add context menu icons: category-based fallbacks from API cache for 750+ types
-- API cache: fetches descriptions, categories, defaultNames for all node/pin/attribute types
-- Dropdown init from gRPC: clay mode, subsample, render priority, gizmo mode read from Octane on startup
-- Full doc cleanup: version consistency, port numbers, dead references removed
+- MCP integration test: glass metal recipe build via MCP tools
+- Fixed MCP server bundling: esbuild needs `--bundle` for cross-package imports from client/src
+- Generated programmatic OBJ assets: sphere_hd.obj (32×16 UV sphere), floor.obj (quad plane)
+- Built glass metal scene v5: 3 smooth spheres on floor at golden hour, materials in progress
+- Full doc consolidation: 8 MCP docs → 4 (REFERENCE.md, BUILD.md, CREATIVE.md, TROUBLESHOOTING.md)
+- Inline MCP rules in CLAUDE.md — 18 gate rules, no pointers to other files
+- Recipe style guide enforced: all 8 recipes converted to creative briefs (Vision + Ingredients only)
+- All cross-references updated to new doc names
+- Debugging lessons captured: disable MCP before breaking changes, stop-and-debug after 2 failures
+- QUICKSTART.md updated to v1.5.9, IMPROVEMENTS.md #32 corrected
 
 ### TODO for Next Session
 
-1. See `docs/project/IMPROVEMENTS.md` for remaining backlog (32 items)
-2. Custom tooltip component (yellow Octane-style, not native browser `title=`)
-3. File → Recent Projects menu
+1. Complete glass metal recipe materials (floor glossy, gold glossy, glass specular, red diffuse) — scene handles exist in summary
+2. See `docs/project/IMPROVEMENTS.md` for remaining backlog (32 items)
+3. Custom tooltip component (yellow Octane-style, not native browser `title=`)
+4. File → Recent Projects menu
 
-### Known MCP Limitations (carried forward)
-
-- `load_project` creates stale nodes — ALWAYS create fresh mesh+placement with absolute paths
-- NT_GEO_MESH has no transform pins → use NT_GEO_PLACEMENT
-- Geo group: set A_PIN_COUNT (attr 113) BEFORE connecting children. Use pin_index (0-based), NOT pin_name
-- Primitive type 18 (Quad) crashes Octane
-- reset_project needs save_project first or Octane pops blocking dialog
-- GLB direct load times out — must use OBJ + separate texture
-- transparentEmission=true on blackbody does NOT reliably hide sphere lights from camera — use tiny radius or position behind subjects
+For all known problems and workarounds (web + MCP), see `docs/mcp/TROUBLESHOOTING.md`.
 
 ## Project Vocabulary
 
@@ -57,10 +34,10 @@
 | **CA**    | Code Agent — first-pass technical reviewer in a MEET                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **BA**    | Business Analyst — final reviewer in a MEET (strategic view, communication grades, fumble report, verdict)                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | **ES**    | Executive Summary — final deliverable to the user after a MEET                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **DRESS** | Demo build mode — 1 node at a time, render after each step, max visual change per second. For boss demos. See `docs/mcp/DRESS_BUILD_PROTOCOL.md`                                                                                                                                                                                                                                                                                                                                                                                           |
+| **DRESS** | Demo build mode — 1 node at a time, render after each step, max visual change per second. For boss demos. See `docs/mcp/BUILD.md`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | **SPEED** | Batch build mode — create all nodes fast, wire all, render once at end. For testing.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **AA**    | Artistic Agent — responsible for visual quality at every stage. Ensures the render looks cool throughout the build, not just at the end. Guides camera framing, lighting mood, material readability. If AA wouldn't approve the current viewport, fix it before moving on. Owns **CM** and **TA** as sub-agents.                                                                                                                                                                                                                           |
-| **CM**    | Camera Math — AA's sub-agent for computing camera positions, FOV coverage, framing distances, and scene bounds. Does real trig instead of guessing. Reports position/target vectors AA can apply directly. **Learns from live:** after each set_camera, CM checks the actual render against its prediction — if chips are clipped, framing is off, or composition is wrong, CM revises its model (FOV, aspect ratio, scene bounds) and retries. Caches proven formulas and scene-specific corrections in `docs/mcp/CAMERA_MATH.md`.        |
+| **CM**    | Camera Math — AA's sub-agent for computing camera positions, FOV coverage, framing distances, and scene bounds. Does real trig instead of guessing. Reports position/target vectors AA can apply directly. **Learns from live:** after each set_camera, CM checks the actual render against its prediction — if chips are clipped, framing is off, or composition is wrong, CM revises its model (FOV, aspect ratio, scene bounds) and retries. Caches proven formulas and scene-specific corrections in `docs/mcp/BUILD.md`.              |
 | **MA**    | Math Agent — AA's sub-agent for computing ALL scene positions from mesh bounds. Primary input: world-space bounding box of subject. Calculates camera position/target, light positions, object spacing, composition. Never guesses — always derives from geometry. Reports exact {x,y,z} vectors AA can apply directly.                                                                                                                                                                                                                    |
 | **TA**    | Tech Agent — AA's sub-agent for deep CG technical problems. Has full web search, octane-docs MCP, and OTOY forum (render.otoy.com) access. Researches shader math, procedural texture tuning, noise function parameters, physically-based material properties, and renderer-specific quirks. When AA needs a procedural texture to match a real-world reference (e.g., species-accurate wood grain), TA does the deep dive: web research, OTOY forum threads, octane-docs API, parameter sweeps. Reports actionable settings AA can apply. |
 
@@ -68,13 +45,13 @@
 
 ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved to repo-backed folders (e.g., `docs/`, `mcp/`, `recipes/`). NEVER store project-useful docs only in local/user memory folders. This is a shareable project — if it's useful, it belongs in the repo.
 
-**Doc update order:** When a finding changes a rule, update `docs/mcp/OCTANE_MCP.md` FIRST (single source of truth), then propagate to other docs (CHEATSHEET, DRESS_BUILD_PROTOCOL, CLAUDE.md, IMPROVEMENTS.md). Don't wait for user to ask — scan all docs immediately after any rule-changing finding.
+**Doc update order:** When a finding changes a rule, update the relevant doc in `docs/mcp/` and this file's MCP Rules section. Don't wait for user to ask — scan all docs immediately after any rule-changing finding.
 
 ## #0 Rule: Read Before Doing (HARD GATE)
 
 **The "Current Session" section above IS your briefing.** Read it and **summarize what you found to the user** before taking any action. This is not optional — the summary forces you to actually process the instructions instead of scanning past them. Short user requests ("wow me with X", "do the wood chips") reference the plan already written there.
 
-**Before MCP scene building**, also read `docs/mcp/OCTANE_CHEATSHEET.md` for exact values and pin layouts.
+**Before MCP scene building**, read the MCP Rules section below. Look up values in `docs/mcp/REFERENCE.md` during the build — don't memorize, don't guess.
 
 **At session end**, update the "Current Session" section to reflect the next session's task. This is your responsibility — don't leave stale instructions for the next conversation.
 
@@ -100,16 +77,13 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 All docs live under `docs/` in subfolders:
 
 - `docs/project/` — ARCHITECTURE, IMPROVEMENTS, TEST_PLAN, CHANGELOG, QUICKSTART
-- `docs/mcp/` — all MCP and scene-building docs:
-  - `OCTANE_MCP.md` — single source of truth: pin layouts, crash prevention, API patterns
-  - `OCTANE_CHEATSHEET.md` — quick-reference: values, materials, camera, pins, transforms
-  - `DRESS_BUILD_PROTOCOL.md` — 19-step scene build protocol (4 phases)
-  - `SCENE_BUILDING_TIPS.md` — camera workflow, framing, build order
-  - `CAMERA_MATH.md` — FOV calibration and framing formulas
-  - `OCTANE_CREATIVE.md` — lighting, materials, composition, anti-CG
-  - `DEMO_SHOW_FLOW.md` — demo script
+- `docs/mcp/` — MCP and scene-building (4 docs):
+  - `REFERENCE.md` — lookup tables: pin layouts, node types, materials, primitives, values. Don't read front-to-back.
+  - `BUILD.md` — build workflow: DRESS protocol, camera workflow, setup order, scene management
+  - `CREATIVE.md` — lighting, materials, composition, OTOY Studio pipeline, anti-CG
+  - `TROUBLESHOOTING.md` — all known problems + workarounds (web + MCP), fresh start procedure
 - `docs/ui/UI_IMPLEMENTATION.md` — inspector depth shading, float formatting, movable inputs
-- `docs/recipes/` — scene recipes (prose creative briefs with reference values)
+- `docs/recipes/` — scene recipes (prose creative briefs with reference values, see README.md for style guide)
 
 ## Testing Rules
 
@@ -129,50 +103,67 @@ All in `docs/project/TEST_PLAN.md`. Key points:
 
 ## Fresh Start Rule (BIG RULE)
 
-When starting after a long delay, or when anything is unstable: **kill everything and start fresh**. The EXACT order matters:
+When starting after a long delay, or when anything is unstable: **kill everything and start fresh**.
 
-**⚠ SERVERS DIE FIRST, OCTANE DIES LAST.** Killing Octane while servers are connected causes hangs and zombie processes that resist `taskkill`. Always stop preview/dev server before touching Octane.
+**⚠ SERVERS DIE FIRST, OCTANE DIES LAST.** Killing Octane while servers are connected causes hangs and zombie processes.
 
-1. **Stop preview** (`preview_stop`) — **MUST be first**
-2. **Kill dev server** (stops with preview)
-3. **Kill Octane** (`cmd /c "taskkill /F /IM octane.exe"` — must use `cmd /c` wrapper in bash shell. If it resists, use `powershell -Command "Stop-Process -Name octane -Force"`)
-4. **Verify clean** — `tasklist | grep -i octane` should return nothing
-5. **Launch Octane** — MUST use bash background syntax with `dangerouslyDisableSandbox: true`:
-   ```
-   "C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &
-   ```
-   `cmd /c start` does NOT work from the sandbox. Only `"<path>" &` reliably launches Octane.
-6. **Wait for Octane gRPC** — typically ~10-15s. Verify with: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
-7. **Start preview** (`preview_start` — this starts both dev server and browser). MUST start AFTER Octane gRPC is listening or the Vite plugin won't connect.
+1. `preview_stop` — **MUST be first**
+2. `cmd /c "taskkill /F /IM octane.exe"` (if resists: `powershell -Command "Stop-Process -Name octane -Force"`)
+3. Verify: `tasklist | grep -i octane` → nothing
+4. Launch: `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true`
+5. Wait ~10-15s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
+6. `preview_start` — MUST start AFTER Octane gRPC is listening
 
-**NEVER** skip steps or reorder. Especially: NEVER kill Octane while servers/preview are still running. NEVER start servers before Octane is ready. Always check for already-running Octane instances before launching a new one (`tasklist | grep -i octane`).
+NEVER kill Octane while servers are running. NEVER start servers before Octane is ready.
 
-## MCP Scene Building Rules
+## MCP Rules (READ EVERY SESSION — these are the rules, not pointers to other files)
 
-**Full rules in `docs/mcp/OCTANE_MCP.md`.** The 3 hardest-learned rules:
+### Crash Prevention
 
-- **NEVER `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
-- **`restart_render` was REMOVED** — it crashed Octane. Use `start_render` (keeps render live).
-- **Connections need `update_scene()` + camera change** — `start_render` does NOT refresh the geometry tree. After connections, call `update_scene()` then `set_camera` — both are required.
-- **`reset_project` needs save first** — without saving, Octane pops a system dialog that blocks gRPC. Always `save_project` to a temp path before `reset_project`.
+1. **NEVER `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
+2. **NEVER parallel `create_node`** — sequential only. 4× simultaneous = ECONNRESET.
+3. **Primitive type 18 (Quad) crashes Octane** — use flat Box (scale Y≈0.001) or quad.obj.
+4. **`restart_render` was REMOVED** — it crashed Octane. Use `start_render` (keeps render live).
+5. **`reset_project` pops blocking dialog** — `save_project` to a temp path first, or use delete-all-nodes method.
+6. **Bad A_FILENAME pops Octane dialog** — blocks gRPC for 30s. Use valid absolute paths only.
 
-Also see: `docs/mcp/DRESS_BUILD_PROTOCOL.md` (build order), `docs/mcp/OCTANE_CHEATSHEET.md` (values), `docs/mcp/SCENE_BUILDING_TIPS.md` (camera/framing).
+### Connection Gotchas (silent failures — no error, just doesn't work)
+
+7. **RT geometry: use `pin_index: 3`** — `pin_id: 59` silently fails.
+8. **Mesh material: use `pin_index: 0`** — `pin_id: 30` silently fails.
+9. **Geo group inputs: use `pin_index: N` (0-based)** — `pin_name: "Input N"` silently fails.
+10. **Geo group needs `A_PIN_COUNT` (attr 113) set BEFORE connecting children** — fresh groups have 0 pins.
+11. **Always verify connections** — `get_node_info(RT)` → check pins 1, 3, 6 have `connected_handle != 0`. Never trust `success:true` alone.
+
+### Render Pipeline
+
+12. **`start_render` does NOT refresh geometry** — after connections, call `update_scene()` THEN `set_camera`. Both required.
+13. **DOF is ON by default** (aperture=0.893) — disable immediately: RT→pin0(camera)→pin14(aperture)→set value to 0.
+14. **Emission efficiency defaults to 0.025** — set to 1.0 or lights will be 40× dimmer than expected.
+
+### Workflow Gates
+
+15. **Plan the frame BEFORE creating nodes** — know camera position, object positions, depth formation. If you can't state the camera position, you don't have a plan.
+16. **Render after every object** — `save_render` → Read PNG → evaluate. Never batch multiple objects without checking.
+17. **Disable MCP server before making MCP code changes** — it auto-starts with Claude Code and will crash Octane with broken calls.
+18. **After 2 failures of the same kind, STOP** — don't add retries or pacing. Step back, list alternatives, try a different approach entirely.
+
+### Key Values (don't hallucinate — look up the rest in `docs/mcp/REFERENCE.md`)
+
+```
+TRANSFORMS:  A_TRANSLATION=172  A_ROTATION=137 (DEGREES!)  A_SCALE=139  (all AT_FLOAT3=11)
+KEY ATTRS:   A_VALUE=185  A_FILENAME=34  A_RELOAD=124
+WIRING:      material → mesh (pin 0), mesh → placement (pin_name "geometry"), placement → geo group (pin_index N)
+RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
+```
 
 ## Status
 
-- **Version**: 1.5.9
+- **Version**: 2.0.0
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive type 18 crashes)
 - **MCP server**: 27 tools, API cache, incremental webapp sync
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
 
-### Production Hardening (deferred — not needed for local dev)
-
-These items were identified in `review.md` code review and deferred because the risk is low for a localhost dev tool. **Must be addressed before any public/multi-user deployment:**
-
-1. **Security headers (helmet)** — No CSP, X-Frame-Options, or nosniff headers. Deferred because CSP breaks Vite HMR in dev.
-2. **gRPC proxy allowlist** — `POST /api/grpc/:service/:method` forwards any service/method with no validation. Core app functionality depends on this openness. Add a service/method allowlist before exposing to untrusted networks.
-3. **Rate limiting** — No rate limiting on any endpoint. Add `express-rate-limit` or equivalent before public deployment.
-4. **Error message sanitization** — Internal error messages (gRPC errors, paths, stack traces) are returned to HTTP clients. Replace with generic errors in production.
-5. **WebSocket limits** — No `maxPayload` or connection limit on WebSocket server. Add `maxPayload: 1048576` and a connection cap.
+Production hardening items (security headers, rate limiting, etc.) are in `docs/mcp/TROUBLESHOOTING.md`.

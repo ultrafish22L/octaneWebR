@@ -48,7 +48,7 @@ Ordered easy → hard within each section. Done items purged.
 
 ## Octane API Bugs (not fixable by us)
 
-| #   | Item                                    | Notes                                                       |
-| --- | --------------------------------------- | ----------------------------------------------------------- |
-| 31  | Quad primitive (type 18) crashes Octane | Workaround: use quad.obj or flat Box                        |
-| 32  | Primitive type change crashes Octane    | Workaround: disconnect geo before changing, reconnect after |
+| #   | Item                                    | Notes                                                                                          |
+| --- | --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 31  | Quad primitive (type 18) crashes Octane | Workaround: use quad.obj or flat Box                                                           |
+| 32  | Primitive type change crashes Octane    | Type 18 (Quad) crashes. Types 1-17, 19-23 safe. Workaround: flat Box or NT_GEO_MESH + quad.obj |

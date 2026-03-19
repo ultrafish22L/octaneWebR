@@ -25,7 +25,7 @@ export interface PinIconInfo {
 
 /**
  * Complete pin type definitions (all PT_ constants from octaneids.proto)
- * Similar to OCTANE_NODE_TYPES but without categories
+ * Similar to node type hierarchy but without categories
  */
 export interface PinTypeInfo {
   name: string;
@@ -150,111 +150,6 @@ export interface CompatibleNodeType {
   id: number;
 }
 
-export const pinTypeToNodeTypes: Record<string, CompatibleNodeType[]> = {
-  // Texture pin accepts all texture node types
-  PT_TEXTURE: [
-    { key: 'NT_TEX_IMAGE', id: 34 },
-    { key: 'NT_TEX_ALPHAIMAGE', id: 35 },
-    { key: 'NT_TEX_FLOATIMAGE', id: 36 },
-    { key: 'NT_TEX_CHECKS', id: 45 },
-    { key: 'NT_TEX_NOISE', id: 87 },
-    { key: 'NT_TEX_TURBULENCE', id: 22 },
-    { key: 'NT_TEX_MARBLE', id: 47 },
-    { key: 'NT_TEX_GRADIENT', id: 49 },
-    { key: 'NT_TEX_MIX', id: 38 },
-    { key: 'NT_TEX_ADD', id: 106 },
-    { key: 'NT_TEX_SUBTRACT', id: 108 },
-    { key: 'NT_TEX_MULTIPLY', id: 39 },
-    { key: 'NT_TEX_FALLOFF', id: 50 },
-    { key: 'NT_TEX_RGB', id: 33 },
-    { key: 'NT_TEX_FLOAT', id: 31 },
-  ],
-
-  // Material pin accepts all material node types
-  PT_MATERIAL: [
-    { key: 'NT_MAT_DIFFUSE', id: 17 },
-    { key: 'NT_MAT_GLOSSY', id: 16 },
-    { key: 'NT_MAT_SPECULAR', id: 18 },
-    { key: 'NT_MAT_UNIVERSAL', id: 130 },
-    { key: 'NT_MAT_MIX', id: 19 },
-    { key: 'NT_MAT_PORTAL', id: 20 },
-    { key: 'NT_MAT_METAL', id: 120 },
-    { key: 'NT_MAT_TOON', id: 121 },
-  ],
-
-  // Geometry pin accepts geometry node types
-  PT_GEOMETRY: [
-    { key: 'NT_GEO_MESH', id: 1 },
-    { key: 'NT_GEO_PLANE', id: 110 },
-    { key: 'NT_GEO_SCATTER', id: 5 },
-    { key: 'NT_GEO_GROUP', id: 3 },
-    { key: 'NT_GEO_PLACEMENT', id: 4 },
-    { key: 'NT_GEO_OBJECT', id: 153 },
-    { key: 'NT_GEO_VOLUME', id: 91 },
-  ],
-
-  // Camera pin accepts camera node types
-  PT_CAMERA: [
-    { key: 'NT_CAM_THINLENS', id: 13 },
-    { key: 'NT_CAM_PANORAMIC', id: 62 },
-    { key: 'NT_CAM_BAKING', id: 94 },
-    { key: 'NT_CAM_UNIVERSAL', id: 157 },
-    { key: 'NT_CAM_SIMULATED_LENS', id: 301 },
-    { key: 'NT_CAM_OSL', id: 126 },
-    { key: 'NT_CAM_OSL_BAKING', id: 128 },
-  ],
-
-  // Environment pin accepts environment node types
-  PT_ENVIRONMENT: [
-    { key: 'NT_ENV_TEXTURE', id: 37 },
-    { key: 'NT_ENV_DAYLIGHT', id: 14 },
-    { key: 'NT_ENV_PLANETARY', id: 129 },
-  ],
-
-  // Kernel pin accepts kernel node types
-  PT_KERNEL: [
-    { key: 'NT_KERN_PATHTRACING', id: 25 },
-    { key: 'NT_KERN_DIRECTLIGHTING', id: 24 },
-    { key: 'NT_KERN_PMC', id: 23 },
-    { key: 'NT_KERN_INFO', id: 26 },
-  ],
-
-  // Emission pin accepts emission node types
-  PT_EMISSION: [
-    { key: 'NT_EMIS_TEXTURE', id: 54 },
-    { key: 'NT_EMIS_BLACKBODY', id: 53 },
-  ],
-
-  // Medium pin accepts medium node types
-  PT_MEDIUM: [
-    { key: 'NT_MED_ABSORPTION', id: 58 },
-    { key: 'NT_MED_SCATTERING', id: 59 },
-    { key: 'NT_MED_RANDOMWALK', id: 146 },
-    { key: 'NT_MED_VOLUME', id: 98 },
-  ],
-
-  // Displacement pin accepts displacement node types
-  PT_DISPLACEMENT: [{ key: 'NT_DISPLACEMENT', id: 80 }],
-
-  // Render target pin
-  PT_RENDERTARGET: [{ key: 'NT_RENDERTARGET', id: 56 }],
-
-  // Transform pin accepts transform node types
-  PT_TRANSFORM: [
-    { key: 'NT_TRANSFORM_VALUE', id: 10 },
-    { key: 'NT_TRANSFORM_3D', id: 76 },
-    { key: 'NT_TRANSFORM_2D', id: 77 },
-    { key: 'NT_TRANSFORM_ROTATION', id: 78 },
-    { key: 'NT_TRANSFORM_SCALE', id: 79 },
-  ],
-
-  // Value types accept value node types
-  PT_BOOL: [{ key: 'NT_BOOL', id: 11 }],
-  PT_FLOAT: [{ key: 'NT_FLOAT', id: 6 }],
-  PT_INT: [{ key: 'NT_INT', id: 9 }],
-  PT_ENUM: [{ key: 'NT_ENUM', id: 57 }],
-};
-
 /**
  * Get icon and color for a pin type
  */
@@ -263,21 +158,18 @@ export function getPinIconInfo(pinType: string): PinIconInfo {
 }
 
 /**
- * Get compatible node types for a pin type.
- * Checks the runtime API cache first (has all compatible types from Octane),
- * falls back to hardcoded subset if cache isn't loaded yet.
+ * Get compatible node types for a pin type (from API cache).
+ * Returns empty array if cache isn't loaded yet.
  */
 export function getCompatibleNodeTypes(pinType: string): CompatibleNodeType[] {
-  const cached = octaneCacheService.getCompatibleNodeTypes(pinType);
-  if (cached) return cached;
-  return pinTypeToNodeTypes[pinType] || [];
+  return octaneCacheService.getCompatibleNodeTypes(pinType) || [];
 }
 
 /**
- * Check if a node type can connect to a pin type
+ * Check if a node type can connect to a pin type (from API cache).
  */
 export function isNodeTypeCompatible(nodeType: string, pinType: string): boolean {
-  const compatibleTypes = pinTypeToNodeTypes[pinType];
+  const compatibleTypes = octaneCacheService.getCompatibleNodeTypes(pinType);
   if (!compatibleTypes) return false;
   return compatibleTypes.some(t => t.key === nodeType);
 }

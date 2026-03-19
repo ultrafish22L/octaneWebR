@@ -8,7 +8,7 @@ import { BaseService } from './BaseService';
 import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { SceneNode } from './types';
 import { SceneService } from './SceneService';
-import { ObjectType, AttributeId, AttrType, InputAction } from '../../constants/OctaneTypes';
+import { ObjectType, AttributeId, AttrType, InputAction } from '../../constants/OctaneProtocol';
 import { Logger } from '../../utils/Logger';
 
 export class NodeService extends BaseService {

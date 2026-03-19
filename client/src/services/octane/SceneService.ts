@@ -27,7 +27,7 @@ import { BaseService } from './BaseService';
 import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { Scene, SceneNode } from './types';
 import { getIconForType } from '../../constants/PinTypes';
-import { AttrType, AttributeId } from '../../constants/OctaneTypes';
+import { AttrType, AttributeId } from '../../constants/OctaneProtocol';
 import { cacheManager } from '../CacheManager';
 
 export class SceneService extends BaseService {

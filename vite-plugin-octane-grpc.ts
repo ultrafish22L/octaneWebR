@@ -124,6 +124,7 @@ function buildClientCachePayload(): string | null {
   const nodeTypes: Record<
     string,
     {
+      id: number;
       name: string;
       category: string;
       color: string;
@@ -145,6 +146,7 @@ function buildClientCachePayload(): string | null {
       movableInputName: string;
     };
     nodeTypes[key] = {
+      id: Number(nameToId[key]) || 0,
       name: nt.defaultName || nt.name.replace(/^NT_/, '').replace(/_/g, ' '),
       category: nt.category,
       color: juceColorToHex(nt.nodeColor),
