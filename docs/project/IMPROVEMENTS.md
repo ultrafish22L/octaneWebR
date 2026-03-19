@@ -1,84 +1,70 @@
 # OctaneWebR — Improvement Backlog
 
-Ordered easy → hard. Done items removed.
+Ordered easy → hard within each section. Done items purged.
 
----
+## Easy
 
-## Priority
-
-| #   | Item                                                                        | Difficulty | Source     |
-| --- | --------------------------------------------------------------------------- | ---------- | ---------- |
-| P1  | Camera framing from bounds — use centroid for target, zoom based on extents | Medium     | BUGLIST #5 |
-| P1  | "Materials from geo 1" rule — every geo gets at least a color variant       | Easy       | BUGLIST #6 |
-| P2  | Node create context dialog: set all node type icons                         | Medium     | —          |
-
-## Easy — CSS / one-file
-
-| #   | Item                                       | Notes                               |
-| --- | ------------------------------------------ | ----------------------------------- |
-| 1   | GPU stats dialog: remove "selected" border | Delete one CSS rule                 |
-| 2   | Dialog dimming                             | Toggle CSS for modal background dim |
-| 3   | Tooltip yellow background                  | Add CSS vars                        |
-| 4   | Panel title menu icon                      | Add icon element + CSS              |
-| 6   | Inspector expanded/collapsed icon shape    | Conditional border-radius           |
-| 7   | Save render shared path memory             | Single state variable               |
-| 8   | RequestQueue configurable max size         | Add MAX_QUEUE_SIZE constant         |
-| 9   | GPU dialog on render bar right-click       | Add onContextMenu handler           |
+| #   | Item                                            | Notes                                                                                 |
+| --- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | Lazy logging (Logger accepts callbacks)         | 463 calls across 52 files. Biggest perf win — avoids JSON.stringify when debug is off |
+| 2   | Improve MCP connect_nodes tool descriptions     | Guide LLM to pick correct pin param type on first try                                 |
+| 3   | Add `up` param to set_camera                    | mcp/src/tools/camera.ts — prevents up-vector resets                                   |
+| 4   | Guard reset_project with warning                | suppressUI:true helps but no user-facing warning before destructive action            |
+| 5   | save_render path validation                     | Check parent dir exists, warn on bad paths                                            |
+| 6   | MCP RT auto-select doesn't expand outliner      | Expand tree node on auto-select                                                       |
+| 7   | Empty nodes not selectable in outliner          | Show and make clickable                                                               |
+| 8   | Inspector incomplete after MCP add              | buildNewNode depth issue — deferred loadSceneTree or deeper recursion                 |
+| 9   | Save render shared path memory                  | Single state variable between save/export                                             |
+| 10  | GPU statistics dialog: remove "selected" border | Delete one CSS rule                                                                   |
+| 11  | Tooltip yellow background                       | Add --tooltip-bg/--tooltip-text CSS vars                                              |
+| 12  | Panel title menu icon                           | Icon element left of each panel title                                                 |
+| 13  | Inspector: expanded vs collapsed icon box shape | Conditional border-radius                                                             |
+| 14  | GPU dialog on render bar right-click            | Add onContextMenu handler                                                             |
 
 ## Medium
 
-| #   | Item                                   | Notes                                   |
-| --- | -------------------------------------- | --------------------------------------- |
-| 10  | Modal dialog stacking policy           | Enforce single-modal z-index            |
-| 11  | Toolbar button style unification       | Audit + unify select/hover/border       |
-| 12  | CSS cleanup                            | Consolidate scattered toolbar styles    |
-| 13  | Fix all icons in node-add context menu | Map each type to correct icon           |
-| 14  | Export render passes dialog            | Rework to include file name input       |
-| 15  | FileBrowserDialog file type filter     | User-facing dropdown                    |
-| 16  | Tooltip audit                          | Fix "Unknown type" / generic tooltips   |
-| 17  | Suppress edits during sync             | Disable user edits while syncing        |
-| 18  | PreferencesDialog wiring               | Connect to Octane via ApiProjectManager |
-| 19  | React 19 upgrade                       | @xyflow/react 12.x supports R19         |
-| 20  | Multi-pass render export               | Export all passes with name+extension   |
+| #   | Item                                         | Notes                                                                                                     |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 15  | Extract VectorInput component                | Pull out of ParameterControl.tsx (1028 lines)                                                             |
+| 16  | Split useMouseInteraction into focused hooks | 500+ line useEffect → orbit/pan/zoom/pick hooks                                                           |
+| 17  | Extract shared constants to shared location  | Fix MCP cross-boundary imports from client/src                                                            |
+| 18  | Add gRPC response interfaces                 | Top 10 response shapes, typed at service boundaries                                                       |
+| 19  | Camera framing from bounds                   | Use centroid for target, zoom from extents                                                                |
+| 20  | Inspector doesn't update on MCP changes      | Re-fetch on selected node changes                                                                         |
+| 21  | connect_nodes doesn't trigger re-render      | Need explicit update_scene after connect                                                                  |
+| 22  | MCP-created nodes pile at (0,0)              | Auto-arrange or position hints in node graph                                                              |
+| 23  | load_project wait-for-ready                  | Replace hardcoded 2s sleep with polling                                                                   |
+| 24  | Track auto-created children in cache         | node.ts:199 — children fall through to gRPC                                                               |
+| 25  | Context menu fails on empty scene            | Right-click should work with no nodes                                                                     |
+| 26  | Audit FILE_NODE_TYPES via offline API        | Determine which types actually need file paths                                                            |
+| 27  | Mesh material pin_id:30 silently fails       | Must use pin_index:0 instead. Document in MCP docs                                                        |
+| 28  | Fix all icons in node-add context menu       | Map each node type to correct icon. Reference: `screenshots/octane_allitems1.png`, `octane_allitems2.png` |
+| 29  | Export render passes dialog rework           | File name input instead of "select folder"                                                                |
+| 30  | FileBrowserDialog file type filter dropdown  | User-facing dropdown for file types                                                                       |
+| 31  | Modal dialog stacking policy                 | Add modal manager or single-modal z-index                                                                 |
+| 32  | Toolbar button style unification             | Audit all toolbar buttons, unify styles                                                                   |
+| 33  | Suppress edits during sync                   | Disable user edits while scene is syncing                                                                 |
+| 34  | PreferencesDialog wiring                     | Connect stub to ApiProjectManager.applicationPreferences()                                                |
+| 35  | Save render passes: multi-pass export        | Discover all passes, export with pass name + extension                                                    |
+| 36  | React 19 upgrade                             | @xyflow/react 12.x and react-error-boundary 6.x support R19                                               |
 
 ## Hard
 
-| #   | Item                                      | Notes                                              |
-| --- | ----------------------------------------- | -------------------------------------------------- |
-| 21  | Multi-connect: connect all selected nodes | Rewrite edge connection logic                      |
-| 22  | Viewport axis rotation                    | 3D matrix transforms                               |
-| 23  | Automated test suite                      | Vitest — estimateNodeWidth, CacheManager, services |
-| 24  | Event queuing during load                 | Queue events from async loading loop               |
-| 25  | Node Inspector for grouped nodes          | Group-specific rendering                           |
-| 26  | Animation bar below render bar            | Full new component + Octane API                    |
-| 27  | Progressive scene loading                 | Load first-level then connections                  |
-| 28  | Better graph arranging                    | Sugiyama or force-directed layout                  |
+| #   | Item                                      | Notes                                                       |
+| --- | ----------------------------------------- | ----------------------------------------------------------- |
+| 37  | Automated test suite                      | Vitest — estimateNodeWidth, CacheManager, services          |
+| 38  | execute_batch tool                        | 30x speedup — batch gRPC calls (1.4s gRPC vs 300s thinking) |
+| 39  | Multi-connect: connect all selected nodes | Rewrite edge connection logic                               |
+| 40  | Node Inspector for grouped nodes          | Group-specific rendering                                    |
+| 41  | Viewport axis rotation                    | Axis overlay must rotate with camera orientation (3D math)  |
+| 42  | Animation bar below render bar            | Full new component + Octane API                             |
+| 43  | Event queuing during load                 | Queue events from async loading, don't emit synchronously   |
+| 44  | Progressive scene loading                 | Load first-level then connections                           |
+| 45  | Better graph arranging                    | Sugiyama or force-directed layout                           |
 
-## MCP Server
+## Octane API Bugs (not fixable by us)
 
-| #   | Item                                      | Difficulty | Notes                                               |
-| --- | ----------------------------------------- | ---------- | --------------------------------------------------- |
-| 31  | Crash detection + recovery guidance       | Medium     | Structured ECONNRESET/ECONNREFUSED errors           |
-| 32  | Quad primitive (type 18) crashes Octane   | N/A        | **Confirmed Octane bug** — workaround: use quad.obj |
-| 36  | Add `up` param to set_camera              | Easy       | mcp/src/tools/camera.ts:57                          |
-| 37  | Add timeout to notifyWebapp fetch         | Easy       | 3-5s AbortController                                |
-| 38  | Remove or guard reset_project             | Easy       | Crash trigger, add warning                          |
-| 39  | save_render path validation               | Easy       | Check parent dir exists                             |
-| 40  | load_project wait-for-ready               | Medium     | Replace hardcoded 2s sleep                          |
-| 41  | Track auto-created children in cache      | Medium     | node.ts:199                                         |
-| 42  | execute_batch tool                        | Hard       | **30x speedup** — batch gRPC calls                  |
-| 49  | Test rig: connection refresh requirements | Medium     | Map what needs update_scene + set_camera            |
-| 50  | Cache invalidation after MCP updates      | High       | CacheManager doesn't invalidate on set_attribute    |
-
-## Bugs
-
-| #   | Item                                       | Difficulty | Notes                                    |
-| --- | ------------------------------------------ | ---------- | ---------------------------------------- |
-| 29  | Context menu fails on empty scene          | Medium     | Right-click should work with no nodes    |
-| 30  | Audit FILE_NODE_TYPES via offline API      | Medium     | Determine which types need file paths    |
-| 34  | MCP RT auto-select doesn't expand outliner | Easy       | Expand tree on select                    |
-| 35  | MCP-created nodes pile at (0,0)            | Medium     | Need auto-arrange or position hints      |
-| 43  | Inspector incomplete after MCP add         | Easy       | buildNewNode depth issue                 |
-| 45  | Inspector doesn't update on MCP changes    | Medium     | Need re-fetch on selected node changes   |
-| 46  | Empty nodes not selectable in outliner     | Easy       | Show and make clickable                  |
-| 47  | connect_nodes doesn't trigger re-render    | Medium     | Need explicit update_scene after connect |
+| #   | Item                                    | Notes                                                       |
+| --- | --------------------------------------- | ----------------------------------------------------------- |
+| 46  | Quad primitive (type 18) crashes Octane | Workaround: use quad.obj or flat Box                        |
+| 47  | Primitive type change crashes Octane    | Workaround: disconnect geo before changing, reconnect after |

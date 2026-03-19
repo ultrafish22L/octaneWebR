@@ -744,11 +744,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
     );
   }
 
-  // No nodes state
-  if (nodes.length === 0) {
-    return <div className="node-graph-empty"></div>;
-  }
-
+  // Always render ReactFlow — even with no nodes, so context menu (right-click → Add Node) works
   return (
     <div
       ref={containerRef}
@@ -819,7 +815,7 @@ const NodeGraphEditorInner = React.memo(function NodeGraphEditorInner({
         edgesFocusable={true}
         edgesReconnectable={true} // Enable edge reconnection by dragging
         reconnectRadius={50} // Allow clicking within 50px of edge to start reconnect (larger area)
-        panOnDrag={[1, 2]} // Only pan with middle/right mouse button, not left button
+        panOnDrag={[1]} // Middle mouse button only for pan — right-click reserved for context menu
         selectionOnDrag={true} // Enable box selection by dragging in empty space (Octane SE manual)
         selectNodesOnDrag={false} // Don't interfere with box selection - let selectionOnDrag handle it
         selectionMode={SelectionMode.Partial} // Select nodes when box overlaps them (partial or full)

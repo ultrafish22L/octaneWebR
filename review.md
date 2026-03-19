@@ -1,109 +1,113 @@
 # OctaneWebR Code Review
 
-**Date:** 2026-03-18
-**Version:** 1.5.2
-**Reviewer:** Claude Opus 4.6 (strict mode)
-**Scope:** Full codebase — server, MCP server, client, config/deps
+**Date:** 2026-03-18 | **Version:** 1.5.3 | **Reviewer:** Claude Opus 4.6
 
-## Summary
+A strict review of the full OctaneWebR codebase: Vite plugin, MCP server, React client, and project configuration.
 
-43 findings across 4 severity levels. 17 fixed, 5 skipped (not real issues), 21 deferred.
+---
 
-| Severity | Found | Fixed | Deferred | Skipped |
-| -------- | ----- | ----- | -------- | ------- |
-| CRITICAL | 4     | 2     | 2        | 0       |
-| HIGH     | 9     | 5     | 4        | 0       |
-| MEDIUM   | 17    | 6     | 8        | 3       |
-| LOW      | 13    | 4     | 7        | 2       |
+## Architecture
 
-## Fixed (17)
+OctaneWebR is a browser-based UI for Octane Render Studio, communicating with Octane via its gRPC LiveLink API. The architecture has three tiers: a Vite dev server with an embedded gRPC plugin that proxies API calls and manages WebSocket callbacks; an MCP server (27 tools) that exposes the same gRPC API to AI agents via stdio; and a React/TypeScript client that renders the scene tree, node graph, parameter inspector, and live viewport.
 
-### CRITICAL
+The Vite plugin and MCP server share a single gRPC client implementation (`server/src/grpc/OctaneGrpcClientBase.ts`) but are otherwise independent processes. The client communicates with the Vite plugin over HTTP and WebSocket — there is no direct gRPC from the browser.
 
-- **C1. Server binds to 0.0.0.0** — Made configurable via `OCTANE_BIND_HOST` env var (default unchanged for Docker compat)
-- **C3. Arbitrary filesystem read via `/api/files/list`** — Path restricted to `OCTANE_FILE_ROOTS` (default `C:\otoyla`), blocks traversal with `path.resolve()`, returns 403 on disallowed paths. Fixed in both Express server and Vite plugin.
+This is a clean separation for a dev tool. The main architectural tension is that `OctaneGrpcClientBase.ts` lives under `server/src/` despite being shared infrastructure, and the MCP server imports client-side constants via fragile relative paths (`../../../client/src/constants/OctaneTypes`). Both work but would break silently if either directory is reorganized.
 
-### HIGH
+---
 
-- **H1. No graceful shutdown in MCP server** — Added SIGINT/SIGTERM handlers calling `server.close()` + `client.close()`
-- **H2. Synchronous `appendFileSync` in MCP hot path** — Changed to async `fs.appendFile` (fire-and-forget)
-- **H3. `restart_render` still registered as MCP tool** — Removed entirely (was deprecated, wasted LLM round-trips)
-- **H4. No `handle` param validation in MCP tools** — All 8 handle params changed to `z.number().int().nonnegative()`
-- **H5. `USE_ALPHA5_API` flag duplicated** — Now imports from shared `api-version.config.js` instead of hardcoding
+## Security
 
-### MEDIUM
+The file browser endpoint restricts access to directories under `OCTANE_FILE_ROOTS` (defaulting to `C:\otoyla`), with `path.resolve()` normalization and 403 responses for disallowed paths. The server bind address is configurable via `OCTANE_BIND_HOST`. CORS is restricted to localhost origins.
 
-- **M1. Unhandled promise rejection on `serverPromise`** — Added `.catch()` and `process.on('unhandledRejection')` handler
-- **M2. `notifyWebapp` fetch has no timeout** — Added `AbortSignal.timeout(2000)`
-- **M3. Duplicated `setValue` logic** — `useParameterValue` hook now calls `client.setParameterValue()` instead of duplicating the AttrType switch. Also fixes cache invalidation bypass.
-- **M4. `NumberInput` window listeners not cleaned on unmount** — Stored cleanup function in ref, added useEffect unmount cleanup
-- **M5. `StatusMessageContext` causes cascading re-renders** — Split into value + actions contexts. 11 setter-only consumers migrated to `useStatusActions()` (no re-render on message change)
-- **M6. `MovableInputPinActions` menu has no click-outside-to-close** — Added mousedown listener with ref-based outside detection
+Five items would need attention before any public deployment. The generic gRPC proxy (`POST /api/grpc/:service/:method`) forwards any service and method name with no allowlist — this is by design for a dev tool but would be dangerous on an open network. There are no security response headers (CSP, X-Frame-Options, nosniff), no rate limiting, no WebSocket message size limits, and internal error messages (including gRPC error details and filesystem paths) are returned verbatim to HTTP clients. These are all acceptable tradeoffs for a localhost-only tool behind CORS, but they are documented in `CLAUDE.md` under "Production Hardening" as a checklist for future hardening.
 
-### LOW
+The MCP server accepts file paths for `load_project`, `save_project`, and `save_render` with no validation. This is a non-issue in practice because the MCP client (Claude) already has full filesystem access through other tools.
 
-- **L1. `@improbable-eng/grpc-web` unused dependency** — Removed from `dependencies`
-- **L2. `google-protobuf` unused in client** — Moved to `devDependencies`
-- **L3. `eslint-plugin-react` installed but not in config** — Removed from `devDependencies`
-- **L4. Reconnect timer not cancelled on `close()`** — Stored timer ref, cancel in `close()`
-- **L5. Non-null assertion on `getElementById('root')`** — Replaced with null check + clear error message
-- **L6. MCP log path inconsistency** — Exported `MCP_LOG_PATH` from `OctaneMcpClient`, imported in `info.ts`
-- **L7. `DeviceService` unsafe casts** — Replaced `as number`/`as string`/`as boolean` with `asNumber`/`asString`/`asBool` helpers
-- **L8. MCP esbuild script missing `utils.ts`** — Added to explicit file list
-- **L9. `handleNodeTypeChange` no loading guard** — Added `nodeTypeChanging` state, disables dropdown during async operation
-- **L10. Unsafe `as unknown as` double-cast in CameraService** — Removed intermediate `as unknown`, direct cast is safe with index signature
-- **L11. `useFileBrowser` effect missing dep explanation** — Added eslint-disable comment explaining intentional no-deps pattern
+---
 
-## Deferred (21)
+## TypeScript Quality
 
-### Production Hardening (documented in CLAUDE.md)
+The client code is compiled under `strict: true` with `noUnusedLocals` and `noUnusedParameters` enabled — this is good. The React components and hooks are generally well-typed with proper use of generics, discriminated unions, and explicit return types where they matter.
 
-These are deferred because the risk is low for a localhost dev tool. Must be addressed before any public/multi-user deployment:
+The weak spot is the gRPC boundary. `OctaneGrpcClientBase` returns `any` from every method, and this propagates through the entire call chain: the Vite plugin's API proxy, the MCP server's tool handlers, and the client's service layer all work with untyped gRPC responses. The `DeviceService` uses typed helper functions (`asNumber`, `asString`, `asBool`) to safely extract values from responses, which is the right pattern — but most other services cast directly with `as`. Defining interfaces for even the ten most common response shapes (render status, camera state, node info, scene tree) would catch a class of bugs that currently only surface at runtime.
 
-1. **Security headers (helmet)** — No CSP, X-Frame-Options, nosniff. CSP breaks Vite HMR.
-2. **gRPC proxy allowlist** — `POST /api/grpc/:service/:method` forwards any service/method. Core app functionality depends on this openness.
-3. **Rate limiting** — No rate limiting on any endpoint.
-4. **Error message sanitization** — Internal errors returned to HTTP clients.
-5. **WebSocket limits** — No `maxPayload` or connection limit.
+The MCP server loads `OctaneGrpcClientBase` via `require()` to avoid pulling the full server type graph into TypeScript compilation (which caused OOM). The loaded module is typed as `any`. A minimal interface covering the four methods actually called (`initialize`, `callMethod`, `checkHealth`, `close`) would preserve the OOM workaround while adding compile-time safety.
 
-### Type Safety
+---
 
-6. **Pervasive `any` types across server code** — Large refactor to define gRPC response interfaces.
-7. **MCP path traversal in `load_project`/`save_project`/`save_render`** — MCP client (Claude) already has full disk access.
-8. **Cross-boundary import in MCP server** — `node.ts`/`info.ts` import from `../../../client/src/`. Should extract shared constants.
-9. **Untyped `require()` in MCP `OctaneMcpClient.ts`** — Intentional to avoid OOM. Could add minimal interface.
+## React Patterns
 
-### Refactoring
+The component architecture follows standard React patterns: context providers for global state, custom hooks for API integration, `React.memo` for expensive components, and `react-window` for virtualized lists.
 
-10. **`ParameterControl.tsx` 1028-line switch** — Should extract generic vector input component.
-11. **`useMouseInteraction` 600-line monolithic useEffect** — Should split into focused hooks.
-12. **Hardcoded 2s timeout in MCP `load_project`** — Pragmatic workaround for missing "project loaded" callback.
+The `StatusMessageContext` is well-structured as a split context — setter-only consumers use `useStatusActions()` and don't re-render when the message changes, while only the status bar reads the value. This is a good pattern that other contexts in the codebase could adopt.
 
-### Performance (top of defer list)
+Two components stand out for their size. `ParameterControl.tsx` is 1028 lines, dominated by a switch statement where each numeric vector type (int2 through float4) repeats nearly identical JSX with minor variations. A generic `VectorInput` component parameterized by dimension count would eliminate hundreds of lines of duplication. `useMouseInteraction.ts` contains a single `useEffect` spanning 500+ lines that registers six event listeners for orbit, pan, zoom, and picking — splitting this into focused hooks would improve readability and make the dependency arrays more precise.
 
-13. **Verbose logging in hot paths** — 463 `Logger.debug`/`debugV` calls. String interpolation evaluated before level gate. Fix would be lazy evaluation pattern.
-14. **Fire-and-forget `saveRender`** — No `await` or `.catch()`, user gets no feedback on failure.
+The `useParameterValue` hook delegates to `ItemService.setParameterValue()` for writes, which handles the AttrType-to-protobuf mapping, cache invalidation, and scene update in one place. The hook adds optimistic local state and error toasts on top. This is a clean separation of concerns.
 
-### Code Quality
+One subtle pattern worth noting: the `useFileBrowser` hook uses a `useEffect` with no dependency array to keep a ref in sync with the latest callback. This is intentional (the ref must update every render to avoid stale closures) and is annotated with an eslint-disable comment. The alternative — assigning the ref during render — would change the hook count and break HMR hot-swapping.
 
-15. **`SceneService` mutates tree in-place** — Intentional for performance on large scene trees.
-16. **`connect_nodes` mutually exclusive params** — Works via precedence, but MCP tool docs should guide LLM to pick one param type.
+---
 
-### Unused/Misplaced Dependencies
+## MCP Server
 
-17. **`express` + `cors` in prod deps** — Only used by legacy server. Move to devDeps if retired.
-18. **`concurrently` in devDeps** — Only used by dead `dev:legacy` script.
+The MCP server is well-organized with tool definitions split by domain (project, camera, render, scene, node, attribute, webapp). Input validation uses Zod schemas with handle parameters constrained to non-negative integers. The gRPC mutex prevents concurrent calls, and crash detection flags ECONNRESET errors clearly.
 
-### Other
+The `restart_render` tool has been removed (it crashed Octane). The remaining 27 tools cover the full Octane API surface needed for scene building.
 
-19. **`handleNodeTypeChange` async no loading indicator** — FIXED (was originally deferred, promoted to fix)
-20. **Server/mcp directories have no ESLint coverage** — Consider adding lint scripts.
-21. **`sourceMap` + `inlineSources` in tsconfig no effect with `noEmit`** — Cosmetic only.
+Areas for improvement: the `connect_nodes` tool accepts three mutually exclusive pin specifier parameters (`pin_index`, `pin_name`, `pin_id`) but doesn't validate that exactly one is provided — it silently uses whichever has highest precedence. Better tool descriptions would help the LLM pick the right parameter on the first try. The scene tree traversal function has no cap on total nodes visited (only depth is limited), which could result in thousands of sequential gRPC calls on very wide scenes — though in practice Octane scenes rarely have more than a few hundred top-level nodes.
 
-## Skipped (5)
+The `notifyWebapp` fetch has a 2-second timeout, and the debug logger is async — both important for preventing the gRPC mutex from being held by slow I/O.
 
-- **Unbounded scene tree traversal** — DAG with no cycles, `max_depth` already limits depth
-- **`convertSceneToGraph` O(n) map rebuild** — "n" is top-level nodes only (2-50), microseconds
-- **`flattenTree` array copies** — Essential for virtualization, negligible at depth 5-10
-- **`connect_nodes` param validation** — Precedence is predictable, adding validation would reject harmless calls
-- **Unused `memo` import** — Actually used on line 1042
+---
+
+## Performance
+
+The client handles large parameter trees (100+ parameters on a Render Target) by queuing API calls through a `RequestQueue` with a concurrency limit of 4. The `SceneOutliner` uses `react-window` for virtualized rendering. The `NodeInspector` does not — all parameter components mount simultaneously, each firing a `useParameterValue` hook. For scenes with very large parameter counts, lazy-loading values only for expanded/visible groups would reduce initial API traffic.
+
+The logging system has 463 `Logger.debug`/`debugV` calls across 52 files. While gated by a level check inside the Logger, the string interpolation and `JSON.stringify` at each call site are evaluated before the check. This is the highest-priority performance improvement remaining — a lazy evaluation pattern (passing a callback instead of a pre-built string) would eliminate the overhead when debug logging is disabled, which is the common case.
+
+The `SceneService` mutates the scene tree in place with `splice` and `filter`, then re-emits the modified object. This is intentional for performance (avoiding deep-clone on every structural change) but fragile — any React component that captures a reference to a subtree could see it mutated under its feet. The current code works because mutations are always followed by an event emission that triggers a re-render, but it's a pattern that requires careful attention when adding new consumers.
+
+---
+
+## Configuration and Dependencies
+
+The project uses Vite 5, React 18, TypeScript in strict mode, ESLint with flat config, Prettier, and Husky pre-commit hooks running lint-staged. The toolchain is modern and well-configured.
+
+The dependency list is clean. All production dependencies are actively used by the client (`react`, `react-dom`, `@tanstack/react-query`, `@xyflow/react`, `react-error-boundary`, `react-window`). gRPC packages live in devDependencies (correct, since they're used by the Vite plugin at dev time, not shipped to the browser). The `google-protobuf` package is in devDependencies for proto codegen tools.
+
+The ESLint config covers the client but ignores `server/` and `mcp/`. Since the server directory now contains only one shared file, this is acceptable. The MCP server has its own build pipeline via esbuild.
+
+One configuration oddity: `tsconfig.json` sets `sourceMap: true` and `inlineSources: true`, but also `noEmit: true` — the source map options have no effect since TypeScript never produces output files (Vite's esbuild handles compilation). These are harmless but misleading.
+
+---
+
+## What's Good
+
+The codebase demonstrates several strong patterns worth preserving:
+
+- **Split context for StatusMessage** — setters and readers use separate contexts, preventing unnecessary re-renders across 11 consumer components
+- **Request queue with concurrency limit** — prevents browser connection pool exhaustion when hundreds of parameter hooks fire simultaneously
+- **Single source of truth for API version** — `api-version.config.js` controls Alpha5/Beta2 switching across client, server, and MCP
+- **Crash detection and recovery** — the gRPC client detects ECONNRESET, reports it clearly, and implements exponential backoff reconnection with a configurable attempt limit
+- **File browser path restriction** — configurable roots with `path.resolve()` normalization, 403 on violation, parent navigation stops at boundary
+- **Graceful shutdown** — both the Vite plugin and MCP server clean up gRPC channels on SIGINT/SIGTERM
+- **Virtualized scene outliner** — `react-window` with proper tree flattening for indent line rendering
+
+---
+
+## Priority Improvements
+
+If I were to spend a day improving this codebase, in order:
+
+1. **Lazy logging** — Change Logger to accept `() => string` callbacks. Eliminates `JSON.stringify` and template literal evaluation on 463 call sites when debug logging is off. Biggest perf win for the least risk.
+
+2. **Extract `VectorInput` component** — Replace the 600-line switch in `ParameterControl.tsx` with a generic component parameterized by dimension. Cuts the file in half and makes adding new numeric types trivial.
+
+3. **Split `useMouseInteraction`** — Break the 500-line useEffect into `useOrbitControls`, `usePanControls`, `useZoomControls`, and `usePickerMode`. Each gets a focused dependency array and can be tested independently.
+
+4. **Extract shared constants** — Move `OctaneTypes.ts` (or the subset the MCP server needs) to a shared location, eliminating the `../../../client/src/` cross-boundary imports.
+
+5. **Add gRPC response interfaces** — Define TypeScript interfaces for the ten most common response shapes. Apply them at the service layer boundaries. Doesn't require changing the `any`-returning base client — just type the consumers.

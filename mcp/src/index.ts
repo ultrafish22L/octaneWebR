@@ -67,7 +67,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('Octane MCP server running on stdio (28 tools registered)');
+  console.error('Octane MCP server running on stdio (27 tools registered)');
 
   // Graceful shutdown — close gRPC channels and MCP transport
   const shutdown = async (signal: string) => {

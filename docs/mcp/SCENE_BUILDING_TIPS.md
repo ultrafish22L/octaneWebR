@@ -11,6 +11,7 @@ Hard-won lessons from building Octane scenes via MCP. These complement the [DRES
 **Always pull camera WAY back first** to see the full scene, place/orient objects, THEN zoom in. Never guess framing up close.
 
 When lost, confused about placement, or starting a new build phase:
+
 1. Pull camera far back (e.g., Z=50 or more)
 2. Place and orient objects while viewing from this wide shot
 3. Verify positions and rotations make sense
@@ -40,6 +41,7 @@ Set `set_camera(target: {x, y, z})` to the centroid or center of interest. The c
 ### 3D Asset Orientation
 
 When loading 3D models from OTOY Studio or any source:
+
 - Model facing direction is set by the generation pipeline — not random
 - Plan camera position relative to the model's front face BEFORE creating nodes
 - OTOY Studio preview shows the model at identity rotation — use it to determine facing direction
@@ -54,6 +56,7 @@ When loading 3D models from OTOY Studio or any source:
 ### Materials From Geo 1
 
 **Every geometry object gets a material from the moment it's created** — even in test scenes. Default grey is never acceptable. Use color variants at minimum (cycle through a palette), or apply distinct material types (diffuse, glossy, metallic) where relevant. This:
+
 - Makes renders readable (22 grey boxes = useless; 22 colored shapes = instant visual ID)
 - Tests material assignment per object as a bonus
 - Costs almost nothing (one extra `set_attribute` on the auto-created material's RGB child)
@@ -61,6 +64,7 @@ When loading 3D models from OTOY Studio or any source:
 ### Geo Before Lighting
 
 Place geometry BEFORE setting lighting:
+
 1. Geometry (all objects placed and positioned — **with materials**)
 2. Lighting (environment, emitters, etc.)
 
@@ -69,6 +73,7 @@ This ensures clear preview during the build process.
 ### Recipe Assembly
 
 When building from a recipe, all values are pre-calculated. Assemble ASAP:
+
 - Don't re-engineer lighting or fiddle with values during build
 - Trust the recipe
 - Iterate AFTER the full scene is assembled
@@ -88,13 +93,14 @@ When building from a recipe, all values are pre-calculated. Assemble ASAP:
 AA and CM work as a team during scene builds:
 
 1. **AA reviews every render** — flags clipping, bad framing, ugly lighting, wrong materials
-2. **CM computes camera positions** using calibrated FOV values from `docs/build/CAMERA_MATH.md`
+2. **CM computes camera positions** using calibrated FOV values from `docs/mcp/CAMERA_MATH.md`
 3. **Start far, inch forward** — pure math framing has failed repeatedly. Always verify with a render.
 4. **AA gives CM HARD requirements** — "ALL objects visible, zero clipping, 10% margin" not "pull back a bit"
 5. **Cache what works** — proven camera positions and FOV calibrations go in CAMERA_MATH.md
 6. **AA directs lighting and materials** — sunset environment should be set early, not after all geo is placed. Grey boxes on white background = immediate AA fail.
 
 ### AA Quick Checklist (Every Render)
+
 - All objects fully visible? (no clipping)
 - Lighting creates mood? (not flat/grey)
 - Materials readable? (not default grey)

@@ -9,6 +9,7 @@
  */
 
 import { hasIconMapping, getNodeIconPath } from './NodeTypes';
+import { octaneCacheService } from '../services/OctaneCacheService';
 
 /**
  * Pin icon and color mapping for all PT_ types
@@ -262,9 +263,13 @@ export function getPinIconInfo(pinType: string): PinIconInfo {
 }
 
 /**
- * Get compatible node types for a pin type
+ * Get compatible node types for a pin type.
+ * Checks the runtime API cache first (has all compatible types from Octane),
+ * falls back to hardcoded subset if cache isn't loaded yet.
  */
 export function getCompatibleNodeTypes(pinType: string): CompatibleNodeType[] {
+  const cached = octaneCacheService.getCompatibleNodeTypes(pinType);
+  if (cached) return cached;
   return pinTypeToNodeTypes[pinType] || [];
 }
 

@@ -8,12 +8,6 @@
       "port": 43929
     },
     {
-      "name": "server",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "server:dev"],
-      "port": 45769
-    },
-    {
       "name": "gallery",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["http-server", "renders/storyboard", "-p", "8765", "-c-1"],

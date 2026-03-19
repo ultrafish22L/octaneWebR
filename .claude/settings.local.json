@@ -105,7 +105,14 @@
       "Bash(npm install:*)",
       "Bash(find /c/otoyla/GRPC/dev/octaneWebR/server/src -type f -name *.ts -o -name *.js)",
       "Bash(grep -r from.*server /c/otoyla/GRPC/dev/octaneWebR/client/src --include=*.ts --include=*.tsx)",
-      "Bash(grep -r server/ /c/otoyla/GRPC/dev/octaneWebR --include=*.json --include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=dist)"
+      "Bash(grep -r server/ /c/otoyla/GRPC/dev/octaneWebR --include=*.json --include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=dist)",
+      "Bash(sort -k2)",
+      "mcp__mcp-registry__search_mcp_registry",
+      "mcp__octane-docs__get_octane_module",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\) if False else None\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''mcp/data/octane-api-cache.json'',''utf8''\\)\\); const ct=d.compatibleTypes; console.log\\(''Pin types with compatible nodes:'', Object.keys\\(ct\\).length\\); for\\(const [k,v] of Object.entries\\(ct\\).slice\\(0,5\\)\\) console.log\\(k, '':'', v.nodes.length, ''nodes''\\); console.log\\(''---''\\); console.log\\(''PT_TEXTURE:'', ct.PT_TEXTURE?.nodes?.length, ''nodes''\\); console.log\\(''PT_MATERIAL:'', ct.PT_MATERIAL?.nodes?.length, ''nodes''\\); console.log\\(''PT_GEOMETRY:'', ct.PT_GEOMETRY?.nodes?.length, ''nodes''\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(node scripts/fetch-api-cache.js)"
     ]
   }
 }

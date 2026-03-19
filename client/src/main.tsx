@@ -1,5 +1,10 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { octaneCacheService } from './services/OctaneCacheService';
+
+// Pre-fetch API cache (non-blocking — app works with hardcoded defaults while loading)
+octaneCacheService.initialize();
+
 // Import theme variables first, then component styles
 import './styles/theme-octane.css';
 //import './styles/theme-octane-debug.css'

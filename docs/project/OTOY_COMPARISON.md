@@ -2,7 +2,7 @@
 
 **Estimated coverage: ~40-45%** of Octane SE's full feature surface.
 
-Date: 2026-03-06 | OctaneWebR v1.5.2
+Date: 2026-03-06 | OctaneWebR v1.5.3
 
 ---
 
