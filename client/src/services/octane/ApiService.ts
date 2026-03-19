@@ -129,7 +129,7 @@ export class ApiService extends BaseService {
     const compatibleMethod = getCompatibleMethodName(service, method);
 
     if (method !== compatibleMethod) {
-      Logger.debugV(`API Compatibility: ${service}.${method} → ${compatibleMethod}`);
+      Logger.debugV(() => `API Compatibility: ${service}.${method} → ${compatibleMethod}`);
     }
 
     const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
@@ -175,7 +175,7 @@ export class ApiService extends BaseService {
       Logger.debugV('Added params:', transformedParams);
     }
 
-    Logger.debugV('Request body:', JSON.stringify(body));
+    Logger.debugV(() => `Request body: ${JSON.stringify(body)}`);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs ?? API_TIMEOUT_MS);
@@ -200,7 +200,7 @@ export class ApiService extends BaseService {
       }
 
       const data = (await response.json()) as ApiCallResult;
-      Logger.debugV(`${service}.${method} success`);
+      Logger.debugV(() => `${service}.${method} success`);
       return data;
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {

@@ -105,7 +105,7 @@ export class SceneService extends BaseService {
           signal
         );
         if (newNode) {
-          Logger.debug(`Building children for new node: ${newNode.name}`);
+          Logger.debug(() => `Building children for new node: ${newNode.name}`);
           await this.addItemChildren(newNode, signal);
           Logger.debug('Node metadata built:', newNode.name);
         } else {
@@ -250,7 +250,7 @@ export class SceneService extends BaseService {
         );
         const size = asNumber(sizeResponse?.result, 0);
 
-        Logger.debug(`Level ${level}: Found ${size} owned items`);
+        Logger.debug(() => `Level ${level}: Found ${size} owned items`);
 
         for (let i = 0; i < size; i++) {
           if (signal?.aborted) throw new Error('Scene tree build was cancelled');
@@ -286,7 +286,7 @@ export class SceneService extends BaseService {
             this.emitAsync('scene:level0Complete', { nodes: sceneItems });
           }
 
-          Logger.debug(`Building children for ${sceneItems.length} level 1 items`);
+          Logger.debug(() => `Building children for ${sceneItems.length} level 1 items`);
 
           for (const item of sceneItems) {
             if (signal?.aborted) throw new Error('Scene tree build was cancelled');
@@ -302,16 +302,16 @@ export class SceneService extends BaseService {
               await new Promise(resolve => setTimeout(resolve, 50));
             }
           }
-          Logger.debug(`Finished building children for all level 1 items`);
+          Logger.debug(() => `Finished building children for all level 1 items`);
         }
       } else if (itemHandle != 0) {
         // Regular nodes: iterate through pins to find connected nodes
-        Logger.debug(`Level ${level}: Processing node pins for handle ${itemHandle}`);
+        Logger.debug(() => `Level ${level}: Processing node pins for handle ${itemHandle}`);
         try {
           const pinCountResponse = await this.apiService.callApi('ApiNode', 'pinCount', itemHandle);
           const pinCount = asNumber(pinCountResponse?.result, 0);
 
-          Logger.debug(`  Found ${pinCount} pins`);
+          Logger.debug(() => `  Found ${pinCount} pins`);
 
           for (let i = 0; i < pinCount; i++) {
             if (signal?.aborted) throw new Error('Scene tree build was cancelled');
@@ -419,7 +419,7 @@ export class SceneService extends BaseService {
         });
 
         Logger.debug(
-          `API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
+          () => `API returned outType: "${outType}" (type: ${typeof outType}) for ${itemName}`
         );
 
         isGraph = await cacheManager.get(`node:${handleNum}:info:isGraph`, async () => {
@@ -437,7 +437,7 @@ export class SceneService extends BaseService {
                 x: asNumber(posObj.x, 0),
                 y: asNumber(posObj.y, 0),
               };
-              Logger.debug(`  Position for ${itemName}: (${position.x}, ${position.y})`);
+              Logger.debug(() => `  Position for ${itemName}: (${position!.x}, ${position!.y})`);
             }
           } catch (posError) {
             Logger.warn(
@@ -461,7 +461,7 @@ export class SceneService extends BaseService {
         );
       }
     } else {
-      Logger.debug(`  Unconnected pin: ${itemName}`);
+      Logger.debug(() => `  Unconnected pin: ${itemName}`);
     }
 
     const displayName = String(pinInfo?.staticLabel || itemName);
@@ -490,7 +490,7 @@ export class SceneService extends BaseService {
       if (signal?.aborted) throw new Error('Scene tree build was cancelled');
       this.scene.map.set(handleNum, entry);
       Logger.debug(
-        `Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`
+        () => `Added item: ${displayName} (type: "${outType}", icon: ${icon}, level: ${level})`
       );
 
       if (level > 1) {
@@ -525,7 +525,7 @@ export class SceneService extends BaseService {
       const attrResultObj = asObject(attrInfoResponse?.result);
       if (attrResultObj && String(attrResultObj.type) !== 'AT_UNKNOWN') {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
-        Logger.debugV(` ${item.name} ${JSON.stringify(attrResultObj)}`);
+        Logger.debugV(() => ` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {
         const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', item.handle, {
           attribute_id: AttributeId.A_FILENAME,

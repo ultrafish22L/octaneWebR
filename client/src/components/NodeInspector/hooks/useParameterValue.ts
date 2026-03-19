@@ -123,7 +123,7 @@ export function useParameterValue(
       try {
         const expectedType = AttrType[node.attrInfo.type as keyof typeof AttrType];
 
-        Logger.debug(`Setting ${node.name} = ${JSON.stringify(newValue)}`);
+        Logger.debug(() => `Setting ${node.name} = ${JSON.stringify(newValue)}`);
 
         await client.setParameterValue(String(node.handle), expectedType, newValue);
 

@@ -1,6 +1,6 @@
 {
   "name": "octaneweb-react",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "description": "OctaneWeb ported to React TypeScript with Node.js gRPC",
   "scripts": {
     "generate:proto": "bash scripts/generate-proto.sh",

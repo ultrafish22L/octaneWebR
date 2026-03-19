@@ -47,18 +47,37 @@ class LoggerInstance {
 
   // ── Level checks ────────────────────────────────────────────────
 
-  /** Verbose debug — API calls, proto resolution, high-frequency data */
-  debugV(...args: unknown[]): void {
+  /** Verbose debug — API calls, proto resolution, high-frequency data.
+   *  Accepts a callback `() => string` for lazy evaluation — the callback
+   *  is only invoked if DEBUGV logging is enabled. Use this form for calls
+   *  that build expensive strings (JSON.stringify, template literals). */
+  debugV(msgOrFn: unknown, ...rest: unknown[]): void {
     if (this.level < LogLevel.DEBUGV) return;
-    console.log(...args);
-    this.buffer('debugv', args);
+    if (typeof msgOrFn === 'function' && rest.length === 0) {
+      const result = (msgOrFn as () => unknown)();
+      const args = Array.isArray(result) ? result : [result];
+      console.log(...args);
+      this.buffer('debugv', args);
+    } else {
+      console.log(msgOrFn, ...rest);
+      this.buffer('debugv', [msgOrFn, ...rest]);
+    }
   }
 
-  /** Standard debug — state changes, scene operations */
-  debug(...args: unknown[]): void {
+  /** Standard debug — state changes, scene operations.
+   *  Accepts a callback `() => string` for lazy evaluation — the callback
+   *  is only invoked if DEBUG logging is enabled. */
+  debug(msgOrFn: unknown, ...rest: unknown[]): void {
     if (this.level < LogLevel.DEBUG) return;
-    console.log(...args);
-    this.buffer('debug', args);
+    if (typeof msgOrFn === 'function' && rest.length === 0) {
+      const result = (msgOrFn as () => unknown)();
+      const args = Array.isArray(result) ? result : [result];
+      console.log(...args);
+      this.buffer('debug', args);
+    } else {
+      console.log(msgOrFn, ...rest);
+      this.buffer('debug', [msgOrFn, ...rest]);
+    }
   }
 
   /** Info — normal operation events */
@@ -92,18 +111,18 @@ class LoggerInstance {
   }
 
   /** Network events (debug) */
-  network(...args: unknown[]): void {
-    this.debug(...args);
+  network(first: unknown, ...rest: unknown[]): void {
+    this.debug(first, ...rest);
   }
 
   /** Scene operations (debug) */
-  scene(...args: unknown[]): void {
-    this.debug(...args);
+  scene(first: unknown, ...rest: unknown[]): void {
+    this.debug(first, ...rest);
   }
 
   /** Render events (debug) */
-  render(...args: unknown[]): void {
-    this.debug(...args);
+  render(first: unknown, ...rest: unknown[]): void {
+    this.debug(first, ...rest);
   }
 
   /** Console group (debug) */

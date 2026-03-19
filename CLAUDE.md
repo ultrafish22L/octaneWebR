@@ -2,7 +2,7 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 7: Code Review + UI Polish — v1.5.8**
+**Phase 8: Code Review + UI Polish + Cleanup — v1.5.9**
 
 **What happened this session:**
 
@@ -24,14 +24,20 @@
 - MCP: graceful shutdown handler (SIGINT/SIGTERM)
 - MCP: async debug logging (appendFile instead of appendFileSync)
 - Dependencies cleaned: removed `@improbable-eng/grpc-web`, `eslint-plugin-react`
+- Lazy logging: Logger accepts `() => string` callbacks, 17 hot-path calls converted
+- setValue dedup: useParameterValue now delegates to ItemService.setParameterValue()
+- saveRender/exportPasses: proper error handling with statusMessage feedback
+- NumberInput: window listener cleanup on unmount
+- Node-add context menu icons: category-based fallbacks from API cache for 750+ types
+- API cache: fetches descriptions, categories, defaultNames for all node/pin/attribute types
+- Dropdown init from gRPC: clay mode, subsample, render priority, gizmo mode read from Octane on startup
 - Full doc cleanup: version consistency, port numbers, dead references removed
 
 ### TODO for Next Session
 
-1. See `docs/project/IMPROVEMENTS.md` for remaining backlog (lazy logging, VectorInput extraction, etc.)
+1. See `docs/project/IMPROVEMENTS.md` for remaining backlog (32 items)
 2. Custom tooltip component (yellow Octane-style, not native browser `title=`)
 3. File → Recent Projects menu
-4. Node type icons from API cache (category-based fallbacks for 750+ types)
 
 ### Known MCP Limitations (carried forward)
 
@@ -154,8 +160,8 @@ Also see: `docs/mcp/DRESS_BUILD_PROTOCOL.md` (build order), `docs/mcp/OCTANE_CHE
 
 ## Status
 
-- **Version**: 1.5.8
-- **2 open items** (#5 camera framing from bounds, #6 materials-from-geo-1 rule) — see `docs/project/IMPROVEMENTS.md`
+- **Version**: 1.5.9
+- **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive type 18 crashes)
 - **MCP server**: 27 tools, API cache, incremental webapp sync
 - **Themes**: 3 themes — vibe (default), octane, debug

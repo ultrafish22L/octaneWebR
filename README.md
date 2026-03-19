@@ -149,4 +149,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 1.5.8** | Active Development
+**Version 1.5.9** | Active Development

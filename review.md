@@ -1,6 +1,6 @@
 # OctaneWebR Code Review
 
-**Date:** 2026-03-18 | **Version:** 1.5.8 | **Reviewer:** Claude Opus 4.6
+**Date:** 2026-03-18 | **Version:** 1.5.9 | **Reviewer:** Claude Opus 4.6
 
 A strict review of the full OctaneWebR codebase: Vite plugin, MCP server, React client, and project configuration.
 
