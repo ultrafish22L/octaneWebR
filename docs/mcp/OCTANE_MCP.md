@@ -61,7 +61,7 @@ CRASH RULES:       1. NEVER use evaluate:false. Always use evaluate:true
                    2. Restart ALL servers (dev, preview) before every build
                       run AND after every Octane crash.
                    3. NEVER create nodes in parallel. Sequential only.
-                   4. restart_render was REMOVED in v1.5.3 (crashed Octane).
+                   4. restart_render was REMOVED (crashed Octane).
                    5. Primitive types 1-17, 19-23 on NT_GEO_OBJECT are SAFE
                       (visually verified 2026-03-14 with 22 distinct shapes).
                       Type 18 (Quad) CRASHES Octane — NEVER use it.
@@ -93,7 +93,7 @@ LIVE RENDER:       Most changes (connect, set_attribute) take effect on
 
 REFRESH RULE:      set_camera is the ONLY way to force re-render.
                    start_render does NOT refresh geometry.
-                   restart_render was REMOVED in v1.5.3 (crashed Octane).
+                   restart_render was REMOVED (crashed Octane).
                    WARNING: set_camera RESETS up vector to (0,1,0).
                    NEVER flip up vector to compensate for model orientation.
                    ALWAYS rotate the MODEL instead (A_ROTATION=137).
@@ -188,7 +188,7 @@ These patterns supplement the Cheat Sheet with additional detail.
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Quad primitive (type 18)**         | **Octane Alpha 5 bug.** Type 18 (Quad) crashes Octane on set_attribute. Types 1-17, 19-23 are all safe (22 verified in grid, 2026-03-14). Workaround: flat Box (A_SCALE Y≈0.001) or NT_GEO_MESH + `quad.obj`. |
 | `evaluate:false` × N (any node op)   | **NEVER defer evals** — 8× deferred set_attribute crashed. Always evaluate:true.                                                                                                                              |
-| ~~`restart_render`~~                 | **REMOVED in v1.5.3.** Was causing ECONNRESET. Use `start_render` once — Octane stays in render mode. All changes are picked up live.                                                                         |
+| ~~`restart_render`~~                 | **REMOVED.** Was causing ECONNRESET. Use `start_render` once — Octane stays in render mode. All changes are picked up live.                                                                                   |
 | Parallel `create_node` calls         | Sequential only — 4× simultaneous = ECONNRESET                                                                                                                                                                |
 | `resetProject` (any variant)         | Use delete-all-nodes pattern (avoids "Save changes?" dialog)                                                                                                                                                  |
 | Bad A_FILENAME (e.g. `:rgba` suffix) | Pops Octane dialog blocking gRPC for 30s. Use valid absolute paths only.                                                                                                                                      |

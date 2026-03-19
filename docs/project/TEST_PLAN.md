@@ -357,7 +357,7 @@ while (fiber) {
 | ID  | Test                      | Pass Criteria                                        |
 | --- | ------------------------- | ---------------------------------------------------- |
 | H1  | Status bar: "Connected"   | Shows when Octane is running                         |
-| H2  | Version number            | Displayed in bottom-right (e.g. "OctaneWebR v1.5.3") |
+| H2  | Version number            | Displayed in bottom-right (e.g. "OctaneWebR v1.5.8") |
 | H3  | Temporary status messages | Appear on actions and auto-dismiss after timeout     |
 
 ### Medium (H4–H6)

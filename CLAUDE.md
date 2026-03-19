@@ -2,73 +2,36 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 6: Nemo Trailer v3 — COMPLETE + St. Patrick's Poster**
+**Phase 7: Code Review + UI Polish — v1.5.8**
 
-**What happened in Phase 5f→6:**
+**What happened this session:**
 
-- **Writers Room** — 4 specialized agents (Narrative, Cat, World, Emotion) pitched scene beats in parallel
-- **AA/Showrunner synthesis** — merged best elements into locked script v3: "The Deep Purrs Back"
-- **Story spine:** Nemo searches for Patala (Hindu underworld). Catraken is its guardian. The twist: the treasure was never there — the journey was the point. Two outcasts recognize each other. The slow blink is the climax.
-- **18 keyframes generated** — all AA-reviewed (avg grade A, 4x A+ on critical frames)
-- **17 video clips** — 10 Veo3 (with generated audio!), 7 Kling i2v animations
-- **85-second trailer assembled** via moviepy (Python) — `renders/storyboard/v3/trailer_v3.mp4`
-- **St. Patrick's Day poster** — Captain, crew, and Catraken celebrating as friends (A+ grade, 4x upscaled)
-- **Gallery page** at `renders/storyboard/v3/gallery.html` — 4 tabs (Trailer, Storyboard, Video, St. Patrick's)
-
-**Key story beats (script v3):**
-
-1. The Shrine (Nemo praying at mother's portrait) → 2. Descent (purple ocean pulses) → 3. Bridge (crew ears rotate) → 4. Whisker Forest (the ocean IS the creature) → 5. Graveyard (centuries of failed seekers) → 6. The Eye (mirror moment) → 7. Eruption (Catraken reveal) → 8. Curiosity Tap (BONG — intelligent predator) → 9. Battle (turmeric rockets! kitten in crate! belly trap!) → 10. Caught → 11. The Turn (Nemo kills engines — first seeker wise enough to STOP) → 12. The Slow Blink (climax — trust) → 13. Release → 14. Ascent → 15. "Nothing." (Nemo + kitten) → 16. Title card
-
-**Cat behaviors are load-bearing, not decoration:**
-
-- Curiosity tap (terrifying intelligent investigation)
-- Kneading the helm (self-soothing under stress)
-- Belly trap recognition ("No. It wants us to.")
-- Claws on wet steel (survival instinct)
-- Kitten in supply crate (unbothered through apocalypse)
-- The slow blink (emotional climax — highest cat trust signal)
-
-**Key assets saved:**
-
-- `renders/storyboard/v3/` — 18 keyframes (PNG), trailer (MP4), poster (PNG + 4x)
-- `renders/storyboard/v3/video/` — 17 clips (10 Veo3, 7 Kling)
-- `docs/recipes/NEMO_TRAILER_SCRIPT_v3.md` — locked 16-beat script with AA notes
-- `renders/storyboard/v3/assemble_trailer.py` — moviepy assembly script
-- Previous assets in `renders/storyboard/` still intact
+- Full strict code review (see `review.md`) — security, TypeScript, React, MCP, config
+- Removed legacy Express server (standalone `server/src/index.ts` and related files)
+- File browser restricted to configurable `OCTANE_FILE_ROOTS` (default `C:\otoyla`)
+- Bind host configurable via `OCTANE_BIND_HOST` (default `127.0.0.1`)
+- Removed `restart_render` MCP tool (crashed Octane) — now 27 tools
+- Fixed handle-0 selection bug in SceneOutliner (`||` → `??`)
+- Empty pin nodes (Visible Environment) show no icon, matching Octane
+- Clay mode + subsample mode → 3-item dropdown menus matching Octane
+- Render priority + gizmo mode dropdowns converted to fixed positioning
+- Toolbar tooltip text updated from `reference/strings.xml`
+- Node inspector + node graph toolbar tooltips from strings.xml
+- Gold selection highlight for all dropdown menus (theme-aware)
+- MCP: added `up` param to `set_camera`, improved `connect_nodes` description
+- MCP: `reset_project` warning in description and response
+- MCP: `save_render` validates parent directory exists
+- MCP: graceful shutdown handler (SIGINT/SIGTERM)
+- MCP: async debug logging (appendFile instead of appendFileSync)
+- Dependencies cleaned: removed `@improbable-eng/grpc-web`, `eslint-plugin-react`
+- Full doc cleanup: version consistency, port numbers, dead references removed
 
 ### TODO for Next Session
 
-1. **Octane 3D production scene** — build the hero frame ("The Turn" — Nemo's paw on glass, Catraken eye beyond) in Octane with full volumetric purple medium, pathtracing kernel, hero lighting. All 3D assets ready in `ORBX/assets/`.
-2. **Refine trailer** — swap Ken Burns frames for more Kling animations, add crossfades, music track.
-3. **Upscale hero trailer frames** — 4x upscale the 6 critical keyframes for print/poster use.
-4. **Video chain continuity** — re-generate clips using end-frame→start-frame technique for seamless transitions.
-
-### Proven Purple Medium Values (UPDATED — old values were wrong!)
-
-- **Scale:** 0.007 (0.002=invisible, 0.015=opaque)
-- **Absorption:** {0.3, 0.3, 0.3} NEUTRAL — do NOT use colored absorption, it's unintuitive with invertAbsorption
-- **invertAbsorption:** true (default)
-- **Scattering:** {0.3, 0.05, 0.4} (purple scatter — R+B heavy, low G)
-- **Env color:** {0.45, 0.05, 0.5} (saturated purple)
-- **Env power:** 35
-- **mediumRadius:** 5000 (default 1 = nothing visible!)
-- **Kernel:** NT_KERN_PATHTRACING (type_id 25)
-
-**Key insight:** Purple comes from env color + scattering color, NOT from absorption. Keep absorption neutral.
-
-### Sphere Light Power in Medium (efficiency=1.0, surfaceBrightness=false)
-
-| Role         | Power | Temp       | Notes                        |
-| ------------ | ----- | ---------- | ---------------------------- |
-| Overhead key | 10-20 | 2800-5500K | Warm for underwater contrast |
-| Fill         | 6-8   | 8000-9000K | Cool blue, opposite side     |
-
-### Assets Ready (in ORBX/assets/)
-
-**Hero meshes:** nautilus.obj (40MB), cat_captain_hindu.obj (40MB), catraken.obj (39MB) ✅
-**Textures:** nautilus_diffuse.png, cat_captain_hindu_diffuse.png, catraken_diffuse.png — all 4096×4096 ✅
-**Primitives:** sphere.obj, pillar.obj, monolith.obj, ring.obj, torus.obj, prism.obj, floor.obj
-**Composition plan:** `docs/recipes/NEMO_STORYBOARD_PLAN.md` — 3 frames (Kraken Wakes, Battle, Captain's Stand).
+1. See `docs/project/IMPROVEMENTS.md` for remaining backlog (lazy logging, VectorInput extraction, etc.)
+2. Custom tooltip component (yellow Octane-style, not native browser `title=`)
+3. File → Recent Projects menu
+4. Node type icons from API cache (category-based fallbacks for 750+ types)
 
 ### Known MCP Limitations (carried forward)
 
@@ -111,7 +74,7 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 
 ## Quick Start
 
-- **Dev server**: `npm run dev` (port 57341)
+- **Dev server**: `npm run dev` (port 43929)
 - **Test scene**: `ORBX/teapot.orbx` — load via File→Open
 - **Smoke test**: Toggle Orthographic on Camera node → verify `setByAttrID` in `grpc-debug.log`
 - **MCP server**: `cd mcp && npm run build && npm run mcp:start`
@@ -183,7 +146,7 @@ When starting after a long delay, or when anything is unstable: **kill everythin
 **Full rules in `docs/mcp/OCTANE_MCP.md`.** The 3 hardest-learned rules:
 
 - **NEVER `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
-- **`restart_render` was REMOVED** (v1.5.3) — it crashed Octane. Use `start_render` (keeps render live).
+- **`restart_render` was REMOVED** — it crashed Octane. Use `start_render` (keeps render live).
 - **Connections need `update_scene()` + camera change** — `start_render` does NOT refresh the geometry tree. After connections, call `update_scene()` then `set_camera` — both are required.
 - **`reset_project` needs save first** — without saving, Octane pops a system dialog that blocks gRPC. Always `save_project` to a temp path before `reset_project`.
 
@@ -191,7 +154,7 @@ Also see: `docs/mcp/DRESS_BUILD_PROTOCOL.md` (build order), `docs/mcp/OCTANE_CHE
 
 ## Status
 
-- **Version**: 1.5.3
+- **Version**: 1.5.8
 - **2 open items** (#5 camera framing from bounds, #6 materials-from-geo-1 rule) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive type 18 crashes)
 - **MCP server**: 27 tools, API cache, incremental webapp sync

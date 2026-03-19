@@ -198,7 +198,7 @@ function enhanceCrashError(
 
 // Resolve paths relative to mcp/dist/ at runtime
 const SERVER_ROOT = path.resolve(__dirname, '../../server');
-const GRPC_CLIENT_PATH = path.join(SERVER_ROOT, 'src/grpc/OctaneGrpcClientBase');
+const GRPC_CLIENT_PATH = path.join(SERVER_ROOT, 'dist/grpc/OctaneGrpcClientBase');
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires */
 const grpcModule = require(GRPC_CLIENT_PATH);

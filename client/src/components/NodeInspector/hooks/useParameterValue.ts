@@ -125,7 +125,7 @@ export function useParameterValue(
 
         Logger.debug(`Setting ${node.name} = ${JSON.stringify(newValue)}`);
 
-        await client.setParameterValue(node.handle, expectedType, newValue);
+        await client.setParameterValue(String(node.handle), expectedType, newValue);
 
         // Optimistic local state update — reflects the change in the UI immediately
         // without waiting for a re-fetch from Octane

@@ -2,8 +2,6 @@
 
 A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser. An MCP server lets AI agents (Claude) build and modify Octane scenes programmatically.
 
-![octaneWebR — Octane Theme](docs/screenshots/theme-octane.png)
-
 ## Quick Start
 
 ### Prerequisites
@@ -18,14 +16,14 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:57341**. The app connects to Octane at `localhost:51022` by default.
+Open **http://localhost:43929**. The app connects to Octane at `localhost:51022` by default.
 
 ## Architecture
 
 OctaneWebR is a Vite application with an embedded gRPC plugin that handles all API proxying, WebSocket callbacks, and file browser endpoints. There is no separate backend server — the Vite plugin bridges the browser to Octane's gRPC API directly.
 
 ```
-Browser  -->  Vite Dev Server (port 57341)  -->  Octane gRPC (port 51022)
+Browser  -->  Vite Dev Server (port 43929)  -->  Octane gRPC (port 51022)
               - HTTP proxy (/api/grpc/*)
               - WebSocket (/ws) for callbacks and render streaming
               - File browser (/api/files/*)
@@ -126,7 +124,7 @@ octaneWebR/
 ## Development
 
 ```bash
-npm run dev          # Dev server with HMR (port 57341)
+npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint (flat config)
 npx tsc --noEmit     # Type check
@@ -151,4 +149,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 1.5.3** | Active Development
+**Version 1.5.8** | Active Development

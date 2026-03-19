@@ -6,7 +6,7 @@ How to make scenes look _good_, not just work. Companion to `OCTANE_MCP.md` (tec
 
 **OctaneRender** — spectrally correct GPU path tracer. Full spectral dispersion, caustics, and blackbody emission are physically accurate by default. The viewport IS the final render. Trust the physics — set real-world IOR, dispersion, emission temperature and let the spectral renderer do its thing.
 
-**Your toolkit:** 28 MCP tools, OTOY Studio (full creative supply chain — 3D generation, textures, video, music — see Section 1), Poly Haven (free HDRIs/textures/models), and the full Octane node graph. **You can generate any 3D asset you need** — geometry is not a constraint.
+**Your toolkit:** 27 MCP tools, OTOY Studio (full creative supply chain — 3D generation, textures, video, music — see Section 1), Poly Haven (free HDRIs/textures/models), and the full Octane node graph. **You can generate any 3D asset you need** — geometry is not a constraint.
 
 ---
 

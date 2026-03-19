@@ -115,7 +115,7 @@ Sundir node (NT_SUN_DIRECTION) children: latitude(0), longitude(1), month(2), da
 | -------------------- | ------------------- | ---------------------------------------------------------------------------- |
 | **`set_camera`**     | **YES**             | The ONLY way to force geometry re-evaluation. Even same position works.      |
 | `start_render`       | NO                  | Only starts sampling. New objects won't appear.                              |
-| ~~`restart_render`~~ | **REMOVED**         | Removed from MCP in v1.5.3 — crashed Octane (ECONNRESET).                    |
+| ~~`restart_render`~~ | **REMOVED**         | Removed from MCP — crashed Octane (ECONNRESET).                              |
 | `set_attribute`      | Partial             | Triggers re-render of existing objects but doesn't add new geometry to tree. |
 
 **After connections:** call `update_scene()` then `set_camera` — both required. Connections need an extra trigger beyond just update_scene.

@@ -116,7 +116,9 @@
       "Bash(find C:/otoyla/GRPC/dev/octaneWebR -name *VectorInput* -o -name *vector*input*)",
       "Bash(grep -l \"vector\\\\|Vector\" C:/otoyla/GRPC/dev/octaneWebR/client/src/components/*.tsx)",
       "Bash(grep -n \"menuIcon\\\\|icon.*menu\\\\|panel.*icon\\\\|panel-title\" C:/otoyla/GRPC/dev/octaneWebR/client/src/components/**/*.tsx)",
-      "Bash(grep -n \"panel-title\\\\|panel-header\\\\|menuIcon\\\\|menu.*icon\" C:/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)"
+      "Bash(grep -n \"panel-title\\\\|panel-header\\\\|menuIcon\\\\|menu.*icon\" C:/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)",
+      "Bash(node dist/index.js)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object State\")"
     ]
   }
 }
