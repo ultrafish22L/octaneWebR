@@ -162,8 +162,11 @@ export function useToolbarActions({
       switch (actionId) {
         // Camera & View Controls
         case 'recenter-view':
-          Logger.debug(' Recenter view - resetting 2D canvas transform');
+          Logger.debug('Recenter view - resetting 2D canvas transform + framing scene');
           onRecenterView?.();
+          client.frameScene().catch(err => {
+            Logger.error('Failed to frame scene:', err);
+          });
           break;
         case 'reset-camera':
           Logger.debug('Reset camera to original position');

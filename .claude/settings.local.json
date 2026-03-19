@@ -118,7 +118,11 @@
       "Bash(grep -n \"menuIcon\\\\|icon.*menu\\\\|panel.*icon\\\\|panel-title\" C:/otoyla/GRPC/dev/octaneWebR/client/src/components/**/*.tsx)",
       "Bash(grep -n \"panel-title\\\\|panel-header\\\\|menuIcon\\\\|menu.*icon\" C:/otoyla/GRPC/dev/octaneWebR/client/src/styles/*.css)",
       "Bash(node dist/index.js)",
-      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object State\")"
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object State\")",
+      "Bash(node -e \"const d = require\\(''./client/public/data/octane-api-cache.json''\\); console.log\\(JSON.stringify\\(d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,5\\)\\)\\)\")",
+      "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); const nodes = d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,3\\); console.log\\(JSON.stringify\\(nodes\\)\\); console.log\\(''types:'', typeof nodes[0].id, typeof nodes[0].key\\)\")",
+      "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(''NT_CAM_OSL:'', d.nodeTypesByName?.NT_CAM_OSL\\); console.log\\(''NT_CAM_PANORAMIC:'', d.nodeTypesByName?.NT_CAM_PANORAMIC\\); console.log\\(''sample compat:'', JSON.stringify\\(d.compatibleTypes?.PT_CAMERA?.nodes?.slice\\(0,3\\)\\)\\)\")",
+      "Bash(node -e \"const d = require\\(''./mcp/data/octane-api-cache.json''\\); console.log\\(typeof d.nodeTypesByName?.NT_CAM_OSL\\)\")"
     ]
   }
 }

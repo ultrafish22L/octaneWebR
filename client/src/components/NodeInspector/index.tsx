@@ -553,7 +553,23 @@ const NodeParameter = React.memo(function NodeParameter({
   // Handler for node type change — value is "key:id" to carry both pieces
   // Guard prevents concurrent changes (multiple API calls can create orphaned nodes)
   const handleNodeTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = compatibleNodeTypes.find(t => t.key === event.target.value);
+    const value = event.target.value;
+
+    // Handle "Delete node" action
+    if (value === '__delete_node__') {
+      // Reset select to current value
+      event.target.value = currentNodeType;
+      if (!node.handle) return;
+      try {
+        await client.deleteNodeOptimized(node.handle);
+      } catch (error) {
+        Logger.error('Failed to delete node:', error);
+        setTemporaryStatus('Failed to delete node', 3000);
+      }
+      return;
+    }
+
+    const selected = compatibleNodeTypes.find(t => t.key === value);
     if (!selected || selected.key === currentNodeType || nodeTypeChanging) return;
 
     setNodeTypeChanging(true);
@@ -753,6 +769,12 @@ const NodeParameter = React.memo(function NodeParameter({
                       </option>
                     );
                   })}
+                  {!isEmptyPin && (
+                    <>
+                      <option disabled>──────────</option>
+                      <option value="__delete_node__">Delete node</option>
+                    </>
+                  )}
                 </select>
                 {isMovable && parentHandle !== undefined && pinIdx !== undefined && (
                   <MovableInputPinActions

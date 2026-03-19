@@ -178,6 +178,10 @@ export class OctaneClient extends EventEmitter {
     return this.cameraService.resetCamera();
   }
 
+  async frameScene(elevation?: number, margin?: number): Promise<boolean> {
+    return this.cameraService.frameScene(elevation, margin);
+  }
+
   // ==================== Scene Methods ====================
 
   async buildSceneTree(newNodeHandle?: number): Promise<SceneNode[]> {

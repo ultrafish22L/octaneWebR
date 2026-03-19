@@ -17,7 +17,6 @@ Ordered easy → hard within each section. Done items purged.
 | 4   | Split useMouseInteraction into focused hooks | 500+ line useEffect → orbit/pan/zoom/pick hooks                                                 |
 | 5   | Extract shared constants to shared location  | Fix MCP cross-boundary imports from client/src                                                  |
 | 6   | Add gRPC response interfaces                 | Top 10 response shapes, typed at service boundaries                                             |
-| 7   | Camera framing from bounds                   | Use centroid for target, zoom from extents                                                      |
 | 8   | Inspector doesn't update on MCP changes      | Re-fetch on selected node changes                                                               |
 | 9   | connect_nodes partial re-render              | notifyWebapp works but may need update_scene + set_camera for geometry changes                  |
 | 10  | MCP-created nodes pile at (0,0)              | Auto-arrange or position hints in node graph                                                    |

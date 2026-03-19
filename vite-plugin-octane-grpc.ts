@@ -114,7 +114,7 @@ function buildClientCachePayload(): string | null {
   for (const [pinType, val] of Object.entries(raw.compatibleTypes || {})) {
     const nodes = ((val as { nodes: string[] }).nodes || [])
       .filter((n: string) => nameToId[n] !== undefined)
-      .map((n: string) => ({ key: n, id: nameToId[n] }));
+      .map((n: string) => ({ key: n, id: Number(nameToId[n]) }));
     if (nodes.length > 0) {
       compatibleTypes[pinType] = { nodes };
     }
@@ -136,6 +136,7 @@ function buildClientCachePayload(): string | null {
   for (const [key, val] of Object.entries(raw.nodeTypes || {})) {
     const nt = val as {
       name: string;
+      defaultName: string;
       category: string;
       nodeColor: number;
       outType: string;
@@ -144,7 +145,7 @@ function buildClientCachePayload(): string | null {
       movableInputName: string;
     };
     nodeTypes[key] = {
-      name: nt.name,
+      name: nt.defaultName || nt.name.replace(/^NT_/, '').replace(/_/g, ' '),
       category: nt.category,
       color: juceColorToHex(nt.nodeColor),
       outType: nt.outType,
