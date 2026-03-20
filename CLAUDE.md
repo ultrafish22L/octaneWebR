@@ -168,7 +168,7 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 - **Version**: 2.1.3
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
-- **MCP server**: 28 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync
+- **MCP server**: 29 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
 

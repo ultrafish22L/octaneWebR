@@ -257,15 +257,29 @@ Set `set_camera(target: {x, y, z})` to the centroid or center of interest. The c
 
 ### 3D Asset Orientation
 
-When loading 3D models from OTOY Studio or any source:
+Generated 3D meshes have unknown orientation until you check. **Never guess — orbit to discover.**
 
-- Model facing direction is set by the generation pipeline -- not random
-- Plan camera position relative to the model's front face BEFORE creating nodes
-- OTOY Studio preview shows the model at identity rotation -- use it to determine facing direction
-- If model faces +Z, camera at +Z sees the back -- rotate model or move camera to -Z
-- **Never flip the camera up vector** to compensate for model orientation -- always rotate the MODEL instead (A_ROTATION=137)
+**Discovery protocol (MANDATORY for any new mesh):**
 
-**General rule:** Have a complete composition plan (camera, object orientation, framing) BEFORE creating any nodes.
+1. Load mesh, connect to scene, scale to roughly visible size
+2. Back camera WAY out (8-10 units) to see the whole thing
+3. Render 3 orbit views:
+   - **Front**: camera at (0, Y, +Z) — what does the mesh face?
+   - **Right**: camera at (+X, Y, 0) — is it lying down or standing?
+   - **Top**: camera at (0, +Y, +Z small) — where is the base plate?
+4. From the 3 views, determine: which axis is up, which way it faces, where the base is
+5. THEN apply rotation to fix orientation
+
+**Common orientation issues:**
+
+- **OTOY Studio GLB exports are Z-up** — Octane is Y-up. Fix: rotate placement +90° on X (`A_ROTATION=137, {90,0,0}`)
+- **Front face varies** — rotate on Y until 3/4 hero angle faces camera. Test: 0°, 45°, 90°, 135°, 180°
+- **Base plate creates a large flat face** — if you see a dark wall, you're looking at the base plate edge-on
+- **Scale is unpredictable** — OTOY Studio meshes are typically ~0.5-1 unit tall. Scale 2-3x for Octane scenes
+
+**Never flip the camera up vector** to compensate for model orientation — always rotate the MODEL (A_ROTATION=137).
+
+**Film aspect matters:** Portrait (720x1280) for standing figures, landscape for wide scenes. Set film resolution BEFORE framing — changing aspect after framing invalidates your composition.
 
 ---
 
@@ -381,17 +395,37 @@ for the full Chrome 3D workflow (navigate → USE URL → upload → generate �
 
 ### 3D Asset Pipeline (OTOY Studio to Octane)
 
-1. **Generate reference image** -- `generate_image_pro` (MCP API) for front-facing view
-2. **Image-to-3D** -- Hunyuan-3d v3.1 [Pro] via Chrome at otoy.studio/image-to-3d -- 56 credits
-3. **Download GLB** -- intercept download URL via JS, save to local path
-4. **Convert** -- GLB → OBJ + textures: `trimesh.load(glb) → export('name.obj')` + extract diffuse PNG
-5. **Load in Octane** -- `NT_GEO_MESH` with `A_FILENAME`, material with `NT_TEX_IMAGE` for texture
+**Phase 1 — Generate & Download:**
+
+1. **Generate reference image** — `generate_image_pro` (MCP API) for front-facing, isolated-on-black view
+2. **Image-to-3D** — Chrome UI at `otoy.studio/image-to-3d`: toggle "USE URL", paste MCP image URL, add prompt, click Create (56 credits, ~3-5 min)
+3. **Download GLB** — click Download in Generation Details panel. File saves to `~/Downloads/`
+
+**Phase 2 — Convert:**
+
+4. **GLB → OBJ** — Python trimesh: `trimesh.load(glb)` → concatenate geometry → `export('name.obj')`. Extracts OBJ + MTL + diffuse PNG automatically
+5. **Copy to project** — `assets/<name>/` folder (OBJ + textures together, MTL references are relative)
+
+**Phase 3 — Load in Octane:**
+
+6. **Create mesh** — `NT_GEO_MESH`, set `A_FILENAME=34` to OBJ path
+7. **Create placement** — `NT_GEO_PLACEMENT`, connect mesh via `pin_name: "geometry"`
+8. **Create material** — `NT_MAT_UNIVERSAL` + `NT_TEX_IMAGE` with diffuse PNG → connect to mesh `pin_index: 0`
+9. **Connect to scene** — placement → geo group (next available `pin_index`)
+
+**Phase 4 — Orient & Frame (CRITICAL — do this BEFORE final composition):**
+
+10. **Set film aspect FIRST** — portrait (720x1280) for standing figures. Changing aspect later invalidates framing
+11. **Discover orientation** — orbit 3 views (front/right/top), see "3D Asset Orientation" above
+12. **Fix rotation** — typically +90° X for Z-up→Y-up, then rotate Y for facing direction
+13. **Scale to scene** — OTOY meshes are ~0.5-1 unit. Scale 2-3x to match Octane scene units
+14. **Frame hero shot** — start far, zoom in. Portrait + low angle = dramatic for standing figures
 
 **File loading pattern** (meshes AND textures):
 
 ```
 set_attribute(handle, A_FILENAME=34, AT_STRING=14, "C:\\otoyla\\...\\assets\\file.obj")
-set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # CRITICAL -- always reload!
+set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # force reload after path change
 ```
 
 ---

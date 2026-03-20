@@ -42,7 +42,8 @@ Thumbs.db
 # Generated proto files (reference only)
 server/src/generated/
 
-# Octane scene files and renders (large binaries)
+# Octane scene files, renders, and imported 3D assets (large binaries)
+assets/
 renders/
 ORBX/assets/
 ORBX/*.orbx

@@ -14,14 +14,13 @@ import { SceneCache } from './SceneCache';
 
 export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
 
-// Log levels: 'debug' = everything, 'warn' = warnings+errors, 'error' = errors only, 'off' = silent
-type LogLevel = 'debug' | 'warn' | 'error' | 'off';
-// Default 'warn': logs gate rejections and errors only.
-// Raw gRPC REQ/RES is in log_grpc.log — no need to duplicate here.
-// Set MCP_LOG_LEVEL=debug to see all gRPC calls in log_mcp.log too.
-const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'warn';
+// Log levels: 'debug' = full REQ/RES, 'info' = tool calls + results, 'warn' = problems only, 'error' = errors, 'off' = silent
+type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'off';
+// Default 'info': logs every gRPC call name + success/fail + timing.
+// Set MCP_LOG_LEVEL=debug for full request/response JSON.
+const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'info';
 
-const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, warn: 1, error: 2, off: 3 };
+const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3, off: 4 };
 
 // Use a WriteStream (like log_grpc.log) so writes are ordered.
 // fs.appendFile is fire-and-forget and can interleave out of order.
@@ -276,9 +275,13 @@ export class OctaneMcpClient {
           `REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`,
           'debug'
         );
+      const startMs = Date.now();
       const endProfile = profileGrpc(service, method);
       const result = await this.base.callMethod(service, method, transformed, options);
       endProfile();
+      const elapsed = Date.now() - startMs;
+      const ok = result?.success !== false && result?.error_message !== '';
+      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'info');
       if (isDebug)
         mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');
       return result;
