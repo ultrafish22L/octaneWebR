@@ -2,25 +2,26 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 14 COMPLETE: Crash investigation findings + fix**
+**Phase 17: Deep code review — real bugs fixed, false positives filtered**
 
 **What happened this session:**
 
-- **Systematic crash testing** — 7 controlled tests, 716+ successful gRPC calls, 7 crashes analyzed
-- **Findings**:
-  - Primitive type enum changes (`set_attribute` on NT_GEO_OBJECT pin 0 enum child) crash Octane non-deterministically. Threshold varies per session: crashed at 5, 15, or survived 40+ identical operations. This is an **Octane bug** in its geometry rebuild path — not fixable by us.
-  - All other `set_attribute` operations (translation, rotation, scale, material albedo, roughness, metallic) are **completely stable** — 700+ calls, zero crashes.
-  - `create_node`, `connect_nodes`, `set_camera`, `start_render`, `save_render` are all **completely stable**.
-  - The old "limit to ≤5 primitive type changes" rule was based on incomplete data; the real threshold is non-deterministic.
-- **Bug found and fixed**: Stale MCP gRPC channels after manual Octane kill. When Octane was killed without an in-flight gRPC call, the MCP server never detected the death — kept stale channels, `create_node` returned handle 0 silently, scene cache held invalid handles. Fixed with `ensureConnection()` health check (pings Octane after 30s idle, resets channels on failure).
-- **Docs updated**: TROUBLESHOOTING.md corrected with real test data.
+- **Deep code review** — 4 parallel agents, manually verified every finding. Filtered 5 false positives (agents got boolean logic wrong, miscounted ARGB bytes, missed existing cleanup).
+- **import.ts fixed** — 5 callMethod sites used Alpha 5 names (`setByAttrID`, `item_ref`, `type: 16`), bypassing compat layer. Now uses Beta 2 (`setValueByAttrID`, `objectPtr`, `OBJ_API_ITEM`). Also replaced all hardcoded attribute IDs with `AttributeId.*`.
+- **info.ts fixed** — wrong import path (client → shared), replaced `ObjectType` with `OBJ_API_ITEM/OBJ_API_NODE`.
+- **node.ts fixed** — hardcoded `113` → `AttributeId.A_PIN_COUNT`, error message handles undefined pin index.
+- **scene.ts fixed** — `console.error` → `mcpLog` (2 sites in traverseGraph).
+- **index.ts fixed** — `mcpLogReset()` in shutdown handler (WriteStream leak).
+- **useRenderOutput.tsx fixed** — export format select bound to state instead of ref.
+- **Version**: 2.1.6
 
 ### TODO for Next Session
 
-1. **Resume scene building** — primitive type changes are safe to use. If Octane crashes (non-deterministic), just restart and rebuild. The MCP server now auto-recovers stale channels.
-2. **Consider removing the primitive type guard** in `mcp/src/tools/node.ts` (CRASH_TYPE_IDS check on set_attribute for enum children) — it was overly cautious. Or keep it as a warning instead of a block.
+1. **Scene building** — all docs and infrastructure ready. Test the new DRESS protocol order (camera first, geo second).
+2. **Consider adding more tests** — tool-level integration tests (mock callMethod, test create_node/connect_nodes logic).
+3. **Consider CI/CD** — GitHub Actions for lint+typecheck+test on PR.
 
-**Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
+**Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools. Protocol constants now in `shared/OctaneConstants.ts`.
 
 For all known problems and workarounds (web + MCP), see `docs/mcp/TROUBLESHOOTING.md`.
 
@@ -91,6 +92,7 @@ All in `docs/project/TEST_PLAN.md`. Key points:
 - Fix one, verify, then next. No batching.
 - Fresh state per test — restart dev server and reload scene.
 - Detect Octane crashes immediately — check for `ECONNRESET`/`ECONNREFUSED`.
+- Run tests before push — `npm test` (59 tests: SceneCache, utils, constants).
 - Lint and build before push — `npm run lint` + `npm run build`.
 
 ## Interaction Mode
@@ -116,6 +118,12 @@ When starting after a long delay, or when anything is unstable: **kill everythin
 NEVER kill Octane while servers are running. NEVER start servers before Octane is ready.
 
 ## MCP Rules (READ EVERY SESSION — these are the rules, not pointers to other files)
+
+### Human View First (MOST IMPORTANT RULE)
+
+0. **Check Octane is running** before every build — `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`. If it's not up, nothing works.
+1. **Get an interesting render on screen ASAP.** A human is watching. Priority: RT → `set_camera` to known good frame `{0,1.5,4}→{0,0,0}` → first geometry + material wired to RT → `start_render` → contrasting environment. Set camera BEFORE connecting geometry so the object appears framed instantly. Infrastructure (kernel swap, DOF fix) comes AFTER the human sees something.
+2. **DRESS is the default mode.** Every step = a visible change. Never build the whole scene backstage and render at the end. See `docs/mcp/BUILD.md`.
 
 ### Crash Prevention
 
@@ -154,10 +162,12 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.1.4
-- **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
+- **Version**: 2.1.6
+- **30 open items** (1 easy, 18 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
-- **MCP server**: 29 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync
+- **MCP server**: 28 tools, 9 resources, 4 prompts, API cache, SceneCache (with TTL/staleness), dynamic ApiInfo cache, file path validation, incremental webapp sync
+- **Shared constants**: `shared/OctaneConstants.ts` — single source of truth for protocol enums (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS)
+- **Tests**: 59 tests (SceneCache, utils, constants) via Vitest
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
 

@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { PIN_TYPE_NAMES } from './node';
 import {
@@ -128,12 +128,12 @@ async function traverseGraph(
 
         nodes.push(node);
       } catch (e: any) {
-        console.error(`traverseGraph: skipping item ${i} in graph ${graphHandle}: ${e.message}`);
+        mcpLog(`traverseGraph: skipping item ${i} in graph ${graphHandle}: ${e.message}`, 'warn');
         continue;
       }
     }
   } catch (error: any) {
-    console.error(`traverseGraph error for handle ${graphHandle}:`, error.message);
+    mcpLog(`traverseGraph error for handle ${graphHandle}: ${error.message}`, 'error');
   }
 
   return nodes;

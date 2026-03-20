@@ -18,6 +18,6 @@
     "sourceMap": true,
     "inlineSources": true
   },
-  "include": ["client/src"],
+  "include": ["client/src", "shared"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

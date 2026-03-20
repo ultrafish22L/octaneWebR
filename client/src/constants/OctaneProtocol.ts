@@ -4,9 +4,15 @@
  * Protocol-level enums and helpers that match Octane's protobuf definitions.
  * These are immutable protocol values — they come from .proto files, NOT the API cache.
  *
+ * Core enum values (AttrType, AttributeId) are defined in shared/OctaneConstants.ts
+ * and re-exported here for backward compatibility with existing client imports.
+ *
  * For dynamic node/pin type data (names, colors, categories, compatible types),
  * use OctaneCacheService instead.
  */
+
+// Re-export shared constants so existing client imports keep working
+export { AttrType, AttributeId } from '../../../shared/OctaneConstants';
 
 // ─── ObjectType ──────────────────────────────────────────────────────────────
 
@@ -117,42 +123,6 @@ export function createObjectPtr(handle: string, type: number) {
 export function getObjectTypeForService(serviceName: string): number | undefined {
   return ObjectType[serviceName as ObjectTypeName];
 }
-
-// ─── AttributeId ─────────────────────────────────────────────────────────────
-
-export const AttributeId = {
-  A_VALUE: 185,
-  A_FILENAME: 34,
-  A_VERTICES_PER_POLY: 189,
-  A_POLY_OBJECT_INDICES: 116,
-  A_PIN_COUNT: 113,
-  A_RELOAD: 124,
-  A_INPUT_ACTION: 128,
-  A_ROTATION_ORDER: 136,
-  A_ROTATION: 137,
-  A_SCALE: 139,
-  A_TRANSLATION: 172,
-} as const;
-
-// ─── AttrType ────────────────────────────────────────────────────────────────
-
-export const AttrType = {
-  AT_UNKNOWN: 0,
-  AT_BOOL: 1,
-  AT_BYTE: 2,
-  AT_INT: 3,
-  AT_INT2: 4,
-  AT_INT3: 5,
-  AT_INT4: 6,
-  AT_LONG: 7,
-  AT_LONG2: 8,
-  AT_FLOAT: 9,
-  AT_FLOAT2: 90, // Note: 90 not 10 — verified in common.proto
-  AT_FLOAT3: 11,
-  AT_FLOAT4: 12,
-  AT_MATRIX: 13,
-  AT_STRING: 14,
-} as const;
 
 // ─── InputAction ─────────────────────────────────────────────────────────────
 

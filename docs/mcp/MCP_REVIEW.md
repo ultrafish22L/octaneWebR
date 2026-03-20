@@ -158,16 +158,16 @@ The web server enforces `OCTANE_FILE_ROOTS` for path traversal prevention. The M
 
 All 8 prioritized items complete (Phases 0-4).
 
-| #   | Item                       | Status   | What Changed                                                                                                                                                       |
-| --- | -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | Enrich tool descriptions   | **DONE** | All 28 tool descriptions rewritten with domain knowledge, pin layouts, crash warnings, defaults                                                                    |
-| 2   | Auto-verify connections    | **DONE** | `connect_nodes` and `create_and_connect` verify via `connectedNodeIx` after every connect                                                                          |
-| 3   | Block crash-causing inputs | **DONE** | Crash type ID guard in `create_node`, A_FILENAME path validation in `set_attribute`                                                                                |
-| 4   | `create_and_connect` tool  | **DONE** | New compound tool: create + connect + verify in one call (28 tools total)                                                                                          |
-| 5   | Compact response formats   | **DONE** | `get_scene_tree(compact:true)` → tuples; `get_node_info(connected_only:true)` → filtered pins                                                                      |
-| 6   | MCP Resources              | **DONE** | 8 resources: node-types, node-types-by-category, pin-layout, compatibility (static); node-info, pin-info, attribute-info (dynamic/cached); scene (live SceneCache) |
-| 7   | File path roots in MCP     | **DONE** | `validateFilePath()` in utils.ts, enforced in load_project, save_project, save_render via OCTANE_FILE_ROOTS                                                        |
-| 8   | MCP Prompts                | **DONE** | 4 prompts: setup-scene, add-material, build-lit-object, troubleshoot-render                                                                                        |
+| #   | Item                       | Status   | What Changed                                                                                                                                                                        |
+| --- | -------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Enrich tool descriptions   | **DONE** | All 28 tool descriptions rewritten with domain knowledge, pin layouts, crash warnings, defaults                                                                                     |
+| 2   | Auto-verify connections    | **DONE** | `connect_nodes` and `create_and_connect` verify via `connectedNodeIx` after every connect                                                                                           |
+| 3   | Block crash-causing inputs | **DONE** | Crash type ID guard in `create_node`, A_FILENAME path validation in `set_attribute`                                                                                                 |
+| 4   | `create_and_connect` tool  | **DONE** | New compound tool: create + connect + verify in one call (28 tools total)                                                                                                           |
+| 5   | Compact response formats   | **DONE** | `get_scene_tree(compact:true)` → tuples; `get_node_info(connected_only:true)` → filtered pins                                                                                       |
+| 6   | MCP Resources              | **DONE** | 9 resources: node-types, node-types-by-category, pin-layout, compatibility, primitive-types (static); node-info, pin-info, attribute-info (dynamic/cached); scene (live SceneCache) |
+| 7   | File path roots in MCP     | **DONE** | `validateFilePath()` in utils.ts, enforced in load_project, save_project, save_render via OCTANE_FILE_ROOTS                                                                         |
+| 8   | MCP Prompts                | **DONE** | 4 prompts: setup-scene, add-material, build-lit-object, troubleshoot-render                                                                                                         |
 
 ### New: SceneCache (Phase 0)
 

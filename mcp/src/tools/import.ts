@@ -26,6 +26,7 @@ import {
   OBJ_API_ITEM,
 } from './utils';
 import { notifyWebapp } from './webapp';
+import { AttributeId } from '../../../shared/OctaneConstants';
 
 const execFileAsync = promisify(execFile);
 
@@ -161,17 +162,17 @@ export function registerImportTools(
         if (!meshHandle) throw new Error('Failed to create NT_GEO_MESH node');
 
         // Set OBJ filename
-        await client.callMethod('ApiItem', 'setByAttrID', {
-          item_ref: { handle: String(meshHandle), type: 16 },
-          attribute_id: 34, // A_FILENAME
+        await client.callMethod('ApiItem', 'setValueByAttrID', {
+          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_FILENAME,
           string_value: conv.objPath.replace(/\//g, '\\'),
           evaluate: false,
         });
 
         // Reload mesh
-        await client.callMethod('ApiItem', 'setByAttrID', {
-          item_ref: { handle: String(meshHandle), type: 16 },
-          attribute_id: 124, // A_RELOAD
+        await client.callMethod('ApiItem', 'setValueByAttrID', {
+          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_RELOAD,
           bool_value: true,
           evaluate: false,
         });
@@ -249,9 +250,9 @@ export function registerImportTools(
             notifyWebapp({ type: 'nodeAdded', handle: texHandle });
 
             // Set texture filename
-            await client.callMethod('ApiItem', 'setByAttrID', {
-              item_ref: { handle: String(texHandle), type: 16 },
-              attribute_id: 34,
+            await client.callMethod('ApiItem', 'setValueByAttrID', {
+              objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
+              attribute_id: AttributeId.A_FILENAME,
               string_value: conv.texturePaths[0].replace(/\//g, '\\'),
               evaluate: false,
             });
@@ -306,17 +307,17 @@ export function registerImportTools(
         const roughnessVal = roughness ?? 0.4;
 
         if (metallicHandle) {
-          await client.callMethod('ApiItem', 'setByAttrID', {
-            item_ref: { handle: String(metallicHandle), type: 16 },
-            attribute_id: 185,
+          await client.callMethod('ApiItem', 'setValueByAttrID', {
+            objectPtr: { handle: String(metallicHandle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_VALUE,
             float3_value: { x: metallicVal, y: metallicVal, z: metallicVal },
             evaluate: false,
           });
         }
         if (roughnessHandle) {
-          await client.callMethod('ApiItem', 'setByAttrID', {
-            item_ref: { handle: String(roughnessHandle), type: 16 },
-            attribute_id: 185,
+          await client.callMethod('ApiItem', 'setValueByAttrID', {
+            objectPtr: { handle: String(roughnessHandle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_VALUE,
             float3_value: { x: roughnessVal, y: roughnessVal, z: roughnessVal },
             evaluate: false,
           });
@@ -358,9 +359,9 @@ export function registerImportTools(
             'OTOY Studio GLBs are Z-up. Set placement transform rotation to {90,0,0} to stand upright in Octane (Y-up). Orbit 3 views (front/right/top) to discover facing direction before framing.',
           next_steps: [
             `Connect placement (${placementHandle}) to geo group via pin_index N`,
-            `Set transform rotation: set_attribute(${transformHandle}, 137, 11, {90, Y_rotation, 0})`,
-            `Set transform position: set_attribute(${transformHandle}, 172, 11, {x, y, z})`,
-            `Set transform scale: set_attribute(${transformHandle}, 139, 11, {s, s, s})`,
+            `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {90, Y_rotation, 0})`,
+            `Set transform position: set_attribute(${transformHandle}, ${AttributeId.A_TRANSLATION}, 11, {x, y, z})`,
+            `Set transform scale: set_attribute(${transformHandle}, ${AttributeId.A_SCALE}, 11, {s, s, s})`,
           ],
         });
       } catch (error: any) {

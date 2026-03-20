@@ -10,7 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { OctaneMcpClient, MCP_LOG_PATH } from './OctaneMcpClient';
+import { OctaneMcpClient, MCP_LOG_PATH, mcpLogReset } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
 import { registerInfoTools } from './tools/info';
 import { registerProjectTools } from './tools/project';
@@ -91,13 +91,14 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('Octane MCP server running on stdio (29 tools, 8 resources, 4 prompts)');
+  console.error('Octane MCP server running on stdio (28 tools, 9 resources, 4 prompts)');
 
-  // Graceful shutdown — close gRPC channels and MCP transport
+  // Graceful shutdown — close gRPC channels, log stream, and MCP transport
   const shutdown = async (signal: string) => {
     console.error(`${signal} received, shutting down...`);
     await server.close();
     client.close();
+    mcpLogReset();
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));

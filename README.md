@@ -1,132 +1,136 @@
 # OctaneWebR
 
-A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser. An MCP server lets AI agents (Claude) build and modify Octane scenes programmatically.
+A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
+
+An MCP server lets AI agents (Claude) build and modify Octane scenes programmatically while the browser UI shows every change in real time.
 
 ## Quick Start
 
-### Prerequisites
-
-- **Octane Render** with gRPC enabled (File > Preferences > GRPC API > Enable)
-- **Node.js 18+**
-
-### Install and Run
-
 ```bash
-npm install
-npm run dev
+npm install && cd mcp && npm install && cd ..   # Install everything
+cd mcp && npm run build && cd ..                 # Build MCP server
+npm run dev                                      # Start web UI (port 43929)
 ```
 
-Open **http://localhost:43929**. The app connects to Octane at `localhost:51022` by default.
+> Octane must be running with gRPC enabled first. See [QUICKSTART.md](./QUICKSTART.md) for full setup.
 
 ## Architecture
 
-OctaneWebR is a Vite application with an embedded gRPC plugin that handles all API proxying, WebSocket callbacks, and file browser endpoints. There is no separate backend server — the Vite plugin bridges the browser to Octane's gRPC API directly.
-
 ```
-Browser  -->  Vite Dev Server (port 43929)  -->  Octane gRPC (port 51022)
-              - HTTP proxy (/api/grpc/*)
-              - WebSocket (/ws) for callbacks and render streaming
-              - File browser (/api/files/*)
+┌──────────────────────────────────────────────────────────────────┐
+│                        Octane (gRPC :51022)                      │
+└──────────┬───────────────────────────────────┬───────────────────┘
+           │ gRPC                               │ gRPC
+┌──────────┴──────────┐              ┌─────────┴──────────┐
+│  Vite Dev Server    │              │   MCP Server       │
+│  HTTP proxy + WS    │              │   stdio transport   │
+│  port 43929         │              │   28 tools          │
+└──────────┬──────────┘              └─────────┬──────────┘
+           │ HTTP/WS                            │ stdio
+┌──────────┴──────────┐              ┌─────────┴──────────┐
+│   Browser UI        │              │   Claude Code      │
+│   React + ReactFlow │              │   (or any MCP      │
+│   Live render       │              │    client)         │
+└─────────────────────┘              └────────────────────┘
 ```
 
-**Stack:** React 18, TypeScript (strict mode), Vite, ReactFlow v12, React Query
+Both paths use the same shared gRPC client with a unified compatibility layer for Octane's Beta 2 API.
 
-**Client services:** 11 modular service wrappers extending `BaseService`, fronted by `OctaneClient.ts` as the main API facade.
+**Stack:** React 18, TypeScript (strict), Vite, ReactFlow v12, React Query, gRPC
 
 ## Features
 
-### Scene Outliner
+### Browser UI
 
-Virtualized hierarchical tree with type-specific icons, visibility toggles, and selection sync. Tabs for Scene, LiveDB (OTOY cloud library), and LocalDB (local materials).
+- **Scene Outliner** — Virtualized tree with type icons, visibility toggles, selection sync. Tabs for Scene, LiveDB, and LocalDB.
+- **Node Graph Editor** — 755+ node types across 25 categories. Drag-and-drop connections, multi-select, copy/paste, connection cutter, search, minimap.
+- **Node Inspector** — Real-time editing: booleans, numbers with scrub controls, vectors, color pickers, enums, text fields, collapsible groups.
+- **Render Viewport** — Live render streaming with orbit/pan/zoom. Picker tools for material, object, focus distance, camera target, white balance. Render region selection.
+- **Menu System** — File, Edit, Script (batch/daylight/turntable), View, Window, Help.
+- **Themes** — Vibe (pastel purple, default), Octane (dark pro), Debug (colored borders).
 
-### Node Graph Editor
+### MCP Server (AI Scene Builder)
 
-ReactFlow-based editor supporting 755+ Octane node types across 25 categories. Drag-and-drop connections, multi-select, copy/paste, connection cutter (Ctrl+Drag), search (Ctrl+F), and minimap.
+28 tools let AI agents control Octane through natural language:
 
-### Node Inspector
+| Category       | Tools                                                                                                  | What They Do                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| **Project**    | `load_project`, `save_project`, `reset_project`                                                        | Open/save/clear scenes                          |
+| **Camera**     | `get_camera`, `set_camera`                                                                             | Read and set camera position/target             |
+| **Render**     | `start_render`, `stop_render`, `get_render_status`, `save_render`                                      | Control rendering, export images                |
+| **Scene**      | `get_scene_tree`, `list_node_types`                                                                    | Query scene hierarchy and available types       |
+| **Nodes**      | `create_node`, `delete_node`, `get_node_info`, `connect_nodes`, `disconnect_pin`, `create_and_connect` | Build the node graph                            |
+| **Attributes** | `set_attribute`, `get_attribute`                                                                       | Read and write node properties                  |
+| **Import**     | `import_glb`                                                                                           | Import GLB → OBJ + textures + material + wiring |
+| **Webapp**     | `refresh_webapp`                                                                                       | Sync octaneWebR with current scene state        |
+| **Info**       | `get_octane_version`, `get_device_info`                                                                | System information                              |
+| **Debug**      | `clear_log`                                                                                            | Clear MCP log                                   |
+| **Profiling**  | `profile_start`, `profile_end`, `profile_report`, `profile_reset`                                      | Performance timing                              |
 
-Real-time parameter editing: booleans, numbers (with scrub controls), vectors, color pickers, enum dropdowns, text fields, and collapsible groups. Supports node type replacement via dropdown.
-
-### Render Viewport
-
-Live render streaming with orbit/pan/zoom camera controls. Picker tools for material, object, focus distance, camera target, and white balance. Render region selection.
-
-### Menu System
-
-File (New/Open/Save/Package), Edit (Undo/Redo/Cut/Copy/Paste), Script (Batch/Daylight/Turntable), View (panel toggles, F5 refresh), Window (Material DB, Fullscreen), Help.
-
-### Themes
-
-Three CSS variable themes with 134 variables each: **Vibe** (default, pastel purple), **Octane** (dark professional), **Debug** (colored layout borders for development).
-
-## MCP Server
-
-The MCP server exposes Octane's gRPC API to AI agents via stdio transport. Claude can create nodes, set materials, position cameras, trigger renders, and modify scenes while OctaneWebR visualizes changes in real time.
+**MCP + octaneWebR together** is the best experience: ask Claude to build a scene in your terminal while watching every node, connection, and render update live in the browser.
 
 ```
-Claude Code  <--stdio-->  MCP Server  <--gRPC-->  Octane  <--gRPC-->  OctaneWebR
+You: "Create a gold sphere on a dark floor with dramatic side lighting"
+
+Claude: Creates RT → kernel → environment → sphere mesh → gold material →
+        floor mesh → area light → frames camera → renders → saves PNG
+
+Browser: Shows every node appearing in the outliner, connections forming in
+         the graph, and the render updating in real time.
 ```
 
-### Setup
+### Companion MCP Servers
 
-The `.mcp.json` config is already in the project root. To build and run manually:
+The `.mcp.json` also connects:
 
-```bash
-cd mcp
-npm install
-npm run build
-npm run mcp:start
-```
-
-**27 tools** organized by category: project management, camera, rendering, scene tree, node creation/deletion, attribute get/set, pin connections, and webapp sync.
-
-### Companion MCPs
-
-- [Octane Docs MCP](https://octane-mcp.otoy.ai/sse) — Octane Lua API documentation and examples
-- [OTOY Studio](https://otoy.studio/) — AI-generated 3D assets, textures, video, and music
+- **[Octane Docs MCP](https://octane-mcp.otoy.ai/sse)** — Search Octane's API docs, browse modules, find examples
+- **[OTOY Studio MCP](https://otoy.studio/)** — AI image/video/3D/music generation for scene assets
 
 ## Project Structure
 
 ```
 octaneWebR/
 ├── client/src/
-│   ├── components/              # React components (Viewport, NodeGraph, Outliner, Inspector)
+│   ├── components/              # React UI (Viewport, NodeGraph, Outliner, Inspector)
 │   ├── services/octane/         # 11 gRPC service wrappers
 │   ├── services/OctaneClient.ts # Main API facade
 │   ├── hooks/                   # React hooks
 │   ├── utils/                   # Logger, formatters, helpers
-│   ├── constants/               # Node types (755+), icon mappings
-│   ├── styles/                  # CSS themes and component styles
-│   └── App.tsx                  # Root component
-├── server/
-│   ├── proto/                   # Protobuf definitions
-│   └── src/                     # gRPC server utilities
-├── mcp/src/                     # MCP server (27 tools, stdio transport)
+│   ├── constants/               # Node types (755+), icon mappings, protocol enums
+│   └── styles/                  # CSS themes (134 variables each)
+├── server/proto/                # Protobuf definitions (Beta 2)
+├── shared/                      # Shared constants (AttrType, AttributeId, etc.)
+├── mcp/src/                     # MCP server (28 tools, SceneCache, ApiCache)
+│   ├── tools/                   # Tool implementations by category
+│   ├── types/                   # TypeScript interfaces (GrpcClientTypes)
+│   └── __tests__/               # Unit tests
 ├── vite-plugin-octane-grpc.ts   # Vite plugin: proxy, WebSocket, file browser
-├── api-version.config.js        # API version configuration
+├── .mcp.json                    # MCP server configuration
 └── docs/
-    ├── project/                 # Architecture, improvements, test plan, changelog
-    ├── mcp/                     # MCP reference, cheatsheet, build protocols, creative guides
+    ├── mcp/                     # MCP docs: user guide, reference, build protocols, creative
+    ├── project/                 # Architecture, changelog, improvements, test plan
     ├── ui/                      # UI implementation notes
-    └── recipes/                 # Scene recipes and creative briefs
+    └── recipes/                 # Scene recipes (creative briefs)
 ```
 
 ## Environment Variables
 
-| Variable            | Default     | Purpose                                                         |
-| ------------------- | ----------- | --------------------------------------------------------------- |
-| `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host                                                |
-| `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                |
-| `WORKER_1`          | `43929`     | Vite dev server port                                            |
-| `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address (set to `127.0.0.1` on untrusted networks) |
-| `OCTANE_FILE_ROOTS` | —           | Additional file browser root paths                              |
+| Variable            | Default     | Purpose                                                        |
+| ------------------- | ----------- | -------------------------------------------------------------- |
+| `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host                                               |
+| `OCTANE_PORT`       | `51022`     | Octane gRPC port                                               |
+| `WORKER_1`          | `43929`     | Dev server port                                                |
+| `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address (use `127.0.0.1` on untrusted networks)   |
+| `OCTANE_FILE_ROOTS` | —           | Allowed file browser roots (comma-separated)                   |
+| `GRPC_DEBUG_LOG`    | `1`         | Log mutating gRPC calls to `log_grpc.log` (set `0` to disable) |
 
 ## Development
 
 ```bash
 npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
-npm run lint         # ESLint (flat config)
+npm run lint         # ESLint
+npm test             # 59 tests (SceneCache, utils, constants)
 npx tsc --noEmit     # Type check
 ```
 
@@ -134,10 +138,16 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 ## Documentation
 
-- [QUICKSTART.md](./QUICKSTART.md) — Detailed setup guide
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — Architecture and design patterns
-- [CHANGELOG.md](./CHANGELOG.md) — Version history
-- [docs/mcp/OCTANE_MCP.md](./docs/mcp/OCTANE_MCP.md) — MCP technical reference
+| Doc                                                            | What's In It                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — get everything running in 5 minutes          |
+| [docs/mcp/USER_GUIDE.md](./docs/mcp/USER_GUIDE.md)             | Complete MCP user guide — all 28 tools, tips, pitfalls          |
+| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (demo) and SPEED (batch) workflows      |
+| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition, OTOY Studio  |
+| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | All known problems and workarounds                              |
+| [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                |
+| [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                 |
 
 ### External Resources
 
@@ -149,4 +159,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 2.0.0** | Active Development
+**Version 2.1.5** | Active Development

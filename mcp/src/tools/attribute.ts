@@ -8,15 +8,15 @@ import path from 'path';
 import fs from 'fs';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
+import { AttrType } from '../../../shared/OctaneConstants';
 
-// AttrType enum values (from OctaneProtocol.ts)
-const AT_BOOL = 1;
-const AT_INT = 3;
-const AT_INT2 = 4;
-const AT_FLOAT = 9;
-const AT_FLOAT2 = 90;
-const AT_FLOAT3 = 11;
-const AT_STRING = 14;
+const AT_BOOL = AttrType.AT_BOOL;
+const AT_INT = AttrType.AT_INT;
+const AT_INT2 = AttrType.AT_INT2;
+const AT_FLOAT = AttrType.AT_FLOAT;
+const AT_FLOAT2 = AttrType.AT_FLOAT2;
+const AT_FLOAT3 = AttrType.AT_FLOAT3;
+const AT_STRING = AttrType.AT_STRING;
 
 /**
  * Map expected_type to the correct proto oneof field for getValue responses.

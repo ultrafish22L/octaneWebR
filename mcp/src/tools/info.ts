@@ -20,7 +20,7 @@ import {
   profileEnd,
 } from '../OctaneMcpClient';
 
-import { AttrType, AttributeId, ObjectType } from '../../../client/src/constants/OctaneProtocol';
+import { AttrType, AttributeId, OBJ_API_ITEM, OBJ_API_NODE } from '../../../shared/OctaneConstants';
 import { ApiCache } from '../ApiCache';
 
 import { jsonResult, errorResult } from './utils';
@@ -102,7 +102,7 @@ export function registerInfoTools(
           node_types: nodeTypes,
           attr_types: AttrType,
           attribute_ids: AttributeId,
-          object_types: { ApiItem: ObjectType.ApiItem, ApiNode: ObjectType.ApiNode },
+          object_types: { ApiItem: OBJ_API_ITEM, ApiNode: OBJ_API_NODE },
         });
       } catch (error: any) {
         return errorResult(error);

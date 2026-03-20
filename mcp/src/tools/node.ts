@@ -20,60 +20,9 @@ import {
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
 } from './utils';
-
-// Type IDs that crash Octane when used with create or nodeInfo (internal/system types)
-const CRASH_TYPE_IDS = new Set([0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]);
-
-// --- Legacy pin type validation (fallback when cache unavailable) ---
-
-/** NodePinType enum → human-readable name */
-export const PIN_TYPE_NAMES: Record<number, string> = {
-  0: 'PT_UNKNOWN',
-  1: 'PT_BOOL',
-  2: 'PT_FLOAT',
-  3: 'PT_INT',
-  4: 'PT_TRANSFORM',
-  5: 'PT_TEXTURE',
-  6: 'PT_EMISSION',
-  7: 'PT_MATERIAL',
-  8: 'PT_CAMERA',
-  9: 'PT_ENVIRONMENT',
-  10: 'PT_IMAGER',
-  11: 'PT_KERNEL',
-  12: 'PT_GEOMETRY',
-  13: 'PT_MEDIUM',
-  14: 'PT_PHASEFUNCTION',
-  15: 'PT_FILM_SETTINGS',
-  16: 'PT_ENUM',
-  17: 'PT_OBJECTLAYER',
-  18: 'PT_POSTPROCESSING',
-  19: 'PT_RENDERTARGET',
-  20: 'PT_WORK_PANE',
-  21: 'PT_PROJECTION',
-  22: 'PT_DISPLACEMENT',
-  23: 'PT_STRING',
-  24: 'PT_RENDER_PASSES',
-  25: 'PT_RENDER_LAYER',
-  26: 'PT_VOLUME_RAMP',
-  27: 'PT_ANIMATION_SETTINGS',
-  28: 'PT_LUT',
-  29: 'PT_RENDER_JOB',
-  30: 'PT_TOON_RAMP',
-  31: 'PT_BIT_MASK',
-  32: 'PT_ROUND_EDGES',
-  33: 'PT_MATERIAL_LAYER',
-  34: 'PT_OCIO_VIEW',
-  35: 'PT_OCIO_LOOK',
-  36: 'PT_OCIO_COLOR_SPACE',
-  37: 'PT_OUTPUT_AOV_GROUP',
-  38: 'PT_OUTPUT_AOV',
-  39: 'PT_TEX_COMPOSITE_LAYER',
-  40: 'PT_OUTPUT_AOV_LAYER',
-  44: 'PT_BLENDING_SETTINGS',
-  45: 'PT_POST_VOLUME',
-  46: 'PT_TRACE_SET_VISIBILITY_RULE_GROUP',
-  47: 'PT_TRACE_SET_VISIBILITY_RULE',
-};
+import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../../../shared/OctaneConstants';
+// Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
+export { PIN_TYPE_NAMES };
 
 /** Fallback: get output type via gRPC */
 async function getOutTypeFallback(
@@ -375,10 +324,9 @@ export function registerNodeTools(
               });
               const curCount = Number(extractValue(curResult) ?? 0);
               if (curCount < neededCount) {
-                // A_PIN_COUNT = 113, AT_INT = 3
                 await client.callMethod('ApiItem', 'setValueByAttrID', {
                   objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
-                  attribute_id: 113,
+                  attribute_id: AttributeId.A_PIN_COUNT,
                   int_value: neededCount,
                   evaluate: false,
                 });
@@ -449,8 +397,10 @@ export function registerNodeTools(
           sourceType !== targetPinType
         ) {
           const pinDesc = resolvedPinName
-            ? `'${resolvedPinName}' (index ${resolvedPinIndex})`
-            : `index ${resolvedPinIndex}`;
+            ? `'${resolvedPinName}'${resolvedPinIndex !== undefined ? ` (index ${resolvedPinIndex})` : ' (not found)'}`
+            : resolvedPinIndex !== undefined
+              ? `index ${resolvedPinIndex}`
+              : 'unknown pin';
           return errorResult(
             `Pin type mismatch: target pin ${pinDesc} expects ${targetPinType} ` +
               `but source node (handle ${source_handle}) outputs ${sourceType}. ` +

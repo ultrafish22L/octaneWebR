@@ -2,402 +2,243 @@
 
 Lookup tables for MCP scene building. Don't read front-to-back — find what you need.
 
-For rules and crash prevention, see the MCP Rules section in `CLAUDE.md`.
-For build workflow, see `BUILD.md`.
-For troubleshooting, see `TROUBLESHOOTING.md`.
+**Live type system discovery**: Use MCP resources instead of memorizing values. See [MCP Resources](#mcp-resources) at the end of this file.
+
+Hardcoded protocol constants (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS) live in `shared/OctaneConstants.ts`.
 
 ---
 
 ## Paths
 
-| Path                                         | Purpose                                     |
-| -------------------------------------------- | ------------------------------------------- |
-| `C:/otoyla/GRPC/dev/octaneWebR/renders/`     | Render output. NEVER save renders to ORBX/. |
-| `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/` | Asset path for meshes and textures.         |
+| Path                                         | Purpose             |
+| -------------------------------------------- | ------------------- |
+| `C:/otoyla/GRPC/dev/octaneWebR/renders/`     | Render output       |
+| `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/` | Meshes and textures |
 
-ALWAYS use absolute paths for `A_FILENAME` on meshes AND textures. Relative paths are fragile (depend on Octane working dir).
+Always use absolute paths for `A_FILENAME`. Relative paths depend on Octane's working dir.
 
-### File Loading Pattern (meshes AND textures)
+### File Loading Pattern
 
 ```
-set_attribute(handle, A_FILENAME=34, AT_STRING=14, "C:\\otoyla\\...\\assets\\file.obj")
-set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # CRITICAL — always reload!
+set_attribute(handle, A_FILENAME=34, AT_STRING=14, "C:/otoyla/.../file.obj")
+set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # CRITICAL for meshes
 ```
+
+Image textures don't need A_RELOAD — they load on connect.
 
 ---
 
 ## Attributes
 
-### Transform Attributes
+### Transform (all AT_FLOAT3=11)
 
-| Attribute     | ID  | Type           | Notes               |
-| ------------- | --- | -------------- | ------------------- |
-| A_TRANSLATION | 172 | AT_FLOAT3 (11) | World units         |
-| A_ROTATION    | 137 | AT_FLOAT3 (11) | DEGREES not radians |
-| A_SCALE       | 139 | AT_FLOAT3 (11) | Uniform = {1,1,1}   |
-
-NOT 140/141!
+| Attribute     | ID  | Notes               |
+| ------------- | --- | ------------------- |
+| A_TRANSLATION | 172 | World units         |
+| A_ROTATION    | 137 | DEGREES not radians |
+| A_SCALE       | 139 | Uniform = {1,1,1}   |
 
 ### Other Key Attributes
 
-| Attribute  | ID  | Notes                         |
-| ---------- | --- | ----------------------------- |
-| A_VALUE    | 185 | General value attribute       |
-| A_FILENAME | 34  | File path for meshes/textures |
-| A_RELOAD   | 124 | Trigger file reload           |
+| Attribute   | ID  | Notes                                        |
+| ----------- | --- | -------------------------------------------- |
+| A_VALUE     | 185 | General value                                |
+| A_FILENAME  | 34  | File path                                    |
+| A_RELOAD    | 124 | Force file reload                            |
+| A_PIN_COUNT | 113 | Set on geo groups BEFORE connecting children |
 
 ### Attribute Types
 
-| Type      | ID  |
-| --------- | --- |
-| AT_BOOL   | 1   |
-| AT_INT    | 3   |
-| AT_INT2   | 4   |
-| AT_FLOAT  | 9   |
-| AT_FLOAT2 | 90  |
-| AT_FLOAT3 | 11  |
-| AT_STRING | 14  |
+AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRING=14
 
 ---
 
 ## RT Pin Layout (NT_RENDERTARGET)
 
-| Pin | Name              | Type            | Notes                                                            |
-| --- | ----------------- | --------------- | ---------------------------------------------------------------- |
-| 0   | camera            | PT_CAMERA       | Auto-created (Thin lens)                                         |
-| 1   | environment       | PT_ENVIRONMENT  | Auto-created (Texture env)                                       |
-| 2   | cameraEnvironment | PT_ENVIRONMENT  | Optional                                                         |
-| 3   | **mesh**          | **PT_GEOMETRY** | **Connect geo here via pin_index:3** (pin_id:59 silently fails!) |
-| 4   | film              | PT_FILM         | Auto-created, has resolution child                               |
-| 6   | kernel            | PT_KERNEL       | Auto-created (Direct lighting)                                   |
+| Pin | Name        | Type            | Notes                                            |
+| --- | ----------- | --------------- | ------------------------------------------------ |
+| 0   | camera      | PT_CAMERA       | Auto-created (Thin lens)                         |
+| 1   | environment | PT_ENVIRONMENT  | Auto-created. Connect via `pin_id:43`            |
+| 3   | **mesh**    | **PT_GEOMETRY** | **pin_index:3 ONLY** (pin_id:59 silently fails!) |
+| 4   | film        | PT_FILM         | Auto-created, resolution on grandchild           |
+| 6   | kernel      | PT_KERNEL       | Auto-created (DL). Connect via `pin_id:89`       |
 
-Camera pin 14 = aperture child. DEFAULT = 0.893 (DOF ON!).
-Set to 0 immediately after start_render to disable DOF:
+**DOF off:** RT→pin0→camera→pin14→aperture child→`set_attribute(child, 185, 9, 0)`. Default 0.893.
 
-```
-get_node_info(RT) → pin 0 → camera handle
-get_node_info(camera) → pin 14 → aperture child handle
-set_attribute(aperture_handle, 185, AT_FLOAT=9, 0)
-```
-
-Film resolution: `get_node_info(film)` → pin 0 → "Image resolution" child → `set_attribute(child, 185, AT_INT2=4, {1024,576})`
+**Film resolution:** `get_node_info(film)`→pin0→child→`set_attribute(child, 185, AT_INT2=4, {1024,576})`
 
 ---
 
 ## Node Types (common)
 
-| Category         | Type Key                 | ID  | Description                                                         |
-| ---------------- | ------------------------ | --- | ------------------------------------------------------------------- |
-| **Render**       | `NT_RENDERTARGET`        | 56  | Scene root                                                          |
-| **Geometry**     | `NT_GEO_GROUP`           | 3   | Geometry container                                                  |
-|                  | `NT_GEO_OBJECT`          | 153 | Geometric primitive (supports all primitive types — see pin 0 enum) |
-|                  | `NT_GEO_MESH`            | 1   | Mesh from file (.obj/.fbx/.stl)                                     |
-|                  | `NT_GEO_PLACEMENT`       | 4   | Placement wrapper (transform/scale)                                 |
-|                  | `NT_GEO_PLANE`           | 110 | Infinite plane                                                      |
-|                  | `NT_GEO_SCATTER`         | 5   | Scatter instances on surface                                        |
-|                  | `NT_GEO_VOLUME`          | 115 | OpenVDB volume (.vdb)                                               |
-| **Materials**    | `NT_MAT_UNIVERSAL`       | 130 | PBR material (recommended default)                                  |
-|                  | `NT_MAT_DIFFUSE`         | 17  | Matte material                                                      |
-|                  | `NT_MAT_GLOSSY`          | 16  | Glossy/reflective                                                   |
-|                  | `NT_MAT_SPECULAR`        | 18  | Glass/transparent (IOR-based)                                       |
-|                  | `NT_MAT_METAL`           | 120 | Metal (complex IOR)                                                 |
-|                  | `NT_MAT_MIX`             | 19  | Blend two materials                                                 |
-| **Textures**     | `NT_TEX_RGB`             | 33  | Solid color                                                         |
-|                  | `NT_TEX_FLOAT`           | 31  | Solid float                                                         |
-|                  | `NT_TEX_IMAGE`           | 34  | Image file                                                          |
-|                  | `NT_TEX_CHECKS`          | 45  | Checkerboard                                                        |
-|                  | `NT_TEX_NOISE`           | 87  | Noise                                                               |
-|                  | `NT_TEX_MIX`             | 38  | Mix/blend two textures                                              |
-|                  | `NT_TEX_MULTIPLY`        | 39  | Multiply two textures                                               |
-|                  | `NT_TEX_ADD`             | 106 | Add two textures                                                    |
-|                  | `NT_TEX_SUBTRACT`        | 108 | Subtract two textures                                               |
-|                  | `NT_TEX_MARBLE`          | 47  | Marble procedural                                                   |
-|                  | `NT_TEX_TURBULENCE`      | 22  | Turbulence procedural                                               |
-|                  | `NT_TEX_GRADIENT`        | 49  | Gradient                                                            |
-|                  | `NT_TEX_FALLOFF`         | 50  | Falloff                                                             |
-| **Emission**     | `NT_EMIS_BLACKBODY`      | 53  | Thermal emission (power + temperature)                              |
-|                  | `NT_EMIS_TEXTURE`        | 54  | Textured emission                                                   |
-| **Environments** | `NT_ENV_DAYLIGHT`        | 14  | Physical sun + sky                                                  |
-|                  | `NT_ENV_TEXTURE`         | 37  | HDRI environment                                                    |
-| **Cameras**      | `NT_CAM_THINLENS`        | 13  | Standard camera                                                     |
-|                  | `NT_CAM_UNIVERSAL`       | 157 | Multi-mode camera                                                   |
-| **Kernels**      | `NT_KERN_PATHTRACING`    | 25  | Path tracing (use this!)                                            |
-|                  | `NT_KERN_DIRECTLIGHTING` | 24  | Direct lighting (fast preview)                                      |
-|                  | `NT_KERN_PMC`            | 23  | PMC (difficult caustics)                                            |
-| **Lights**       | `NT_LIGHT_QUAD`          | 148 | Rectangular area light                                              |
-|                  | `NT_LIGHT_SPHERE`        | 149 | Sphere area light                                                   |
-| **Medium**       | `NT_MED_SCATTERING`      | —   | Scattering medium (volumetric)                                      |
-| **Transform**    | `NT_TRANSFORM_VALUE`     | —   | Transform node (on placements, lights)                              |
-| **Sun**          | `NT_SUN_DIRECTION`       | —   | Sun direction (children: lat, lon, month, day, hour, gmtoffset)     |
+| Category     | Type Key                 | ID  | Description               |
+| ------------ | ------------------------ | --- | ------------------------- |
+| Render       | `NT_RENDERTARGET`        | 56  | Scene root                |
+| Geometry     | `NT_GEO_GROUP`           | 3   | Geometry container        |
+|              | `NT_GEO_OBJECT`          | 153 | Primitive shapes          |
+|              | `NT_GEO_MESH`            | 1   | Mesh from .obj file       |
+|              | `NT_GEO_PLACEMENT`       | 4   | Transform wrapper         |
+|              | `NT_GEO_PLANE`           | 110 | Infinite plane            |
+| Materials    | `NT_MAT_UNIVERSAL`       | 130 | PBR (recommended default) |
+|              | `NT_MAT_DIFFUSE`         | 17  | Matte                     |
+|              | `NT_MAT_GLOSSY`          | 16  | Glossy/reflective         |
+|              | `NT_MAT_SPECULAR`        | 18  | Glass/transparent         |
+| Textures     | `NT_TEX_RGB`             | 33  | Solid color               |
+|              | `NT_TEX_IMAGE`           | 34  | Image file                |
+|              | `NT_TEX_CHECKS`          | 45  | Checkerboard              |
+|              | `NT_TEX_NOISE`           | 87  | Noise                     |
+|              | `NT_TEX_MARBLE`          | 47  | Marble procedural         |
+|              | `NT_TEX_MIX`             | 38  | Blend two textures        |
+| Emission     | `NT_EMIS_BLACKBODY`      | 53  | Thermal (power + temp)    |
+|              | `NT_EMIS_TEXTURE`        | 54  | Textured emission         |
+| Environments | `NT_ENV_DAYLIGHT`        | 14  | Physical sun + sky        |
+|              | `NT_ENV_TEXTURE`         | 37  | HDRI environment          |
+| Kernels      | `NT_KERN_PATHTRACING`    | 25  | Path tracing (use this!)  |
+|              | `NT_KERN_PMC`            | 23  | PMC (difficult caustics)  |
+|              | `NT_KERN_DIRECTLIGHTING` | 24  | Fast preview              |
+| Lights       | `NT_LIGHT_QUAD`          | 148 | Rectangular area light    |
+|              | `NT_LIGHT_SPHERE`        | 149 | Sphere area light         |
+| Camera       | `NT_CAM_THINLENS`        | 13  | Standard camera           |
 
 ---
 
 ## NT_GEO_OBJECT Pin Layout
 
-`create_node` returns all child handles. Pin indices are fixed:
-
-| Pin | Name        | Child Type       | Notes                                                                                                                                                                                                  |
-| --- | ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-17, 19-23 safe. Type 18 (Quad) crashes Octane.                                                                                      |
-| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                                                                              |
-| 2   | objectLayer | Object layer     |                                                                                                                                                                                                        |
-| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale. **Set on the child handle, NOT the geo object!** Setting on the geo object returns success but does nothing. |
-| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                                                                           |
-| 5   | Height      | Float value      |                                                                                                                                                                                                        |
-| 6   | Depth       | Float value      |                                                                                                                                                                                                        |
-| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                                                                                       |
-
-### Setting Material Color on Auto-Created Materials
-
-NT_GEO_OBJECT auto-creates a diffuse material on pin 1. To set its color you need one `get_node_info` to find the RGB child:
-
-```
-get_node_info(material_handle) → pin 0 → RGB_child_handle
-set_attribute(RGB_child, 185, AT_FLOAT3=11, {0.65, 0.05, 0.05})  → red
-```
-
----
+| Pin   | Name      | Child Type | Notes                                                                       |
+| ----- | --------- | ---------- | --------------------------------------------------------------------------- |
+| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. Type 18 (Quad) crashes. |
+| 1     | material  | Diffuse    | Auto-created. Color: `get_node_info(mat)`→pin0→RGB child                    |
+| 3     | transform | Transform  | A_TRANSLATION/ROTATION/SCALE on **child handle, NOT parent**                |
+| 4/5/6 | W/H/D     | Float      | `set_attribute(child, 185, 9, value)`                                       |
 
 ## NT_GEO_PLACEMENT Pin Layout
 
-| Pin | Name      | Type            | Notes                                                                                  |
-| --- | --------- | --------------- | -------------------------------------------------------------------------------------- |
-| 0   | transform | Transform value | `A_TRANSLATION=172`, `A_ROTATION=137`, `A_SCALE=139` (all AT_FLOAT3=11)                |
-| 1   | geometry  | —               | Connect mesh here via `pin_name: "geometry"` (pin_index 1, not 0 — pin 0 is transform) |
-
-**OBJ scale is multiplicative**: If the .obj defines 0.3x3x0.3 geometry, placement scale (0.3, 3, 0.3) = 0.09x9x0.09. Check the mesh's native size before scaling.
-
----
-
-## NT_MAT_SPECULAR Pin Layout (glass/transparent)
-
-Use `get_node_info(specular)` to discover child handles, then `set_attribute(child, 185, type, value)`.
-
-| Pin | Name         | Type           | Example                                  |
-| --- | ------------ | -------------- | ---------------------------------------- |
-| 0   | reflection   | AT_FLOAT3 (11) | `set_attribute(child, 185, 11, {1,1,1})` |
-| 1   | transmission | AT_FLOAT3 (11) | `set_attribute(child, 185, 11, {1,1,1})` |
-| 3   | roughness    | AT_FLOAT (9)   | `set_attribute(child, 185, 9, 0)`        |
-| 7   | index (IOR)  | AT_FLOAT (9)   | `set_attribute(child, 185, 9, 1.5)`      |
-| 22  | smooth       | AT_BOOL (1)    | `set_attribute(child, 185, 1, true)`     |
-
----
-
-## NT_MAT_DIFFUSE Pin Layout (matte)
-
-| Pin | Name     | Type           | Example                                                             |
-| --- | -------- | -------------- | ------------------------------------------------------------------- |
-| 0   | diffuse  | AT_FLOAT3 (11) | `set_attribute(child, 185, 11, {0.9, 0.9, 0.9})` -> white           |
-| 10  | smooth   | AT_BOOL (1)    | `set_attribute(child, 185, 1, true)`                                |
-| 14  | emission | —              | Use `connect_nodes` with `pin_name: "emission"` (NT_EMIS_BLACKBODY) |
-
----
-
-## NT_EMIS_BLACKBODY Pin Layout (thermal emission)
-
-| Pin | Name              | Type         | Example                                                                |
-| --- | ----------------- | ------------ | ---------------------------------------------------------------------- |
-| 0   | efficiency        | AT_FLOAT (9) | `set_attribute(child, 185, 9, 1.0)` — **MUST SET! Defaults to ~0.025** |
-| 1   | power             | AT_FLOAT (9) | `set_attribute(child, 185, 9, 200)`                                    |
-| 5   | temperature       | AT_FLOAT (9) | `set_attribute(child, 185, 9, 6500)` (Kelvin)                          |
-| 2   | surfaceBrightness | AT_BOOL (1)  |                                                                        |
-| 4   | doubleSided       | AT_BOOL (1)  |                                                                        |
-
----
-
-## Primitive Types (NT_GEO_OBJECT pin 0 enum)
-
-Set via: `set_attribute(enum_child_handle, 185, AT_INT=3, N)` then `update_scene()`.
-
-`update_scene()` is REQUIRED after setting primitive type — without it the render won't update.
-
-| Val | Shape          | Val | Shape                        |
-| --- | -------------- | --- | ---------------------------- |
-| 1   | Box (DEFAULT)  | 13  | Icosahedron                  |
-| 2   | Capsule        | 14  | Octahedron                   |
-| 3   | Cone           | 15  | Plane                        |
-| 4   | Cylinder       | 16  | Polygon                      |
-| 5   | Ding dong      | 17  | Prism                        |
-| 6   | Disc           | 18  | Quad **CRASHES — NEVER USE** |
-| 7   | Dodecahedron   | 19  | Saddle                       |
-| 8   | Dome           | 20  | Sphere                       |
-| 9   | Ellipsoid      | 21  | Tetrahedron                  |
-| 10  | Elliptic torus | 22  | Torus                        |
-| 11  | Figure eight   | 23  | Truncated cone               |
-| 12  | Hyperboloid    |     |                              |
-
-IDs are 1-indexed alphabetical (0 is invalid, defaults to Box). Workaround for Quad: flat Box (A_SCALE Y near 0.001) or NT_GEO_MESH + `quad.obj`.
+| Pin | Name      | Notes                                                             |
+| --- | --------- | ----------------------------------------------------------------- |
+| 0   | transform | A_TRANSLATION=172, A_ROTATION=137, A_SCALE=139 (all AT_FLOAT3=11) |
+| 1   | geometry  | Connect mesh via `pin_name: "geometry"`                           |
 
 ---
 
 ## Connection Patterns
 
-### Wiring Pattern
+### Wiring Chain
 
 ```
-material → mesh (pin 0)
-mesh → placement (pin_name "geometry")
-placement → geo group (pin_index N, 0-based)
-NOT: material → placement. NEVER.
+material → mesh (pin_index: 0)
+mesh → placement (pin_name: "geometry")
+placement → geo group (pin_index: N, 0-based)
+geo group → RT (pin_index: 3)
 ```
 
-### Pin IDs for Connections
+### What Works vs What Fails
 
-| Pin ID | Constant      | Target                                     |
-| ------ | ------------- | ------------------------------------------ |
-| 89     | P_KERNEL      | RT kernel                                  |
-| 43     | P_ENVIRONMENT | RT environment                             |
-| 111    | P_MESH        | Mesh slot                                  |
-| 30     | P_DIFFUSE     | Material diffuse                           |
-| 41     | P_EMISSION    | Material emission                          |
-| 59     | P_GEOMETRY    | Geometry (but NOT on RT — use pin_index:3) |
-
-### Pin Compatibility
-
-| Pin                      | Accepts                     | Rejects              |
-| ------------------------ | --------------------------- | -------------------- |
-| diffuse (P_DIFFUSE=30)   | Texture nodes (NT*TEX*\*)   | Emissions, materials |
-| emission (P_EMISSION=41) | Emission nodes (NT*EMIS*\*) | Raw textures         |
-| material (geo pin 0)     | Material nodes (NT*MAT*\*)  | Textures, emissions  |
-| geometry (P_GEOMETRY=59) | Geometry (NT*GEO*\*)        | Materials, textures  |
+| Target            | Works                       | Silently fails                       |
+| ----------------- | --------------------------- | ------------------------------------ |
+| RT geometry       | `pin_index: 3`              | `pin_id: 59`                         |
+| Mesh material     | `pin_index: 0`              | `pin_id: 30`                         |
+| Geo group inputs  | `pin_index: N` (0-based)    | `pin_name: "Input N"`                |
+| RT kernel         | `pin_id: 89`                | —                                    |
+| RT environment    | `pin_id: 43`                | —                                    |
+| Geo group (fresh) | Set `A_PIN_COUNT=113` first | Connect to 0-pin group = silent fail |
 
 ### Verified Connections
 
-- RGB texture → material diffuse `pin_id: 30` (P_DIFFUSE)
-- **Image texture → material diffuse `pin_id: 30`** (replaces auto-created RGB child)
-- Blackbody emission → material `pin_id: 41` (P_EMISSION)
-- Geometry objects → geo group `pin_index: N` (0-based)
-- Geo group → RT `pin_index: 3`
-- Geo objects → RT `pin_index: 3` directly (Octane auto-creates a geometry group)
-- PT kernel → RT `pin_id: 89` (P_KERNEL)
-- Environment → RT `pin_id: 43` (P_ENVIRONMENT)
-- Specular material → geo mesh pin 0 (pin_index works for mesh material slot)
+```
+RGB/Image texture → material diffuse pin_id: 30
+Blackbody emission → material pin_id: 41 (P_EMISSION)
+Geometry → geo group pin_index: N
+Geo group → RT pin_index: 3
+Geo object → RT pin_index: 3 (auto-creates group)
+PT kernel → RT pin_id: 89
+Environment → RT pin_id: 43
+```
 
 ### Image Texture on Material
 
 ```
 create_node(NT_TEX_IMAGE) → TEX
-set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "C:/absolute/path/to/image.jpg")
+set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "C:/absolute/path/image.jpg")
 connect_nodes(TEX → material, pin_index: 0)   # replaces auto-created RGB child
 ```
 
-No A_RELOAD needed — the texture loads on connect.
-
-### Sphere via .obj Mesh
-
-```
-NT_GEO_MESH (load sphere.obj via A_FILENAME=34)
-  → NT_GEO_PLACEMENT pin 1 (geometry)
-    → placement transform child: A_TRANSLATION=172 for position, A_SCALE=139 for size
-NT_MAT_SPECULAR → NT_GEO_MESH pin 0 (material)
-NT_GEO_PLACEMENT → geo_group pin_index N (0-based)
-```
-
-Files (absolute paths):
-
-- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere.obj` — low-poly sphere
-- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere_hd.obj` — high-detail sphere (radius ~0.5)
-- `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/sphere_uv.obj` — UV-mapped sphere
-
-### Wiring Pattern for External Meshes
-
-```
-NT_TEX_IMAGE (texture file) → material albedo pin
-NT_MAT_UNIVERSAL (material) → NT_GEO_MESH pin 0
-NT_GEO_MESH (OBJ file) → NT_GEO_PLACEMENT pin "geometry"  (pin_index 1)
-NT_GEO_PLACEMENT (transform) → NT_GEO_GROUP pin "Input N"
-```
+No A_RELOAD needed for textures.
 
 ### Sphere Light Wiring
 
 ```
-NT_EMIS_BLACKBODY → NT_MAT_DIFFUSE via pin_id: 41 (P_EMISSION)
-NT_MAT_DIFFUSE → NT_LIGHT_SPHERE pin_index: 1 (material1)
+NT_EMIS_BLACKBODY → NT_MAT_DIFFUSE via pin_id: 41
+NT_MAT_DIFFUSE → NT_LIGHT_SPHERE pin_index: 1
 ```
 
-Sphere light transform uses `A_TRANSLATION=172`, NOT `A_VALUE=185`! The transform child on NT_LIGHT_SPHERE is an NT_TRANSFORM_VALUE node.
-
-### Area Light (Emission Panel)
-
-```
-NT_GEO_OBJECT (thin box: H=0.01)
-  → pin 1: standalone NT_MAT_DIFFUSE
-              → pin_name "emission": NT_EMIS_BLACKBODY (power=200)
-  → connect to geo_group via pin_index N (0-based)
-```
+Transform uses `A_TRANSLATION=172`, NOT `A_VALUE=185`.
 
 ### Emission Workaround
 
-Auto-created child materials on NT_GEO_OBJECT silently reject emission connections. Create a **standalone** NT_MAT_DIFFUSE, connect emission to it via `pin_name: "emission"`, then connect to the geo object's material pin (1).
+Auto-created materials on NT_GEO_OBJECT reject emission. Create standalone NT_MAT_DIFFUSE, connect emission via `pin_name: "emission"`, then connect to geo pin 1.
 
 ---
 
-## Pin Connection Gotchas
+## Material Presets
 
-| Target                | What works                                                                                                         | What silently fails                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| RT geometry           | `pin_index: 3`                                                                                                     | `pin_id: 59`                                                 |
-| Mesh material         | `pin_index: 0`                                                                                                     | `pin_id: 30`                                                 |
-| **Geo group inputs**  | **`pin_index: N` (0-based)**                                                                                       | **`pin_name: "Input N"`**                                    |
-| RT kernel             | `pin_id: 89`                                                                                                       | —                                                            |
-| RT environment        | `pin_id: 43`                                                                                                       | —                                                            |
-| **Env medium pin**    | **Create standalone `NT_ENV_TEXTURE`, connect medium FIRST, then connect env to RT**                               | `pin_index: 4` on auto-created env (pin not materialized)    |
-| **Env mediumRadius**  | **Set to 1000+ (default is 1!)** — medium only extends this many units from origin. At default 1, nothing visible. | —                                                            |
-| **Geo group (fresh)** | **Set `A_PIN_COUNT=113` to 4+ BEFORE connecting children** — fresh groups have 0 pins                              | `connect_nodes` to pin 0 reports success but nothing happens |
+All use `get_node_info` to find child handles, then `set_attribute(child, 185, type, value)`.
+
+### Universal Material (NT_MAT_UNIVERSAL)
+
+| Material    | Albedo (pin 2)    | Metallic (pin 4) | Roughness (pin 8) |
+| ----------- | ----------------- | ---------------- | ----------------- |
+| **Gold**    | {1.0, 0.78, 0.34} | 1.0              | 0.15              |
+| **Chrome**  | {0.9, 0.9, 0.9}   | 1.0              | 0.02              |
+| **Plastic** | any color         | 0                | 0.2               |
+| **Fabric**  | any color         | 0                | 0.9               |
+
+### Glossy Material (NT_MAT_GLOSSY) — set IOR to 100 for metallic Fresnel
+
+| Material | Diffuse (pin 0) | Specular | Roughness | IOR (pin 12) |
+| -------- | --------------- | -------- | --------- | ------------ |
+| **Gold** | {1, 0.84, 0}    | 1.0      | 0.15      | 100          |
+
+### Specular Material (NT_MAT_SPECULAR) — glass
+
+| Property          | Pin                 | Value                             |
+| ----------------- | ------------------- | --------------------------------- |
+| Transmission type | pin 1 child         | 1 (specular)                      |
+| IOR               | pin 7 (index) child | 1.5                               |
+| Albedo            | pin 0 child         | {0.85, 0.95, 1.0} light blue tint |
+
+### Quick Color Recipes (auto-created diffuse)
+
+RGB child on pin 0: `set_attribute(child, 185, 11, {r,g,b})`
+
+White={0.9, 0.9, 0.9}, Red={0.65, 0.05, 0.05}, Green={0.12, 0.45, 0.15}, Loud Red={1.0, 0.1, 0.05}
+
+Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 ---
 
-## Materials — Presets
+## Emission (NT_EMIS_BLACKBODY)
 
-### Glass (specular transmission)
+| Pin | Name        | Type  | Notes                                          |
+| --- | ----------- | ----- | ---------------------------------------------- |
+| 0   | efficiency  | Float | **MUST set to 1.0** (defaults 0.025 = 40x dim) |
+| 1   | power       | Float | 200 for close-up, 4000+ for rooms              |
+| 5   | temperature | Float | Kelvin (see CREATIVE.md for temps)             |
 
-| Property          | Pin                      | Handle path | Value                               |
-| ----------------- | ------------------------ | ----------- | ----------------------------------- |
-| Transmission type | pin 1 (transmissionType) | enum child  | `1` (specular)                      |
-| IOR               | pin 15 (index)           | float child | `1.5` (glass)                       |
-| Albedo            | pin 2                    | RGB child   | `{0.85, 0.95, 1.0}` light blue tint |
+---
 
-### Gold Metal
+## Primitive Types (NT_GEO_OBJECT pin 0)
 
-| Property  | Pin   | Handle path | Value                         |
-| --------- | ----- | ----------- | ----------------------------- |
-| Metallic  | pin 4 | float child | `1.0`                         |
-| Roughness | pin 8 | float child | `0.15`                        |
-| Albedo    | pin 2 | RGB child   | `{1.0, 0.78, 0.34}` warm gold |
+| Val | Shape         | Val | Shape          |
+| --- | ------------- | --- | -------------- |
+| 1   | Box (default) | 13  | Icosahedron    |
+| 2   | Capsule       | 14  | Octahedron     |
+| 3   | Cone          | 20  | Sphere         |
+| 4   | Cylinder      | 22  | Torus          |
+| 6   | Disc          | 23  | Truncated cone |
 
-### Chrome
+Type 18 (Quad) crashes. Full list: 1-17, 19-23 (alphabetical). Workaround: flat Box or quad.obj.
 
-| Property  | Pin   | Handle path | Value                        |
-| --------- | ----- | ----------- | ---------------------------- |
-| Metallic  | pin 4 | float child | `1.0`                        |
-| Roughness | pin 8 | float child | `0.02`                       |
-| Albedo    | pin 2 | RGB child   | `{0.9, 0.9, 0.9}` near-white |
-
-### Loud Red (debugging/test)
-
-| Property | Pin   | Value                            |
-| -------- | ----- | -------------------------------- |
-| Albedo   | pin 2 | `{1.0, 0.1, 0.05}` saturated red |
-
-### Quick Recipes
-
-All require `get_node_info` to discover child handles first, then `set_attribute(child, 185, type, value)`.
-
-| Material       | Type                  | Key Attributes                                                                     |
-| -------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| **White wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.9, 0.9, 0.9})`                                           |
-| **Red wall**   | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.65, 0.05, 0.05})`                                        |
-| **Green wall** | NT_MAT_DIFFUSE (auto) | RGB child → `(185, 11, {0.12, 0.45, 0.15})`                                        |
-| **Glass**      | NT_MAT_SPECULAR       | IOR child → `(185, 9, 1.5)` + smooth child → `(185, 1, true)`                      |
-| **Gold**       | NT_MAT_GLOSSY         | Diffuse=(1, 0.84, 0), Specular=1.0, Roughness=0.15, **IOR=100** (metallic Fresnel) |
-| **Chrome**     | NT_MAT_UNIVERSAL      | Metallic=1, Roughness=0.02, Albedo={0.9,0.9,0.9}                                   |
-| **Plastic**    | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.2, Specular=0.5                                            |
-| **Fabric**     | NT_MAT_UNIVERSAL      | Metallic=0, Roughness=0.9, Sheen=0.7                                               |
-| **Textured**   | NT_MAT_DIFFUSE (auto) | NT_TEX_IMAGE → diffuse pin 0 (replaces RGB child)                                  |
-
-### Metallic Fresnel
-
-NT_MAT_GLOSSY defaults to IOR 1.5 (glass). At low IOR, specular reflections only appear at grazing angles — looks like plastic, not metal. **For any metallic material (gold, chrome, copper, etc.), set IOR to 100** on the glossy material's `index` pin (pin 12). This flattens the Fresnel curve so it reflects at all angles.
+**Primitive type changes are non-deterministic crash risk** — see TROUBLESHOOTING.md.
 
 ---
 
@@ -405,289 +246,132 @@ NT_MAT_GLOSSY defaults to IOR 1.5 (glass). At low IOR, specular reflections only
 
 ### Sunset
 
-| Property      | Handle path                                 | Value  | Notes                                                                   |
-| ------------- | ------------------------------------------- | ------ | ----------------------------------------------------------------------- |
-| **Hour**      | env → pin 0 (sundir) → pin 4 (hour) → child | `16.5` | 4:30 PM = warm golden hour (17.5 was too cool/blue)                     |
-| Turbidity     | env → pin 1 (turbidity) → child             | `6.0`  | Heavy haze = warm scattering. 4.0 still too blue. Default 2.4 too clean |
-| Latitude      | sundir → pin 0 (latitude) → child           | `40.0` | Mid-latitude for natural sun angle                                      |
-| North offset  | env → pin 4 (northOffset) → child           | `45.0` | Rotates sun direction for raking side light                             |
-| Power         | env → pin 2                                 | `1.0`  | Default is fine                                                         |
-| Sun intensity | env → pin 3                                 | `1.0`  | Default is fine                                                         |
+env→pin0(sundir)→pin4(hour)→child: `16.5`. env→pin1(turbidity)→child: `6.0`. sundir→pin0(latitude)→child: `40.0`.
 
-Setting A_VALUE on sundir handle directly does NOT work. Must use hour child.
+Setting A_VALUE on sundir directly does NOT work. Must navigate to hour child.
 
-Sundir node (NT_SUN_DIRECTION) children: latitude(0), longitude(1), month(2), day(3), **hour(4)**, gmtoffset(5)
+### Noon
 
-### Noon (bright, flat)
-
-| Property  | Handle path                   | Value  | Notes              |
-| --------- | ----------------------------- | ------ | ------------------ |
-| Hour      | sundir → pin 4 (hour) → child | `12.0` | Noon, high sun     |
-| Turbidity | env → pin 1 → child           | `2.4`  | Default, clean sky |
+Hour: `12.0`. Turbidity: `2.4` (default).
 
 ---
 
 ## Camera Presets
 
-| Scenario        | Position         | Target         | Notes                      |
-| --------------- | ---------------- | -------------- | -------------------------- |
-| Hero 3-object   | `{1.25, 1.5, 8}` | `{1.25, 0, 0}` | 3 objects spread on X axis |
-| Single object   | `{0, 0.5, 4}`    | `{0, 0, 0}`    | Centered, slightly above   |
-| Pull-back debug | `{0, 5, 20}`     | `{0, 0, 0}`    | Way back, see everything   |
+| Scenario        | Position       | Target       |
+| --------------- | -------------- | ------------ |
+| Hero 3-object   | {1.25, 1.5, 8} | {1.25, 0, 0} |
+| Single object   | {0, 0.5, 4}    | {0, 0, 0}    |
+| Pull-back debug | {0, 5, 20}     | {0, 0, 0}    |
 
-**DOF off:** camera → pin 14 (aperture) → child handle → `set_attribute(handle, 185, AT_FLOAT=9, 0)`
-
-**Framing technique:** Set `target` to scene centroid (center of bounding box of all objects). Then compute camera `position` distance based on bounding box extents — pull back far enough to fit the full extent in frame, accounting for FOV/focal length. Don't guess zoom; derive it from bounds.
-
-**Up vector:** Camera pin 22 (up Float3 node) defaults to (0,1,0). `set_camera` resets up to (0,1,0). NEVER set up to (0,0,0).
-
----
-
-## Lighting
-
-### Product Photography Setup
-
-- **Key light:** NT_EMIS_BLACKBODY, 4000K warm, power 60-100, positioned above/behind scene
-- **Fill light:** NT_EMIS_BLACKBODY, 5500K neutral, power 20-30, opposite side
-- **Environment:** Neutral gray RGB (0.28-0.32) as env texture for calibration. Low env power (0.4-0.6) so area light dominates.
-
-### Cinematic Two-Light Setup (sphere lights)
-
-**Emission defaults that kill output:**
-
-- `efficiency` (pin 0) defaults to 0.025 — set to 1.0 or lights will be 40x dimmer than expected
-- `surfaceBrightness` (pin 2) normalizes by area — disable for small spheres (set to false)
-
-**Power ranges (with efficiency=1.0, surfaceBrightness=false):**
-
-| Scenario         | Key power | Fill power | Notes                         |
-| ---------------- | --------- | ---------- | ----------------------------- |
-| Product/close-up | 200-400   | 100-200    | Lights 3-5 units from subject |
-| Room/enclosed    | 4000-8000 | 2000-4000  | Lights far from surfaces      |
-
-**Temperatures:** Warm key 2800-3500K, cool fill 7000-9000K. Or neutral key 4500K + cool fill 8500K.
-
----
-
-## Underwater Volumetric Medium — Purple Ocean
-
-| Property         | Handle/Node         | Value               | Notes                                                               |
-| ---------------- | ------------------- | ------------------- | ------------------------------------------------------------------- |
-| Medium type      | NT_MED_SCATTERING   | —                   | Must use path tracing kernel                                        |
-| Scale            | pin 0 child         | `0.007`             | 0.002 = invisible, 0.015 = opaque                                   |
-| Absorption       | pin 8 (RGB)         | `{0.3, 0.3, 0.3}`   | Neutral! Don't rely on absorption for color                         |
-| invertAbsorption | pin 9               | `true` (default)    | With invert=true, values→transmittance. {low_G}→green. Unintuitive! |
-| Scattering       | pin 10 (RGB)        | `{0.3, 0.05, 0.4}`  | Purple scatter (R+B heavy, low G)                                   |
-| Env color        | env pin 0 (RGB)     | `{0.45, 0.05, 0.5}` | Saturated purple                                                    |
-| Env power        | env pin 1           | `35`                | Balances with sphere lights                                         |
-| mediumRadius     | env pin 5           | `5000`              | Default 1 = nothing visible!                                        |
-| Kernel           | NT_KERN_PATHTRACING | —                   | Required for volumetric                                             |
-
-**Sphere light power in medium (efficiency=1.0, surfaceBrightness=false):**
-
-| Role           | Power | Temp       | Notes                        |
-| -------------- | ----- | ---------- | ---------------------------- |
-| Overhead key   | 10-20 | 2800-5500K | Warm for underwater contrast |
-| Fill           | 6-8   | 8000-9000K | Cool blue, opposite side     |
-| Accent (red)   | 8-20  | 1800K      | Bioluminescence              |
-| Accent (amber) | 3-8   | 2800K      | Running lights               |
-
----
-
-## Procedural Textures
-
-Node types: NT_TEX_MARBLE (47), NT_TEX_TURBULENCE (22), NT_TEX_NOISE (87), NT_TEX_CHECKS (45), NT_TEX_GRADIENT (49), NT_TEX_FALLOFF (50), NT_TEX_MIX (38), NT_TEX_MULTIPLY (39), NT_TEX_ADD (106), NT_TEX_SUBTRACT (108), NT_TEX_RGB (33), NT_TEX_FLOAT (31)
-
-### NT_TEX_MIX — the workhorse
-
-| Pin | Name     | Type       | Notes                                  |
-| --- | -------- | ---------- | -------------------------------------- |
-| 0   | amount   | PT_TEXTURE | Blend mask (connect noise/marble here) |
-| 1   | texture1 | PT_TEXTURE | Color A                                |
-| 2   | texture2 | PT_TEXTURE | Color B                                |
-
-### NT_TEX_MARBLE
-
-| Pin | Name      | Type         | Notes                  |
-| --- | --------- | ------------ | ---------------------- |
-| 0   | power     | PT_TEXTURE   |                        |
-| 1   | offset    | PT_TEXTURE   |                        |
-| 2   | octaves   | PT_INT       | More = finer detail    |
-| 3   | omega     | PT_TEXTURE   |                        |
-| 4   | variance  | PT_TEXTURE   |                        |
-| 5   | transform | PT_TRANSFORM | Stretch for wood grain |
-
-### NT_TEX_TURBULENCE — organic noise, NOT banded
-
-| Pin | Name       | Type          | Notes                           |
-| --- | ---------- | ------------- | ------------------------------- |
-| 0   | power      | PT_TEXTURE    | Brightness/intensity            |
-| 1   | offset     | PT_TEXTURE    | 3D offset                       |
-| 2   | octaves    | PT_INT        | Detail scale (6-12)             |
-| 3   | omega      | PT_TEXTURE    | Fractal detail (0.35-0.65)      |
-| 4   | transform  | PT_TRANSFORM  | **Stretch for grain direction** |
-| 5   | projection | PT_PROJECTION |                                 |
-| 6   | turbulence | PT_BOOL       | Toggle turbulent noise          |
-| 7   | invert     | PT_BOOL       |                                 |
-| 8   | gamma      | PT_FLOAT      | Luminance control (1.0-2.0)     |
-
-### NT_TEX_RGB
-
-Set color via `set_attribute(handle, A_VALUE=185, AT_FLOAT3=11, {r,g,b})`
+Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set to (0,0,0).
 
 ---
 
 ## Render Pipeline — Minimum Sequence
 
-1. `create_node(NT_RENDERTARGET)` — handle is your RT
-2. `create_node(NT_GEO_OBJECT)` — your geometry (defaults to Box)
-3. `connect_nodes(geo → RT, pin_index: 3)` — pin 3 = "mesh" (PT_GEOMETRY)
-4. `start_render(render_target_handle: RT)` — sets RT on render API
-5. `update_scene()` — flush connections
-6. `set_camera(position, target)` — triggers geometry evaluation
-7. Wait 3-5s for samples
-8. `save_render(path)` — grab the image
+1. `create_node(NT_RENDERTARGET)` → RT handle
+2. `create_node(NT_GEO_OBJECT)` → geometry (default Box)
+3. `connect_nodes(geo → RT, pin_index: 3)`
+4. `start_render(render_target_handle: RT)`
+5. `set_camera(position, target)` — **required** to refresh geometry tree
+6. Wait 3-5s for samples
+7. `save_render(path)`
 
----
-
-## Render Refresh
-
-| Method               | Refreshes geometry? | Notes                                                                        |
-| -------------------- | ------------------- | ---------------------------------------------------------------------------- |
-| **`set_camera`**     | **YES**             | The ONLY way to force geometry re-evaluation. Even same position works.      |
-| `start_render`       | NO                  | Only starts sampling. New objects won't appear.                              |
-| ~~`restart_render`~~ | **REMOVED**         | Removed from MCP — crashed Octane.                                           |
-| `set_attribute`      | Partial             | Triggers re-render of existing objects but doesn't add new geometry to tree. |
-
-After connections: `update_scene()` then `set_camera` — both required.
+**Geometry refresh:** `set_camera` is the ONLY way to force geometry re-evaluation after connecting new objects. `start_render` does NOT refresh geometry.
 
 ---
 
 ## .obj Assets
 
-Absolute path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`
+Path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`
 
 **Primitives:** sphere.obj, sphere_hd.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, floor.obj, quad.obj
 
-**Hero meshes:** nautilus.obj (40MB), cat_captain_hindu.obj (40MB), catraken.obj (39MB)
-
-**Textures:** nautilus_diffuse.png, cat_captain_hindu_diffuse.png, catraken_diffuse.png (all 4096x4096)
+**Hero meshes:** nautilus.obj, cat_captain_hindu.obj, catraken.obj (all ~40MB, with 4096x4096 diffuse PNGs)
 
 ---
 
 ## Coordinate System
 
-- **+X = RIGHT**, **-X = LEFT**
-- **+Y = UP**, **-Y = DOWN**
-- **+Z = toward camera**, **-Z = into scene**
++X=right, -X=left, +Y=up, -Y=down, +Z=toward camera, -Z=into scene.
+
+1 unit = 1 meter. Human eye: Y=1.5. Table: Y=0.75.
 
 ---
 
-## Scale Reference
+## Procedural Textures
 
-1 unit = 1 meter. Human eye height: Y=1.0-1.7. Table: Y=0.75. Room: 2.5-3.0 tall.
+### NT_TEX_MIX (blend workhorse)
 
----
+Pin 0=amount (mask), pin 1=texture1, pin 2=texture2.
 
-## Kernels
+### NT_TEX_MARBLE
 
-| Kernel              | Type ID | Notes                                              |
-| ------------------- | ------- | -------------------------------------------------- |
-| **Path Tracing**    | 25      | ALWAYS use for interiors. DL kernel renders white. |
-| **Direct Lighting** | 24      | No bounced light. Only for open/exterior scenes.   |
-| **PMC**             | 23      | Slow but handles difficult glass caustics.         |
+Pin 2=octaves (more=finer), pin 5=transform (stretch for grain).
 
----
+### NT_TEX_TURBULENCE
 
-## ApiInfo — Type System Introspection
+Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for direction), pin 8=gamma (1.0-2.0).
 
-### Available Methods
+### NT_TEX_RGB
 
-| Method                                                              | Returns                                                   | Purpose                                                                        |
-| ------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `getNodeTypes()`                                                    | All ~300 node types                                       | Complete node catalog                                                          |
-| `nodeInfo(NodeType)`                                                | `ApiNodeInfo`                                             | outType, category, description, pinInfoCount, attributeInfoCount per node type |
-| `nodePinInfo(NodeType, pinIx)`                                      | `ObjectRef` → `getApiNodePinInfo(ref)` → `ApiNodePinInfo` | Pin id, type, name, label, description, defaultNodeType                        |
-| `attributeInfo(NodeType, AttrId)`                                   | `ApiAttributeInfo`                                        | Attribute type, isArray, description, defaults                                 |
-| `attributeInfo1(NodeType, attrIx)`                                  | Same, by index                                            | Enumerate all attributes for a node type                                       |
-| `getCompatibleTypes(PinType)`                                       | Compatible node types + graph types                       | Authoritative pin compatibility map                                            |
-| `getPinTypes()`                                                     | All pin types                                             | Complete pin type catalog                                                      |
-| `getPinTypeName(type)` / `getPinTypeColor(type)`                    | Name, ARGB color                                          | Pin type metadata                                                              |
-| `getAttributeTypes()`                                               | All attribute types                                       | Complete attribute type catalog                                                |
-| `getNodeTypeName(type)` / `getAttributeName(id)` / `getPinName(id)` | Name strings                                              | Forward lookups                                                                |
-| `getAttributeId(name)` / `getPinId(name)`                           | IDs                                                       | Reverse lookups (name → ID)                                                    |
-
-### Key Data Structures
-
-**`ApiNodeInfo`** (from `octaneinfos.proto`):
-
-```
-type, outType, category, defaultName, description, pinInfoCount, attributeInfoCount,
-movableInputCountAttribute, movableInputPinCount, movableInputFormat, movableInputName,
-isHidden, isCreatableByApi, isLinker, texNodeTypeInfo, compatibilityModeInfos
-```
-
-**`ApiNodePinInfo`** (from `octaneinfos.proto`):
-
-```
-id (PinId), type (NodePinType), staticName, staticLabel, description, groupName,
-defaultNodeType, pinColor, isTypedTexturePin, minVersion, endVersion,
-boolInfo, floatInfo, intInfo, enumInfo, texInfo, transformInfo, stringInfo, ...
-```
-
-**`ApiAttributeInfo`** (from `octaneinfos.proto`):
-
-```
-id, type, isArray, description, defaultInts, defaultLongs, defaultFloats, defaultString
-```
+`set_attribute(handle, A_VALUE=185, AT_FLOAT3=11, {r,g,b})`
 
 ---
 
-## Octane Docs MCP
+## ApiInfo Methods
 
-Connect: `npx -y mcp-remote https://octane-mcp.otoy.ai/sse`
-
-| Tool                    | Purpose                    |
-| ----------------------- | -------------------------- |
-| `search_octane_api`     | Search Lua API functions   |
-| `get_octane_function`   | Detailed function docs     |
-| `get_octane_properties` | Node type properties       |
-| `list_octane_constants` | Enum values (NT*, P*, A\_) |
-| `search_examples`       | Find example scripts       |
+| Method                                    | Returns                                 |
+| ----------------------------------------- | --------------------------------------- |
+| `getNodeTypes()`                          | All node types (755+)                   |
+| `nodeInfo(type)`                          | Pins, attributes, category, description |
+| `getCompatibleTypes(pinType)`             | What nodes can connect to a pin type    |
+| `getAttributeId(name)` / `getPinId(name)` | Name → ID reverse lookups               |
 
 ---
 
-## External Resources
+## MCP Resources
 
-| Resource            | URL                                                | Use For                             |
-| ------------------- | -------------------------------------------------- | ----------------------------------- |
-| **OTOY Forum**      | https://render.otoy.com/forum/index.php            | Community knowledge, scene tips     |
-| **Octane Docs**     | https://docs.otoy.com/                             | Official plugin/standalone docs     |
-| **Octane Docs MCP** | `npx -y mcp-remote https://octane-mcp.otoy.ai/sse` | Lua API search, constants, examples |
-| **Octane Live DB**  | https://render.otoy.com/livedb/                    | Community materials and assets      |
-| **Poly Haven**      | https://polyhaven.com/                             | Free HDRI, textures, models         |
+9 read-only resources for live type system discovery. Use these instead of hardcoded values when exploring unfamiliar node types.
 
----
+### Static (from ApiCache — instant)
 
-## Pin Value RPCs — UNIMPLEMENTED
+| Resource                 | URI                                | Use For                                                                                                  |
+| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `node-types`             | `octane://node-types`              | Full catalog: name, id, category, pinCount for all 755+ types                                            |
+| `node-types-by-category` | `octane://node-types/{category}`   | Filter by category (MAT, TEX, GEO, LIGHT, KERN, etc.)                                                    |
+| `pin-layout`             | `octane://pin-layout/{typeName}`   | All pins for a type: index, id, name, type, defaultNodeType. **Resolves pin_index vs pin_id confusion.** |
+| `compatibility`          | `octane://compatibility/{pinType}` | What nodes can connect to a pin type (PT_TEXTURE, PT_MATERIAL, etc.)                                     |
+| `primitive-types`        | `octane://primitive-types`         | NT_GEO_OBJECT enum values (Box=1, Sphere=20, etc.) with crash warnings                                   |
 
-The proto defines `setPinValueByIx`, `setPinValueByPinID`, `setPinValueByName` (and get variants) but Octane's gRPC server returns UNIMPLEMENTED for all 6. These are future API stubs.
+### Dynamic (live gRPC query — cached after first hit)
 
-Current workflow: `create_node` → use pin handles from response → `set_attribute` on child handles. Use `get_node_info` only for deeper children.
+| Resource                 | URI                                           | Use For                                                     |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------------------- |
+| `node-info-dynamic`      | `octane://node-info/{typeName}`               | Full metadata: attribute count, movable inputs, description |
+| `pin-info-dynamic`       | `octane://pin-info/{typeName}/{pinIndex}`     | Deep pin metadata: float ranges, enum values, defaults      |
+| `attribute-info-dynamic` | `octane://attribute-info/{typeName}/{attrId}` | Attribute type, defaults, min/max, description              |
+
+### Scene (from SceneCache)
+
+| Resource | URI              | Use For                                                             |
+| -------- | ---------------- | ------------------------------------------------------------------- |
+| `scene`  | `octane://scene` | Current scene snapshot: all nodes, connections, children, staleness |
+
+### When to Use Resources vs Hardcoded Values
+
+- **Known patterns** (RT pins, transforms, materials): use hardcoded values in this doc — they're proven and faster.
+- **Unfamiliar node types**: query `pin-layout` and `node-info-dynamic` to discover pin names, indices, and compatible connections.
+- **"What can connect here?"**: query `compatibility` with the pin type.
+- **Debugging silent failures**: query `pin-layout` to verify you're using the right pin_index vs pin_id.
 
 ---
 
 ## Discovery Workflow
 
-### Fresh nodes — use create_node pins
+**Fresh nodes:** `create_node` returns handle + pins array with all child handles. Set attributes directly.
 
-1. `create_node` → handle + pins array with all child handles
-2. `set_attribute` directly on child handles (primitive, W/H/D, transform)
-3. For material color: `get_node_info(material_handle)` → pin 0 → RGB child → `set_attribute`
+**Material color:** `get_node_info(material)`→pin 0→RGB child→`set_attribute`.
 
-### Unknown nodes — full discovery
-
-1. `create_node` → get handle + pin handles
-2. `get_node_info(handle)` → see all pins with names and child handles
-3. `set_attribute` / `connect_nodes` using discovered handles/pins
-4. For unknowns: `list_node_types`, Octane Docs MCP, or web search
+**Unknown nodes:** Query `octane://pin-layout/{typeName}` resource, or `get_node_info`→see all pins→`set_attribute`/`connect_nodes` on discovered handles.

@@ -9,13 +9,21 @@
  *   and incrementally by mutation tools (create_node, delete_node, etc.)
  * - Hint layer, not source of truth: critical ops verify against live gRPC.
  * - Cleared on: crash detection, load_project, reset_project.
+ * - Staleness tracking: each entry records when it was last updated.
+ *   Consumers can check age via `getAge()` and the snapshot includes
+ *   `lastUpdatedMs` so the AI can judge data freshness.
  */
 
 export interface CachedNode {
   name: string;
   typeName: string;
   typeId: number;
+  /** Timestamp (Date.now()) when this entry was created or last confirmed */
+  updatedAt: number;
 }
+
+/** Default TTL: 5 minutes. Entries older than this are flagged as stale. */
+const DEFAULT_STALE_MS = 5 * 60 * 1000;
 
 export class SceneCache {
   /** handle → node metadata */
@@ -30,6 +38,12 @@ export class SceneCache {
   /** Whether get_scene_tree has populated this cache at least once */
   private _populated = false;
 
+  /** Timestamp of last full population (get_scene_tree) or clear */
+  private _lastSyncMs = 0;
+
+  /** Staleness threshold in ms. Entries older than this are flagged. */
+  readonly staleTtlMs: number;
+
   /**
    * Every handle ever returned to the AI by any MCP tool response.
    * Includes node handles, pin child handles, connected handles — anything
@@ -37,6 +51,10 @@ export class SceneCache {
    * Cleared on crash/load/reset (same as the rest of the cache).
    */
   private _knownHandles = new Set<number>();
+
+  constructor(staleTtlMs: number = DEFAULT_STALE_MS) {
+    this.staleTtlMs = staleTtlMs;
+  }
 
   // ── Handle tracking (crash prevention) ─────────────────────────
 
@@ -85,8 +103,14 @@ export class SceneCache {
   // ── Node operations ──────────────────────────────────────────────
 
   addNode(handle: number, name: string, typeName: string, typeId: number): void {
-    this.nodes.set(handle, { name, typeName, typeId });
+    this.nodes.set(handle, { name, typeName, typeId, updatedAt: Date.now() });
     this._knownHandles.add(handle);
+  }
+
+  /** Touch/refresh a node's timestamp (e.g., after confirming it still exists via gRPC) */
+  touchNode(handle: number): void {
+    const node = this.nodes.get(handle);
+    if (node) node.updatedAt = Date.now();
   }
 
   removeNode(handle: number): void {
@@ -135,6 +159,38 @@ export class SceneCache {
     return this.nodes.size;
   }
 
+  // ── Staleness queries ─────────────────────────────────────────────
+
+  /** Age of a specific node entry in ms, or undefined if not cached */
+  getNodeAge(handle: number): number | undefined {
+    const node = this.nodes.get(handle);
+    if (!node) return undefined;
+    return Date.now() - node.updatedAt;
+  }
+
+  /** Check if a cached node is older than the stale threshold */
+  isNodeStale(handle: number): boolean {
+    const age = this.getNodeAge(handle);
+    if (age === undefined) return true; // not in cache = stale
+    return age > this.staleTtlMs;
+  }
+
+  /** Time since last full sync (get_scene_tree), or Infinity if never synced */
+  get timeSinceLastSyncMs(): number {
+    if (!this._lastSyncMs) return Infinity;
+    return Date.now() - this._lastSyncMs;
+  }
+
+  /** Count of nodes whose entries are older than the stale threshold */
+  get staleNodeCount(): number {
+    const now = Date.now();
+    let count = 0;
+    for (const node of this.nodes.values()) {
+      if (now - node.updatedAt > this.staleTtlMs) count++;
+    }
+    return count;
+  }
+
   // ── Connection operations ────────────────────────────────────────
 
   private connKey(targetHandle: number, pinIndex: number): string {
@@ -171,6 +227,12 @@ export class SceneCache {
 
   markPopulated(): void {
     this._populated = true;
+    this._lastSyncMs = Date.now();
+    // Touch all nodes — they were just confirmed via get_scene_tree
+    const now = Date.now();
+    for (const node of this.nodes.values()) {
+      node.updatedAt = now;
+    }
   }
 
   clear(): void {
@@ -179,6 +241,7 @@ export class SceneCache {
     this.children.clear();
     this._knownHandles.clear();
     this._populated = false;
+    this._lastSyncMs = 0;
   }
 
   /** Serializable snapshot for debugging / responses / MCP resources */
@@ -186,19 +249,33 @@ export class SceneCache {
     nodeCount: number;
     connectionCount: number;
     populated: boolean;
-    nodes: Array<{ handle: number; name: string; typeName: string; typeId: number }>;
+    lastSyncMs: number;
+    staleNodeCount: number;
+    nodes: Array<{
+      handle: number;
+      name: string;
+      typeName: string;
+      typeId: number;
+      ageMs: number;
+      stale: boolean;
+    }>;
     connections: Array<{ target: number; pinIndex: number; source: number }>;
     children: Array<{ graph: number; children: number[] }>;
   } {
+    const now = Date.now();
     return {
       nodeCount: this.nodes.size,
       connectionCount: this.connections.size,
       populated: this._populated,
+      lastSyncMs: this._lastSyncMs,
+      staleNodeCount: this.staleNodeCount,
       nodes: [...this.nodes.entries()].map(([handle, n]) => ({
         handle,
         name: n.name,
         typeName: n.typeName,
         typeId: n.typeId,
+        ageMs: now - n.updatedAt,
+        stale: now - n.updatedAt > this.staleTtlMs,
       })),
       connections: [...this.connections.entries()].map(([key, source]) => {
         const [target, pinIndex] = key.split(':').map(Number);

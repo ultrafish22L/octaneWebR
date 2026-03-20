@@ -4,6 +4,40 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.6] - 2026-03-20
+
+### Fixed — Deep Code Review
+
+- **import.ts: Beta 2 method names** — 5 `callMethod` sites used Alpha 5 `setByAttrID` + `item_ref` param instead of Beta 2 `setValueByAttrID` + `objectPtr`. Worked by accident (Alpha 5 API active) but bypassed compat layer. Now goes through same translation path as all other tools.
+- **import.ts: hardcoded `type: 16`** → `OBJ_API_ITEM` constant (already imported).
+- **import.ts: hardcoded attribute IDs** — `34`, `124`, `185` replaced with `AttributeId.A_FILENAME`, `A_RELOAD`, `A_VALUE`. Next-steps strings now use `AttributeId.A_ROTATION/A_TRANSLATION/A_SCALE`.
+- **info.ts: wrong import path** — imported `AttrType`, `AttributeId`, `ObjectType` from `client/src/constants/OctaneProtocol` instead of `shared/OctaneConstants`. Replaced `ObjectType.ApiItem/ApiNode` with `OBJ_API_ITEM/OBJ_API_NODE`.
+- **node.ts: `A_PIN_COUNT` constant** — replaced hardcoded `113` with `AttributeId.A_PIN_COUNT`.
+- **node.ts: error message showed `undefined`** — pin type mismatch error for unresolved `pin_name` now says "not found" instead of "index undefined".
+- **scene.ts: `console.error` → `mcpLog`** — 2 instances in `traverseGraph()` polluted stdio transport. Now uses `mcpLog()` with warn/error levels.
+- **index.ts: WriteStream resource leak** — `mcpLogReset()` now called in shutdown handler before `process.exit()`.
+- **useRenderOutput.tsx: export format select** — bound to `exportFormatRef.current` (ref, no re-render) instead of `exportFormat` (state). Fixed + added `exportFormat` to useCallback deps.
+- **Versions synced**: Root and MCP `package.json` bumped to 2.1.6.
+
+---
+
+## [2.1.5] - 2026-03-20
+
+### Added — Code Review Hardening
+
+- **Shared constants** (`shared/OctaneConstants.ts`): Single source of truth for `AttrType`, `AttributeId`, `OBJ_API_*`, `CRASH_TYPE_IDS`, `PIN_TYPE_NAMES`, `RT_PINS`. Eliminates constant duplication between `client/src/constants/OctaneProtocol.ts` and `mcp/src/tools/attribute.ts`/`node.ts`. Client re-exports from shared for backward compatibility.
+- **Typed gRPC interface** (`mcp/src/types/GrpcClientTypes.ts`): `IGrpcClientBase` interface + `GrpcModule` type annotation replaces `any` on `OctaneMcpClient.base`. Dynamic `require()` retained (esbuild OOM constraint) but now type-checked via `as GrpcModule`.
+- **SceneCache TTL/staleness**: Each `CachedNode` carries `updatedAt` timestamp. New API: `touchNode()`, `getNodeAge()`, `isNodeStale()`, `staleNodeCount`, `timeSinceLastSyncMs`. `markPopulated()` refreshes all node timestamps. Snapshot includes `ageMs`/`stale` per entry. Default TTL: 5 minutes. Configurable via constructor.
+- **First test suite** (59 tests, 3 files):
+  - `SceneCache.test.ts` — 32 tests: handle validation, node CRUD, connections, children, staleness, snapshots
+  - `utils.test.ts` — 20 tests: jsonResult, errorResult, gateHandle, extractHandle, extractValue, validateFilePath
+  - `OctaneConstants.test.ts` — 7 tests: value correctness for all shared constants
+- **Vitest config**: Now includes `mcp/src/__tests__/**/*.test.ts` alongside client tests.
+- **MCP tsconfig**: Includes `shared/` directory for cross-project imports.
+- **Versions synced**: Root and MCP `package.json` bumped to 2.1.5.
+
+---
+
 ## [2.1.4] - 2026-03-20
 
 ### Fixed — gRPC Connection Lifecycle

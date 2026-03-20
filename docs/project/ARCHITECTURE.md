@@ -8,7 +8,7 @@ Browser-based UI for Octane Render Studio. Communicates with Octane via gRPC Liv
 React Client (browser)
     |
     v
-Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (27 tools, stdio)
+Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (28 tools, stdio)
     |                                                         |
     +------- Shared: OctaneGrpcClientBase.ts ----------------+
                             |
@@ -18,7 +18,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (27 tools, st
 
 **Vite plugin** (`vite-plugin-octane-grpc.ts`) handles everything server-side: gRPC proxying, WebSocket callback streaming, REST endpoints for health and file operations. No separate Express server.
 
-**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 28 tools for scene building, camera, render, nodes, and attributes. Built with esbuild, has its own `package.json`.
+**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 28 tools for scene building, camera, render, nodes, and attributes. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
 
 **Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
 
@@ -40,8 +40,12 @@ octaneWebR/
 │   ├── proto/            Beta 2 protobuf definitions (2026.1)
 │   ├── proto_old/        Alpha 5 protobuf definitions (2026.1)
 │   └── src/grpc/         Shared gRPC client base
+├── shared/               Protocol constants shared by client + MCP
+│   └── OctaneConstants.ts  AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS
 ├── mcp/                  MCP server (separate package)
 │   ├── src/              Tool implementations
+│   ├── src/types/        Typed interfaces (GrpcClientTypes.ts)
+│   ├── src/__tests__/    Integration tests (59 tests via Vitest)
 │   └── data/             API cache (octane-api-cache.json)
 ├── ORBX/assets/          3D meshes (.obj) and textures
 ├── renders/              Render output
@@ -120,4 +124,5 @@ Both the web UI (via HTTP → Vite plugin → base) and MCP (via OctaneMcpClient
 - **Prod**: `npm run build` (tsc + vite build, output in `dist/`)
 - **Type check**: `npx tsc --noEmit`
 - **Lint**: `npm run lint`
+- **Test**: `npm test` (59 tests: SceneCache, utils, constants)
 - **MCP**: `cd mcp && npm run build` (esbuild)

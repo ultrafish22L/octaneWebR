@@ -11,6 +11,11 @@
 import path from 'path';
 import fs from 'fs';
 import { SceneCache } from './SceneCache';
+import type {
+  IGrpcClientBase,
+  GrpcModule,
+  TransformObjectPtrParams,
+} from './types/GrpcClientTypes';
 
 export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
 
@@ -218,15 +223,16 @@ function enhanceCrashError(
 const SERVER_ROOT = path.resolve(__dirname, '../../server');
 const GRPC_CLIENT_PATH = path.join(SERVER_ROOT, 'dist/grpc/OctaneGrpcClientBase');
 
+// Dynamic require to avoid pulling entire server/gRPC type system into esbuild (causes OOM).
+// Typed via mcp/src/types/GrpcClientTypes.ts — update that file if the server API changes.
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires */
-const grpcModule = require(GRPC_CLIENT_PATH);
+const grpcModule = require(GRPC_CLIENT_PATH) as GrpcModule;
 const GrpcClientBase = grpcModule.OctaneGrpcClientBase;
-const transformParams: (s: string, m: string, p: Record<string, any>) => Record<string, any> =
-  grpcModule.transformObjectPtrParams;
+const transformParams: TransformObjectPtrParams = grpcModule.transformObjectPtrParams;
 /* eslint-enable */
 
 export class OctaneMcpClient {
-  private base: any; // OctaneGrpcClientBase (loaded at runtime)
+  private base: IGrpcClientBase;
   private mutex: Promise<void> = Promise.resolve(); // Serializes all gRPC calls
   private rootGraphHandle: number | null = null; // Cached root node graph handle
   private lastSuccessMs = 0; // Timestamp of last successful gRPC call

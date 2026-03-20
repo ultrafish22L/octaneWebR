@@ -118,7 +118,7 @@ export function useRenderOutput(
           <select
             id="export-format"
             className="form-control"
-            value={exportFormatRef.current}
+            value={exportFormat}
             onChange={e => setExportFormat(e.target.value as 'PNG' | 'JPG' | 'EXR' | 'TIFF')}
             name="export-format"
           >
@@ -130,7 +130,7 @@ export function useRenderOutput(
         </div>
       ),
     });
-  }, [browseExportPasses, setExportFormat]);
+  }, [browseExportPasses, setExportFormat, exportFormat]);
 
   return {
     handleCopyToClipboard,
