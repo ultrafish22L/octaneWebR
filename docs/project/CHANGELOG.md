@@ -4,6 +4,20 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.4] - 2026-03-20
+
+### Fixed — gRPC Connection Lifecycle
+
+- **Stale MCP channels after Octane restart**: When Octane was killed without an in-flight gRPC call, the MCP server never detected the death — kept stale channels, `create_node` returned handle 0 silently. Added `ensureConnection()` health check that pings Octane after 30s idle and resets all channels/caches on failure.
+- **Octane shutdown hang**: Closing Octane while the dev server was connected caused Octane to hang indefinitely. Root cause: the callback stream was an infinite server-streaming RPC — Octane's graceful shutdown waited for it to finish, creating a deadlock. Fixed by adding a 60s deadline to the callback stream with auto-reconnect on expiry.
+- **Callback stream reconnect on crash**: Stream error handler no longer retries when Octane is gone (ECONNRESET/ECONNREFUSED/CANCELLED). Previously retried every 5s, holding connections open.
+- **gRPC keepalive**: All gRPC channels now use HTTP/2 keepalive pings (10s interval, 5s timeout) to detect dead connections faster.
+- **`close()` cancels callback stream**: `OctaneGrpcClient.close()` now cancels the callback stream before closing service stubs, ensuring clean teardown.
+- **TROUBLESHOOTING.md**: Corrected primitive type crash data (non-deterministic threshold, not fixed at 6). Documented stale channel fix.
+- **Versions synced**: Root and MCP `package.json` bumped to 2.1.4.
+
+---
+
 ## [2.1.3] - 2026-03-19
 
 ### Fixed — MCP Cache Integrity (full code review)

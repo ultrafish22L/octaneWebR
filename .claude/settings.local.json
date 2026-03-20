@@ -146,7 +146,9 @@
       "Bash(git rm:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(grep -n \"ApiChangeManager\" /c/otoyla/GRPC/dev/octaneWebR/mcp/src/tools/*.ts)",
+      "Bash(find C:/otoyla/GRPC/dev/octaneWebR -name *.log -type f)"
     ]
   }
 }

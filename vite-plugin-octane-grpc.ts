@@ -199,6 +199,10 @@ class OctaneGrpcClient {
     return this.base.checkHealth();
   }
 
+  get isCallbackActive(): boolean {
+    return this.isCallbackRegistered;
+  }
+
   // ========== Callback Management ==========
 
   private isRegistering = false;
@@ -339,6 +343,13 @@ class OctaneGrpcClient {
       });
   }
 
+  // Callback stream deadline: the stream auto-expires after this many ms.
+  // On expiry, we reconnect immediately. This prevents Octane's graceful
+  // shutdown from deadlocking — it waits for in-progress RPCs to finish,
+  // and an infinite stream never finishes. With a deadline, the stream
+  // expires within this window, freeing Octane to exit.
+  private static readonly CALLBACK_STREAM_DEADLINE_MS = 60_000;
+
   /**
    * Start streaming callbacks from Octane via StreamCallbackService.
    */
@@ -348,7 +359,8 @@ class OctaneGrpcClient {
     try {
       this.streamActive = true;
       const streamService = this.base.getService('StreamCallbackService');
-      this.callbackStream = streamService.callbackChannel({});
+      const deadline = Date.now() + OctaneGrpcClient.CALLBACK_STREAM_DEADLINE_MS;
+      this.callbackStream = streamService.callbackChannel({}, null, { deadline });
 
       this.callbackStream.on('data', (callbackRequest: any) => {
         try {
@@ -359,9 +371,7 @@ class OctaneGrpcClient {
       });
 
       this.callbackStream.on('error', (error: any) => {
-        slog.error('Callback stream error:', error.message);
         this.streamActive = false;
-        // Cancel the stream before releasing the reference to free server-side resources
         try {
           this.callbackStream?.cancel();
         } catch {
@@ -369,12 +379,26 @@ class OctaneGrpcClient {
         }
         this.callbackStream = null;
 
-        if (this.isCallbackRegistered) {
+        const msg = String(error?.message || '');
+        const isDeadline = /DEADLINE_EXCEEDED/i.test(msg);
+        const octaneGone = /ECONNRESET|ECONNREFUSED|CANCELLED|Stream removed|socket hang up/i.test(
+          msg
+        );
+
+        if (isDeadline && this.isCallbackRegistered) {
+          // Normal deadline expiry — reconnect immediately
+          this.startCallbackStreaming();
+        } else if (this.isCallbackRegistered && !octaneGone) {
+          slog.error('Callback stream error:', error.message);
           setTimeout(() => {
             if (this.isCallbackRegistered) {
               this.startCallbackStreaming();
             }
           }, 5000);
+        } else if (octaneGone) {
+          slog.warn('Octane connection lost — closing all gRPC channels');
+          this.isCallbackRegistered = false;
+          this.base.close();
         }
       });
 
@@ -382,6 +406,12 @@ class OctaneGrpcClient {
         slog.debug('Callback stream ended');
         this.streamActive = false;
         this.callbackStream = null;
+        // Reconnect if we're still registered (server may have ended the stream
+        // for its own reasons). If Octane is shutting down, the reconnect will
+        // fail with ECONNREFUSED and hit the octaneGone path above.
+        if (this.isCallbackRegistered) {
+          this.startCallbackStreaming();
+        }
       });
 
       slog.info('Callback streaming active');
@@ -445,6 +475,18 @@ class OctaneGrpcClient {
   }
 
   close(): void {
+    // Cancel the callback stream first — this is the long-lived gRPC streaming
+    // connection that blocks Octane from shutting down if left open.
+    this.isCallbackRegistered = false;
+    if (this.callbackStream) {
+      this.streamActive = false;
+      try {
+        this.callbackStream.cancel();
+      } catch {
+        /* already closed */
+      }
+      this.callbackStream = null;
+    }
     this.base.close();
   }
 }
@@ -597,6 +639,10 @@ export function octaneGrpcPlugin(): Plugin {
           );
           Promise.race([grpcClient?.checkHealth() ?? Promise.resolve(false), healthTimeout])
             .then(isHealthy => {
+              // Re-register callbacks if Octane came back after a disconnect
+              if (isHealthy && grpcClient && !grpcClient.isCallbackActive) {
+                grpcClient.registerOctaneCallbacks().catch(() => {});
+              }
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(

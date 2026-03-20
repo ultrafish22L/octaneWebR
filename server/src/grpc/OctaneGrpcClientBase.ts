@@ -338,6 +338,12 @@ export class OctaneGrpcClientBase {
     const service = new ServiceConstructor(this.address, grpc.credentials.createInsecure(), {
       'grpc.max_receive_message_length': 64 * 1024 * 1024,
       'grpc.max_send_message_length': 64 * 1024 * 1024,
+      // Keepalive: detect dead server (Octane closed/crashed) within ~15s.
+      // Without this, gRPC holds TCP connections open indefinitely, blocking
+      // Octane's graceful shutdown (it waits for all clients to disconnect).
+      'grpc.keepalive_time_ms': 10_000, // send ping every 10s
+      'grpc.keepalive_timeout_ms': 5_000, // close channel if no pong within 5s
+      'grpc.keepalive_permit_without_calls': 1, // ping even when no RPCs active
     });
 
     this.services.set(serviceName, service);

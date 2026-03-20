@@ -229,6 +229,8 @@ export class OctaneMcpClient {
   private base: any; // OctaneGrpcClientBase (loaded at runtime)
   private mutex: Promise<void> = Promise.resolve(); // Serializes all gRPC calls
   private rootGraphHandle: number | null = null; // Cached root node graph handle
+  private lastSuccessMs = 0; // Timestamp of last successful gRPC call
+  private static readonly HEALTH_CHECK_INTERVAL_MS = 30_000; // Re-validate connection after 30s idle
 
   // Session info cache — static per Octane session
   private sessionInfo: {
@@ -267,6 +269,12 @@ export class OctaneMcpClient {
 
     try {
       await prev; // wait for previous call
+
+      // Health check: if connection has been idle, verify Octane is still alive
+      // before sending the real call. Detects manual Octane kills that don't
+      // trigger ECONNRESET (because no call was in-flight at the time).
+      await this.ensureConnection(service, method);
+
       const transformed = transformParams(service, method, params);
       const options = timeoutMs ? { timeout: timeoutMs } : {};
       const isDebug = LEVEL_RANK['debug'] >= LEVEL_RANK[LOG_LEVEL];
@@ -280,6 +288,7 @@ export class OctaneMcpClient {
       const result = await this.base.callMethod(service, method, transformed, options);
       endProfile();
       const elapsed = Date.now() - startMs;
+      this.lastSuccessMs = Date.now();
       const ok = result?.success !== false && !result?.error_message;
       mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'info');
       if (isDebug)
@@ -289,6 +298,32 @@ export class OctaneMcpClient {
       throw enhanceCrashError(error, service, method, this);
     } finally {
       resolve!();
+    }
+  }
+
+  /**
+   * Verify the gRPC connection is alive before a call. Runs a health check
+   * if the connection has been idle longer than HEALTH_CHECK_INTERVAL_MS.
+   * On failure, resets all channels and caches so the next call gets a fresh
+   * connection to whichever Octane instance is currently running.
+   */
+  private async ensureConnection(service: string, method: string): Promise<void> {
+    // Skip health check for the ping call itself (avoid recursion)
+    if (service === 'ApiProjectManager' && method === 'getPing') return;
+    // Skip if we had a recent successful call
+    if (
+      this.lastSuccessMs &&
+      Date.now() - this.lastSuccessMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS
+    )
+      return;
+
+    try {
+      await this.base.callMethod('ApiProjectManager', 'getPing', {}, { timeout: 5000 });
+      this.lastSuccessMs = Date.now();
+    } catch {
+      mcpLog(`Health check failed — Octane connection stale. Resetting channels.`, 'warn');
+      this.clearRootGraphCache();
+      this.resetGrpcChannels();
     }
   }
 
