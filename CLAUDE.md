@@ -2,27 +2,24 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 9: Doc Consolidation + MCP Integration Test — v2.0.0**
+**Phase 11: MCP — v2.1.0**
 
-**What happened this session:**
+**What happened last session (Phase 10):**
 
-- MCP integration test: glass metal recipe build via MCP tools
-- Fixed MCP server bundling: esbuild needs `--bundle` for cross-package imports from client/src
-- Generated programmatic OBJ assets: sphere_hd.obj (32×16 UV sphere), floor.obj (quad plane)
-- Built glass metal scene v5: 3 smooth spheres on floor at golden hour, materials in progress
-- Full doc consolidation: 8 MCP docs → 4 (REFERENCE.md, BUILD.md, CREATIVE.md, TROUBLESHOOTING.md)
-- Inline MCP rules in CLAUDE.md — 18 gate rules, no pointers to other files
-- Recipe style guide enforced: all 8 recipes converted to creative briefs (Vision + Ingredients only)
-- All cross-references updated to new doc names
-- Debugging lessons captured: disable MCP before breaking changes, stop-and-debug after 2 failures
-- QUICKSTART.md updated to v1.5.9, IMPROVEMENTS.md #32 corrected
+- Unified API compat layer in `OctaneGrpcClientBase.callMethod()` — one code path for web UI and MCP
+- Bool revert fix: explicit `evaluate: false` + `ApiChangeManager.update()` flush (matches web UI)
+- No deferred batching — `evaluate: true` on every call, stale state causes wrong data on wire
+- Glass metal scene verified end-to-end via MCP (all material types + bool attrs work)
+- Full doc purge: all docs updated to reflect unified compat, stale refs removed
 
-### TODO for Next Session
+### TODO for This Session
 
-1. Complete glass metal recipe materials (floor glossy, gold glossy, glass specular, red diffuse) — scene handles exist in summary
-2. See `docs/project/IMPROVEMENTS.md` for remaining backlog (32 items)
-3. Custom tooltip component (yellow Octane-style, not native browser `title=`)
+1. **MCP focus** — continue MCP work (user's direction)
+2. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
+3. Custom tooltip component (#2 in backlog)
 4. File → Recent Projects menu
+
+**Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
 
 For all known problems and workarounds (web + MCP), see `docs/mcp/TROUBLESHOOTING.md`.
 
@@ -120,33 +117,29 @@ NEVER kill Octane while servers are running. NEVER start servers before Octane i
 
 ### Crash Prevention
 
-1. **NEVER `evaluate:false`** — always evaluate immediately. Deferred batches crash Octane.
-2. **NEVER parallel `create_node`** — sequential only. 4× simultaneous = ECONNRESET.
-3. **Primitive type 18 (Quad) crashes Octane** — use flat Box (scale Y≈0.001) or quad.obj.
-4. **`restart_render` was REMOVED** — it crashed Octane. Use `start_render` (keeps render live).
-5. **`reset_project` pops blocking dialog** — `save_project` to a temp path first, or use delete-all-nodes method.
-6. **Bad A_FILENAME pops Octane dialog** — blocks gRPC for 30s. Use valid absolute paths only.
+1. **`reset_project` pops blocking dialog** — `save_project` to a temp path first, or use delete-all-nodes method.
+2. **Bad A_FILENAME pops Octane dialog** — blocks gRPC for 30s. Use valid absolute paths only.
+3. **nodeInfo on certain type IDs crashes Octane** — IDs `[0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]` cause ECONNRESET. Never call `nodeInfo`/`create_node` with these. Already skipped in `scripts/fetch-api-cache.js`.
 
 ### Connection Gotchas (silent failures — no error, just doesn't work)
 
-7. **RT geometry: use `pin_index: 3`** — `pin_id: 59` silently fails.
-8. **Mesh material: use `pin_index: 0`** — `pin_id: 30` silently fails.
-9. **Geo group inputs: use `pin_index: N` (0-based)** — `pin_name: "Input N"` silently fails.
-10. **Geo group needs `A_PIN_COUNT` (attr 113) set BEFORE connecting children** — fresh groups have 0 pins.
-11. **Always verify connections** — `get_node_info(RT)` → check pins 1, 3, 6 have `connected_handle != 0`. Never trust `success:true` alone.
+3. **RT geometry: use `pin_index: 3`** — `pin_id: 59` silently fails.
+4. **Mesh material: use `pin_index: 0`** — `pin_id: 30` silently fails.
+5. **Can't `connectTo` internal (auto-created) child pins** — silently fails. Auto-created children (env, camera, kernel on RT) are internal nodes. To replace: create a standalone node and connect it to the parent pin. See SDK `ApiNode::createInternal()`.
+6. **Always verify connections** — `get_node_info(RT)` → check pins 1, 3, 6 have `connected_handle != 0`. Never trust `success:true` alone.
 
 ### Render Pipeline
 
-12. **`start_render` does NOT refresh geometry** — after connections, call `update_scene()` THEN `set_camera`. Both required.
-13. **DOF is ON by default** (aperture=0.893) — disable immediately: RT→pin0(camera)→pin14(aperture)→set value to 0.
-14. **Emission efficiency defaults to 0.025** — set to 1.0 or lights will be 40× dimmer than expected.
+7. **`start_render` does NOT evaluate the scene** — any evaluated change upstream of the RT triggers a refresh (connect with evaluate:true, update_scene, set_camera, set_attribute). `start_render` just renders the current state.
+8. **DOF is ON by default** (aperture=0.893) — disable immediately: RT→pin0(camera)→pin14(aperture)→set value to 0.
+9. **Emission efficiency defaults to 0.025** — set to 1.0 or lights will be 40× dimmer than expected.
 
 ### Workflow Gates
 
-15. **Plan the frame BEFORE creating nodes** — know camera position, object positions, depth formation. If you can't state the camera position, you don't have a plan.
-16. **Render after every object** — `save_render` → Read PNG → evaluate. Never batch multiple objects without checking.
-17. **Disable MCP server before making MCP code changes** — it auto-starts with Claude Code and will crash Octane with broken calls.
-18. **After 2 failures of the same kind, STOP** — don't add retries or pacing. Step back, list alternatives, try a different approach entirely.
+10. **Plan the frame BEFORE creating nodes** — know camera position, object positions, depth formation. If you can't state the camera position, you don't have a plan.
+11. **Render after every object** — `save_render` → Read PNG → evaluate. Never batch multiple objects without checking.
+12. **Disable MCP server before making MCP code changes** — it auto-starts with Claude Code and will crash Octane with broken calls.
+13. **After 2 failures of the same kind, STOP** — don't add retries or pacing. Step back, list alternatives, try a different approach entirely.
 
 ### Key Values (don't hallucinate — look up the rest in `docs/mcp/REFERENCE.md`)
 
@@ -159,9 +152,9 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.0.0
+- **Version**: 2.1.0
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
-- **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive type 18 crashes)
+- **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
 - **MCP server**: 27 tools, API cache, incremental webapp sync
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)

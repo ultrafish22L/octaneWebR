@@ -907,7 +907,7 @@ export function octaneGrpcPlugin(): Plugin {
               // Unified parameter transforms (shared with Express server)
               params = transformObjectPtrParams(service, method, params);
 
-              const isHighFreq = method === 'getByAttrID' || method === 'getValueByAttrID';
+              const isHighFreq = method === 'getValueByAttrID';
               // DEBUG: log mutations (set*, create*, destroy, update, connect, disconnect, etc.)
               const isMutation =
                 method.startsWith('set') ||

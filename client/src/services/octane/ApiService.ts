@@ -5,8 +5,7 @@
 
 import { getObjectTypeForService, createObjectPtr } from '../../constants/OctaneProtocol';
 import { BaseService } from './BaseService';
-import { Logger, LogLevel } from '../../utils/Logger';
-import { getCompatibleMethodName, transformRequestParams } from '../../config/apiVersionConfig';
+import { Logger } from '../../utils/Logger';
 
 /** Default timeout for API calls (ms). Prevents zombie requests from accumulating.
  *  60s allows for slow scene tree operations on large scenes. */
@@ -125,16 +124,11 @@ export class ApiService extends BaseService {
     params: Record<string, unknown> = {},
     timeoutMs?: number
   ): Promise<ApiCallResult> {
-    // Apply API version compatibility: translate method name if needed
-    const compatibleMethod = getCompatibleMethodName(service, method);
+    // Method names are always Beta 2 (e.g. 'setValueByAttrID').
+    // API version translation happens in OctaneGrpcClientBase.callMethod().
+    const url = `${this.serverUrl}/api/grpc/${service}/${method}`;
 
-    if (method !== compatibleMethod) {
-      Logger.debugV(() => `API Compatibility: ${service}.${method} → ${compatibleMethod}`);
-    }
-
-    const url = `${this.serverUrl}/api/grpc/${service}/${compatibleMethod}`;
-
-    Logger.api(service, compatibleMethod, handle);
+    Logger.api(service, method, handle);
 
     /**
      * Request body construction follows Octane's gRPC conventions:
@@ -158,21 +152,9 @@ export class ApiService extends BaseService {
     }
 
     if (params && Object.keys(params).length > 0) {
-      // Apply parameter transformation if needed for API version compatibility
-      const transformedParams = transformRequestParams(service, method, params);
-
-      // Log if parameters were transformed (guarded to avoid JSON.stringify on hot paths)
-      if (Logger.getLevel() >= LogLevel.DEBUGV) {
-        const paramsChanged = JSON.stringify(params) !== JSON.stringify(transformedParams);
-        if (paramsChanged) {
-          Logger.debugV(`API Compatibility: Parameter transformation applied`);
-          Logger.debugV(`   Original:`, params);
-          Logger.debugV(`   Transformed:`, transformedParams);
-        }
-      }
-
-      body = { ...body, ...transformedParams };
-      Logger.debugV('Added params:', transformedParams);
+      // Param transforms (API version compat) happen in OctaneGrpcClientBase.callMethod()
+      body = { ...body, ...params };
+      Logger.debugV('Added params:', params);
     }
 
     Logger.debugV(() => `Request body: ${JSON.stringify(body)}`);

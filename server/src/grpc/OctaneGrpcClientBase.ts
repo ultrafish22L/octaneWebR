@@ -12,8 +12,9 @@ import path from 'path';
 import * as fs from 'fs';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getProtoDir } = require('../../../api-version.config.js') as {
+const { getProtoDir, USE_ALPHA5_API } = require('../../../api-version.config.js') as {
   getProtoDir: () => string;
+  USE_ALPHA5_API: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -23,6 +24,88 @@ const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS }
     PROTO_LOADER_OPTIONS: Record<string, unknown>;
     SERVICE_NAMESPACE_PATTERNS: string[];
   };
+
+// ========== API Version Compatibility Layer ==========
+// Single source of truth for method name + param transforms.
+// Both web UI (via vite plugin) and MCP (via OctaneMcpClient) flow through
+// callMethod() below, so everyone gets the same compat handling automatically.
+
+/** Beta 2 → Alpha 5 method name mappings */
+const METHOD_NAME_MAP: Record<string, string> = {
+  // ApiNode methods
+  getPinValueByPinID: 'getPinValue',
+  setPinValueByPinID: 'setPinValue',
+  // ApiItem methods
+  setValueByAttrID: 'setByAttrID',
+  getValueByAttrID: 'getByAttrID',
+  setValueByIx: 'setByIx',
+  getValueByIx: 'getByIx',
+  setValueByName: 'setByName',
+  getValueByName: 'getByName',
+};
+
+/**
+ * Translate a Beta 2 method name to the current API version's equivalent.
+ * Callers should always use Beta 2 names; this handles the rest.
+ */
+export function getCompatibleMethodName(methodName: string): string {
+  if (!USE_ALPHA5_API) return methodName;
+  return METHOD_NAME_MAP[methodName] ?? methodName;
+}
+
+/**
+ * Transform request parameters for API version compatibility.
+ * Called with the ORIGINAL (Beta 2) method name, before method name translation.
+ */
+export function transformRequestParams(
+  methodName: string,
+  params: Record<string, unknown>
+): Record<string, unknown> {
+  if (!USE_ALPHA5_API) return params;
+
+  // Pin value methods: Beta 2 uses pin_id/typed values, Alpha 5 uses id/generic value
+  if (methodName === 'getPinValueByPinID' || methodName === 'setPinValueByPinID') {
+    const transformed: Record<string, unknown> = { ...params };
+
+    if ('pin_id' in transformed) {
+      transformed.id = transformed.pin_id;
+      delete transformed.pin_id;
+    }
+
+    if ('expected_type' in transformed) {
+      delete transformed.expected_type;
+    }
+
+    // Typed value fields → generic 'value'
+    const valueFields = [
+      'bool_value',
+      'int_value',
+      'int2_value',
+      'int3_value',
+      'int4_value',
+      'long_value',
+      'long2_value',
+      'float_value',
+      'float2_value',
+      'float3_value',
+      'float4_value',
+      'string_value',
+    ];
+    for (const field of valueFields) {
+      if (field in transformed) {
+        transformed.value = transformed[field];
+        delete transformed[field];
+        break;
+      }
+    }
+
+    return transformed;
+  }
+
+  // setValueByAttrID / getValueByAttrID: no param transforms needed
+  // Both Alpha 5 and Beta 2 use identical parameter structures.
+  return params;
+}
 
 export interface GrpcCallOptions {
   timeout?: number;
@@ -211,6 +294,12 @@ export class OctaneGrpcClientBase {
 
   /**
    * Invoke a gRPC method. Returns the deserialized response.
+   *
+   * Callers should always use Beta 2 method names (e.g. 'setValueByAttrID').
+   * This method handles API version translation automatically:
+   * 1. transformRequestParams() — adjusts param structure if needed
+   * 2. getCompatibleMethodName() — translates to current API version's method name
+   * 3. getService()[method]() — makes the actual gRPC call
    */
   async callMethod(
     serviceName: string,
@@ -218,14 +307,21 @@ export class OctaneGrpcClientBase {
     params: any = {},
     options: GrpcCallOptions = {}
   ): Promise<any> {
+    // API version compat: transform params first (uses original method name),
+    // then translate the method name for the wire call
+    const compatParams = transformRequestParams(methodName, params);
+    const compatMethod = getCompatibleMethodName(methodName);
+
     const service = this.getService(serviceName);
-    const method = service[methodName];
+    const method = service[compatMethod];
 
     if (!method || typeof method !== 'function') {
-      throw new Error(`Method ${methodName} not found in service ${serviceName}`);
+      throw new Error(
+        `Method ${compatMethod} not found in service ${serviceName} (from ${methodName})`
+      );
     }
 
-    const request = Object.keys(params).length === 0 ? {} : params;
+    const request = Object.keys(compatParams).length === 0 ? {} : compatParams;
     const metadata = options.metadata || new grpc.Metadata();
     const deadline = Date.now() + (options.timeout || 30000);
 
@@ -300,8 +396,9 @@ const OBJECT_PTR_REMAPPINGS: ObjectPtrRemapping[] = [
     exclusive: true,
   },
   // ApiItem value methods: objectPtr → item_ref
+  // Use Beta 2 names — callMethod() translates before reaching here
   {
-    methods: ['getValueByAttrID', 'setValueByAttrID', 'getValue', 'getByAttrID', 'setByAttrID'],
+    methods: ['getValueByAttrID', 'setValueByAttrID', 'getValue'],
     field: 'item_ref',
   },
   // ApiNode pin value methods: objectPtr → item_ref (apinodesystem_7.proto)

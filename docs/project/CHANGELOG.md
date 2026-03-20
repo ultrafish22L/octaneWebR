@@ -4,6 +4,20 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.0] - 2026-03-19
+
+### Changed - Unified API Compat Layer
+
+- **Single compat path**: Moved method name translation + param transforms into `OctaneGrpcClientBase.callMethod()`. Both web UI and MCP now share one code path — no duplicate compat logic.
+- **Bool revert fix**: MCP `set_attribute` now sends explicit `evaluate: false` then flushes via `ApiChangeManager.update()`, matching web UI's `ItemService.setParameterValue()` pattern. Fixes bool values reverting after set.
+- **No deferred batching**: `evaluate: true` (default) on every call. Batching with `evaluate: false` causes stale Octane state.
+- **Removed**: `getCompatibleMethodName()`, `transformRequestParams()`, `METHOD_NAME_MAP` from `apiVersionConfig.ts` (moved to base)
+- **Removed**: Compat calls from `ApiService.callApi()` (base handles translation)
+- **Removed**: Hardcoded Alpha 5 method names from MCP tools (`attribute.ts`, `node.ts`)
+- **Verified**: Glass metal scene built end-to-end via MCP, all material types + bool attributes confirmed working
+
+---
+
 ## [2.0.0] - 2026-03-19
 
 ### Changed - Doc Consolidation + MCP Integration Test
@@ -146,4 +160,4 @@ Production-ready release with:
 ---
 
 **Status**: Active Development
-**Last Updated**: 2026-03-07
+**Last Updated**: 2026-03-19

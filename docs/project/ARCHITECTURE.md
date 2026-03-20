@@ -20,7 +20,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (27 tools, st
 
 **MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 27 tools for scene building, camera, render, nodes, and attributes. Built with esbuild, has its own `package.json`.
 
-**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, and method invocation. Used by both the Vite plugin and MCP server via composition.
+**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, and API version compatibility translation. All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
 
 ## Directory Structure
 
@@ -92,11 +92,17 @@ Services emit events for UI sync: `connection:changed`, `scene:loaded`, `node:se
 
 ```
 api-version.config.js
-  ├──> vite-plugin-octane-grpc.ts (server side, CommonJS require)
-  └──> client/src/config/apiVersionImport.ts (client side)
+  ├──> OctaneGrpcClientBase.ts (compat layer — method name + param translation)
+  ├──> vite-plugin-octane-grpc.ts (server side, proto dir selection)
+  └──> client/src/config/apiVersionConfig.ts (client side, UI display only)
 ```
 
-Alpha 5 transforms handle API differences: `getPinValueByPinID` becomes `getPinValue`, `pin_id` becomes `id`, typed values become generic `value`.
+**Unified compat layer (v2.1.0):** All callers use Beta 2 method names. `OctaneGrpcClientBase.callMethod()` handles API version translation before the gRPC wire call:
+
+1. `transformRequestParams()` — adjusts param structure (e.g. `pin_id` → `id`, typed values → generic `value`)
+2. `getCompatibleMethodName()` — translates method name (e.g. `setValueByAttrID` → `setByAttrID`)
+
+Both the web UI (via HTTP → Vite plugin → base) and MCP (via OctaneMcpClient → base) share this single code path. No duplicate compat logic anywhere.
 
 ## Key Components
 

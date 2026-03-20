@@ -36,12 +36,12 @@ For boss demos and presentations. Maximum visual impact per second.
 
 ### SPEED (Batch Mode)
 
-For testing and iteration. Minimize round-trips.
+For testing and iteration. Minimize overhead.
 
 - Create ALL nodes quickly (no renders between)
-- Set ALL attributes (`evaluate:true`, the default)
-- Wire ALL chains (`evaluate:true`)
-- `start_render` --> `set_camera` --> `save_render`
+- Set ALL attributes — `evaluate: true` (default) on every call. Never batch with `evaluate: false` — it causes stale Octane state where subsequent calls operate against a scene that doesn't reflect prior changes.
+- Wire ALL connections — `evaluate: true` on every call.
+- `start_render` → `set_camera` → `save_render`
 - Single render at end
 
 ---

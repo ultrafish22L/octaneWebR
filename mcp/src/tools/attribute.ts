@@ -7,9 +7,6 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { USE_ALPHA5_API } = require('../../../api-version.config.js');
-
 // AttrType enum values (from OctaneProtocol.ts)
 const AT_BOOL = 1;
 const AT_INT = 3;
@@ -77,8 +74,9 @@ function buildValueParams(value: any, expectedType: number): Record<string, any>
 }
 
 export function registerAttributeTools(server: McpServer, client: OctaneMcpClient) {
-  const getMethod = USE_ALPHA5_API ? 'getByAttrID' : 'getValueByAttrID';
-  const setMethod = USE_ALPHA5_API ? 'setByAttrID' : 'setValueByAttrID';
+  // Always use Beta 2 method names — OctaneGrpcClientBase.callMethod() translates
+  const getMethod = 'getValueByAttrID';
+  const setMethod = 'setValueByAttrID';
 
   server.tool(
     'get_attribute',
@@ -124,29 +122,23 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .boolean()
         .default(true)
         .describe(
-          'Trigger scene evaluation after setting. KEEP TRUE (default) — deferred batching (evaluate:false) has caused crashes. Only use false for non-structural attrs like transform, then call update_scene.'
+          'Trigger scene evaluation after setting. KEEP TRUE (default) — calls ApiChangeManager.update() to flush changes. Use false to batch multiple sets, then call update_scene.'
         ),
     },
     async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
         const valueParams = buildValueParams(value, expected_type);
-        // Alpha 5 setValueByIDRequest has NO evaluate field — Octane auto-evaluates.
-        // ApiItem.evaluate() is used as a sync barrier after each set to ensure
-        // Octane finishes processing before the next call.
-        // NOTE: Primitive type 18 (Quad) crashes Octane — skip it.
-        // Types 1-17 and 19-23 all work (verified 2026-03-14).
+        // Match web UI pattern: set with evaluate:false, then ApiChangeManager.update()
         await client.callMethod('ApiItem', setMethod, {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
-          expected_type,
           ...valueParams,
+          evaluate: false,
         });
 
         if (evaluate) {
-          // Sync barrier: wait for Octane to finish evaluating this node
-          await client.callMethod('ApiItem', 'evaluate', {
-            objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
-          });
+          // Flush pending changes — same as web UI's ItemService.setParameterValue()
+          await client.callMethod('ApiChangeManager', 'update', {});
           client.resetDeferredEvalCount();
         } else {
           const warning = client.trackDeferredEval();
@@ -155,7 +147,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           }
         }
 
-        return jsonResult({ success: true, handle, attribute_id, value });
+        return jsonResult({ success: true, handle, attribute_id, value: String(value) });
       } catch (error: any) {
         return errorResult(error);
       }

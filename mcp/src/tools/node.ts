@@ -335,10 +335,9 @@ export function registerNodeTools(
               const curCount = Number(extractValue(curResult) ?? 0);
               if (curCount < neededCount) {
                 // A_PIN_COUNT = 113, AT_INT = 3
-                await client.callMethod('ApiItem', 'setByAttrID', {
+                await client.callMethod('ApiItem', 'setValueByAttrID', {
                   objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
                   attribute_id: 113,
-                  expected_type: 3,
                   int_value: neededCount,
                   evaluate: false,
                 });
@@ -430,7 +429,7 @@ export function registerNodeTools(
         // --- Perform the connection ---
         // NOTE: Unlike set_attribute (which always sends evaluate:false then calls
         // ApiChangeManager.update() to avoid double-evaluation crashes specific to
-        // setByAttrID), connect_nodes passes evaluate directly to the gRPC call.
+        // setValueByAttrID), connect_nodes passes evaluate directly to the gRPC call.
         // The connectTo/connectToIx/connectTo1 RPCs don't exhibit the double-eval
         // issue, so the extra round-trip to update() is unnecessary here.
         if (pin_id !== undefined) {
@@ -510,7 +509,7 @@ export function registerNodeTools(
         await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
-          sourceNode: { handle: '0', type: OBJ_API_NODE },
+          sourceNode: { handle: 0, type: OBJ_API_NODE },
           evaluate,
           doCycleCheck: true,
         });

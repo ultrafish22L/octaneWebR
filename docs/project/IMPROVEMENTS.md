@@ -10,45 +10,47 @@ Ordered easy → hard within each section. Done items purged.
 
 ## Medium
 
-| #   | Item                                         | Notes                                                                                           |
-| --- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 2   | Custom tooltip component                     | Native `title=` tooltips can't be styled. Need a `<Tooltip>` wrapper for Octane-style yellow bg |
-| 3   | Extract VectorInput component                | Pull out of ParameterControl.tsx (1028 lines)                                                   |
-| 4   | Split useMouseInteraction into focused hooks | 500+ line useEffect → orbit/pan/zoom/pick hooks                                                 |
-| 5   | Extract shared constants to shared location  | Fix MCP cross-boundary imports from client/src                                                  |
-| 6   | Add gRPC response interfaces                 | Top 10 response shapes, typed at service boundaries                                             |
-| 8   | Inspector doesn't update on MCP changes      | Re-fetch on selected node changes                                                               |
-| 9   | connect_nodes partial re-render              | notifyWebapp works but may need update_scene + set_camera for geometry changes                  |
-| 10  | MCP-created nodes pile at (0,0)              | Auto-arrange or position hints in node graph                                                    |
-| 11  | load_project wait-for-ready                  | Replace hardcoded 2s sleep with polling                                                         |
-| 12  | Track auto-created children in cache         | node.ts:199 — children fall through to gRPC                                                     |
-| 13  | Audit FILE_NODE_TYPES via offline API        | Determine which types actually need file paths                                                  |
-| 14  | Export render passes dialog rework           | File name input instead of "select folder"                                                      |
-| 15  | FileBrowserDialog file type filter dropdown  | User-facing dropdown for file types                                                             |
-| 16  | Modal dialog stacking policy                 | Add modal manager or single-modal z-index                                                       |
-| 17  | Toolbar button style unification             | Audit all toolbar buttons, unify styles                                                         |
-| 18  | Suppress edits during sync                   | Disable user edits while scene is syncing                                                       |
-| 19  | PreferencesDialog wiring                     | Connect stub to ApiProjectManager.applicationPreferences()                                      |
-| 20  | Save render passes: multi-pass export        | Discover all passes, export with pass name + extension                                          |
-| 21  | React 19 upgrade                             | @xyflow/react 12.x and react-error-boundary 6.x support R19                                     |
+| #   | Item                                                   | Notes                                                                                                                                                                                                                              |
+| --- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2   | Custom tooltip component                               | Native `title=` tooltips can't be styled. Need a `<Tooltip>` wrapper for Octane-style yellow bg                                                                                                                                    |
+| 3   | Extract VectorInput component                          | Pull out of ParameterControl.tsx (1028 lines)                                                                                                                                                                                      |
+| 4   | Split useMouseInteraction into focused hooks           | 500+ line useEffect → orbit/pan/zoom/pick hooks                                                                                                                                                                                    |
+| 5   | Extract shared constants to shared location            | Fix MCP cross-boundary imports from client/src                                                                                                                                                                                     |
+| 6   | Add gRPC response interfaces                           | Top 10 response shapes, typed at service boundaries                                                                                                                                                                                |
+| 8   | Inspector doesn't update on MCP changes                | Re-fetch on selected node changes                                                                                                                                                                                                  |
+| 9   | connect_nodes partial re-render                        | notifyWebapp works but may need update_scene + set_camera for geometry changes                                                                                                                                                     |
+| 10  | MCP-created nodes pile at (0,0)                        | Auto-arrange or position hints in node graph                                                                                                                                                                                       |
+| 11  | load_project wait-for-ready                            | Replace hardcoded 2s sleep with polling                                                                                                                                                                                            |
+| 12  | Track auto-created children in cache                   | node.ts:199 — children fall through to gRPC                                                                                                                                                                                        |
+| 13  | Audit FILE_NODE_TYPES via offline API                  | Determine which types actually need file paths                                                                                                                                                                                     |
+| 14  | Export render passes dialog rework                     | File name input instead of "select folder"                                                                                                                                                                                         |
+| 15  | FileBrowserDialog file type filter dropdown            | User-facing dropdown for file types                                                                                                                                                                                                |
+| 16  | Modal dialog stacking policy                           | Add modal manager or single-modal z-index                                                                                                                                                                                          |
+| 17  | Toolbar button style unification                       | Audit all toolbar buttons, unify styles                                                                                                                                                                                            |
+| 18  | Suppress edits during sync                             | Disable user edits while scene is syncing                                                                                                                                                                                          |
+| 19  | PreferencesDialog wiring                               | Connect stub to ApiProjectManager.applicationPreferences()                                                                                                                                                                         |
+| 20  | Save render passes: multi-pass export                  | Discover all passes, export with pass name + extension                                                                                                                                                                             |
+| 21  | React 19 upgrade                                       | @xyflow/react 12.x and react-error-boundary 6.x support R19                                                                                                                                                                        |
+| 33  | Fix pin referencing in connect_nodes                   | pin_id silently fails on RT geometry (59) and mesh material (30). Make connect_nodes always resolve to pin_index internally so callers can't hit silent failures. Should never be an issue.                                        |
+| 34  | Guard against crash type IDs in MCP tools              | `create_node` and `list_node_types` should reject known crash IDs `[0, 116, 408, 40000, 50000, 50106-8, 50136-7]`. Also catch silent failures (pin_id misuse) and return proper errors instead of false `success:true`.            |
+| 35  | Expose all pins in get_node_info                       | Currently only returns connected pins. gRPC `nodePinInfo` already returns all pins — use it to show unconnected pins too (e.g. NT_GEO_OBJECT pin 7 subdivision).                                                                   |
+| 36  | Add createInternal support to MCP connect_nodes        | `connectTo` silently fails on internal (auto-created) child pins. Need `createInternal`/`createInternalIx` gRPC call to create nodes inside pins. See SDK `ApiNode::createInternal()`. Would fix medium-on-env and similar issues. |
+| 37  | Use createInternal for node inspector dropdown changes | When user changes a pin's node type via inspector dropdown, use `createInternal()` instead of create+connect. This is the correct API for replacing internal child nodes.                                                          |
 
 ## Hard
 
-| #   | Item                                      | Notes                                                       |
-| --- | ----------------------------------------- | ----------------------------------------------------------- |
-| 22  | Automated test suite                      | Vitest — estimateNodeWidth, CacheManager, services          |
-| 23  | execute_batch tool                        | 30x speedup — batch gRPC calls (1.4s gRPC vs 300s thinking) |
-| 24  | Multi-connect: connect all selected nodes | Rewrite edge connection logic                               |
-| 25  | Node Inspector for grouped nodes          | Group-specific rendering                                    |
-| 26  | Viewport axis rotation                    | Axis overlay must rotate with camera orientation (3D math)  |
-| 27  | Animation bar below render bar            | Full new component + Octane API                             |
-| 28  | Event queuing during load                 | Queue events from async loading, don't emit synchronously   |
-| 29  | Progressive scene loading                 | Load first-level then connections                           |
-| 30  | Better graph arranging                    | Sugiyama or force-directed layout                           |
+| #   | Item                                      | Notes                                                                                                                              |
+| --- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 22  | Automated test suite                      | Vitest — estimateNodeWidth, CacheManager, services                                                                                 |
+| 23  | ~~execute_batch tool~~                    | **Removed** — batching with deferred eval causes stale Octane state. One call, one eval. Bottleneck is AI thinking time, not gRPC. |
+| 24  | Multi-connect: connect all selected nodes | Rewrite edge connection logic                                                                                                      |
+| 25  | Node Inspector for grouped nodes          | Group-specific rendering                                                                                                           |
+| 26  | Viewport axis rotation                    | Axis overlay must rotate with camera orientation (3D math)                                                                         |
+| 27  | Animation bar below render bar            | Full new component + Octane API                                                                                                    |
+| 28  | Event queuing during load                 | Queue events from async loading, don't emit synchronously                                                                          |
+| 29  | Progressive scene loading                 | Load first-level then connections                                                                                                  |
+| 30  | Better graph arranging                    | Sugiyama or force-directed layout                                                                                                  |
 
 ## Octane API Bugs (not fixable by us)
 
-| #   | Item                                    | Notes                                                                                          |
-| --- | --------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 31  | Quad primitive (type 18) crashes Octane | Workaround: use quad.obj or flat Box                                                           |
-| 32  | Primitive type change crashes Octane    | Type 18 (Quad) crashes. Types 1-17, 19-23 safe. Workaround: flat Box or NT_GEO_MESH + quad.obj |
+_Items #31 and #32 removed — disproven, see `DISPROVEN_ISSUES.md`._
