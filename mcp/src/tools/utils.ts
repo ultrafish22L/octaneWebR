@@ -2,6 +2,30 @@
  * Shared utilities for MCP tool modules.
  */
 
+import path from 'path';
+
+// ── File path validation ─────────────────────────────────────────────
+
+/**
+ * Validate a file path against OCTANE_FILE_ROOTS.
+ * Returns null if valid, or an error message string if blocked.
+ * Set OCTANE_FILE_ROOTS=* to allow all paths.
+ */
+export function validateFilePath(filePath: string): string | null {
+  const rootsEnv = process.env.OCTANE_FILE_ROOTS || 'C:\\otoyla';
+  const roots = rootsEnv.split(',').map(r => path.resolve(r.trim()));
+
+  // Wildcard = unrestricted
+  if (roots.length === 1 && roots[0] === path.resolve('*')) return null;
+
+  const resolved = path.resolve(filePath);
+  const allowed = roots.some(root => resolved.startsWith(root + path.sep) || resolved === root);
+  if (!allowed) {
+    return `Path "${filePath}" is outside allowed roots (${roots.join(', ')}). Set OCTANE_FILE_ROOTS env var to allow.`;
+  }
+  return null;
+}
+
 // ── Result helpers ───────────────────────────────────────────────────
 
 export function jsonResult(data: unknown) {

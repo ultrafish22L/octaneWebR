@@ -124,13 +124,54 @@ export function registerSceneTools(
 ) {
   server.tool(
     'get_scene_tree',
-    'Get the full scene node hierarchy. Returns handles, names, types, and children for all nodes. Use max_depth to limit traversal depth for large scenes.',
-    { max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)') },
-    async ({ max_depth }) => {
+    'Get full scene hierarchy. Returns handle, name, type, isGraph, children for all nodes. Populates internal scene cache for faster subsequent lookups. Use max_depth to limit traversal for large scenes.',
+    {
+      max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)'),
+      compact: z
+        .boolean()
+        .default(false)
+        .describe(
+          'If true, returns minimal [handle, name, typeName] tuples instead of full objects'
+        ),
+    },
+    async ({ max_depth, compact }) => {
       try {
         const rootHandle = await client.getRootNodeGraph();
 
         const tree = await traverseGraph(client, rootHandle, 0, max_depth);
+
+        // Populate scene cache from traversal results
+        const populateCache = (nodes: SceneTreeNode[], parentHandle?: number) => {
+          const childHandles: number[] = [];
+          for (const node of nodes) {
+            // Add node to cache (typeName from ApiCache if available)
+            const typeName = cache?.getNodeTypeName(node.type) ?? `TYPE_${node.type}`;
+            client.sceneCache.addNode(node.handle, node.name, typeName, node.type);
+            childHandles.push(node.handle);
+            if (node.children) {
+              populateCache(node.children, node.handle);
+            }
+          }
+          if (parentHandle !== undefined) {
+            client.sceneCache.setChildren(parentHandle, childHandles);
+          }
+        };
+        populateCache(tree, rootHandle);
+        client.sceneCache.markPopulated();
+
+        if (compact) {
+          // Flatten tree to minimal tuples: [handle, name, typeName]
+          const flatten = (nodes: SceneTreeNode[]): Array<[number, string, string]> => {
+            const result: Array<[number, string, string]> = [];
+            for (const n of nodes) {
+              const typeName = cache?.getNodeTypeName(n.type) ?? `TYPE_${n.type}`;
+              result.push([n.handle, n.name, typeName]);
+              if (n.children) result.push(...flatten(n.children));
+            }
+            return result;
+          };
+          return jsonResult({ root_handle: rootHandle, nodes: flatten(tree), count: tree.length });
+        }
         return jsonResult({ root_handle: rootHandle, nodes: tree, count: tree.length });
       } catch (error: any) {
         return errorResult(error);
@@ -140,9 +181,15 @@ export function registerSceneTools(
 
   server.tool(
     'get_node_info',
-    'Get detailed information about a specific node including its name, type, and pin connections',
-    { handle: z.number().int().nonnegative().describe('Node handle') },
-    async ({ handle }) => {
+    'Get node details: name, type, all pins with connection status. WARNING: certain internal type IDs crash Octane — never call on handles of unknown type without checking first. Returns pin index, name, type, and connected_handle for each pin. Updates scene cache with discovered connections.',
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+      connected_only: z
+        .boolean()
+        .default(false)
+        .describe('If true, only return pins with connections (non-zero connected_handle)'),
+    },
+    async ({ handle, connected_only }) => {
       try {
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
@@ -162,12 +209,12 @@ export function registerSceneTools(
           pins: [],
         };
 
-        // Try to get node type for cache lookup — check handleToTypeName first to
+        // Try to get node type for cache lookup — check sceneCache first to
         // avoid a redundant ApiNode.type() gRPC call for nodes created via MCP.
         let cachedNodeInfo = null;
         if (cache) {
           try {
-            let nodeTypeName = client.handleToTypeName.get(handle);
+            let nodeTypeName = client.sceneCache.getTypeName(handle);
             if (!nodeTypeName) {
               const nodeTypeResult = await client.callMethod('ApiNode', 'type', {
                 objectPtr: { handle: String(handle), type: OBJ_API_NODE },
@@ -183,7 +230,9 @@ export function registerSceneTools(
               cachedNodeInfo = cache.getNodeType(nodeTypeName);
               if (cachedNodeInfo) {
                 info.nodeType = nodeTypeName;
-                client.handleToTypeName.set(handle, nodeTypeName);
+                // Update scene cache with discovered type
+                const typeId = cache.getNodeTypeId(nodeTypeName) ?? 0;
+                client.sceneCache.addNode(handle, String(info.name), nodeTypeName, typeId);
               }
             }
           } catch {
@@ -332,6 +381,18 @@ export function registerSceneTools(
           // Node may not support pins
         }
 
+        // Update scene cache with discovered connections
+        for (const pin of info.pins) {
+          if (pin.connected_handle && pin.connected_handle !== 0) {
+            client.sceneCache.setConnection(handle, pin.index, pin.connected_handle);
+          }
+        }
+
+        // Filter to connected pins only if requested
+        if (connected_only) {
+          info.pins = info.pins.filter((p: any) => p.connected_handle && p.connected_handle !== 0);
+        }
+
         return jsonResult(info);
       } catch (error: any) {
         return errorResult(error);
@@ -341,7 +402,7 @@ export function registerSceneTools(
 
   server.tool(
     'update_scene',
-    'Flush pending changes to the render engine. Call this after a batch of set_attribute and/or connect_nodes calls (which defer evaluation by default). This is the equivalent of ApiChangeManager.update() — it tells Octane to re-evaluate all dirty nodes and update the render.',
+    'Flush pending changes (ApiChangeManager.update()). Call after batched set_attribute/connect_nodes with evaluate:false. WARNING: batching many deferred changes has crashed complex scenes — prefer evaluate:true (default) for safety.',
     {},
     async () => {
       try {

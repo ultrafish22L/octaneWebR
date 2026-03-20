@@ -92,7 +92,7 @@ Calling `nodeInfo(type)` with certain type IDs kills Octane (ECONNRESET). Tested
 
 ## MCP-Specific Issues
 
-**Architecture note (v2.1.0):** MCP and web UI share the same gRPC interface. Both use Beta 2 method names. `OctaneGrpcClientBase.callMethod()` handles all API version translation (method names + param transforms) — one code path, one compat layer. MCP tools should never use Alpha 5 method names directly.
+**Architecture note (v2.1.1):** MCP and web UI share the same gRPC interface. Both use Beta 2 method names. `OctaneGrpcClientBase.callMethod()` handles all API version translation (method names + param transforms) — one code path, one compat layer. MCP tools should never use Alpha 5 method names directly.
 
 | Problem                                         | Cause                                                                      | Fix                                                                                                                                                                     |
 | ----------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -159,11 +159,11 @@ Use `get_node_info(RT)` after connecting to RT to verify `connected_handle != 0`
 
 ### Log Files
 
-| File                    | Source          | Notes                                          |
-| ----------------------- | --------------- | ---------------------------------------------- |
-| `grpc-debug.log`        | Vite dev plugin | Needs `DEBUG_FILE_LOG = true` in plugin config |
-| `mcp-debug.log`         | MCP server      | All MCP tool calls and responses               |
-| `octaneWebR_client.log` | Browser client  | Client-side logging                            |
+| File                    | Source               | Notes                                                                    |
+| ----------------------- | -------------------- | ------------------------------------------------------------------------ |
+| `grpc-debug.log`        | OctaneGrpcClientBase | On by default (`GRPC_DEBUG_LOG=0` to disable). Logs mutating calls only. |
+| `mcp-debug.log`         | MCP server           | All MCP tool calls and responses                                         |
+| `octaneWebR_client.log` | Browser client       | Client-side logging                                                      |
 
 ### Detecting Crashes
 

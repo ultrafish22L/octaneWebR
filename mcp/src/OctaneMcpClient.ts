@@ -10,6 +10,7 @@
 
 import path from 'path';
 import fs from 'fs';
+import { SceneCache } from './SceneCache';
 
 export const MCP_LOG_PATH = path.resolve(__dirname, '../../mcp-debug.log');
 
@@ -220,8 +221,9 @@ export class OctaneMcpClient {
     deviceNames: Map<number, any>;
   } = { deviceNames: new Map() };
 
-  // Handle-to-type tracking — shared across all tools
-  readonly handleToTypeName = new Map<number, string>();
+  // Scene graph cache — replaces the old handleToTypeName Map.
+  // Tracks nodes, connections, and children for scene awareness.
+  readonly sceneCache = new SceneCache();
 
   // Deferred evaluation tracking — warns when evaluate:false calls pile up.
   // Batching deferred changes + update_scene() crashed a 10-object emissive scene.
@@ -285,10 +287,11 @@ export class OctaneMcpClient {
     return handle;
   }
 
-  /** Clear all session caches (call on load_project / reset_project) */
+  /** Clear all session caches (call on load_project / reset_project / crash) */
   clearRootGraphCache(): void {
     this.rootGraphHandle = null;
-    this.handleToTypeName.clear();
+    this.sceneCache.clear();
+    this.clearDynamicCache();
     this.sessionInfo = { deviceNames: new Map() };
   }
 
@@ -363,6 +366,65 @@ export class OctaneMcpClient {
   /** Get current deferred eval count */
   getDeferredEvalCount(): number {
     return this.deferredEvalCount;
+  }
+
+  // ── Dynamic ApiInfo queries (Tier 2 cache) ─────────────────────────
+  // These query Octane's metadata RPCs and cache the results in memory.
+  // Used when the static ApiCache (Tier 1) doesn't have what we need.
+
+  private dynamicNodeInfo = new Map<string, any>();
+  private dynamicPinInfo = new Map<string, any>();
+  private dynamicAttrInfo = new Map<string, any>();
+  private dynamicCompatTypes = new Map<string, any>();
+
+  /** Get full node type metadata via ApiInfo.nodeInfo (cached after first call) */
+  async queryNodeInfo(nodeType: string): Promise<any> {
+    const cached = this.dynamicNodeInfo.get(nodeType);
+    if (cached) return cached;
+    const result = await this.callMethod('ApiInfo', 'nodeInfo', { nodeType });
+    const info = result?.result ?? result;
+    this.dynamicNodeInfo.set(nodeType, info);
+    return info;
+  }
+
+  /** Get pin metadata via ApiInfo.nodePinInfo (cached after first call) */
+  async queryPinInfo(nodeType: string, pinIx: number): Promise<any> {
+    const key = `${nodeType}:${pinIx}`;
+    const cached = this.dynamicPinInfo.get(key);
+    if (cached) return cached;
+    const result = await this.callMethod('ApiInfo', 'nodePinInfo', { nodeType, pinIx });
+    const info = result?.result ?? result;
+    this.dynamicPinInfo.set(key, info);
+    return info;
+  }
+
+  /** Get attribute metadata via ApiInfo.attributeInfo (cached after first call) */
+  async queryAttributeInfo(nodeType: string, attributeId: number): Promise<any> {
+    const key = `${nodeType}:${attributeId}`;
+    const cached = this.dynamicAttrInfo.get(key);
+    if (cached) return cached;
+    const result = await this.callMethod('ApiInfo', 'attributeInfo', { nodeType, attributeId });
+    const info = result?.result ?? result;
+    this.dynamicAttrInfo.set(key, info);
+    return info;
+  }
+
+  /** Get compatible node/graph types for a pin output type (cached after first call) */
+  async queryCompatibleTypes(pinType: string): Promise<any> {
+    const cached = this.dynamicCompatTypes.get(pinType);
+    if (cached) return cached;
+    const result = await this.callMethod('ApiInfo', 'getCompatibleTypes', { outputType: pinType });
+    const info = result?.result ?? result;
+    this.dynamicCompatTypes.set(pinType, info);
+    return info;
+  }
+
+  /** Clear dynamic cache (called alongside static cache clear) */
+  clearDynamicCache(): void {
+    this.dynamicNodeInfo.clear();
+    this.dynamicPinInfo.clear();
+    this.dynamicAttrInfo.clear();
+    this.dynamicCompatTypes.clear();
   }
 
   async checkHealth(): Promise<boolean> {

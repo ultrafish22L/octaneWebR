@@ -612,7 +612,6 @@ export class NodeService extends BaseService {
 
       await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
         attribute_id: AttributeId.A_PIN_COUNT,
-        expected_type: AttrType.AT_INT,
         int_value: currentCount + 1,
         evaluate: true,
       });
@@ -649,7 +648,6 @@ export class NodeService extends BaseService {
       try {
         await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
           attribute_id: AttributeId.A_INPUT_ACTION,
-          expected_type: AttrType.AT_INT,
           int_value: (pinIdx << 16) | InputAction.DELETE,
           evaluate: true,
         });
@@ -664,7 +662,6 @@ export class NodeService extends BaseService {
         if (currentCount > 0) {
           await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
             attribute_id: AttributeId.A_PIN_COUNT,
-            expected_type: AttrType.AT_INT,
             int_value: currentCount - 1,
             evaluate: true,
           });
@@ -701,7 +698,6 @@ export class NodeService extends BaseService {
 
       await this.apiService.callApi('ApiItem', 'setValueByAttrID', nodeHandle, {
         attribute_id: AttributeId.A_INPUT_ACTION,
-        expected_type: AttrType.AT_INT,
         int_value: (pinIdx << 16) | action,
         evaluate: true,
       });

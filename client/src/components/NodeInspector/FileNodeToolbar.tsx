@@ -4,7 +4,7 @@
  * showing file operations and the currently loaded file path.
  */
 import type { SceneNode } from '../../services/OctaneClient';
-import { AttributeId, AttrType } from '../../constants/OctaneProtocol';
+import { AttributeId } from '../../constants/OctaneProtocol';
 import { Logger } from '../../utils/Logger';
 import { useOctane } from '../../hooks/useOctane';
 import { useFileBrowser } from '../../hooks/useFileBrowser';
@@ -22,7 +22,6 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
     try {
       await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
         attribute_id: AttributeId.A_FILENAME,
-        expected_type: AttrType.AT_STRING,
         string_value: path,
         evaluate: true,
       });
@@ -48,7 +47,6 @@ export function FileNodeToolbar({ node }: FileNodeToolbarProps) {
       // Use A_RELOAD to trigger file reimport, then evaluate to process it
       await client.callApi('ApiItem', 'setValueByAttrID', node.handle, {
         attribute_id: AttributeId.A_RELOAD,
-        expected_type: AttrType.AT_BOOL,
         bool_value: true,
         evaluate: true,
       });

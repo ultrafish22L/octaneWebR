@@ -343,6 +343,7 @@ function AppContent() {
                 onRecenterView={handleRecenterView}
                 onViewportLockChange={viewport.handleViewportLockChange}
                 onPickingModeChange={viewport.handlePickingModeChange}
+                sceneReady={sceneTree.length > 0}
               />
             </ErrorBoundary>
           </section>

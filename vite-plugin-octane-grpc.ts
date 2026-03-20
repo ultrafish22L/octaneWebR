@@ -930,9 +930,7 @@ export function octaneGrpcPlugin(): Plugin {
               }
               // DEBUGV: log all calls with params
               slog.debugV(`${service}.${method}`, JSON.stringify(params).substring(0, 100));
-              if (!isHighFreq) {
-                fileLog(` REQ ${service}.${method} ${JSON.stringify(params)}`);
-              }
+              // REQ/RES file logging moved to OctaneGrpcClientBase.callMethod()
               if (!grpcClient) {
                 res.setHeader('Content-Type', 'application/json');
                 res.statusCode = 503;
@@ -945,15 +943,13 @@ export function octaneGrpcPlugin(): Plugin {
                 if (resStr !== '{}') slog.debug(`  → ${resStr.substring(0, 120)}`);
               }
               slog.debugV(`${service}.${method} →`, JSON.stringify(response).substring(0, 100));
-              if (!isHighFreq) {
-                fileLog(` RES ${service}.${method} ${JSON.stringify(response).substring(0, 500)}`);
-              }
+              // RES file logging moved to OctaneGrpcClientBase.callMethod()
 
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 200;
               res.end(JSON.stringify(response || {}));
             } catch (error: any) {
-              fileLog(` ERR ${service}.${method} ${error.message}`);
+              // ERR file logging moved to OctaneGrpcClientBase.callMethod()
               slog.error(`API error: ${service}.${method}:`, error.message);
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;

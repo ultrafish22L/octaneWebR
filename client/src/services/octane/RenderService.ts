@@ -263,12 +263,13 @@ export class RenderService extends BaseService {
 
   async getViewportResolutionLock(): Promise<boolean> {
     try {
-      const filmSettingsHandle = await this.getFilmSettingsNode();
-      if (!filmSettingsHandle) {
-        return false;
-      }
+      // Guard: RT must exist before querying film settings
+      const rtHandle = await this.getRenderTargetNode();
+      if (!rtHandle) return false;
 
-      // Get boolean value directly using PinId (from OctaneProtocol.PinId)
+      const filmSettingsHandle = await this.getFilmSettingsNode();
+      if (!filmSettingsHandle) return false;
+
       const valueResponse = await this.apiService.callApi(
         'ApiNode',
         'getPinValueByPinID',
@@ -279,11 +280,8 @@ export class RenderService extends BaseService {
         }
       );
       return asBool(valueResponse?.bool_value, false);
-    } catch (error) {
-      Logger.error(
-        'Failed to get viewport resolution lock:',
-        error instanceof Error ? error.message : String(error)
-      );
+    } catch (err) {
+      Logger.debug(() => `getViewportResolutionLock: ${err instanceof Error ? err.message : err}`);
       return false;
     }
   }

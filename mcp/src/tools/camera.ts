@@ -32,7 +32,7 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
 
   server.tool(
     'set_camera',
-    'Set camera position and/or target in world coordinates. At least one of position or target must be provided. Changes are reflected in octaneWebR viewport in real time.',
+    'Set camera position and/or target in world coordinates. Triggers scene evaluation (updates render). At least one of position or target required. Changes reflected in octaneWebR viewport in real time.',
     {
       position: Vec3Schema.optional().describe('Camera position in world coordinates'),
       target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),

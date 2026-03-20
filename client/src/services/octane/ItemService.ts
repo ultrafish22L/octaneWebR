@@ -153,7 +153,6 @@ export class ItemService extends BaseService {
 
     await this.apiService.callApi('ApiItem', 'setValueByAttrID', handle, {
       attribute_id: AttributeId.A_VALUE,
-      expected_type: expectedType,
       [valueField]: formattedValue,
       evaluate: false, // Defer evaluation until ApiChangeManager.update
     });
@@ -172,7 +171,6 @@ export class ItemService extends BaseService {
   async reloadFileNode(handle: string): Promise<void> {
     await this.apiService.callApi('ApiItem', 'setValueByAttrID', handle, {
       attribute_id: AttributeId.A_VALUE,
-      expected_type: AttrType.AT_BOOL,
       bool_value: true,
       evaluate: true,
     });

@@ -2,14 +2,52 @@
  * Shared gRPC Client Base
  *
  * Core gRPC functionality used by both the Vite dev plugin and Express production server.
- * Contains proto loading, service resolution, and method invocation — no logging,
- * no callback handling, no HTTP routing. Consumers wrap via composition.
+ * Contains proto loading, service resolution, method invocation, and optional file logging.
+ * Set GRPC_DEBUG_LOG=1 to log all calls to grpc-debug.log.
  */
 
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import * as fs from 'fs';
+
+// ── gRPC debug file logging ────────────────────────────────────────
+// On by default. Set GRPC_DEBUG_LOG=0 to disable. Logs mutating calls to grpc-debug.log.
+const GRPC_LOG_ENABLED = process.env.GRPC_DEBUG_LOG !== '0';
+let grpcLogStream: fs.WriteStream | null = null;
+
+// Only log mutating calls — skip reads to keep logs usable
+const GRPC_LOG_METHODS = new Set([
+  'create',
+  'destroy',
+  'setByAttrID',
+  'setValueByAttrID',
+  'setByIx',
+  'setValueByIx',
+  'setByName',
+  'setValueByName',
+  'setPinValue',
+  'setPinValueByPinID',
+  'connectTo',
+  'connectTo1',
+  'connectToIx',
+  'disconnectPin',
+  'update',
+  'setPosition',
+]);
+
+function grpcLog(prefix: string, service: string, method: string, data?: any): void {
+  if (!GRPC_LOG_ENABLED) return;
+  if (!GRPC_LOG_METHODS.has(method)) return;
+  if (!grpcLogStream) {
+    const logPath = path.resolve(process.cwd(), 'grpc-debug.log');
+    grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
+    grpcLogStream.write(`=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
+  }
+  const ts = new Date().toISOString().slice(11, 23);
+  const json = data !== undefined ? ' ' + JSON.stringify(data).substring(0, 800) : '';
+  grpcLogStream.write(`[${ts}]  ${prefix} ${service}.${method}${json}\n`);
+}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getProtoDir, USE_ALPHA5_API } = require('../../../api-version.config.js') as {
@@ -32,7 +70,10 @@ const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS }
 
 /** Beta 2 → Alpha 5 method name mappings */
 const METHOD_NAME_MAP: Record<string, string> = {
-  // ApiNode methods
+  // ApiNode pin value methods: Beta 2 → Alpha 5
+  // Alpha 5 proto_old has getPinValue/setPinValue (different request type: objectPtr + id)
+  // Beta 2 has getPinValueByPinID/setPinValueByPinID (item_ref + pin_id + expected_type)
+  // Param transforms in transformRequestParams() handle the field renames.
   getPinValueByPinID: 'getPinValue',
   setPinValueByPinID: 'setPinValue',
   // ApiItem methods
@@ -63,20 +104,30 @@ export function transformRequestParams(
 ): Record<string, unknown> {
   if (!USE_ALPHA5_API) return params;
 
-  // Pin value methods: Beta 2 uses pin_id/typed values, Alpha 5 uses id/generic value
+  // getPinValueByPinID/setPinValueByPinID → getPinValue/setPinValue
+  // Beta 2 uses: item_ref, pin_id, expected_type, typed values (bool_value, int_value, etc.)
+  // Alpha 5 uses: objectPtr, id, no expected_type, generic value
   if (methodName === 'getPinValueByPinID' || methodName === 'setPinValueByPinID') {
     const transformed: Record<string, unknown> = { ...params };
 
+    // item_ref → objectPtr (Alpha 5 field name)
+    if ('item_ref' in transformed) {
+      transformed.objectPtr = transformed.item_ref;
+      delete transformed.item_ref;
+    }
+
+    // pin_id → id
     if ('pin_id' in transformed) {
       transformed.id = transformed.pin_id;
       delete transformed.pin_id;
     }
 
+    // Drop expected_type (Alpha 5 doesn't have it)
     if ('expected_type' in transformed) {
       delete transformed.expected_type;
     }
 
-    // Typed value fields → generic 'value'
+    // Typed value fields → generic 'value' (for set calls)
     const valueFields = [
       'bool_value',
       'int_value',
@@ -325,6 +376,8 @@ export class OctaneGrpcClientBase {
     const metadata = options.metadata || new grpc.Metadata();
     const deadline = Date.now() + (options.timeout || 30000);
 
+    grpcLog('REQ', serviceName, compatMethod, request);
+
     return new Promise((resolve, reject) => {
       method.call(
         service,
@@ -333,8 +386,10 @@ export class OctaneGrpcClientBase {
         { deadline },
         (error: grpc.ServiceError | null, response: any) => {
           if (error) {
+            grpcLog('ERR', serviceName, compatMethod, { code: error.code, message: error.message });
             reject(error);
           } else {
+            grpcLog('RES', serviceName, compatMethod, response);
             resolve(response);
           }
         }

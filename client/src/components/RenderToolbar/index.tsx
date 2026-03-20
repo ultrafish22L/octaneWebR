@@ -38,6 +38,7 @@ interface RenderToolbarProps {
       | 'renderRegion'
       | 'filmRegion'
   ) => void;
+  sceneReady?: boolean;
 }
 
 export const RenderToolbar = React.memo(function RenderToolbar({
@@ -49,6 +50,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
   onRecenterView,
   onViewportLockChange,
   onPickingModeChange,
+  sceneReady = false,
 }: RenderToolbarProps) {
   const { connected, client } = useOctane();
 
@@ -62,7 +64,7 @@ export const RenderToolbar = React.memo(function RenderToolbar({
     setGPUStatsPosition,
   } = useGPUData({ connected, client });
 
-  const { state, setState } = useRenderSettings({ connected, client });
+  const { state, setState } = useRenderSettings({ connected, client, sceneReady });
 
   const { applyRenderPriority, applyCameraPreset } = useCameraPresets({
     client,

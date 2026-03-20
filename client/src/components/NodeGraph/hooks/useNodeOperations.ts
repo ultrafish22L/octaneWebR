@@ -17,7 +17,7 @@ import { Node } from '@xyflow/react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { OctaneNodeData } from '../OctaneNode';
-import { AttributeId, AttrType } from '../../../constants/OctaneProtocol';
+import { AttributeId } from '../../../constants/OctaneProtocol';
 import { octaneCacheService } from '../../../services/OctaneCacheService';
 import { EditCommands } from '../../../commands/EditCommands';
 import { Logger } from '../../../utils/Logger';
@@ -138,7 +138,6 @@ export function useNodeOperations({
       // Then set the file path on the created node
       await client.callApi('ApiItem', 'setValueByAttrID', createdHandle, {
         attribute_id: AttributeId.A_FILENAME,
-        expected_type: AttrType.AT_STRING,
         string_value: path,
         evaluate: true,
       });

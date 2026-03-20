@@ -43,9 +43,14 @@ export interface ToolbarState {
 interface UseRenderSettingsProps {
   connected: boolean;
   client: OctaneClient;
+  sceneReady?: boolean;
 }
 
-export function useRenderSettings({ connected, client }: UseRenderSettingsProps): {
+export function useRenderSettings({
+  connected,
+  client,
+  sceneReady = false,
+}: UseRenderSettingsProps): {
   state: ToolbarState;
   setState: Dispatch<SetStateAction<ToolbarState>>;
 } {
@@ -109,11 +114,6 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
         const realTimeValue = await client.getRealTime();
         setState(prev => ({ ...prev, realTimeMode: realTimeValue }));
         Logger.debug('Real-time mode initialized:', realTimeValue ? 'ON' : 'OFF');
-
-        // Initialize viewport resolution lock
-        const resolutionLock = await client.getViewportResolutionLock();
-        setState(prev => ({ ...prev, viewportResolutionLock: resolutionLock }));
-        Logger.debug('Viewport resolution lock initialized:', resolutionLock ? 'ON' : 'OFF');
       } catch (err) {
         Logger.error('Failed to initialize render settings:', err);
       }
@@ -121,6 +121,22 @@ export function useRenderSettings({ connected, client }: UseRenderSettingsProps)
 
     initializeRenderSettings();
   }, [connected, client]);
+
+  // RT-dependent settings — only query after scene tree is loaded (RT exists)
+  useEffect(() => {
+    if (!connected || !sceneReady) return;
+
+    const initRTSettings = async () => {
+      try {
+        const resolutionLock = await client.getViewportResolutionLock();
+        setState(prev => ({ ...prev, viewportResolutionLock: resolutionLock }));
+        Logger.debug('Viewport resolution lock initialized:', resolutionLock ? 'ON' : 'OFF');
+      } catch {
+        // Film settings node may not exist in this scene
+      }
+    };
+    initRTSettings();
+  }, [connected, sceneReady, client]);
 
   return {
     state,

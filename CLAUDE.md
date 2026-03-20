@@ -2,22 +2,26 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 11: MCP — v2.1.0**
+**Phase 11: MCP — v2.1.1**
 
-**What happened last session (Phase 10):**
+**What happened last session (Phase 11):**
 
-- Unified API compat layer in `OctaneGrpcClientBase.callMethod()` — one code path for web UI and MCP
-- Bool revert fix: explicit `evaluate: false` + `ApiChangeManager.update()` flush (matches web UI)
-- No deferred batching — `evaluate: true` on every call, stale state causes wrong data on wire
-- Glass metal scene verified end-to-end via MCP (all material types + bool attrs work)
-- Full doc purge: all docs updated to reflect unified compat, stale refs removed
+- gRPC debug file logging added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only to `grpc-debug.log`.
+- Vite plugin file logging removed (REQ/RES/ERR lines) — all gRPC logging centralized in the base class now
+- `expected_type` removed from SET calls in web UI (proto doesn't have it for sets)
+- Compat layer fix: `getPinValueByPinID` → `getPinValue` now correctly transforms `item_ref` → `objectPtr` for Alpha 5
+- RT-dependent settings (viewport resolution lock) gated on `sceneReady` in `useRenderSettings`
+- "Failed to fetch" abort noise suppressed to debug level in `ApiService`, `SceneService`, `useParameterValue`
+- Logger default changed from DEBUG to INFO in dev mode
 
-### TODO for This Session
+### TODO for Next Session
 
-1. **MCP focus** — continue MCP work (user's direction)
-2. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
-3. Custom tooltip component (#2 in backlog)
-4. File → Recent Projects menu
+1. **MCP scene testing** — build 3 scenes via MCP tools (metal/glass with primitives + 2 creative). Goal: find bugs. If Octane crashes, check `grpc-debug.log` immediately — it logs all mutating calls with timestamps. Use `mcp__octane__clear_log` to reset before each test.
+2. **Debug with file logging** — `grpc-debug.log` now captures all SET/CREATE/CONNECT/UPDATE calls from both web UI and MCP (same file, same format). Compare web vs MCP calls side-by-side when something breaks. Add reads temporarily to `GRPC_LOG_METHODS` set in `OctaneGrpcClientBase.ts` if needed.
+3. **Known MCP bug** — `connect_nodes` verification falls back to pin 0 when `pin_name` can't resolve to an index (`node.ts:462`). Fix before relying on named-pin connections.
+4. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
+5. Custom tooltip component (#2 in backlog)
+6. File → Recent Projects menu
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
 
@@ -56,7 +60,7 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 
 - **Dev server**: `npm run dev` (port 43929)
 - **Test scene**: `ORBX/teapot.orbx` — load via File→Open
-- **Smoke test**: Toggle Orthographic on Camera node → verify `setByAttrID` in `grpc-debug.log`
+- **Smoke test**: Toggle Orthographic on Camera node → verify `setByAttrID` in `grpc-debug.log` (on by default, `GRPC_DEBUG_LOG=0` to disable)
 - **MCP server**: `cd mcp && npm run build && npm run mcp:start`
 
 ### Environment Variables
@@ -68,6 +72,7 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 | `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host (auto-detects `host.docker.internal` in containers)                                                                            |
 | `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                                                                                                |
 | `WORKER_1`          | `43929`     | Vite dev server port                                                                                                                            |
+| `GRPC_DEBUG_LOG`    | `1` (on)    | Set to `0` to disable gRPC debug file logging (`grpc-debug.log`). Logs mutating calls only.                                                     |
 
 ## Key Docs
 
@@ -152,10 +157,10 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.1.0
+- **Version**: 2.1.1
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
-- **MCP server**: 27 tools, API cache, incremental webapp sync
+- **MCP server**: 28 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
 

@@ -20,6 +20,9 @@ import {
   OBJ_API_NODE_GRAPH,
 } from './utils';
 
+// Type IDs that crash Octane when used with create or nodeInfo (internal/system types)
+const CRASH_TYPE_IDS = new Set([0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]);
+
 // --- Legacy pin type validation (fallback when cache unavailable) ---
 
 /** NodePinType enum → human-readable name */
@@ -147,7 +150,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create a new Octane node. Use list_node_types to find available types. Example: node_type="NT_MAT_UNIVERSAL" for universal material. NT_GEO_OBJECT defaults to Box primitive. Change primitive type via pin 0 enum child: set_attribute(enum_handle, 185, AT_INT=3, N). See OCTANE_MCP.md for primitive type values.',
+    'Create an Octane node. Rejects known crash-causing type IDs. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_OBJECT (geometry+primitive), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). NT_GEO_OBJECT defaults to Box; change via pin 0 enum child: set_attribute(enum_handle, 185, AT_INT=3, primitiveType). Use list_node_types for full catalog.',
     {
       node_type: z
         .string()
@@ -168,6 +171,13 @@ export function registerNodeTools(
           );
         }
 
+        // Block crash-causing type IDs
+        if (CRASH_TYPE_IDS.has(typeId)) {
+          return errorResult(
+            `Type ID ${typeId} (${node_type}) crashes Octane — these are internal/system types that cannot be created via API.`
+          );
+        }
+
         // Get root graph — cached after first call
         const rootHandle = await client.getRootNodeGraph();
 
@@ -180,13 +190,18 @@ export function registerNodeTools(
         const newHandle = extractHandle(result);
         if (!newHandle) return errorResult('Node creation returned no handle');
 
-        // Track handle → type for connect_nodes cache lookups
-        client.handleToTypeName.set(newHandle, node_type);
-
         // Get the name Octane assigned
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(newHandle), type: OBJ_API_ITEM },
         });
+
+        // Track in scene cache for connect_nodes type lookups and scene awareness
+        client.sceneCache.addNode(
+          newHandle,
+          String(extractValue(nameResult) ?? ''),
+          node_type,
+          typeId
+        );
 
         // Discover auto-created pin children
         const cachedInfo = cache?.getNodeType(node_type);
@@ -264,14 +279,14 @@ export function registerNodeTools(
 
   server.tool(
     'delete_node',
-    'Delete a node from the scene. WARNING: Deleting a recently-disconnected node can crash Octane. Disconnect pins first and wait briefly before deleting.',
+    'Delete a node from the scene. Disconnect pins first — deleting a recently-disconnected node can crash Octane. Clears node from scene cache.',
     { handle: z.number().int().nonnegative().describe('Node handle to delete') },
     async ({ handle }) => {
       try {
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
-        client.handleToTypeName.delete(handle);
+        client.sceneCache.removeNode(handle);
         await notifyWebapp({ type: 'nodeDeleted', handle });
         return jsonResult({ success: true, deleted_handle: handle });
       } catch (error: any) {
@@ -282,22 +297,21 @@ export function registerNodeTools(
 
   server.tool(
     'connect_nodes',
-    "Connect a source node to a target node's input pin. PREFERRED: use pin_index (most reliable, from get_node_info). pin_name works for named pins like 'emission', 'diffuse'. pin_id is least reliable — pin_id:30 (P_DIFFUSE) and pin_id:59 (P_GEOMETRY) silently fail on some node types. Always verify connections with get_node_info after connecting.",
+    'Connect source node to target node input pin. Connection is auto-verified. Use pin_name (most readable) — e.g. "camera", "geometry", "diffuse". Use pin_index as fallback for dynamic/movable pins. Query octane://pin-layout/{typeName} to discover pin names. RT pins: camera(0), environment(1), geometry(3), film(4), kernel(6). Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
     {
       target_handle: z
         .number()
         .int()
         .nonnegative()
         .describe('Target node handle (the node receiving the connection)'),
-      pin_index: z.number().optional().describe('Pin index on the target node (uses connectToIx)'),
       pin_name: z
         .string()
         .optional()
-        .describe('Pin name string (uses connectTo1). E.g. "emission", "diffuse"'),
-      pin_id: z
+        .describe('Pin name (preferred). E.g. "camera", "geometry", "diffuse", "emission"'),
+      pin_index: z
         .number()
         .optional()
-        .describe('PinId enum value (uses connectTo). E.g. P_EMISSION=41'),
+        .describe('Pin index (fallback for dynamic/movable pins). E.g. 0, 1, 3'),
       source_handle: z
         .number()
         .int()
@@ -305,17 +319,17 @@ export function registerNodeTools(
         .describe('Source node handle (the node being connected)'),
       evaluate: z.boolean().default(true).describe('Trigger scene evaluation after connecting'),
     },
-    async ({ target_handle, pin_index, pin_name, pin_id, source_handle, evaluate }) => {
+    async ({ target_handle, pin_index, pin_name, source_handle, evaluate }) => {
       try {
         // --- Pin type validation (cache-first, gRPC fallback) ---
-        const sourceTypeName = client.handleToTypeName.get(source_handle);
-        const targetTypeName = client.handleToTypeName.get(target_handle);
+        const sourceTypeName = client.sceneCache.getTypeName(source_handle);
+        const targetTypeName = client.sceneCache.getTypeName(target_handle);
 
         // --- Auto-materialize dynamic pins on movable-input nodes (e.g. NT_GEO_GROUP) ---
         // These nodes start with 0 pins; A_PIN_COUNT (113) must be set to create
         // dynamic input slots before connecting.  When using pin_name like "Input 1",
         // parse the index N and ensure at least N pins exist.
-        if (targetTypeName && cache && pin_id === undefined) {
+        if (targetTypeName && cache) {
           const targetInfo = cache.getNodeType(targetTypeName);
           if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
             // Determine how many pins we need
@@ -432,25 +446,6 @@ export function registerNodeTools(
         // setValueByAttrID), connect_nodes passes evaluate directly to the gRPC call.
         // The connectTo/connectToIx/connectTo1 RPCs don't exhibit the double-eval
         // issue, so the extra round-trip to update() is unnecessary here.
-        if (pin_id !== undefined) {
-          await client.callMethod('ApiNode', 'connectTo', {
-            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-            pinId: pin_id,
-            sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
-            evaluate,
-            doCycleCheck: true,
-          });
-          await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
-          return jsonResult({
-            success: true,
-            target: target_handle,
-            pin_id,
-            source: source_handle,
-            source_type: sourceType,
-            target_pin_type: targetPinType,
-            ...(evalWarning && { warning: evalWarning }),
-          });
-        }
         if (pin_name !== undefined) {
           await client.callMethod('ApiNode', 'connectTo1', {
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
@@ -459,37 +454,68 @@ export function registerNodeTools(
             evaluate,
             doCycleCheck: true,
           });
-          await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
-          return jsonResult({
-            success: true,
-            target: target_handle,
-            pin_name,
-            source: source_handle,
-            source_type: sourceType,
-            target_pin_type: targetPinType,
-            ...(evalWarning && { warning: evalWarning }),
+        } else if (pin_index !== undefined) {
+          await client.callMethod('ApiNode', 'connectToIx', {
+            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+            pinIdx: pin_index,
+            sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
+            evaluate,
+            doCycleCheck: true,
           });
+        } else {
+          return errorResult('Provide pin_name (preferred) or pin_index');
         }
-        if (pin_index === undefined) {
-          return errorResult('Provide one of: pin_index, pin_name, or pin_id');
+
+        // Auto-verify: check the pin actually got connected (silent failures are common)
+        const verifyPinIdx = resolvedPinIndex ?? pin_index ?? 0;
+        let verified = true;
+        let verifyWarning: string | undefined;
+        try {
+          const verifyResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+            pinIx: verifyPinIdx,
+            enterWrapperNode: true,
+          });
+          const connectedHandle = extractHandle(verifyResult) ?? 0;
+          if (connectedHandle !== source_handle) {
+            verified = false;
+            verifyWarning =
+              `Connection verification FAILED: pin ${verifyPinIdx} shows connected_handle=${connectedHandle} ` +
+              `(expected ${source_handle}). Check pin type compatibility with get_node_info.`;
+          }
+        } catch {
+          // If verify call itself fails, don't block — just warn
+          verifyWarning =
+            'Connection verification skipped (verify call failed). Check with get_node_info.';
         }
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-          pinIdx: pin_index,
-          sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
-          evaluate,
-          doCycleCheck: true,
-        });
+
+        // Update scene cache on verified connection
+        if (verified) {
+          client.sceneCache.setConnection(target_handle, verifyPinIdx, source_handle);
+        }
+
         await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
-        return jsonResult({
-          success: true,
+
+        const result: Record<string, any> = {
+          success: verified,
           target: target_handle,
-          pin: pin_index,
           source: source_handle,
+          pin: verifyPinIdx,
+          verified,
           source_type: sourceType,
           target_pin_type: targetPinType,
-          ...(evalWarning && { warning: evalWarning }),
-        });
+        };
+        if (pin_name !== undefined) result.pin_name = pin_name;
+        if (evalWarning) result.eval_warning = evalWarning;
+        if (verifyWarning) result.verify_warning = verifyWarning;
+
+        if (!verified) {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+            isError: true as const,
+          };
+        }
+        return jsonResult(result);
       } catch (error: any) {
         return errorResult(error);
       }
@@ -498,7 +524,7 @@ export function registerNodeTools(
 
   server.tool(
     'disconnect_pin',
-    'Disconnect a pin on a node (sets it to null/handle 0)',
+    'Disconnect a pin on a node (sets connection to null). Updates scene cache.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       pin_index: z.number().describe('Pin index to disconnect'),
@@ -513,8 +539,106 @@ export function registerNodeTools(
           evaluate,
           doCycleCheck: true,
         });
+        client.sceneCache.removeConnection(handle, pin_index);
         await notifyWebapp({ type: 'nodeChanged', handle });
         return jsonResult({ success: true, handle, pin: pin_index });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'create_and_connect',
+    'Create a node and connect it to a target pin in one call. Saves round-trips for the most common pattern (e.g. create material + connect to mesh pin 0). Auto-verifies the connection. If connect fails, returns the created handle so you can retry or clean up.',
+    {
+      node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
+      target_handle: z.number().int().nonnegative().describe('Target node to connect to'),
+      pin_index: z.number().int().nonnegative().describe('Pin index on target node'),
+      evaluate: z.boolean().default(true).describe('Evaluate scene after connecting'),
+    },
+    async ({ node_type, target_handle, pin_index, evaluate }) => {
+      try {
+        // --- Create ---
+        const typeId = cache?.getNodeTypeId(node_type);
+        if (typeId === undefined) {
+          return errorResult(
+            `Unknown node type: ${node_type}. Use list_node_types to see available types.`
+          );
+        }
+        if (CRASH_TYPE_IDS.has(typeId)) {
+          return errorResult(
+            `Type ID ${typeId} (${node_type}) crashes Octane — internal/system type.`
+          );
+        }
+
+        const rootHandle = await client.getRootNodeGraph();
+        const createResult = await client.callMethod('ApiNode', 'create', {
+          type: typeId,
+          ownerGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
+        });
+        const newHandle = extractHandle(createResult);
+        if (!newHandle) return errorResult('Node creation returned no handle');
+
+        const nameResult = await client.callMethod('ApiItem', 'name', {
+          objectPtr: { handle: String(newHandle), type: OBJ_API_ITEM },
+        });
+        const nodeName = String(extractValue(nameResult) ?? '');
+        client.sceneCache.addNode(newHandle, nodeName, node_type, typeId);
+        await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
+
+        // --- Connect ---
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+          pinIdx: pin_index,
+          sourceNode: { handle: String(newHandle), type: OBJ_API_NODE },
+          evaluate,
+          doCycleCheck: true,
+        });
+
+        // --- Verify ---
+        let verified = true;
+        let verifyWarning: string | undefined;
+        try {
+          const verifyResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+            objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+            pinIx: pin_index,
+            enterWrapperNode: true,
+          });
+          const connectedHandle = extractHandle(verifyResult) ?? 0;
+          if (connectedHandle !== newHandle) {
+            verified = false;
+            verifyWarning = `Connection verification FAILED: pin ${pin_index} shows handle=${connectedHandle} (expected ${newHandle}).`;
+          }
+        } catch {
+          verifyWarning = 'Connection verification skipped (verify call failed).';
+        }
+
+        if (verified) {
+          client.sceneCache.setConnection(target_handle, pin_index, newHandle);
+        }
+        await notifyWebapp({ type: 'nodeChanged', handle: target_handle });
+
+        const result: Record<string, any> = {
+          success: true,
+          handle: newHandle,
+          name: nodeName,
+          type: node_type,
+          type_id: typeId,
+          connected_to: target_handle,
+          pin_index,
+          verified,
+        };
+        if (verifyWarning) result.verify_warning = verifyWarning;
+
+        if (!verified) {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+            isError: true as const,
+          };
+        }
+        return jsonResult(result);
       } catch (error: any) {
         return errorResult(error);
       }

@@ -6,7 +6,7 @@
     "generate:proto": "bash scripts/generate-proto.sh",
     "cache:refresh": "node scripts/fetch-api-cache.js",
     "dev": "vite",
-    "build": "tsc && tsc -p server/tsconfig.json --noEmit && vite build",
+    "build": "tsc && tsc -p server/tsconfig.json && vite build",
     "preview": "vite preview",
     "format": "prettier --write \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",

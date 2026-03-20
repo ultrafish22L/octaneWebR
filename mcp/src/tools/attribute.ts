@@ -4,6 +4,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import path from 'path';
+import fs from 'fs';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 
@@ -105,7 +107,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT3=11, AT_STRING=14.',
+    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34, A_TRANSLATION=172, A_ROTATION=137 (degrees!), A_SCALE=139. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRING=14. IMPORTANT: DOF is ON by default (aperture=0.893) — set to 0. Emission efficiency defaults to 0.025 — set to 1.0 or lights will be 40x dim. A_FILENAME validates path exists (bad paths hang gRPC 30s).',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -127,6 +129,22 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type, value, evaluate }) => {
       try {
+        // A_FILENAME (34) with AT_STRING (14): validate path to prevent blocking Octane dialog
+        if (attribute_id === 34 && expected_type === AT_STRING) {
+          const filePath = String(value);
+          if (!path.isAbsolute(filePath)) {
+            return errorResult(
+              'A_FILENAME requires an absolute path. Relative paths cause Octane to pop a blocking dialog.'
+            );
+          }
+          // Skip existence check for UNC paths (network mounts)
+          if (!filePath.startsWith('\\\\') && !fs.existsSync(filePath)) {
+            return errorResult(
+              `File not found: ${filePath}. Non-existent paths cause Octane to pop a blocking dialog that hangs gRPC for 30s.`
+            );
+          }
+        }
+
         const valueParams = buildValueParams(value, expected_type);
         // Match web UI pattern: set with evaluate:false, then ApiChangeManager.update()
         await client.callMethod('ApiItem', setMethod, {

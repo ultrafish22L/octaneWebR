@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
-import { jsonResult, errorResult, OBJ_API_NODE } from './utils';
+import { jsonResult, errorResult, validateFilePath, OBJ_API_NODE } from './utils';
 
 // Maps format name to Octane's imageSaveFormat enum
 const FORMAT_MAP: Record<string, number> = {
@@ -23,7 +23,7 @@ const FORMAT_MAP: Record<string, number> = {
 export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(
     'start_render',
-    'Start or continue rendering the current scene',
+    'Start rendering. Does NOT evaluate the scene — must trigger eval first (connect with evaluate:true, set_attribute, or update_scene). Ensure RT has: camera (pin 0), geometry (pin 3), kernel (pin 6). If render is all white, check connections. If blurry, disable DOF (aperture→0).',
     {
       render_target_handle: z
         .number()
@@ -83,7 +83,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
 
   server.tool(
     'save_render',
-    'Save the current render result to an image file on disk',
+    'Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
     {
       path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
       format: z
@@ -94,6 +94,9 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     },
     async ({ path: savePath, format, render_pass_id }) => {
       try {
+        const pathError = validateFilePath(savePath);
+        if (pathError) return errorResult(new Error(pathError));
+
         // Validate parent directory exists
         const parentDir = savePath.replace(/[\\/][^\\/]*$/, '');
         if (parentDir && parentDir !== savePath) {

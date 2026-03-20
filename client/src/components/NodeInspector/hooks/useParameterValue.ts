@@ -102,9 +102,12 @@ export function useParameterValue(
         }
       } catch (error: unknown) {
         if (cancelled) return;
-        Logger.error(
-          `getValueByAttrID error for ${node.name}: ${error instanceof Error ? error.message : error}`
-        );
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg === 'Failed to fetch') {
+          Logger.debug(() => `getValueByAttrID cancelled for ${node.name}`);
+        } else {
+          Logger.error(`getValueByAttrID error for ${node.name}: ${msg}`);
+        }
       }
     };
 

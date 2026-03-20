@@ -358,10 +358,13 @@ export class SceneService extends BaseService {
             }
           }
         } catch (pinCountError) {
-          Logger.error(
-            `Failed to get pin count:`,
-            pinCountError instanceof Error ? pinCountError.message : String(pinCountError)
-          );
+          const msg =
+            pinCountError instanceof Error ? pinCountError.message : String(pinCountError);
+          if (msg.includes('abort') || msg.includes('Failed to fetch')) {
+            Logger.debug(() => `pinCount cancelled (build aborted)`);
+          } else {
+            Logger.error(`Failed to get pin count:`, msg);
+          }
         }
       }
     } catch (error) {

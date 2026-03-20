@@ -6,7 +6,10 @@
     },
     "octane": {
       "command": "node",
-      "args": ["mcp/dist/index.js"]
+      "args": ["mcp/dist/index.js"],
+      "env": {
+        "GRPC_DEBUG_LOG": "1"
+      }
     }
   }
 }

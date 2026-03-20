@@ -4,6 +4,20 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.1] - 2026-03-19
+
+### Changed - gRPC Debug Logging & Cleanup
+
+- **gRPC debug file logging**: Added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only (create, set, connect, destroy) to `grpc-debug.log`.
+- **Vite plugin file logging removed**: REQ/RES/ERR file logging stripped from `vite-plugin-octane-grpc.ts` — all gRPC logging now centralized in the base class.
+- **`expected_type` removed from SET calls**: Web UI no longer sends `expected_type` in `setByAttrID`/`setValueByAttrID` — the proto doesn't define it for set operations.
+- **Compat layer fix**: `getPinValueByPinID` → `getPinValue` translation now correctly transforms `item_ref` → `objectPtr` for Alpha 5.
+- **RT-dependent settings gated**: Viewport resolution lock in `useRenderSettings` now waits for `sceneReady` before accessing RT node, preventing errors on initial load.
+- **Abort noise suppressed**: "Failed to fetch" errors from `AbortError` (browser tab switch, navigation) downgraded to `Logger.debug` in `ApiService`, `SceneService`, and `useParameterValue`.
+- **Logger default level**: Changed from `DEBUG` to `INFO` in dev mode — reduces console noise while keeping important messages visible.
+
+---
+
 ## [2.1.0] - 2026-03-19
 
 ### Changed - Unified API Compat Layer

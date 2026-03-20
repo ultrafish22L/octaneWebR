@@ -29,7 +29,7 @@ class LoggerInstance {
 
   constructor() {
     const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
-    this.level = isDev ? LogLevel.DEBUG : LogLevel.WARN;
+    this.level = isDev ? LogLevel.INFO : LogLevel.WARN;
 
     if (DEBUG_MODE) {
       this.flushInterval = setInterval(() => this.flush(), 1000) as unknown as number;

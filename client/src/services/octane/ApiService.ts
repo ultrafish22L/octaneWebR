@@ -190,7 +190,11 @@ export class ApiService extends BaseService {
         throw new Error(`${service}.${method} timed out after ${API_TIMEOUT_MS}ms`);
       }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Logger.error(`${service}.${method} error:`, errorMessage);
+      if (errorMessage === 'Failed to fetch') {
+        Logger.debug(() => `${service}.${method} fetch cancelled`);
+      } else {
+        Logger.error(`${service}.${method} error:`, errorMessage);
+      }
       throw error;
     } finally {
       clearTimeout(timeout);

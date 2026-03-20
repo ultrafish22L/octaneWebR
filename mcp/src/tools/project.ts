@@ -5,15 +5,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
-import { jsonResult, errorResult } from './utils';
+import { jsonResult, errorResult, validateFilePath } from './utils';
 
 export function registerProjectTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(
     'load_project',
-    'Load an Octane project file (.orbx or .ocs). The scene takes ~2 seconds to fully load after the call returns.',
+    'Load an Octane project file (.orbx or .ocs). Scene takes ~2s to populate after call returns. Clears all cached handles — previous node handles become invalid.',
     { path: z.string().describe('Absolute path to .orbx or .ocs file') },
     async ({ path }) => {
       try {
+        const pathError = validateFilePath(path);
+        if (pathError) return errorResult(new Error(pathError));
+
         const result = await client.callMethod('ApiProjectManager', 'loadProject', {
           projectPath: path,
         });
@@ -39,6 +42,8 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
     async ({ path }) => {
       try {
         if (path) {
+          const pathError = validateFilePath(path);
+          if (pathError) return errorResult(new Error(pathError));
           await client.callMethod('ApiProjectManager', 'saveProjectAs', { path });
         } else {
           await client.callMethod('ApiProjectManager', 'saveProject', {});
@@ -52,7 +57,7 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
 
   server.tool(
     'reset_project',
-    'Clear the current scene and reset to a blank project. WARNING: This is destructive — all unsaved changes are lost. Save first with save_project if needed. Can take up to 120 seconds.',
+    'Clear scene to blank. DANGER: Pops a BLOCKING DIALOG if project is unsaved — this hangs gRPC for 30+ seconds. ALWAYS call save_project first, or delete all nodes manually. Invalidates ALL handles. Can take up to 120s.',
     {},
     async () => {
       try {
