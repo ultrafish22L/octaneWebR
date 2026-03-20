@@ -280,7 +280,7 @@ export class OctaneMcpClient {
       const result = await this.base.callMethod(service, method, transformed, options);
       endProfile();
       const elapsed = Date.now() - startMs;
-      const ok = result?.success !== false && result?.error_message !== '';
+      const ok = result?.success !== false && !result?.error_message;
       mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'info');
       if (isDebug)
         mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');

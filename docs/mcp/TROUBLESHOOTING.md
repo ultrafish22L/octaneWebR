@@ -12,11 +12,12 @@ For the single source of truth on API patterns, see `REFERENCE.md`.
 
 ### Confirmed Octane Crashes
 
-| Trigger                                    | Symptom                                         | Mitigation                                                                                                                                                      |
-| ------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`resetProject` (any variant)**           | "Save changes?" dialog blocks gRPC indefinitely | Use delete-all-nodes pattern: `get_scene_tree` then `delete_node` each handle (leaves first, RT last). Or `save_project` to a temp path before `reset_project`. |
-| **Bad `A_FILENAME` (e.g. `:rgba` suffix)** | Octane pops a dialog, blocking gRPC for ~30s    | Use valid absolute paths only. No suffixes, no relative paths.                                                                                                  |
-| ~~High subdivision on `NT_GEO_OBJECT`~~    | Disproven — see `DISPROVEN_ISSUES.md`           | Untestable via MCP (pin 7 not exposed). Likely never a real crash.                                                                                              |
+| Trigger                                    | Symptom                                                                                                 | Mitigation                                                                                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`resetProject` (any variant)**           | "Save changes?" dialog blocks gRPC indefinitely                                                         | Use delete-all-nodes pattern: `get_scene_tree` then `delete_node` each handle (leaves first, RT last). Or `save_project` to a temp path before `reset_project`.      |
+| **Bad `A_FILENAME` (e.g. `:rgba` suffix)** | Octane pops a dialog, blocking gRPC for ~30s                                                            | Use valid absolute paths only. No suffixes, no relative paths.                                                                                                       |
+| ~~High subdivision on `NT_GEO_OBJECT`~~    | Disproven — see `DISPROVEN_ISSUES.md`                                                                   | Untestable via MCP (pin 7 not exposed). Likely never a real crash.                                                                                                   |
+| **Setting >6 primitive types per session** | ECONNRESET crash after ~6-7 `set_attribute` calls changing primitive type enum on `NT_GEO_OBJECT` nodes | Use only default box primitives and shape with creative A_SCALE. Or limit primitive type changes to ≤5 per Octane session. Or use `import_glb` for non-box geometry. |
 
 ### nodeInfo Crashes
 

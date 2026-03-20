@@ -38,26 +38,6 @@ enum ServerLogLevel {
 }
 const SERVER_LOG_LEVEL: ServerLogLevel = ServerLogLevel.DEBUG;
 
-// ============================================================================
-// FILE LOGGING CONFIGURATION
-// ============================================================================
-// Set to true to log all gRPC request/response pairs to a file
-const DEBUG_FILE_LOG = process.env.DEBUG_FILE_LOG !== 'false';
-const LOG_FILE_PATH = path.resolve(__dirname, 'log_grpc.log');
-
-// Truncate log file on startup
-if (DEBUG_FILE_LOG) {
-  fs.writeFileSync(LOG_FILE_PATH, `=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
-}
-
-function fileLog(msg: string) {
-  if (!DEBUG_FILE_LOG) return;
-  const ts = new Date().toISOString().substring(11, 23);
-  fs.appendFile(LOG_FILE_PATH, `[${ts}] ${msg}\n`, err => {
-    if (err) console.error('fileLog write failed:', err.message);
-  });
-}
-
 // ANSI color codes for server-side terminal output
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -481,15 +461,16 @@ export function octaneGrpcPlugin(): Plugin {
     name: 'vite-plugin-octane-grpc',
 
     async configureServer(server: ViteDevServer) {
-      // Delete old log file at startup (before logging is initialized)
-      const logFilePath = 'log_client.log';
-      try {
-        if (fs.existsSync(logFilePath)) {
-          fs.unlinkSync(logFilePath);
-          slog.debug('Deleted old client log file');
+      // Clear log files at startup — fresh logs each session
+      for (const logFile of ['log_client.log', 'log_grpc.log']) {
+        try {
+          if (fs.existsSync(logFile)) {
+            fs.unlinkSync(logFile);
+            slog.debug(`Deleted old ${logFile}`);
+          }
+        } catch (error: any) {
+          slog.warn(`Could not delete ${logFile}:`, error.message);
         }
-      } catch (error: any) {
-        slog.warn('Could not delete old log file:', error.message);
       }
 
       // Initialize gRPC client

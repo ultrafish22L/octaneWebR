@@ -2,32 +2,33 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 13: MCP scene building — `import_glb` + DRESS demos**
+**Phase 14: Crash investigation — FIGURE OUT WHY CRASHES HAPPEN**
 
-**What happened last session (Phase 13 prep):**
+**What happened last session (overnight autonomous testing):**
 
-- **Built Moonlit Shrine scene** — full OTOY Studio → Octane pipeline: `generate_image_pro` → Chrome image-to-3D → GLB download → Python trimesh GLB→OBJ → load into Octane. 17 nodes, 159 gRPC calls, 0 crashes, 0 warnings.
-- **New `import_glb` tool (#29)** — seamless GLB/glTF import: converts via Python trimesh, creates NT_GEO_MESH + NT_GEO_PLACEMENT + NT_MAT_UNIVERSAL + NT_TEX_IMAGE, returns all handles + bounds + orientation hint + next_steps. See `mcp/src/tools/import.ts`.
-- **Fixed MCP logging** — default was `'warn'` (nothing logged during normal ops). Changed to `'info'`, added per-call logging: `ApiNode.connectTo OK 12ms`. `log_mcp.log` now populates.
-- **Expanded BUILD.md** — 3D asset pipeline (4-phase, 14-step), mandatory orientation discovery (3 orbit views), film-aspect-before-framing rule, OTOY Studio tool capability table.
-- **Key discoveries**: NT_MAT_UNIVERSAL emission is pin 44 (use `pin_name: "emission"`). NT_MAT_DIFFUSE has NO emission pin. Film resolution: RT→pin4(film)→pin0→child "Image resolution"→`set_attribute(child, 185, AT_INT2=4, {w, h})`.
-- **Scene saved**: `ORBX/samurai_moonlit_shrine.orbx`
+- **38 scenes built** via MCP (scene1→scene38), escalating complexity, 36 ORBX saved, 95 renders, 89 AI-generated textures via OTOY Studio
+- **Code improvements committed**: import.ts refactored to Beta 2 API (`ApiNode.create`, `connectToIx`, `connectedNodeIx`, `pinNameIx`), MCP log OK/FAIL detection fixed, log files cleared at startup, grpc log path fixed for \_\_dirname, new `octane://primitive-types` resource, vite plugin duplicate file logging removed, create_node description updated with primitive type hints, SceneOutliner stack overflow bug documented (#39)
+- **Key finding**: Octane ECONNRESET crashes were avoided all night by using only default box primitives. This is **wrong** — the goal is to understand and fix crashes, not avoid them. Previous sessions proved primitive type changes work fine individually; the crash pattern needs systematic investigation.
+- **Scene 38 (Cyberpunk Neon Alley)**: 25 objects, 5 AI textures, 5 materials, 2 emissions, dark environment — saved as `ORBX/scene38_cyberpunk_alley.orbx`
 
 ### TODO for Next Session
 
-1. **Build a cool DRESS-mode scene** exercising the full MCP toolkit:
-   - Use `import_glb` with an OTOY Studio 3D asset (prove the tool works end-to-end)
-   - DRESS mode: 1 node at a time, render after each step, show the human a visual progression
-   - Use `pin_name` connections where possible (more readable than magic pin indices)
-   - Set film aspect (portrait or landscape) BEFORE framing
-   - Orbit 3 views before guessing mesh orientation
-   - Disable DOF immediately (RT→camera→pin14 aperture→0)
-   - Set emission efficiency to 1.0 on all lights
-2. **Verify `log_mcp.log`** populates at info level — check after first few tool calls
-3. **Check all 3 logs** after scene build — `log_grpc.log`, `log_mcp.log`, `log_client.log`
-4. **After 2 failures of the same kind, STOP** — step back, check logs, try different approach
-5. **Save ORBX** when scene is done, clear for next
-6. See `docs/project/IMPROVEMENTS.md` for backlog items after scene testing
+**SINGLE GOAL: Figure out why Octane crashes (ECONNRESET).**
+
+1. **Read all crash evidence first** — search `TROUBLESHOOTING.md`, `IMPROVEMENTS.md`, and past session logs for every crash that's been recorded. List them all with exact conditions.
+2. **Reproduce systematically** — build minimal test cases:
+   - Does changing primitive type N times in a row crash? Find the exact threshold.
+   - Does it matter WHICH primitive types? Test each one individually.
+   - Does it matter if you change type on the SAME node vs DIFFERENT nodes?
+   - Does timing matter? Fast sequential calls vs. waiting between them?
+   - Is it the `set_attribute` on the enum child, or something else entirely?
+   - Does `nodeInfo` on specific handles trigger it? (Known crash type IDs: 0, 116, 408, 40000, 50000, 50106-50108, 50136-50137)
+   - Does connecting/disconnecting nodes rapidly cause it?
+   - Does scene size (node count) matter?
+3. **Check gRPC logs at crash time** — the last few calls before ECONNRESET are the clue. Save `log_grpc.log` and `log_mcp.log` immediately after every crash.
+4. **Document findings** in `docs/mcp/TROUBLESHOOTING.md` — exact repro steps, exact error, workaround if found.
+5. **After 2 failures of the same kind, STOP** — analyze, don't retry blindly.
+6. **If a crash is an Octane bug** (not our code), document it clearly and file it as a known limitation. If it's our code, fix it.
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
 

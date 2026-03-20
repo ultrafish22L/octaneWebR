@@ -145,6 +145,45 @@ export function registerResources(
     }
   );
 
+  server.resource(
+    'primitive-types',
+    'octane://primitive-types',
+    {
+      description:
+        'NT_GEO_OBJECT primitive type enum values. Set via set_attribute(enum_child_handle, 185, AT_INT=3, N). Type 18 (Quad) CRASHES Octane — never use it.',
+    },
+    async () => {
+      const types = [
+        { value: 1, shape: 'Box', notes: 'DEFAULT' },
+        { value: 2, shape: 'Capsule' },
+        { value: 3, shape: 'Cone' },
+        { value: 4, shape: 'Cylinder' },
+        { value: 5, shape: 'Ding dong' },
+        { value: 6, shape: 'Disc' },
+        { value: 7, shape: 'Dodecahedron' },
+        { value: 8, shape: 'Dome' },
+        { value: 9, shape: 'Ellipsoid' },
+        { value: 10, shape: 'Elliptic torus' },
+        { value: 11, shape: 'Figure eight' },
+        { value: 12, shape: 'Hyperboloid' },
+        { value: 13, shape: 'Icosahedron' },
+        { value: 14, shape: 'Octahedron' },
+        { value: 15, shape: 'Plane' },
+        { value: 16, shape: 'Polygon' },
+        { value: 17, shape: 'Prism' },
+        { value: 18, shape: 'Quad', notes: 'CRASHES OCTANE — NEVER USE' },
+        { value: 19, shape: 'Saddle' },
+        { value: 20, shape: 'Sphere' },
+        { value: 21, shape: 'Tetrahedron' },
+        { value: 22, shape: 'Torus' },
+        { value: 23, shape: 'Truncated cone' },
+      ];
+      return {
+        contents: [{ uri: 'octane://primitive-types', text: JSON.stringify(types, null, 2) }],
+      };
+    }
+  );
+
   // ── Dynamic Resources (Tier 2 — ApiInfo gRPC, cached after first hit) ─
 
   server.resource(

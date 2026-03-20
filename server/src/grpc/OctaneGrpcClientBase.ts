@@ -40,7 +40,8 @@ function grpcLog(prefix: string, service: string, method: string, data?: any): v
   if (!GRPC_LOG_ENABLED) return;
   if (!GRPC_LOG_METHODS.has(method)) return;
   if (!grpcLogStream) {
-    const logPath = path.resolve(process.cwd(), 'log_grpc.log');
+    // __dirname = server/src/grpc (TS) or server/dist/grpc (JS) — 3 levels to project root
+    const logPath = path.resolve(__dirname, '..', '..', '..', 'log_grpc.log');
     grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
     grpcLogStream.write(`=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
   }

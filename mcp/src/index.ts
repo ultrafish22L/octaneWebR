@@ -10,7 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { OctaneMcpClient } from './OctaneMcpClient';
+import { OctaneMcpClient, MCP_LOG_PATH } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
 import { registerInfoTools } from './tools/info';
 import { registerProjectTools } from './tools/project';
@@ -25,6 +25,20 @@ import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 
 async function main() {
+  // Clear log files at startup — fresh logs each session
+  const fs = await import('fs');
+  const path = await import('path');
+  const grpcLogPath = path.resolve(__dirname, '..', '..', 'log_grpc.log');
+  for (const logFile of [MCP_LOG_PATH, grpcLogPath]) {
+    try {
+      if (fs.existsSync(logFile)) {
+        fs.unlinkSync(logFile);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Connect to Octane via gRPC
   const client = new OctaneMcpClient();
   await client.initialize();

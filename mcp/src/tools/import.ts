@@ -15,7 +15,16 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
-import { jsonResult, errorResult, validateFilePath } from './utils';
+import {
+  jsonResult,
+  errorResult,
+  validateFilePath,
+  extractHandle,
+  extractValue,
+  OBJ_API_NODE,
+  OBJ_API_NODE_GRAPH,
+  OBJ_API_ITEM,
+} from './utils';
 import { notifyWebapp } from './webapp';
 
 const execFileAsync = promisify(execFile);
@@ -143,11 +152,12 @@ export function registerImportTools(
 
         // Phase 2: Create NT_GEO_MESH and set filename
         const rootGraph = await client.getRootNodeGraph();
-        const meshResult = await client.callMethod('ApiNodeGraph', 'createNode', {
-          node_graph: { handle: String(rootGraph), type: 20 },
+        const meshResult = await client.callMethod('ApiNode', 'create', {
           type: 1, // NT_GEO_MESH
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
         });
-        const meshHandle = Number(meshResult?.result?.handle ?? meshResult?.handle ?? 0);
+        const meshHandle = extractHandle(meshResult) ?? 0;
         if (!meshHandle) throw new Error('Failed to create NT_GEO_MESH node');
 
         // Set OBJ filename
@@ -170,72 +180,69 @@ export function registerImportTools(
         notifyWebapp({ type: 'nodeAdded', handle: meshHandle });
 
         // Phase 3: Create NT_GEO_PLACEMENT and connect mesh
-        const placementResult = await client.callMethod('ApiNodeGraph', 'createNode', {
-          node_graph: { handle: String(rootGraph), type: 20 },
+        const placementResult = await client.callMethod('ApiNode', 'create', {
           type: 4, // NT_GEO_PLACEMENT
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
         });
-        const placementHandle = Number(
-          placementResult?.result?.handle ?? placementResult?.handle ?? 0
-        );
+        const placementHandle = extractHandle(placementResult) ?? 0;
         if (!placementHandle) throw new Error('Failed to create NT_GEO_PLACEMENT node');
 
         client.sceneCache.addNode(placementHandle, 'Placement', 'NT_GEO_PLACEMENT', 4);
         notifyWebapp({ type: 'nodeAdded', handle: placementHandle });
 
         // Connect mesh → placement pin "geometry" (pin index 1)
-        await client.callMethod('ApiNode', 'connectTo', {
-          node: { handle: String(placementHandle), type: 17 },
-          input_index: 1,
-          connectedNode: { handle: String(meshHandle), type: 17 },
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
+          pinIdx: 1,
+          sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
           evaluate: false,
+          doCycleCheck: true,
         });
 
-        // Get placement transform handle (pin 0)
-        const placementInfo = await client.callMethod('ApiNode', 'pinCount', {
-          node: { handle: String(placementHandle), type: 17 },
-        });
-        const pinCount = Number(placementInfo?.count ?? placementInfo?.result?.count ?? 0);
+        // Get placement transform handle (pin 0 = transform)
         let transformHandle = 0;
-        for (let i = 0; i < pinCount; i++) {
-          const pinInfo = await client.callMethod('ApiNode', 'pinInfo', {
-            node: { handle: String(placementHandle), type: 17 },
-            pin_index: i,
+        try {
+          const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+            objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
+            pinIx: 0,
+            enterWrapperNode: true,
           });
-          const connHandle = Number(pinInfo?.connected_node?.handle ?? 0);
-          const pinName = pinInfo?.name ?? '';
-          if (pinName === 'transform' && connHandle) {
-            transformHandle = connHandle;
-            break;
-          }
+          transformHandle = extractHandle(connResult) ?? 0;
+        } catch {
+          /* no transform child */
         }
 
         // Phase 4: Create material with texture
-        const matResult = await client.callMethod('ApiNodeGraph', 'createNode', {
-          node_graph: { handle: String(rootGraph), type: 20 },
+        const matResult = await client.callMethod('ApiNode', 'create', {
           type: 130, // NT_MAT_UNIVERSAL
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
         });
-        const matHandle = Number(matResult?.result?.handle ?? matResult?.handle ?? 0);
+        const matHandle = extractHandle(matResult) ?? 0;
         if (!matHandle) throw new Error('Failed to create NT_MAT_UNIVERSAL node');
 
         client.sceneCache.addNode(matHandle, 'Material', 'NT_MAT_UNIVERSAL', 130);
         notifyWebapp({ type: 'nodeAdded', handle: matHandle });
 
         // Connect material → mesh pin 0
-        await client.callMethod('ApiNode', 'connectTo', {
-          node: { handle: String(meshHandle), type: 17 },
-          input_index: 0,
-          connectedNode: { handle: String(matHandle), type: 17 },
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
+          pinIdx: 0,
+          sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
           evaluate: false,
+          doCycleCheck: true,
         });
 
         let texHandle = 0;
         // If textures were exported, create NT_TEX_IMAGE and connect to albedo
         if (conv.texturePaths.length > 0) {
-          const texResult = await client.callMethod('ApiNodeGraph', 'createNode', {
-            node_graph: { handle: String(rootGraph), type: 20 },
+          const texResult = await client.callMethod('ApiNode', 'create', {
             type: 34, // NT_TEX_IMAGE
+            ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+            configurePins: true,
           });
-          texHandle = Number(texResult?.result?.handle ?? texResult?.handle ?? 0);
+          texHandle = extractHandle(texResult) ?? 0;
 
           if (texHandle) {
             client.sceneCache.addNode(texHandle, 'Texture', 'NT_TEX_IMAGE', 34);
@@ -250,35 +257,49 @@ export function registerImportTools(
             });
 
             // Connect texture → material albedo (pin 2 on NT_MAT_UNIVERSAL)
-            await client.callMethod('ApiNode', 'connectTo', {
-              node: { handle: String(matHandle), type: 17 },
-              input_index: 2, // albedo pin
-              connectedNode: { handle: String(texHandle), type: 17 },
+            await client.callMethod('ApiNode', 'connectToIx', {
+              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+              pinIdx: 2, // albedo pin
+              sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
               evaluate: false,
+              doCycleCheck: true,
             });
           }
         }
 
         // Set metallic and roughness on material child pins
-        // Need to find them via pinInfo
+        // Use pinNameIx + connectedNodeIx to find them by name
         const matPinCount = Number(
-          (
+          extractValue(
             await client.callMethod('ApiNode', 'pinCount', {
-              node: { handle: String(matHandle), type: 17 },
+              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
             })
-          )?.count ?? 0
+          ) ?? 0
         );
         let metallicHandle = 0;
         let roughnessHandle = 0;
         for (let i = 0; i < matPinCount && (!metallicHandle || !roughnessHandle); i++) {
-          const pinInfo = await client.callMethod('ApiNode', 'pinInfo', {
-            node: { handle: String(matHandle), type: 17 },
-            pin_index: i,
-          });
-          const connHandle = Number(pinInfo?.connected_node?.handle ?? 0);
-          const pinName = pinInfo?.name ?? '';
-          if (pinName === 'metallic' && connHandle) metallicHandle = connHandle;
-          if (pinName === 'roughness' && connHandle) roughnessHandle = connHandle;
+          try {
+            const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
+              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+              index: i,
+            });
+            const pinName = String(extractValue(nameResult) ?? '');
+            if (pinName !== 'metallic' && pinName !== 'roughness') continue;
+
+            const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+              pinIx: i,
+              enterWrapperNode: true,
+            });
+            const connHandle = extractHandle(connResult) ?? 0;
+            if (!connHandle) continue;
+
+            if (pinName === 'metallic') metallicHandle = connHandle;
+            if (pinName === 'roughness') roughnessHandle = connHandle;
+          } catch {
+            /* pin may not have name or connection */
+          }
         }
 
         const metallicVal = metallic ?? 0.3;

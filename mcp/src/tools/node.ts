@@ -151,7 +151,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create an Octane node. Rejects known crash-causing type IDs. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_OBJECT (geometry+primitive), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). NT_GEO_OBJECT defaults to Box; change via pin 0 enum child: set_attribute(enum_handle, 185, AT_INT=3, primitiveType). Use list_node_types for full catalog.',
+    'Create an Octane node. Rejects known crash-causing type IDs. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_OBJECT (geometry+primitive), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). NT_GEO_OBJECT defaults to Box; change via pin 0 enum child: set_attribute(enum_handle, 185, AT_INT=3, primitiveType). Sphere=20, Cone=3, Cylinder=4, Torus=22. Query octane://primitive-types for full list. Use list_node_types for full catalog.',
     {
       node_type: z
         .string()
