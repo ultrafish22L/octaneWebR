@@ -350,12 +350,42 @@ Recipes are creative briefs, not build scripts. Each has two sections:
 
 Implementation details (node types, pin indices, build order, crash prevention) belong in `REFERENCE.md` and `REFERENCE.md` -- never in recipes.
 
+### OTOY Studio Tool Capabilities
+
+OTOY Studio (https://otoy.studio/) has two access methods with different capabilities.
+The user is already authenticated in Chrome -- no login step needed.
+
+**`mcp__otoy-studio__*` MCP API (16 tools) -- 2D media only:**
+
+| Category         | Tools                                                                                   | Notes                    |
+| ---------------- | --------------------------------------------------------------------------------------- | ------------------------ |
+| Image gen        | `generate_image` (flux/schnell), `generate_image_pro` (flux/pro), `generate_image_nano` | Text-to-image            |
+| Image edit       | `edit_image` (flux kontext), `edit_image_nano` (multi-ref)                              | Needs image_url          |
+| Upscale          | `upscale_image`, `upscale_video` (seedvr)                                               | 1-4x                     |
+| Video gen        | `generate_video_veo3`, `generate_video_kling`, `generate_video_seedance`                | Text-to-video            |
+| Video from image | `image_to_video_kling`                                                                  | Animate a still          |
+| Music            | `generate_music`                                                                        | Lyrics + reference audio |
+| LLM              | `chat_completion`                                                                       | Gemini Flash             |
+| Utility          | `check_job`, `list_jobs`, `forget_job`, `request_upload_url`                            | Job mgmt + upload        |
+
+**Chrome MCP only (`mcp__Claude_in_Chrome__*`) -- 3D geometry + browser UI:**
+
+- **3D mesh generation** (Hunyuan-3d v3.1 etc.) -- NO MCP API exists
+- Image-to-3D at `https://otoy.studio/image-to-3d`
+- Gallery browsing, credit balance, model selection
+- Downloading assets (intercept download URLs via JS to avoid OS file dialogs)
+
+**Key rule: never click upload/download buttons** -- they pop OS file dialogs that block automation.
+Use the "USE URL" toggle and `request_upload_url` instead. See `feedback_ots_pipeline.md` in memory
+for the full Chrome 3D workflow (navigate → USE URL → upload → generate → download GLB → convert OBJ).
+
 ### 3D Asset Pipeline (OTOY Studio to Octane)
 
-1. **Generate image** -- use OTOY Studio `generate_image` / `generate_image_pro` for front-facing reference
-2. **Image-to-3D** -- Hunyuan-3d v3.1 [Pro] via OTOY Studio web UI (otoy.studio, not MCP) -- 56 credits, needs front image
-3. **Download** -- OBJ + texture PNG, save to `ORBX/assets/`
-4. **Load in Octane** -- `NT_GEO_MESH` with `A_FILENAME`, material with `NT_TEX_IMAGE` for texture
+1. **Generate reference image** -- `generate_image_pro` (MCP API) for front-facing view
+2. **Image-to-3D** -- Hunyuan-3d v3.1 [Pro] via Chrome at otoy.studio/image-to-3d -- 56 credits
+3. **Download GLB** -- intercept download URL via JS, save to local path
+4. **Convert** -- GLB → OBJ + textures: `trimesh.load(glb) → export('name.obj')` + extract diffuse PNG
+5. **Load in Octane** -- `NT_GEO_MESH` with `A_FILENAME`, material with `NT_TEX_IMAGE` for texture
 
 **File loading pattern** (meshes AND textures):
 
