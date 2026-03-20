@@ -133,7 +133,11 @@
       "Bash(START_DELAY=2 node scripts/fetch-api-cache.js)",
       "Bash(powershell -Command \"Get-NetTCPConnection -RemotePort 51022 -ErrorAction SilentlyContinue | Select-Object OwningProcess,State | Format-Table\")",
       "Bash(mv OCTANE_CREATIVE.md CREATIVE.md)",
-      "Bash(echo \"Renamed OCTANE_CREATIVE.md -> CREATIVE.md\")"
+      "Bash(echo \"Renamed OCTANE_CREATIVE.md -> CREATIVE.md\")",
+      "Bash(grep -r \"pinCount\\\\|pinInfoIx\\\\|connectedNodeIx\\\\|pinNameIx\\\\|pinTypeIx\\\\|pinIdIx\" /c/otoyla/GRPC/dev/octaneWebR/client/src /c/otoyla/GRPC/dev/octaneWebR/mcp/src --include=*.ts)",
+      "Bash(grep -l \"class.*ApiInfo\" \"C:/otoyla/GRPC/dev/sdk\"/*.h)",
+      "mcp__octane__clear_log",
+      "Bash(:)"
     ]
   }
 }
