@@ -16,14 +16,32 @@ export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
 
 // Log levels: 'debug' = everything, 'warn' = warnings+errors, 'error' = errors only, 'off' = silent
 type LogLevel = 'debug' | 'warn' | 'error' | 'off';
+// Default 'warn': logs gate rejections and errors only.
+// Raw gRPC REQ/RES is in log_grpc.log — no need to duplicate here.
+// Set MCP_LOG_LEVEL=debug to see all gRPC calls in log_mcp.log too.
 const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'warn';
 
 const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, warn: 1, error: 2, off: 3 };
 
+// Use a WriteStream (like log_grpc.log) so writes are ordered.
+// fs.appendFile is fire-and-forget and can interleave out of order.
+let mcpLogStream: fs.WriteStream | null = null;
+
 export function mcpLog(msg: string, level: LogLevel = 'debug'): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
+  if (!mcpLogStream) {
+    mcpLogStream = fs.createWriteStream(MCP_LOG_PATH, { flags: 'a' });
+  }
   const ts = new Date().toISOString().substring(11, 23);
-  fs.appendFile(MCP_LOG_PATH, `[${ts}] ${msg}\n`, () => {});
+  mcpLogStream.write(`[${ts}] ${msg}\n`);
+}
+
+/** Reset the log stream after clear_log truncates the file. */
+export function mcpLogReset(): void {
+  if (mcpLogStream) {
+    mcpLogStream.end();
+    mcpLogStream = null;
+  }
 }
 
 // ── Quick & dirty profiler ──────────────────────────────────────────

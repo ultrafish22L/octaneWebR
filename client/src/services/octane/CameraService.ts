@@ -168,8 +168,9 @@ export class CameraService extends BaseService {
       this.originalCameraState = await this.getCamera();
       Logger.debug('Captured original camera state:', this.originalCameraState);
     } catch (error) {
-      Logger.warn(
-        'Could not capture initial camera state:',
+      // Expected on empty scenes (no RT/camera yet) — debug, not warn
+      Logger.debug(
+        'Failed to initialize camera from Octane:',
         error instanceof Error ? error.message : String(error)
       );
     }

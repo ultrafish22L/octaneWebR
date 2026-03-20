@@ -2,23 +2,25 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 11: MCP — v2.1.1**
+**Phase 11: MCP — v2.1.2**
 
-**What happened last session (Phase 11):**
+**What happened last session (Phase 11 → v2.1.2):**
 
-- gRPC debug file logging added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only to `log_grpc.log`.
-- Vite plugin file logging removed (REQ/RES/ERR lines) — all gRPC logging centralized in the base class now
-- `expected_type` removed from SET calls in web UI (proto doesn't have it for sets)
-- Compat layer fix: `getPinValueByPinID` → `getPinValue` now correctly transforms `item_ref` → `objectPtr` for Alpha 5
-- RT-dependent settings (viewport resolution lock) gated on `sceneReady` in `useRenderSettings`
-- "Failed to fetch" abort noise suppressed to debug level in `ApiService`, `SceneService`, `useParameterValue`
-- Logger default changed from DEBUG to INFO in dev mode
+- **Connection verification fix**: `enterWrapperNode: true` → `false` in `connect_nodes` verification — was returning wrapper handles instead of source handles, causing false negatives on every geo→placement connection. Zero verification failures after fix.
+- **Camera init noise fixed**: `Logger.warn` → `Logger.debug` in both `CameraService.captureOriginalCameraState()` and `useCameraSync.initializeCamera()` — expected on empty scenes, not a real warning.
+- **hasAttr pre-check**: `set_attribute` and `get_attribute` now call `ApiItem.hasAttr()` before operating — blocks invalid attribute access with actionable error instead of silent failure.
+- **Log file renames**: `grpc-debug.log` → `log_grpc.log`, `mcp-debug.log` → `log_mcp.log`, `octaneWebR_client.log` → `log_client.log`
+- **MCP log level**: Default changed from `'off'` to `'debug'` so `log_mcp.log` actually captures tool activity
+- **Transform guard in tool description**: `set_attribute` description now warns that A_TRANSLATION/A_ROTATION/A_SCALE must target the transform CHILD handle, not the geo object
+- **Version queryable**: `get_octane_version` now returns `octaneweb_version` alongside Octane's version
+- **Versions synced**: root `package.json` and `mcp/package.json` both now at 2.1.2
+- **MCP scene testing**: Built 2 scenes (glass/metal recipe, obsidian monolith) — found and fixed verification false negatives, hasAttr gating, log issues
 
 ### TODO for Next Session
 
-1. **MCP scene testing** — build 3 scenes via MCP tools (metal/glass with primitives + 2 creative). Goal: find bugs. If Octane crashes, check `log_grpc.log` immediately — it logs all mutating calls with timestamps. Use `mcp__octane__clear_log` to reset before each test.
-2. **Debug with file logging** — `log_grpc.log` now captures all SET/CREATE/CONNECT/UPDATE calls from both web UI and MCP (same file, same format). Compare web vs MCP calls side-by-side when something breaks. Add reads temporarily to `GRPC_LOG_METHODS` set in `OctaneGrpcClientBase.ts` if needed.
-3. **Known MCP bug** — `connect_nodes` verification falls back to pin 0 when `pin_name` can't resolve to an index (`node.ts:462`). Fix before relying on named-pin connections.
+1. **Scene 3** — build a visually striking scene (color-first, not white blobs). Render after every object.
+2. **Log verbosity review** — `log_mcp.log` at debug level is too verbose (1300+ lines per scene). Audit and tune.
+3. **Duplicate nodeChanged events** — webapp gets 3-4 events per MCP connection. Defer (webapp perf issue, not MCP).
 4. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
 5. Custom tooltip component (#2 in backlog)
 6. File → Recent Projects menu
@@ -157,7 +159,7 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.1.1
+- **Version**: 2.1.2
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
 - **MCP server**: 28 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync

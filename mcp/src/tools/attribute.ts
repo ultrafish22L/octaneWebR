@@ -95,6 +95,18 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         const gated = gateHandle('get_attribute', handle, client.sceneCache);
         if (gated) return gated;
 
+        // Pre-check: does this handle actually support this attribute?
+        const hasAttrResult = await client.callMethod('ApiItem', 'hasAttr', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          id: attribute_id,
+        });
+        if (!hasAttrResult?.result) {
+          return errorResult(
+            `Handle ${handle} does not have attribute ${attribute_id}. ` +
+              `Use get_node_info to find the correct child handle for this attribute.`
+          );
+        }
+
         const result = await client.callMethod('ApiItem', getMethod, {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
@@ -110,7 +122,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34, A_TRANSLATION=172, A_ROTATION=137 (degrees!), A_SCALE=139. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRING=14. IMPORTANT: DOF is ON by default (aperture=0.893) — set to 0. Emission efficiency defaults to 0.025 — set to 1.0 or lights will be 40x dim. A_FILENAME validates path exists (bad paths hang gRPC 30s).',
+    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34, A_TRANSLATION=172, A_ROTATION=137 (degrees!), A_SCALE=139. Types: AT_BOOL=1, AT_INT=3, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRING=14. IMPORTANT: Transform attributes (A_TRANSLATION, A_ROTATION, A_SCALE) must be set on the TRANSFORM CHILD handle (pin 3 connected_handle on NT_GEO_OBJECT), NOT on the geo object itself — setting on the geo object silently does nothing. DOF is ON by default (aperture=0.893) — set to 0. Emission efficiency defaults to 0.025 — set to 1.0 or lights will be 40x dim. A_FILENAME validates path exists (bad paths hang gRPC 30s).',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -129,6 +141,19 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         // Gate: reject handles never seen by any MCP tool
         const gated = gateHandle('set_attribute', handle, client.sceneCache);
         if (gated) return gated;
+
+        // Pre-check: does this handle actually support this attribute?
+        // ApiItem.hasAttr is a safe per-instance check (no crash risk).
+        const hasAttrResult = await client.callMethod('ApiItem', 'hasAttr', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          id: attribute_id,
+        });
+        if (!hasAttrResult?.result) {
+          return errorResult(
+            `Handle ${handle} does not have attribute ${attribute_id}. ` +
+              `Use get_node_info to find the correct child handle for this attribute.`
+          );
+        }
 
         // A_FILENAME (34) with AT_STRING (14): validate path to prevent blocking Octane dialog
         if (attribute_id === 34 && expected_type === AT_STRING) {

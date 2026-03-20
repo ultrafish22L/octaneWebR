@@ -90,7 +90,8 @@ export function useCameraSync({
 
       Logger.debug('Camera initialized:', cameraRef.current);
     } catch (error) {
-      Logger.warn(
+      // Expected on empty scenes (no RT/camera yet) — debug, not warn
+      Logger.debug(
         'Failed to initialize camera from Octane:',
         error instanceof Error ? error.message : String(error)
       );

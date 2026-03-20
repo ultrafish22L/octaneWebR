@@ -4,6 +4,21 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.2] - 2026-03-20
+
+### Fixed — Verification, Logging, Attribute Guards
+
+- **Connection verification false negatives**: Changed `enterWrapperNode: true` → `false` in `connect_nodes` auto-verify (`node.ts`). Was returning wrapper handles instead of source handles, causing every geo→placement connection to report FAILED despite succeeding.
+- **Camera init warnings**: Downgraded `Logger.warn` → `Logger.debug` in `CameraService.captureOriginalCameraState()` and `useCameraSync.initializeCamera()` — expected on empty scenes (no RT/camera), not a real warning.
+- **hasAttr pre-check**: `set_attribute` and `get_attribute` now call `ApiItem.hasAttr()` before operating. Blocks invalid attribute access with actionable error message instead of silent success-but-no-effect.
+- **Log file renames**: `grpc-debug.log` → `log_grpc.log`, `mcp-debug.log` → `log_mcp.log`, `octaneWebR_client.log` → `log_client.log`
+- **MCP log level default**: Changed from `'off'` to `'debug'` — `log_mcp.log` was never created because all log calls were filtered out.
+- **Transform guard**: `set_attribute` tool description now explicitly warns that A_TRANSLATION/A_ROTATION/A_SCALE must target the transform CHILD handle (pin 3), not the geo object itself.
+- **Version queryable**: `get_octane_version` returns `octaneweb_version` field. Root and MCP `package.json` synced to 2.1.2.
+- **`[object Object]` in set_attribute response**: Fixed `String(value)` → `value` for float3 attribute responses.
+
+---
+
 ## [2.1.1] - 2026-03-19
 
 ### Changed - gRPC Debug Logging & Cleanup

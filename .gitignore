@@ -16,6 +16,9 @@ mcp/node_modules/
 *.tsbuildinfo
 vite.config.mts.timestamp-*
 
+# MCP config (contains auth tokens)
+.mcp.json
+
 # Environment
 .env
 .env.local

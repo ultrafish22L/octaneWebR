@@ -32,7 +32,7 @@ const GRPC_LOG_METHODS = new Set([
   'connectTo1',
   'connectToIx',
   'disconnectPin',
-  'update',
+  // 'update' omitted — ApiChangeManager.update is a no-info eval trigger ({} in, {} out)
   'setPosition',
 ]);
 

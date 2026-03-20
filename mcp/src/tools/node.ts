@@ -470,10 +470,13 @@ export function registerNodeTools(
         let verified = true;
         let verifyWarning: string | undefined;
         try {
+          // enterWrapperNode: false — we want the actual source handle, not the wrapper.
+          // With true, geo→placement returns a wrapper handle that != source_handle,
+          // causing false negatives on valid connections.
           const verifyResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinIx: verifyPinIdx,
-            enterWrapperNode: true,
+            enterWrapperNode: false,
           });
           const connectedHandle = extractHandle(verifyResult) ?? 0;
           if (connectedHandle !== source_handle) {

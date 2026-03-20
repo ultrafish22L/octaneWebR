@@ -136,16 +136,16 @@ Film resolution: `get_node_info(film)` → pin 0 → "Image resolution" child �
 
 `create_node` returns all child handles. Pin indices are fixed:
 
-| Pin | Name        | Child Type       | Notes                                                                                                             |
-| --- | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-17, 19-23 safe. Type 18 (Quad) crashes Octane. |
-| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                         |
-| 2   | objectLayer | Object layer     |                                                                                                                   |
-| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale                          |
-| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                      |
-| 5   | Height      | Float value      |                                                                                                                   |
-| 6   | Depth       | Float value      |                                                                                                                   |
-| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                  |
+| Pin | Name        | Child Type       | Notes                                                                                                                                                                                                  |
+| --- | ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | primitive   | Enum value       | `set_attribute(child, 185, AT_INT=3, N)` — Box(1) default. Types 1-17, 19-23 safe. Type 18 (Quad) crashes Octane.                                                                                      |
+| 1   | material    | Diffuse material | Auto-created. Has RGB child on its pin 0.                                                                                                                                                              |
+| 2   | objectLayer | Object layer     |                                                                                                                                                                                                        |
+| 3   | transform   | Transform value  | `A_TRANSLATION=172` for position, `A_ROTATION=137` for rotation, `A_SCALE=139` for scale. **Set on the child handle, NOT the geo object!** Setting on the geo object returns success but does nothing. |
+| 4   | Width       | Float value      | `set_attribute(child, 185, AT_FLOAT=9, 2.0)`                                                                                                                                                           |
+| 5   | Height      | Float value      |                                                                                                                                                                                                        |
+| 6   | Depth       | Float value      |                                                                                                                                                                                                        |
+| 7   | Subdivision | Int value        | Keep low. High values may crash.                                                                                                                                                                       |
 
 ### Setting Material Color on Auto-Created Materials
 

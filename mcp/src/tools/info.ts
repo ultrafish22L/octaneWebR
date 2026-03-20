@@ -5,9 +5,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import fs from 'fs';
+import path from 'path';
+
+// Read MCP server version from package.json at startup
+const mcpPkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
+const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
 import {
   OctaneMcpClient,
   MCP_LOG_PATH,
+  mcpLogReset,
   profileReport,
   profileReset,
   profileStart,
@@ -26,12 +32,12 @@ export function registerInfoTools(
 ) {
   server.tool(
     'get_octane_version',
-    'Get the Octane version and license information',
+    'Get the Octane version, license information, and octaneWebR version',
     {},
     async () => {
       try {
         const info = await client.getSessionInfo();
-        return jsonResult(info);
+        return jsonResult({ ...info, octaneweb_version: MCP_SERVER_VERSION });
       } catch (error: any) {
         return errorResult(error);
       }
@@ -177,6 +183,8 @@ export function registerInfoTools(
         if (fs.existsSync(MCP_LOG_PATH)) {
           const content = fs.readFileSync(MCP_LOG_PATH, 'utf-8');
           oldLines = content.split('\n').length;
+          // Close the write stream before truncating, then let it reopen on next write
+          mcpLogReset();
           fs.writeFileSync(MCP_LOG_PATH, '');
         }
         return jsonResult({ cleared: true, old_line_count: oldLines, path: MCP_LOG_PATH });
