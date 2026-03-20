@@ -7,7 +7,7 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
 import { OctaneMcpClient } from '../OctaneMcpClient';
-import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
+import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
 
 // AttrType enum values (from OctaneProtocol.ts)
 const AT_BOOL = 1;
@@ -92,6 +92,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type }) => {
       try {
+        const gated = gateHandle('get_attribute', handle, client.sceneCache);
+        if (gated) return gated;
+
         const result = await client.callMethod('ApiItem', getMethod, {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
@@ -120,15 +123,13 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           z.object({ x: z.number(), y: z.number().optional(), z: z.number().optional() }),
         ])
         .describe('Value to set (boolean, number, string, or {x, y, z} for float3)'),
-      evaluate: z
-        .boolean()
-        .default(true)
-        .describe(
-          'Trigger scene evaluation after setting. KEEP TRUE (default) — calls ApiChangeManager.update() to flush changes. Use false to batch multiple sets, then call update_scene.'
-        ),
     },
-    async ({ handle, attribute_id, expected_type, value, evaluate }) => {
+    async ({ handle, attribute_id, expected_type, value }) => {
       try {
+        // Gate: reject handles never seen by any MCP tool
+        const gated = gateHandle('set_attribute', handle, client.sceneCache);
+        if (gated) return gated;
+
         // A_FILENAME (34) with AT_STRING (14): validate path to prevent blocking Octane dialog
         if (attribute_id === 34 && expected_type === AT_STRING) {
           const filePath = String(value);
@@ -154,18 +155,10 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           evaluate: false,
         });
 
-        if (evaluate) {
-          // Flush pending changes — same as web UI's ItemService.setParameterValue()
-          await client.callMethod('ApiChangeManager', 'update', {});
-          client.resetDeferredEvalCount();
-        } else {
-          const warning = client.trackDeferredEval();
-          if (warning) {
-            return jsonResult({ success: true, handle, attribute_id, value, warning });
-          }
-        }
+        // Always flush — matches web UI's ItemService.setParameterValue() pattern
+        await client.callMethod('ApiChangeManager', 'update', {});
 
-        return jsonResult({ success: true, handle, attribute_id, value: String(value) });
+        return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {
         return errorResult(error);
       }

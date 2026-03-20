@@ -39,8 +39,8 @@ For boss demos and presentations. Maximum visual impact per second.
 For testing and iteration. Minimize overhead.
 
 - Create ALL nodes quickly (no renders between)
-- Set ALL attributes — `evaluate: true` (default) on every call. Never batch with `evaluate: false` — it causes stale Octane state where subsequent calls operate against a scene that doesn't reflect prior changes.
-- Wire ALL connections — `evaluate: true` on every call.
+- Set ALL attributes (always evaluated immediately — no batching option via MCP)
+- Wire ALL connections (always evaluated immediately)
 - `start_render` → `set_camera` → `save_render`
 - Single render at end
 

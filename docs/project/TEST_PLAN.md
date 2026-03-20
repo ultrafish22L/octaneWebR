@@ -9,19 +9,19 @@
 
 1. **Before testing**: Ask user to start Octane with test scene. Wait for go-ahead. Start dev server, verify "Connected" status.
 2. **Screenshot rule**: Any visible change needs before/after screenshots. Format: `R<round>_<testID>_<desc>_<before|after>.png`
-3. **Verify gRPC calls**: Read `grpc-debug.log` after every test that changes a value.
+3. **Verify gRPC calls**: Read `log_grpc.log` after every test that changes a value.
 4. **Don't rationalize failures**: If user sees no change, it FAILED. `{}` response ≠ success.
 5. **Visual proof required**: Screenshots/logs ARE the evidence. Class names lie; pixels don't.
 6. **Test after every fix**: Fix one, verify, then next. No batching.
 7. **Fresh state per test**: Restart dev server and reload scene before each bug test.
-8. **Detect crashes immediately**: Check `grpc-debug.log` for `ECONNRESET`/`ECONNREFUSED` after risky actions. If crashed, STOP and wait for user.
+8. **Detect crashes immediately**: Check `log_grpc.log` for `ECONNRESET`/`ECONNREFUSED` after risky actions. If crashed, STOP and wait for user.
 9. **Lint+build before push**: `npm run lint` + `npm run build`.
 10. **Preview resize**: Always `desktop` preset (1280x800). NOT 1920x1080 (too small when scaled).
-11. **Logs**: `grpc-debug.log` (server, needs `DEBUG_FILE_LOG = true`), `octaneWebR_client.log` (client).
+11. **Logs**: `log_grpc.log` (server, needs `DEBUG_FILE_LOG = true`), `log_client.log` (client).
 
 ### If Octane Crashes
 
-1. Stop immediately. Read `grpc-debug.log` for last success → first error transition.
+1. Stop immediately. Read `log_grpc.log` for last success → first error transition.
 2. Log the crash with severity High.
 3. **Claude stops ALL servers** — `preview_stop` for dev server/preview. Do this BEFORE user restarts Octane.
 4. **Wait for user** to restart Octane and give the OK ("go", "ok", "ready").
@@ -35,7 +35,7 @@
 
 ### Smoke Test
 
-Select Camera in Outliner → toggle Orthographic checkbox → verify `setPinValueByPinID` in `grpc-debug.log` → verify render updates. Run at session start and after any crash.
+Select Camera in Outliner → toggle Orthographic checkbox → verify `setPinValueByPinID` in `log_grpc.log` → verify render updates. Run at session start and after any crash.
 
 ### DOM Patterns (Automated Testing)
 
@@ -388,12 +388,12 @@ while (fiber) {
 
 ### Medium (I3–I6)
 
-| ID  | Test                        | Pass Criteria                                                       |
-| --- | --------------------------- | ------------------------------------------------------------------- |
-| I3  | F5 full pipeline recovery   | Outliner + graph + inspector + render all recover correctly         |
-| I4  | gRPC roundtrip verification | Toggle Orthographic → verify `setPinValueByPinID` in grpc-debug.log |
-| I5  | Create → delete cleanup     | Create node, delete it, verify no orphans in graph or outliner      |
-| I6  | WebSocket connection idle   | Connection stays alive during 60-second idle period                 |
+| ID  | Test                        | Pass Criteria                                                     |
+| --- | --------------------------- | ----------------------------------------------------------------- |
+| I3  | F5 full pipeline recovery   | Outliner + graph + inspector + render all recover correctly       |
+| I4  | gRPC roundtrip verification | Toggle Orthographic → verify `setPinValueByPinID` in log_grpc.log |
+| I5  | Create → delete cleanup     | Create node, delete it, verify no orphans in graph or outliner    |
+| I6  | WebSocket connection idle   | Connection stays alive during 60-second idle period               |
 
 ### Hard (I7–I10)
 

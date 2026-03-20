@@ -30,10 +30,63 @@ export class SceneCache {
   /** Whether get_scene_tree has populated this cache at least once */
   private _populated = false;
 
+  /**
+   * Every handle ever returned to the AI by any MCP tool response.
+   * Includes node handles, pin child handles, connected handles — anything
+   * the AI could legitimately use in a subsequent call.
+   * Cleared on crash/load/reset (same as the rest of the cache).
+   */
+  private _knownHandles = new Set<number>();
+
+  // ── Handle tracking (crash prevention) ─────────────────────────
+
+  /** Register a handle as known-valid (returned by some tool response) */
+  trackHandle(handle: number): void {
+    if (handle > 0) this._knownHandles.add(handle);
+  }
+
+  /** Register multiple handles at once */
+  trackHandles(handles: number[]): void {
+    for (const h of handles) {
+      if (h > 0) this._knownHandles.add(h);
+    }
+  }
+
+  /**
+   * Check if a handle has been seen before.
+   * Returns { valid: true } or { valid: false, reason: string }.
+   * Reason string includes the handle value for log searchability.
+   */
+  validateHandle(handle: number): { valid: true } | { valid: false; reason: string } {
+    if (handle <= 0) {
+      return { valid: false, reason: `Handle ${handle} is invalid (must be > 0)` };
+    }
+    if (!this._populated && this._knownHandles.size === 0) {
+      // Cache not yet populated — can't validate, allow through
+      return { valid: true };
+    }
+    if (this._knownHandles.has(handle)) {
+      return { valid: true };
+    }
+    return {
+      valid: false,
+      reason:
+        `Handle ${handle} was never returned by any MCP tool. ` +
+        `Known handles: ${this._knownHandles.size}. ` +
+        `Use get_scene_tree or get_node_info to discover valid handles. ` +
+        `Passing unknown handles to Octane can crash it.`,
+    };
+  }
+
+  get knownHandleCount(): number {
+    return this._knownHandles.size;
+  }
+
   // ── Node operations ──────────────────────────────────────────────
 
   addNode(handle: number, name: string, typeName: string, typeId: number): void {
     this.nodes.set(handle, { name, typeName, typeId });
+    this._knownHandles.add(handle);
   }
 
   removeNode(handle: number): void {
@@ -114,6 +167,7 @@ export class SceneCache {
     this.nodes.clear();
     this.connections.clear();
     this.children.clear();
+    this._knownHandles.clear();
     this._populated = false;
   }
 

@@ -12,15 +12,15 @@ import path from 'path';
 import fs from 'fs';
 import { SceneCache } from './SceneCache';
 
-export const MCP_LOG_PATH = path.resolve(__dirname, '../../mcp-debug.log');
+export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
 
 // Log levels: 'debug' = everything, 'warn' = warnings+errors, 'error' = errors only, 'off' = silent
 type LogLevel = 'debug' | 'warn' | 'error' | 'off';
-const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'off';
+const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'warn';
 
 const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, warn: 1, error: 2, off: 3 };
 
-function mcpLog(msg: string, level: LogLevel = 'debug'): void {
+export function mcpLog(msg: string, level: LogLevel = 'debug'): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
   const ts = new Date().toISOString().substring(11, 23);
   fs.appendFile(MCP_LOG_PATH, `[${ts}] ${msg}\n`, () => {});
@@ -225,11 +225,6 @@ export class OctaneMcpClient {
   // Tracks nodes, connections, and children for scene awareness.
   readonly sceneCache = new SceneCache();
 
-  // Deferred evaluation tracking — warns when evaluate:false calls pile up.
-  // Batching deferred changes + update_scene() crashed a 10-object emissive scene.
-  private deferredEvalCount = 0;
-  private static readonly DEFERRED_WARN_THRESHOLD = 3;
-
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
   }
@@ -337,35 +332,6 @@ export class OctaneMcpClient {
     const name = result?.value ?? result;
     this.sessionInfo.deviceNames.set(deviceIndex, name);
     return name;
-  }
-
-  /**
-   * Track a deferred evaluation (evaluate:false). Returns a warning string
-   * if the count exceeds the threshold, or null if safe.
-   */
-  trackDeferredEval(): string | null {
-    this.deferredEvalCount++;
-    if (this.deferredEvalCount >= OctaneMcpClient.DEFERRED_WARN_THRESHOLD) {
-      const count = this.deferredEvalCount;
-      mcpLog(`WARN: ${count} deferred evaluations pending — risk of crash on flush`, 'warn');
-      return (
-        `WARNING: ${count} deferred evaluations (evaluate:false) are pending. ` +
-        `Batching many deferred changes and flushing with update_scene() has caused ` +
-        `crashes in complex scenes. Consider using evaluate:true (default) for ` +
-        `incremental evaluation instead.`
-      );
-    }
-    return null;
-  }
-
-  /** Reset deferred eval counter (call after evaluation happens) */
-  resetDeferredEvalCount(): void {
-    this.deferredEvalCount = 0;
-  }
-
-  /** Get current deferred eval count */
-  getDeferredEvalCount(): number {
-    return this.deferredEvalCount;
   }
 
   // ── Dynamic ApiInfo queries (Tier 2 cache) ─────────────────────────

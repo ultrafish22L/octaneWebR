@@ -137,7 +137,12 @@
       "Bash(grep -r \"pinCount\\\\|pinInfoIx\\\\|connectedNodeIx\\\\|pinNameIx\\\\|pinTypeIx\\\\|pinIdIx\" /c/otoyla/GRPC/dev/octaneWebR/client/src /c/otoyla/GRPC/dev/octaneWebR/mcp/src --include=*.ts)",
       "Bash(grep -l \"class.*ApiInfo\" \"C:/otoyla/GRPC/dev/sdk\"/*.h)",
       "mcp__octane__clear_log",
-      "Bash(:)"
+      "Bash(:)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 43929 -ErrorAction SilentlyContinue\")",
+      "Bash(npm run:*)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 43929 -ErrorAction SilentlyContinue | Select-Object -First 1 State\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object -First 1 State\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 43929 -ErrorAction SilentlyContinue | Select-Object State\")"
     ]
   }
 }

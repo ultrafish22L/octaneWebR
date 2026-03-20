@@ -75,18 +75,18 @@ Calling `nodeInfo(type)` with certain type IDs kills Octane (ECONNRESET). Tested
 
 ## Render Issues
 
-| Symptom                                       | Cause                                                                        | Fix                                                                                                                                                                                                                                                    |
-| --------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Render all white**                          | DL kernel (need PT), camera outside scene, or geo/env not actually connected | Verify RT connections: `get_node_info(RT)` -> check pins 1, 3, 6 all have `connected_handle != 0`. Switch kernel to PT.                                                                                                                                |
-| **Render doesn't update after connect**       | `start_render` does NOT evaluate the scene                                   | Use `evaluate: true` (default) on every `set_attribute` / `connect_nodes` call. Never batch with `evaluate: false` — stale state causes wrong data on the wire. `start_render` just renders current state; any evaluated change upstream refreshes it. |
-| **Render grey/blue**                          | Camera looking at sky (open walls, wrong camera angle)                       | Check wall positions and camera angle.                                                                                                                                                                                                                 |
-| **Render blurry**                             | DOF enabled by default (aperture 0.893)                                      | Set aperture to 0 — see Attribute Failures above.                                                                                                                                                                                                      |
-| **Mesh loads but invisible**                  | Missing `A_RELOAD` after `A_FILENAME`                                        | After setting filename: `set_attribute(mesh, A_RELOAD=124, AT_BOOL=1, true)`.                                                                                                                                                                          |
-| **Glass sphere invisible**                    | Clear glass in uniform lighting — physically correct but nothing to refract  | Use colored transmission (`{0.85, 0.95, 1.0}`) for visibility.                                                                                                                                                                                         |
-| **Mesh renders impossibly fast, no geometry** | Stale engine state                                                           | Restart Octane completely.                                                                                                                                                                                                                             |
-| **Black render (space scene)**                | No light sources — environment alone is insufficient                         | Create at least one light source and connect to geo group BEFORE adding geometry.                                                                                                                                                                      |
-| **Render black image from `save_render`**     | Called `save_render` before `start_render`                                   | Always `start_render` first, wait for samples, then `save_render`.                                                                                                                                                                                     |
-| **Objects not appearing**                     | Forgot to connect geo to RT pin 3                                            | Connect geo (or geo group) to RT via `pin_index: 3`.                                                                                                                                                                                                   |
+| Symptom                                       | Cause                                                                        | Fix                                                                                                                                                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Render all white**                          | DL kernel (need PT), camera outside scene, or geo/env not actually connected | Verify RT connections: `get_node_info(RT)` -> check pins 1, 3, 6 all have `connected_handle != 0`. Switch kernel to PT.                                                                                      |
+| **Render doesn't update after connect**       | `start_render` does NOT evaluate the scene                                   | MCP tools always evaluate immediately (no batching option). `start_render` just renders current state; any evaluated change upstream refreshes it. If render is stale, call `set_camera` to force a refresh. |
+| **Render grey/blue**                          | Camera looking at sky (open walls, wrong camera angle)                       | Check wall positions and camera angle.                                                                                                                                                                       |
+| **Render blurry**                             | DOF enabled by default (aperture 0.893)                                      | Set aperture to 0 — see Attribute Failures above.                                                                                                                                                            |
+| **Mesh loads but invisible**                  | Missing `A_RELOAD` after `A_FILENAME`                                        | After setting filename: `set_attribute(mesh, A_RELOAD=124, AT_BOOL=1, true)`.                                                                                                                                |
+| **Glass sphere invisible**                    | Clear glass in uniform lighting — physically correct but nothing to refract  | Use colored transmission (`{0.85, 0.95, 1.0}`) for visibility.                                                                                                                                               |
+| **Mesh renders impossibly fast, no geometry** | Stale engine state                                                           | Restart Octane completely.                                                                                                                                                                                   |
+| **Black render (space scene)**                | No light sources — environment alone is insufficient                         | Create at least one light source and connect to geo group BEFORE adding geometry.                                                                                                                            |
+| **Render black image from `save_render`**     | Called `save_render` before `start_render`                                   | Always `start_render` first, wait for samples, then `save_render`.                                                                                                                                           |
+| **Objects not appearing**                     | Forgot to connect geo to RT pin 3                                            | Connect geo (or geo group) to RT via `pin_index: 3`.                                                                                                                                                         |
 
 ---
 
@@ -145,8 +145,8 @@ These are Octane bugs or unimplemented features — cannot be worked around in o
 ### Crash Debugging Workflow
 
 1. On any crash (ECONNRESET/ECONNREFUSED): **STOP immediately**.
-2. Read `mcp-debug.log` for the last successful call and first error.
-3. Compare with `grpc-debug.log` (Vite plugin traffic).
+2. Read `log_mcp.log` for the last successful call and first error.
+3. Compare with `log_grpc.log` (Vite plugin traffic).
 4. Isolate the exact gRPC call that caused the crash.
 5. Crashes are almost certainly malformed MCP data — investigate, don't speculate.
 6. Stop all servers BEFORE user restarts Octane (see Fresh Start Procedure below).
@@ -159,11 +159,11 @@ Use `get_node_info(RT)` after connecting to RT to verify `connected_handle != 0`
 
 ### Log Files
 
-| File                    | Source               | Notes                                                                    |
-| ----------------------- | -------------------- | ------------------------------------------------------------------------ |
-| `grpc-debug.log`        | OctaneGrpcClientBase | On by default (`GRPC_DEBUG_LOG=0` to disable). Logs mutating calls only. |
-| `mcp-debug.log`         | MCP server           | All MCP tool calls and responses                                         |
-| `octaneWebR_client.log` | Browser client       | Client-side logging                                                      |
+| File             | Source               | Notes                                                                    |
+| ---------------- | -------------------- | ------------------------------------------------------------------------ |
+| `log_grpc.log`   | OctaneGrpcClientBase | On by default (`GRPC_DEBUG_LOG=0` to disable). Logs mutating calls only. |
+| `log_mcp.log`    | MCP server           | All MCP tool calls and responses                                         |
+| `log_client.log` | Browser client       | Client-side logging                                                      |
 
 ### Detecting Crashes
 

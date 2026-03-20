@@ -3,7 +3,7 @@
  *
  * Core gRPC functionality used by both the Vite dev plugin and Express production server.
  * Contains proto loading, service resolution, method invocation, and optional file logging.
- * Set GRPC_DEBUG_LOG=1 to log all calls to grpc-debug.log.
+ * Set GRPC_DEBUG_LOG=1 to log all calls to log_grpc.log.
  */
 
 import * as grpc from '@grpc/grpc-js';
@@ -12,7 +12,7 @@ import path from 'path';
 import * as fs from 'fs';
 
 // ── gRPC debug file logging ────────────────────────────────────────
-// On by default. Set GRPC_DEBUG_LOG=0 to disable. Logs mutating calls to grpc-debug.log.
+// On by default. Set GRPC_DEBUG_LOG=0 to disable. Logs mutating calls to log_grpc.log.
 const GRPC_LOG_ENABLED = process.env.GRPC_DEBUG_LOG !== '0';
 let grpcLogStream: fs.WriteStream | null = null;
 
@@ -40,7 +40,7 @@ function grpcLog(prefix: string, service: string, method: string, data?: any): v
   if (!GRPC_LOG_ENABLED) return;
   if (!GRPC_LOG_METHODS.has(method)) return;
   if (!grpcLogStream) {
-    const logPath = path.resolve(process.cwd(), 'grpc-debug.log');
+    const logPath = path.resolve(process.cwd(), 'log_grpc.log');
     grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
     grpcLogStream.write(`=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
   }

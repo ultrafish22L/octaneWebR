@@ -15,6 +15,7 @@ import {
   errorResult,
   extractHandle,
   extractValue,
+  gateHandle,
   OBJ_API_ITEM,
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
@@ -191,6 +192,10 @@ export function registerSceneTools(
     },
     async ({ handle, connected_only }) => {
       try {
+        // Gate: reject handles never seen by any MCP tool
+        const gated = gateHandle('get_node_info', handle, client.sceneCache);
+        if (gated) return gated;
+
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
@@ -381,9 +386,11 @@ export function registerSceneTools(
           // Node may not support pins
         }
 
-        // Update scene cache with discovered connections
+        // Track all discovered handles for crash prevention
+        client.sceneCache.trackHandle(handle);
         for (const pin of info.pins) {
           if (pin.connected_handle && pin.connected_handle !== 0) {
+            client.sceneCache.trackHandle(pin.connected_handle);
             client.sceneCache.setConnection(handle, pin.index, pin.connected_handle);
           }
         }
@@ -394,22 +401,6 @@ export function registerSceneTools(
         }
 
         return jsonResult(info);
-      } catch (error: any) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.tool(
-    'update_scene',
-    'Flush pending changes (ApiChangeManager.update()). Call after batched set_attribute/connect_nodes with evaluate:false. WARNING: batching many deferred changes has crashed complex scenes — prefer evaluate:true (default) for safety.',
-    {},
-    async () => {
-      try {
-        const pendingCount = client.getDeferredEvalCount();
-        await client.callMethod('ApiChangeManager', 'update', {});
-        client.resetDeferredEvalCount();
-        return jsonResult({ success: true, flushed_deferred_count: pendingCount });
       } catch (error: any) {
         return errorResult(error);
       }

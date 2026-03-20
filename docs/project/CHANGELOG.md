@@ -8,7 +8,7 @@ All notable changes to octaneWebR.
 
 ### Changed - gRPC Debug Logging & Cleanup
 
-- **gRPC debug file logging**: Added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only (create, set, connect, destroy) to `grpc-debug.log`.
+- **gRPC debug file logging**: Added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only (create, set, connect, destroy) to `log_grpc.log`.
 - **Vite plugin file logging removed**: REQ/RES/ERR file logging stripped from `vite-plugin-octane-grpc.ts` — all gRPC logging now centralized in the base class.
 - **`expected_type` removed from SET calls**: Web UI no longer sends `expected_type` in `setByAttrID`/`setValueByAttrID` — the proto doesn't define it for set operations.
 - **Compat layer fix**: `getPinValueByPinID` → `getPinValue` translation now correctly transforms `item_ref` → `objectPtr` for Alpha 5.

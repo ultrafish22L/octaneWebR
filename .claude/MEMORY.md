@@ -148,7 +148,7 @@ For every scene, this is the rendering order. Each step gets a render + honest c
 - **ORBX save resets ALL handles**: After `save_project`, re-query scene tree with `get_scene_tree`.
 - **ORBX embeds assets with relative paths**: .orbx packages copy textures/meshes inside. On reload, paths become relative (e.g. `assets\file.jpg`) resolving inside the package, NOT from disk. You CANNOT re-point them — `set_attribute(filename)` hangs with DEADLINE_EXCEEDED. **Save .ocs during MCP iteration** (keeps absolute paths). Only .orbx for final delivery. If stuck with .orbx: rebuild fresh (fastest) or unpack via Lua API.
 - **ORBX mesh node corruption**: Mesh nodes from ORBX that survived heavy scene surgery (delete siblings, swap filenames) become corrupted. Always create FRESH `NT_GEO_MESH` nodes.
-- **If a crash occurs**: Isolate the exact gRPC call, compare data format with octaneWebR's equivalent call, check grpc-debug.log. Don't blame Octane — almost certainly malformed data. Ask user if no solid path forward.
+- **If a crash occurs**: Isolate the exact gRPC call, compare data format with octaneWebR's equivalent call, check log_grpc.log. Don't blame Octane — almost certainly malformed data. Ask user if no solid path forward.
 - **Diagnostic: render time tells you if geometry is in the pipeline**: Env-only ~3-4s. With 500K face mesh, 8-11s. If render time stays at env-only level, mesh isn't rendering.
 
 ## Lessons Learned (NOT in OCTANE_MCP.md)

@@ -20,7 +20,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (27 tools, st
 
 **MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 28 tools for scene building, camera, render, nodes, and attributes. Built with esbuild, has its own `package.json`.
 
-**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `grpc-debug.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
+**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
 
 ## Directory Structure
 

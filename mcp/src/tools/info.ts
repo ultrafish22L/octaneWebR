@@ -169,7 +169,7 @@ export function registerInfoTools(
 
   server.tool(
     'clear_log',
-    'Clear the mcp-debug.log file to start with a fresh log. Returns the line count of the old log.',
+    'Clear the log_mcp.log file to start with a fresh log. Returns the line count of the old log.',
     {},
     async () => {
       try {

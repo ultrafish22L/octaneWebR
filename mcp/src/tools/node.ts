@@ -15,6 +15,7 @@ import {
   errorResult,
   extractHandle,
   extractValue,
+  gateHandle,
   OBJ_API_ITEM,
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
@@ -258,6 +259,10 @@ export function registerNodeTools(
 
         await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
 
+        // Track all handles returned to the AI for crash prevention
+        client.sceneCache.trackHandle(newHandle);
+        client.sceneCache.trackHandles(pins.filter(p => p.handle !== 0).map(p => p.handle));
+
         // Only return pins with auto-created children (handle != 0).
         // Reduces response size dramatically (e.g. PT kernel: 49 pins → ~15 with children).
         // Claude can use get_node_info if it needs the full pin layout later.
@@ -283,6 +288,9 @@ export function registerNodeTools(
     { handle: z.number().int().nonnegative().describe('Node handle to delete') },
     async ({ handle }) => {
       try {
+        const gated = gateHandle('delete_node', handle, client.sceneCache);
+        if (gated) return gated;
+
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
@@ -317,10 +325,15 @@ export function registerNodeTools(
         .int()
         .nonnegative()
         .describe('Source node handle (the node being connected)'),
-      evaluate: z.boolean().default(true).describe('Trigger scene evaluation after connecting'),
     },
-    async ({ target_handle, pin_index, pin_name, source_handle, evaluate }) => {
+    async ({ target_handle, pin_index, pin_name, source_handle }) => {
       try {
+        // Gate: reject handles never seen by any MCP tool
+        const gatedTarget = gateHandle('connect_nodes(target)', target_handle, client.sceneCache);
+        if (gatedTarget) return gatedTarget;
+        const gatedSource = gateHandle('connect_nodes(source)', source_handle, client.sceneCache);
+        if (gatedSource) return gatedSource;
+
         // --- Pin type validation (cache-first, gRPC fallback) ---
         const sourceTypeName = client.sceneCache.getTypeName(source_handle);
         const targetTypeName = client.sceneCache.getTypeName(target_handle);
@@ -431,27 +444,13 @@ export function registerNodeTools(
           );
         }
 
-        // Track deferred evaluations
-        let evalWarning: string | undefined;
-        if (evaluate) {
-          client.resetDeferredEvalCount();
-        } else {
-          const warning = client.trackDeferredEval();
-          if (warning) evalWarning = warning;
-        }
-
-        // --- Perform the connection ---
-        // NOTE: Unlike set_attribute (which always sends evaluate:false then calls
-        // ApiChangeManager.update() to avoid double-evaluation crashes specific to
-        // setValueByAttrID), connect_nodes passes evaluate directly to the gRPC call.
-        // The connectTo/connectToIx/connectTo1 RPCs don't exhibit the double-eval
-        // issue, so the extra round-trip to update() is unnecessary here.
+        // --- Perform the connection (always evaluate) ---
         if (pin_name !== undefined) {
           await client.callMethod('ApiNode', 'connectTo1', {
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinName: pin_name,
             sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
-            evaluate,
+            evaluate: true,
             doCycleCheck: true,
           });
         } else if (pin_index !== undefined) {
@@ -459,7 +458,7 @@ export function registerNodeTools(
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinIdx: pin_index,
             sourceNode: { handle: String(source_handle), type: OBJ_API_NODE },
-            evaluate,
+            evaluate: true,
             doCycleCheck: true,
           });
         } else {
@@ -506,7 +505,6 @@ export function registerNodeTools(
           target_pin_type: targetPinType,
         };
         if (pin_name !== undefined) result.pin_name = pin_name;
-        if (evalWarning) result.eval_warning = evalWarning;
         if (verifyWarning) result.verify_warning = verifyWarning;
 
         if (!verified) {
@@ -528,15 +526,17 @@ export function registerNodeTools(
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       pin_index: z.number().describe('Pin index to disconnect'),
-      evaluate: z.boolean().default(true).describe('Trigger scene evaluation after disconnecting'),
     },
-    async ({ handle, pin_index, evaluate }) => {
+    async ({ handle, pin_index }) => {
       try {
+        const gated = gateHandle('disconnect_pin', handle, client.sceneCache);
+        if (gated) return gated;
+
         await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
           sourceNode: { handle: 0, type: OBJ_API_NODE },
-          evaluate,
+          evaluate: true,
           doCycleCheck: true,
         });
         client.sceneCache.removeConnection(handle, pin_index);
@@ -555,10 +555,12 @@ export function registerNodeTools(
       node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
       target_handle: z.number().int().nonnegative().describe('Target node to connect to'),
       pin_index: z.number().int().nonnegative().describe('Pin index on target node'),
-      evaluate: z.boolean().default(true).describe('Evaluate scene after connecting'),
     },
-    async ({ node_type, target_handle, pin_index, evaluate }) => {
+    async ({ node_type, target_handle, pin_index }) => {
       try {
+        const gated = gateHandle('create_and_connect(target)', target_handle, client.sceneCache);
+        if (gated) return gated;
+
         // --- Create ---
         const typeId = cache?.getNodeTypeId(node_type);
         if (typeId === undefined) {
@@ -593,7 +595,7 @@ export function registerNodeTools(
           objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
           sourceNode: { handle: String(newHandle), type: OBJ_API_NODE },
-          evaluate,
+          evaluate: true,
           doCycleCheck: true,
         });
 

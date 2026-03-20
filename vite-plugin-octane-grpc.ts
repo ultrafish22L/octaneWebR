@@ -43,7 +43,7 @@ const SERVER_LOG_LEVEL: ServerLogLevel = ServerLogLevel.DEBUG;
 // ============================================================================
 // Set to true to log all gRPC request/response pairs to a file
 const DEBUG_FILE_LOG = process.env.DEBUG_FILE_LOG !== 'false';
-const LOG_FILE_PATH = path.resolve(__dirname, 'grpc-debug.log');
+const LOG_FILE_PATH = path.resolve(__dirname, 'log_grpc.log');
 
 // Truncate log file on startup
 if (DEBUG_FILE_LOG) {
@@ -482,7 +482,7 @@ export function octaneGrpcPlugin(): Plugin {
 
     async configureServer(server: ViteDevServer) {
       // Delete old log file at startup (before logging is initialized)
-      const logFilePath = 'octaneWebR_client.log';
+      const logFilePath = 'log_client.log';
       try {
         if (fs.existsSync(logFilePath)) {
           fs.unlinkSync(logFilePath);
@@ -820,7 +820,7 @@ export function octaneGrpcPlugin(): Plugin {
         // Client log clear endpoint (camelCase to match client call)
         if (url === '/api/logClear' && req.method === 'POST') {
           try {
-            fs.rmSync('octaneWebR_client.log', { force: true });
+            fs.rmSync('log_client.log', { force: true });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ status: 'ok', message: 'Log cleared' }));
           } catch (error: any) {
@@ -863,7 +863,7 @@ export function octaneGrpcPlugin(): Plugin {
                 fileContent += `${timestamp} ${lvl.toUpperCase()} ${entry.message}\n`;
               }
 
-              fs.appendFile('octaneWebR_client.log', fileContent, err => {
+              fs.appendFile('log_client.log', fileContent, err => {
                 if (err) slog.warn('Client log write failed:', err.message);
               });
 

@@ -6,7 +6,7 @@
 
 **What happened last session (Phase 11):**
 
-- gRPC debug file logging added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only to `grpc-debug.log`.
+- gRPC debug file logging added to `OctaneGrpcClientBase.callMethod()` — on by default, `GRPC_DEBUG_LOG=0` to disable. Logs mutating calls only to `log_grpc.log`.
 - Vite plugin file logging removed (REQ/RES/ERR lines) — all gRPC logging centralized in the base class now
 - `expected_type` removed from SET calls in web UI (proto doesn't have it for sets)
 - Compat layer fix: `getPinValueByPinID` → `getPinValue` now correctly transforms `item_ref` → `objectPtr` for Alpha 5
@@ -16,8 +16,8 @@
 
 ### TODO for Next Session
 
-1. **MCP scene testing** — build 3 scenes via MCP tools (metal/glass with primitives + 2 creative). Goal: find bugs. If Octane crashes, check `grpc-debug.log` immediately — it logs all mutating calls with timestamps. Use `mcp__octane__clear_log` to reset before each test.
-2. **Debug with file logging** — `grpc-debug.log` now captures all SET/CREATE/CONNECT/UPDATE calls from both web UI and MCP (same file, same format). Compare web vs MCP calls side-by-side when something breaks. Add reads temporarily to `GRPC_LOG_METHODS` set in `OctaneGrpcClientBase.ts` if needed.
+1. **MCP scene testing** — build 3 scenes via MCP tools (metal/glass with primitives + 2 creative). Goal: find bugs. If Octane crashes, check `log_grpc.log` immediately — it logs all mutating calls with timestamps. Use `mcp__octane__clear_log` to reset before each test.
+2. **Debug with file logging** — `log_grpc.log` now captures all SET/CREATE/CONNECT/UPDATE calls from both web UI and MCP (same file, same format). Compare web vs MCP calls side-by-side when something breaks. Add reads temporarily to `GRPC_LOG_METHODS` set in `OctaneGrpcClientBase.ts` if needed.
 3. **Known MCP bug** — `connect_nodes` verification falls back to pin 0 when `pin_name` can't resolve to an index (`node.ts:462`). Fix before relying on named-pin connections.
 4. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
 5. Custom tooltip component (#2 in backlog)
@@ -60,7 +60,7 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 
 - **Dev server**: `npm run dev` (port 43929)
 - **Test scene**: `ORBX/teapot.orbx` — load via File→Open
-- **Smoke test**: Toggle Orthographic on Camera node → verify `setByAttrID` in `grpc-debug.log` (on by default, `GRPC_DEBUG_LOG=0` to disable)
+- **Smoke test**: Toggle Orthographic on Camera node → verify `setByAttrID` in `log_grpc.log` (on by default, `GRPC_DEBUG_LOG=0` to disable)
 - **MCP server**: `cd mcp && npm run build && npm run mcp:start`
 
 ### Environment Variables
@@ -72,7 +72,7 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 | `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host (auto-detects `host.docker.internal` in containers)                                                                            |
 | `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                                                                                                |
 | `WORKER_1`          | `43929`     | Vite dev server port                                                                                                                            |
-| `GRPC_DEBUG_LOG`    | `1` (on)    | Set to `0` to disable gRPC debug file logging (`grpc-debug.log`). Logs mutating calls only.                                                     |
+| `GRPC_DEBUG_LOG`    | `1` (on)    | Set to `0` to disable gRPC debug file logging (`log_grpc.log`). Logs mutating calls only.                                                       |
 
 ## Key Docs
 
@@ -135,7 +135,7 @@ NEVER kill Octane while servers are running. NEVER start servers before Octane i
 
 ### Render Pipeline
 
-7. **`start_render` does NOT evaluate the scene** — any evaluated change upstream of the RT triggers a refresh (connect with evaluate:true, update_scene, set_camera, set_attribute). `start_render` just renders the current state.
+7. **`start_render` does NOT evaluate the scene** — MCP tools always evaluate immediately (no batching option). Any set_attribute, connect_nodes, or set_camera call triggers evaluation. `start_render` just renders the current state.
 8. **DOF is ON by default** (aperture=0.893) — disable immediately: RT→pin0(camera)→pin14(aperture)→set value to 0.
 9. **Emission efficiency defaults to 0.025** — set to 1.0 or lights will be 40× dimmer than expected.
 
