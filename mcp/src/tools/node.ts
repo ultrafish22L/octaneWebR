@@ -259,9 +259,23 @@ export function registerNodeTools(
 
         await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
 
-        // Track all handles returned to the AI for crash prevention
+        // Track all handles returned to the AI for crash prevention,
+        // and add auto-created children to the nodes Map so getTypeName() works
+        // for subsequent connect_nodes type validation.
         client.sceneCache.trackHandle(newHandle);
-        client.sceneCache.trackHandles(pins.filter(p => p.handle !== 0).map(p => p.handle));
+        for (const p of pins) {
+          if (p.handle !== 0) {
+            client.sceneCache.trackHandle(p.handle);
+            // Cache child with its defaultNodeType from ApiCache if known
+            const childTypeName = cachedInfo?.pins.find(
+              cp => cp.index === p.index
+            )?.defaultNodeType;
+            if (childTypeName) {
+              const childTypeId = cache?.getNodeTypeId(childTypeName) ?? 0;
+              client.sceneCache.addNode(p.handle, p.name ?? '', childTypeName, childTypeId);
+            }
+          }
+        }
 
         // Only return pins with auto-created children (handle != 0).
         // Reduces response size dramatically (e.g. PT kernel: 49 pins → ~15 with children).
@@ -606,10 +620,13 @@ export function registerNodeTools(
         let verified = true;
         let verifyWarning: string | undefined;
         try {
+          // enterWrapperNode: false — we want the actual source handle, not the wrapper.
+          // With true, geo→placement returns a wrapper handle that != source_handle,
+          // causing false negatives on valid connections.
           const verifyResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
             objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
             pinIx: pin_index,
-            enterWrapperNode: true,
+            enterWrapperNode: false,
           });
           const connectedHandle = extractHandle(verifyResult) ?? 0;
           if (connectedHandle !== newHandle) {

@@ -1,5 +1,5 @@
 /**
- * Scene Tools — get_scene_tree, get_node_info, update_scene
+ * Scene Tools — get_scene_tree, get_node_info
  *
  * These replicate the traversal pattern from SceneService.buildSceneTree
  * but return plain JSON instead of populating a Scene object.
@@ -34,6 +34,7 @@ interface SceneTreeNode {
 
 async function traverseGraph(
   client: OctaneMcpClient,
+  cache: ApiCache | null,
   graphHandle: number,
   depth: number,
   maxDepth: number
@@ -70,27 +71,47 @@ async function traverseGraph(
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
         });
-        const typeResult = await client.callMethod('ApiItem', 'outType', {
-          objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
-        });
         const graphResult = await client.callMethod('ApiItem', 'isGraph', {
           objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
         });
 
         const name = extractValue(nameResult) ?? '';
-        const type = extractValue(typeResult) ?? 0;
         const isGraph = extractValue(graphResult) ?? false;
+
+        // Get node TYPE ID (not outType which returns pin output type like PT_MATERIAL=7).
+        // ApiNode.type() returns the NodeType enum (e.g. NT_MAT_UNIVERSAL=130).
+        let typeId = 0;
+        try {
+          const typeResult = await client.callMethod('ApiNode', 'type', {
+            objectPtr: { handle: String(itemHandle), type: OBJ_API_NODE },
+          });
+          const typeRaw = extractValue(typeResult);
+          // enums: String → may return "NT_MAT_UNIVERSAL" or a number
+          if (typeof typeRaw === 'string' && typeRaw.startsWith('NT_')) {
+            typeId = cache?.getNodeTypeId(typeRaw) ?? 0;
+          } else {
+            typeId = Number(typeRaw ?? 0);
+          }
+        } catch {
+          // Some items (pure graphs) may not support ApiNode.type()
+        }
 
         const node: SceneTreeNode = {
           handle: Number(itemHandle),
           name: String(name),
-          type: Number(type),
+          type: typeId,
           isGraph: Boolean(isGraph),
         };
 
         // If it's a graph and we haven't hit max depth, recurse
         if (isGraph && depth < maxDepth) {
-          node.children = await traverseGraph(client, Number(itemHandle), depth + 1, maxDepth);
+          node.children = await traverseGraph(
+            client,
+            cache,
+            Number(itemHandle),
+            depth + 1,
+            maxDepth
+          );
         }
 
         // Get pin count for non-graph nodes
@@ -139,7 +160,7 @@ export function registerSceneTools(
       try {
         const rootHandle = await client.getRootNodeGraph();
 
-        const tree = await traverseGraph(client, rootHandle, 0, max_depth);
+        const tree = await traverseGraph(client, cache, rootHandle, 0, max_depth);
 
         // Populate scene cache from traversal results
         const populateCache = (nodes: SceneTreeNode[], parentHandle?: number) => {
@@ -171,7 +192,8 @@ export function registerSceneTools(
             }
             return result;
           };
-          return jsonResult({ root_handle: rootHandle, nodes: flatten(tree), count: tree.length });
+          const flat = flatten(tree);
+          return jsonResult({ root_handle: rootHandle, nodes: flat, count: flat.length });
         }
         return jsonResult({ root_handle: rootHandle, nodes: tree, count: tree.length });
       } catch (error: any) {

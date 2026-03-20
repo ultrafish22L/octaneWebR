@@ -90,7 +90,17 @@ export class SceneCache {
   }
 
   removeNode(handle: number): void {
+    // Recursively remove cached children first
+    const kids = this.children.get(handle);
+    if (kids) {
+      for (const child of kids) {
+        this.removeNode(child);
+      }
+    }
+
     this.nodes.delete(handle);
+    this._knownHandles.delete(handle);
+
     // Clean up connections involving this handle
     for (const [key, source] of this.connections) {
       const target = Number(key.split(':')[0]);
@@ -100,9 +110,9 @@ export class SceneCache {
     }
     // Clean up children references
     this.children.delete(handle);
-    for (const [parent, kids] of this.children) {
-      const filtered = kids.filter(h => h !== handle);
-      if (filtered.length !== kids.length) {
+    for (const [parent, parentKids] of this.children) {
+      const filtered = parentKids.filter(h => h !== handle);
+      if (filtered.length !== parentKids.length) {
         this.children.set(parent, filtered);
       }
     }

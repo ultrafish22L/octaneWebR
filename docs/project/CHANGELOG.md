@@ -4,6 +4,23 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.1.3] - 2026-03-19
+
+### Fixed — MCP Cache Integrity (full code review)
+
+- **`get_scene_tree` wrong node type**: Was calling `ApiItem.outType()` (returns pin output type like `PT_MATERIAL=7`) instead of `ApiNode.type()` (returns node type ID like `NT_MAT_UNIVERSAL=130`). Poisoned SceneCache with wrong types for ALL scene-tree-discovered nodes, silently disabling `connect_nodes` type validation.
+- **`create_and_connect` verification**: Used `enterWrapperNode: true` (same v2.1.2 bug already fixed in `connect_nodes`). Caused false-negative verification on geo→placement connections.
+- **`create_node` child caching**: Auto-created pin children tracked in `_knownHandles` but never added to `nodes` Map. `getTypeName()` returned undefined for all children, disabling type validation.
+- **`get_scene_tree` compact count**: `count` field was `tree.length` (top-level only), not total flattened node count.
+- **`SceneCache.removeNode` orphans**: Now recursively removes cached children and cleans `_knownHandles`, preventing stale handle accumulation after mass deletes.
+- **`buildHasGroupMap` infinite recursion** (web UI): Added `visited` Set cycle guard — shared materials connected to multiple geo objects caused `Maximum call stack size exceeded` in NodeInspector.
+- **`grpc-constants.js`**: Added `LiveLink` and `ApiChangeManager` to `SERVICE_TO_PROTO_MAP` (were relying on fragile filename guessing fallback).
+- **CLAUDE.md**: Corrected stale claim that MCP log level default was `'debug'` (actual: `'warn'`).
+- **Stale comment**: scene.ts header referenced non-existent `update_scene` tool.
+- **Versions synced**: Root and MCP `package.json` bumped to 2.1.3.
+
+---
+
 ## [2.1.2] - 2026-03-20
 
 ### Fixed — Verification, Logging, Attribute Guards

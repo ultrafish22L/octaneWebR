@@ -824,7 +824,16 @@ const NodeParameter = React.memo(function NodeParameter({
 
 // Helper: Build a map of which levels have groups (matches octaneWeb's hasGroup[] array)
 // This is used to determine indentation for all nodes at each level globally
-function buildHasGroupMap(node: SceneNode, level: number, map: Map<number, boolean>): void {
+function buildHasGroupMap(
+  node: SceneNode,
+  level: number,
+  map: Map<number, boolean>,
+  visited?: Set<number>
+): void {
+  const seen = visited ?? new Set<number>();
+  if (node.handle != null && seen.has(node.handle)) return; // cycle guard
+  if (node.handle != null) seen.add(node.handle);
+
   if (node.children && node.children.length > 0) {
     // Check if any child at the next level has a group
     const hasGroups = node.children.some(child => child.pinInfo?.groupName != null);
@@ -834,7 +843,7 @@ function buildHasGroupMap(node: SceneNode, level: number, map: Map<number, boole
 
     // Recursively process children
     for (const child of node.children) {
-      buildHasGroupMap(child, level + 1, map);
+      buildHasGroupMap(child, level + 1, map, seen);
     }
   }
 }

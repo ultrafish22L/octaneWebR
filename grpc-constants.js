@@ -46,6 +46,10 @@ const SERVICE_TO_PROTO_MAP = {
   ApiLocalDB_Package: 'apilocaldb.proto',
   // File chooser
   ApiFileChooser: 'apifilechooser.proto',
+  // LiveLink (camera control)
+  LiveLink: 'livelink.proto',
+  // Change manager (scene evaluation)
+  ApiChangeManager: 'apichangemanager.proto',
   // Callbacks
   StreamCallbackService: 'callback.proto',
   CallbackHandler: 'callback.proto',

@@ -2,36 +2,34 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 11: MCP — v2.1.2**
+**Phase 12: MCP — v2.1.3 (cache integrity + code review fixes)**
 
-**What happened last session (Phase 11 → v2.1.2):**
+**What happened last session (Phase 12):**
 
-- **Connection verification fix**: `enterWrapperNode: true` → `false` in `connect_nodes` verification — was returning wrapper handles instead of source handles, causing false negatives on every geo→placement connection. Zero verification failures after fix.
-- **Camera init noise fixed**: `Logger.warn` → `Logger.debug` in both `CameraService.captureOriginalCameraState()` and `useCameraSync.initializeCamera()` — expected on empty scenes, not a real warning.
-- **hasAttr pre-check**: `set_attribute` and `get_attribute` now call `ApiItem.hasAttr()` before operating — blocks invalid attribute access with actionable error instead of silent failure.
-- **Log file renames**: `grpc-debug.log` → `log_grpc.log`, `mcp-debug.log` → `log_mcp.log`, `octaneWebR_client.log` → `log_client.log`
-- **MCP log level**: Default changed from `'off'` to `'debug'` so `log_mcp.log` actually captures tool activity
-- **Transform guard in tool description**: `set_attribute` description now warns that A_TRANSLATION/A_ROTATION/A_SCALE must target the transform CHILD handle, not the geo object
-- **Version queryable**: `get_octane_version` now returns `octaneweb_version` alongside Octane's version
-- **Versions synced**: root `package.json` and `mcp/package.json` both now at 2.1.2
-- **MCP scene testing**: Built 2 scenes (glass/metal recipe, obsidian monolith) — found and fixed verification false negatives, hasAttr gating, log issues
+- **Full MCP code review**: Read all 15 MCP source files + 4 shared files (OctaneGrpcClientBase, OctaneProtocol, api-version.config, grpc-constants). Found 6 bugs, fixed all.
+- **BUG FIX: `create_and_connect` verification** — used `enterWrapperNode: true` (same bug already fixed in `connect_nodes` in v2.1.2). Now uses `false` to get actual source handles, preventing false-negative verification on geo→placement connections.
+- **BUG FIX: `get_scene_tree` wrong node type** — was calling `ApiItem.outType()` (returns pin output type like PT_MATERIAL=7) instead of `ApiNode.type()` (returns node type ID like NT_MAT_UNIVERSAL=130). Poisoned SceneCache with wrong typeId/typeName for ALL nodes discovered via scene tree, silently disabling type validation in `connect_nodes`. Now correctly queries `ApiNode.type()`.
+- **BUG FIX: `get_scene_tree` compact count** — `count` field was `tree.length` (top-level only), now correctly counts all flattened nodes.
+- **BUG FIX: `create_node` child caching** — auto-created pin children were tracked in `_knownHandles` but not added to the `nodes` Map. `getTypeName()` returned undefined for all children, disabling type validation. Now caches children with their `defaultNodeType` from ApiCache.
+- **FIX: `grpc-constants.js`** — added `LiveLink` and `ApiChangeManager` to `SERVICE_TO_PROTO_MAP` (were relying on fragile filename guessing fallback).
+- **FIX: CLAUDE.md** — corrected stale claim that MCP log level default was `'debug'` (actual: `'warn'`).
+- **FIX: stale comment** — scene.ts header referenced non-existent `update_scene` tool.
+- **Web UI fix: `buildHasGroupMap` cycle guard** — added `visited` Set to prevent infinite recursion when shared materials create circular references in NodeInspector.
+- **SceneCache `removeNode` fix** — now recursively removes cached children and cleans `_knownHandles`, preventing stale handle accumulation after mass deletes.
+- **MCP scene testing**: Built 2 full scenes (Cosmic Jellyfish, Volcanic Forge) via MCP tools. Found UI bugs during testing (cycle guard, cache cleanup).
 
 ### TODO for Next Session
 
-**Mode: test → check logs → fix → test → check logs → fix...**
-
-1. **MCP scene testing** — build 3 scenes via MCP tools. After EVERY scene:
+1. **MCP scene testing** — build 3 scenes via MCP tools to validate the cache fixes. After EVERY scene:
    - Clear logs (`mcp__octane__clear_log`) before starting
    - Build the scene (render after every object — a human is watching)
    - Check all 3 logs (`log_grpc.log`, `log_mcp.log`, `log_client.log`) for anomalies
-   - If anything looks wrong: fix it, rebuild MCP (`cd mcp && npm run build`), retest
-   - Don't hand-wave — if a log line looks weird, investigate it
-   - Scene goals: visually striking (color-first, not white blobs), test different material types (emissive, glass, metallic), test the full pipeline (transforms, placements, geo groups, environments, kernels)
-2. **Log verbosity review** — `log_mcp.log` at debug level is too verbose (1300+ lines per scene). Audit log levels: REQ/RES of every gRPC call is too much for production. Find the right balance between debuggability and noise.
-3. **After 2 failures of the same kind, STOP** — don't retry. Step back, check logs, try a different approach.
-4. See `docs/project/IMPROVEMENTS.md` for backlog items after testing is done
-5. Custom tooltip component (#2 in backlog)
-6. File → Recent Projects menu
+   - Verify `get_scene_tree` now shows correct type names (not `TYPE_7`)
+   - Verify `connect_nodes` type validation works for scene-tree-discovered nodes
+2. **After 2 failures of the same kind, STOP** — don't retry. Step back, check logs, try a different approach.
+3. See `docs/project/IMPROVEMENTS.md` for backlog items after testing is done
+4. Custom tooltip component (#2 in backlog)
+5. File → Recent Projects menu
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
 
@@ -167,7 +165,7 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.1.2
+- **Version**: 2.1.3
 - **32 open items** (1 easy, 20 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
 - **MCP server**: 28 tools, 8 resources, 4 prompts, API cache, SceneCache, dynamic ApiInfo cache, file path validation, incremental webapp sync
