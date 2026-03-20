@@ -2,34 +2,32 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 12: MCP — v2.1.3 (cache integrity + code review fixes)**
+**Phase 13: MCP scene building — `import_glb` + DRESS demos**
 
-**What happened last session (Phase 12):**
+**What happened last session (Phase 13 prep):**
 
-- **Full MCP code review**: Read all 15 MCP source files + 4 shared files (OctaneGrpcClientBase, OctaneProtocol, api-version.config, grpc-constants). Found 6 bugs, fixed all.
-- **BUG FIX: `create_and_connect` verification** — used `enterWrapperNode: true` (same bug already fixed in `connect_nodes` in v2.1.2). Now uses `false` to get actual source handles, preventing false-negative verification on geo→placement connections.
-- **BUG FIX: `get_scene_tree` wrong node type** — was calling `ApiItem.outType()` (returns pin output type like PT_MATERIAL=7) instead of `ApiNode.type()` (returns node type ID like NT_MAT_UNIVERSAL=130). Poisoned SceneCache with wrong typeId/typeName for ALL nodes discovered via scene tree, silently disabling type validation in `connect_nodes`. Now correctly queries `ApiNode.type()`.
-- **BUG FIX: `get_scene_tree` compact count** — `count` field was `tree.length` (top-level only), now correctly counts all flattened nodes.
-- **BUG FIX: `create_node` child caching** — auto-created pin children were tracked in `_knownHandles` but not added to the `nodes` Map. `getTypeName()` returned undefined for all children, disabling type validation. Now caches children with their `defaultNodeType` from ApiCache.
-- **FIX: `grpc-constants.js`** — added `LiveLink` and `ApiChangeManager` to `SERVICE_TO_PROTO_MAP` (were relying on fragile filename guessing fallback).
-- **FIX: CLAUDE.md** — corrected stale claim that MCP log level default was `'debug'` (actual: `'warn'`).
-- **FIX: stale comment** — scene.ts header referenced non-existent `update_scene` tool.
-- **Web UI fix: `buildHasGroupMap` cycle guard** — added `visited` Set to prevent infinite recursion when shared materials create circular references in NodeInspector.
-- **SceneCache `removeNode` fix** — now recursively removes cached children and cleans `_knownHandles`, preventing stale handle accumulation after mass deletes.
-- **MCP scene testing**: Built 2 full scenes (Cosmic Jellyfish, Volcanic Forge) via MCP tools. Found UI bugs during testing (cycle guard, cache cleanup).
+- **Built Moonlit Shrine scene** — full OTOY Studio → Octane pipeline: `generate_image_pro` → Chrome image-to-3D → GLB download → Python trimesh GLB→OBJ → load into Octane. 17 nodes, 159 gRPC calls, 0 crashes, 0 warnings.
+- **New `import_glb` tool (#29)** — seamless GLB/glTF import: converts via Python trimesh, creates NT_GEO_MESH + NT_GEO_PLACEMENT + NT_MAT_UNIVERSAL + NT_TEX_IMAGE, returns all handles + bounds + orientation hint + next_steps. See `mcp/src/tools/import.ts`.
+- **Fixed MCP logging** — default was `'warn'` (nothing logged during normal ops). Changed to `'info'`, added per-call logging: `ApiNode.connectTo OK 12ms`. `log_mcp.log` now populates.
+- **Expanded BUILD.md** — 3D asset pipeline (4-phase, 14-step), mandatory orientation discovery (3 orbit views), film-aspect-before-framing rule, OTOY Studio tool capability table.
+- **Key discoveries**: NT_MAT_UNIVERSAL emission is pin 44 (use `pin_name: "emission"`). NT_MAT_DIFFUSE has NO emission pin. Film resolution: RT→pin4(film)→pin0→child "Image resolution"→`set_attribute(child, 185, AT_INT2=4, {w, h})`.
+- **Scene saved**: `ORBX/samurai_moonlit_shrine.orbx`
 
 ### TODO for Next Session
 
-1. **MCP scene testing** — build 3 scenes via MCP tools to validate the cache fixes. After EVERY scene:
-   - Clear logs (`mcp__octane__clear_log`) before starting
-   - Build the scene (render after every object — a human is watching)
-   - Check all 3 logs (`log_grpc.log`, `log_mcp.log`, `log_client.log`) for anomalies
-   - Verify `get_scene_tree` now shows correct type names (not `TYPE_7`)
-   - Verify `connect_nodes` type validation works for scene-tree-discovered nodes
-2. **After 2 failures of the same kind, STOP** — don't retry. Step back, check logs, try a different approach.
-3. See `docs/project/IMPROVEMENTS.md` for backlog items after testing is done
-4. Custom tooltip component (#2 in backlog)
-5. File → Recent Projects menu
+1. **Build a cool DRESS-mode scene** exercising the full MCP toolkit:
+   - Use `import_glb` with an OTOY Studio 3D asset (prove the tool works end-to-end)
+   - DRESS mode: 1 node at a time, render after each step, show the human a visual progression
+   - Use `pin_name` connections where possible (more readable than magic pin indices)
+   - Set film aspect (portrait or landscape) BEFORE framing
+   - Orbit 3 views before guessing mesh orientation
+   - Disable DOF immediately (RT→camera→pin14 aperture→0)
+   - Set emission efficiency to 1.0 on all lights
+2. **Verify `log_mcp.log`** populates at info level — check after first few tool calls
+3. **Check all 3 logs** after scene build — `log_grpc.log`, `log_mcp.log`, `log_client.log`
+4. **After 2 failures of the same kind, STOP** — step back, check logs, try different approach
+5. **Save ORBX** when scene is done, clear for next
+6. See `docs/project/IMPROVEMENTS.md` for backlog items after scene testing
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools.
 
