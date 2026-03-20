@@ -18,10 +18,18 @@
 
 ### TODO for Next Session
 
-1. **Scene 3** — build a visually striking scene (color-first, not white blobs). Render after every object.
-2. **Log verbosity review** — `log_mcp.log` at debug level is too verbose (1300+ lines per scene). Audit and tune.
-3. **Duplicate nodeChanged events** — webapp gets 3-4 events per MCP connection. Defer (webapp perf issue, not MCP).
-4. See `docs/project/IMPROVEMENTS.md` for MCP-related backlog items: #5 (shared constants), #8 (inspector update on MCP changes), #10 (node auto-arrange), #12 (auto-created children cache), #33 (pin referencing), #34 (crash type guards), #35 (expose all pins), #36 (createInternal)
+**Mode: test → check logs → fix → test → check logs → fix...**
+
+1. **MCP scene testing** — build 3 scenes via MCP tools. After EVERY scene:
+   - Clear logs (`mcp__octane__clear_log`) before starting
+   - Build the scene (render after every object — a human is watching)
+   - Check all 3 logs (`log_grpc.log`, `log_mcp.log`, `log_client.log`) for anomalies
+   - If anything looks wrong: fix it, rebuild MCP (`cd mcp && npm run build`), retest
+   - Don't hand-wave — if a log line looks weird, investigate it
+   - Scene goals: visually striking (color-first, not white blobs), test different material types (emissive, glass, metallic), test the full pipeline (transforms, placements, geo groups, environments, kernels)
+2. **Log verbosity review** — `log_mcp.log` at debug level is too verbose (1300+ lines per scene). Audit log levels: REQ/RES of every gRPC call is too much for production. Find the right balance between debuggability and noise.
+3. **After 2 failures of the same kind, STOP** — don't retry. Step back, check logs, try a different approach.
+4. See `docs/project/IMPROVEMENTS.md` for backlog items after testing is done
 5. Custom tooltip component (#2 in backlog)
 6. File → Recent Projects menu
 
