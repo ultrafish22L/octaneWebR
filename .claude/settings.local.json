@@ -148,7 +148,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(grep -n \"ApiChangeManager\" /c/otoyla/GRPC/dev/octaneWebR/mcp/src/tools/*.ts)",
-      "Bash(find C:/otoyla/GRPC/dev/octaneWebR -name *.log -type f)"
+      "Bash(find C:/otoyla/GRPC/dev/octaneWebR -name *.log -type f)",
+      "Bash(find /c/otoyla/GRPC/dev/octaneWebR -maxdepth 3 -type f \\\\\\(-name *.eslintignore -o -name .npmrc -o -name husky* \\\\\\))",
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(npx vitest:*)"
     ]
   }
 }

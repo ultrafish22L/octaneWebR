@@ -6,11 +6,13 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ## Crashes
 
-| Trigger                                | Symptom                                                          | Mitigation                                                                              |
-| -------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `resetProject`                         | "Save changes?" dialog blocks gRPC                               | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last) |
-| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                          | Valid absolute paths only                                                               |
-| Primitive type enum changes            | Non-deterministic ECONNRESET (crashed at 5, 15, or survived 40+) | Use `import_glb` for non-box geometry when stability matters                            |
+| Trigger                                | Symptom                                                                                           | Mitigation                                                                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                         |
+| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                           | Valid absolute paths only                                                                                                                       |
+| Primitive type enum changes            | Non-deterministic ECONNRESET (crashed at 5, 15, or survived 40+)                                  | Use NT_GEO_MESH with .obj file, or `import_glb` for non-box geometry                                                                            |
+| `get_node_info` on internal children   | ECONNRESET when querying auto-created float/enum children (e.g. sundir child on NT_ENV_DAYLIGHT)  | Avoid `get_node_info` on internal children immediately after `connect_nodes`. Sequence: connect, wait, then query. Needs further investigation. |
+| Silent death during connect chains     | All `connect_nodes` calls return `verified: true`, but Octane is dead at next call (ECONNREFUSED) | Likely caused by evaluation cascades from rapid state mutations. No reliable mitigation — check Octane is alive before critical calls.          |
 
 ### nodeInfo Crash Types
 

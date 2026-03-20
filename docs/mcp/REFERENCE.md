@@ -286,9 +286,11 @@ Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set t
 
 Path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`
 
-**Primitives:** sphere.obj, sphere_hd.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, floor.obj, quad.obj
+**Available:** `sphere_hd.obj`, `floor.obj`
 
-**Hero meshes:** nautilus.obj, cat_captain_hindu.obj, catraken.obj (all ~40MB, with 4096x4096 diffuse PNGs)
+**Also in directory (textures/images):** `art_cyber.jpg`, `art_surreal.jpg`, `gallery_env.jpg`, `hdri_sunset_ocean.png`, `lava_env.jpg`, `space_env.jpg`
+
+**Not available (listed previously but missing):** sphere.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, quad.obj. Use `sphere_hd.obj` as the only sphere mesh, or use NT_GEO_OBJECT (crash risk) or NT_GEO_PLANE for flat surfaces.
 
 ---
 

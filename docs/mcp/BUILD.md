@@ -28,14 +28,14 @@ Every step produces a visible change. The human should see a render update withi
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                       | Result                                                                                                                            |
-| ---- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)`                                               | RT handle + pin handles                                                                                                           |
-| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                             | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin. |
-| 3    | Create first mesh + LOUD material `{1,0,0}` → wire to RT `pin_index:3`       | **Object exists**                                                                                                                 |
-| 4    | `start_render` + `set_camera` again (triggers geo eval)                      | **FIRST VISUAL — human sees something**                                                                                           |
-| 5    | Create environment → `connect_nodes(env, RT, pin_id:43)`                     | Sky + lighting appear                                                                                                             |
-| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)` | Sharp render                                                                                                                      |
+| Step | Action                                                                                                                                                               | Result                                                                                                                                 |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                       | RT handle + pin handles                                                                                                                |
+| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                     | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.      |
+| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                          | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. |
+| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                              | **FIRST VISUAL — human sees something**                                                                                                |
+| 5    | Create environment → `connect_nodes(env, RT, pin_id:43)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                  |
+| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                         | Sharp render                                                                                                                           |
 
 **Why camera before geometry:** `set_camera` is needed to evaluate geometry anyway. Setting it early means the object appears framed the instant it's wired — no black viewport, no lost object, no "where is it?" moment.
 
@@ -80,7 +80,8 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Transform pin:** Pin 3 (NT_TRANSFORM_VALUE).
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
-- **Primitive type change is UNSAFE** — non-deterministic ECONNRESET crash. Use `import_glb` for non-box geometry when stability matters.
+- **Primitive type change is UNSAFE** — non-deterministic ECONNRESET crash. Use NT_GEO_MESH with .obj files for non-box geometry. Only `sphere_hd.obj` and `floor.obj` are available in `ORBX/assets/`.
+- **Silent death during connect chains** — Octane can die silently during rapid state mutations even when all calls report success. Check Octane is alive before `start_render`.
 
 Primitive values: Box=1, Sphere=20, Torus=22, Cylinder=4, Cone=3 (full list in `REFERENCE.md`).
 

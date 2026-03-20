@@ -6,20 +6,23 @@ Control Octane Render from AI agents over gRPC. Build scenes, set materials, pos
 
 The Octane MCP server wraps Octane's gRPC LiveLink API into 28 tools that any MCP-compatible AI client (Claude Code, Claude Desktop, etc.) can call. The AI becomes your 3D scene builder — you describe what you want, it creates nodes, wires them together, sets materials, frames the camera, and renders.
 
-Two ways to use it:
+Three ways to use it:
 
-1. **MCP alone** — Claude controls Octane directly. You see results in Octane's viewport or as saved render images.
-2. **MCP + octaneWebR** — Claude controls Octane while octaneWebR shows the scene tree, node graph, inspector, and live render in your browser. This is the best experience — you see every change as it happens.
+1. **MCP alone (Claude Code CLI)** — Claude controls Octane directly. You see results in Octane's viewport or as saved render images.
+2. **MCP + octaneWebR** — Claude controls Octane while octaneWebR shows the scene tree, node graph, inspector, and live render in your browser. Best visual experience.
+3. **Claude Desktop (code tab)** — Open the `octaneWebR` folder in Claude Desktop's code tab. It reads `.mcp.json` automatically and connects to all three MCP servers. This is the primary development environment — same MCP capabilities as CLI, but with Claude Desktop's conversational UI. Supports all the same scene building, rendering, and debugging workflows.
 
 ```
-┌─────────────┐     stdio      ┌────────────┐     gRPC      ┌─────────┐
-│ Claude Code │ ◄────────────► │ MCP Server │ ◄────────────► │ Octane  │
-└─────────────┘                └────────────┘                └────┬────┘
-                                                                  │ gRPC
-                                                             ┌────┴────┐
-                                                             │octaneWebR│
-                                                             │ Browser  │
-                                                             └─────────┘
+┌───────────────────┐  stdio  ┌────────────┐  gRPC   ┌─────────┐
+│ Claude Code CLI   │◄───────►│            │◄───────►│         │
+│    — or —         │         │ MCP Server │         │ Octane  │
+│ Claude Desktop    │◄───────►│            │◄───────►│         │
+│  (code tab)       │         └────────────┘         └────┬────┘
+└───────────────────┘                                     │ gRPC
+                                                     ┌────┴────┐
+                                                     │octaneWebR│
+                                                     │ Browser  │
+                                                     └─────────┘
 ```
 
 ## Prerequisites
@@ -92,7 +95,7 @@ Open the URL in your browser. You'll see the scene tree, node graph, and live re
 
 ## Using MCP Alone
 
-With Octane running and Claude Code open in the project directory, you can start building scenes immediately. Claude reads `.mcp.json` and connects to the MCP server automatically.
+With Octane running and Claude open in the project directory — either Claude Code CLI or Claude Desktop's code tab — you can start building scenes immediately. Both read `.mcp.json` and connect to the MCP server automatically.
 
 ### Your First Scene
 
@@ -164,10 +167,12 @@ This is where it gets good. With octaneWebR running alongside MCP, you get a liv
 1. Start Octane
 2. Run `npm run dev` (octaneWebR on port 43929)
 3. Open http://localhost:43929 in your browser
-4. Open Claude Code in the project directory
+4. Open the project in Claude Code CLI or Claude Desktop's code tab
 5. Start asking Claude to build your scene
 
-You interact through Claude in your terminal while watching the results in the browser. It's like having a 3D artist working in real time while you direct.
+You interact through Claude while watching the results in the browser. It's like having a 3D artist working in real time while you direct.
+
+> **Note:** This project has been primarily developed and tested using Claude Desktop's code tab. Both CLI and Desktop work identically — same `.mcp.json`, same MCP servers, same tools.
 
 ### What You Can Do in the Browser
 

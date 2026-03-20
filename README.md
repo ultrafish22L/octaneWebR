@@ -28,9 +28,9 @@ npm run dev                                      # Start web UI (port 43929)
 └──────────┬──────────┘              └─────────┬──────────┘
            │ HTTP/WS                            │ stdio
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
-│   Browser UI        │              │   Claude Code      │
-│   React + ReactFlow │              │   (or any MCP      │
-│   Live render       │              │    client)         │
+│   Browser UI        │              │  Claude Desktop    │
+│   React + ReactFlow │              │  (code tab) or     │
+│   Live render       │              │  Claude Code CLI   │
 └─────────────────────┘              └────────────────────┘
 ```
 

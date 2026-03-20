@@ -6,7 +6,7 @@ Get the browser UI and AI scene builder running in under 5 minutes.
 
 - **Octane Render Studio 2026.1+** with gRPC enabled
 - **Node.js 18+**
-- **Claude Code** (for MCP / AI scene building)
+- **Claude Code CLI or Claude Desktop** (for MCP / AI scene building)
 
 ## Step 1: Enable gRPC in Octane
 
@@ -60,7 +60,7 @@ Open **http://localhost:43929** in your browser.
 
 ## Using the AI Scene Builder (MCP)
 
-Open Claude Code in the `octaneWebR` directory. It reads `.mcp.json` automatically and connects to the Octane MCP server.
+Open Claude Code CLI or Claude Desktop's code tab in the `octaneWebR` directory. Both read `.mcp.json` automatically and connect to the Octane MCP server. Claude Desktop's code tab is the primary development environment for this project.
 
 **Try these prompts:**
 
