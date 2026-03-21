@@ -23,7 +23,8 @@ import { registerWebappTools } from './tools/webapp';
 import { registerImportTools } from './tools/import';
 import { registerRenderControlTools } from './tools/render-control';
 import { registerStatsTools } from './tools/stats';
-import { registerMaterialDbTools } from './tools/materials-db';
+// LiveDB tools disabled — Octane gRPC "invalid pointer type" bug on all 4 tools
+// import { registerMaterialDbTools } from './tools/materials-db';
 import { registerAnimationTools } from './tools/animation';
 import { registerColorMaterialXTools } from './tools/color-materialx';
 import { registerArtDirectionTools } from './tools/artdirection';
@@ -123,7 +124,7 @@ async function main() {
   registerImportTools(server, client, cache);
   registerRenderControlTools(server, client);
   registerStatsTools(server, client);
-  registerMaterialDbTools(server, client);
+  // registerMaterialDbTools(server, client); // disabled — Octane API bug
   registerAnimationTools(server, client);
   registerColorMaterialXTools(server, client);
 
