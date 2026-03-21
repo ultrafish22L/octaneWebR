@@ -149,6 +149,12 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
           intersectionsSize: max_intersections,
         });
         const count = result?.result ?? 0;
+        if (count === 0) {
+          return jsonResult({
+            hit_count: 0,
+            message: 'Ray missed all geometry at this pixel.',
+          });
+        }
         return jsonResult({
           hit_count: count,
           intersections: result?.intersections ?? [],
