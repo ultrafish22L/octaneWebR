@@ -4,6 +4,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import path from 'path';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult, validateFilePath, OBJ_API_NODE } from './utils';
 
@@ -98,12 +99,10 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
         if (pathError) return errorResult(new Error(pathError));
 
         // Validate parent directory exists
-        const parentDir = savePath.replace(/[\\/][^\\/]*$/, '');
-        if (parentDir && parentDir !== savePath) {
-          const fs = await import('fs');
-          if (!fs.existsSync(parentDir)) {
-            return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
-          }
+        const fs = await import('fs');
+        const parentDir = path.dirname(savePath);
+        if (!fs.existsSync(parentDir)) {
+          return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
         }
 
         const imageSaveFormat = FORMAT_MAP[format] ?? 0;

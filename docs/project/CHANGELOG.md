@@ -17,6 +17,9 @@ All notable changes to octaneWebR.
 - **scene.ts: `console.error` → `mcpLog`** — 2 instances in `traverseGraph()` polluted stdio transport. Now uses `mcpLog()` with warn/error levels.
 - **index.ts: WriteStream resource leak** — `mcpLogReset()` now called in shutdown handler before `process.exit()`.
 - **useRenderOutput.tsx: export format select** — bound to `exportFormatRef.current` (ref, no re-render) instead of `exportFormat` (state). Fixed + added `exportFormat` to useCallback deps.
+- **ItemService: don't cache transient errors** — `getParameterValue` catch block returned `null`, which CacheManager stored for 30s. Now re-throws so cache doesn't store failures.
+- **render.ts: parent dir check** — replaced regex with `path.dirname()`, fixes edge case where filename-only paths skipped validation.
+- **SavePackageDialog: lint fix** — removed broken eslint-disable directive (`—` vs `--` separator, rule not configured).
 - **Versions synced**: Root and MCP `package.json` bumped to 2.1.6.
 
 ---

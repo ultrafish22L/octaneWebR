@@ -1,4 +1,3 @@
-/* eslint-disable no-alert */
 /**
  * Save Package Dialog Component
  * Dialog for configuring ORBX package export settings
@@ -30,6 +29,10 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
   const { client, connected } = useOctane();
   const [filename, setFilename] = useState('scene.orbx');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [status, setStatus] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'warn';
+  } | null>(null);
 
   const [settings, setSettings] = useState<PackageSettings>({
     mergeScatterInstances: true,
@@ -44,13 +47,14 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
   });
 
   const handleSave = async () => {
+    setStatus(null);
     if (!connected) {
-      alert('Not connected to Octane');
+      setStatus({ message: 'Not connected to Octane', type: 'error' });
       return;
     }
 
     if (!filename.trim()) {
-      alert('Please enter a filename');
+      setStatus({ message: 'Please enter a filename', type: 'warn' });
       return;
     }
 
@@ -83,15 +87,18 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
 
       if (response && response.result) {
         Logger.debug('Package saved successfully');
-        alert(`Package saved successfully: ${filename}`);
-        onClose();
+        setStatus({ message: `Package saved: ${filename}`, type: 'success' });
+        setTimeout(() => onClose(), 1500);
       } else {
         Logger.error('Failed to save package');
-        alert('Failed to save package');
+        setStatus({ message: 'Failed to save package', type: 'error' });
       }
     } catch (error) {
       Logger.error('Error saving package:', error);
-      alert(`Error saving package: ${error instanceof Error ? error.message : String(error)}`);
+      setStatus({
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        type: 'error',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -378,6 +385,12 @@ function SavePackageDialog({ isOpen, onClose }: SavePackageDialogProps) {
             </p>
           </div>
         </div>
+
+        {status && (
+          <div className={`modal-status modal-status--${status.type}`} role="alert">
+            {status.message}
+          </div>
+        )}
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose} disabled={isProcessing}>

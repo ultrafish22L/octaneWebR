@@ -76,7 +76,7 @@ export class ItemService extends BaseService {
           ` getParameterValue failed for handle ${handle}:`,
           error instanceof Error ? error.message : error
         );
-        return null;
+        throw error; // Re-throw so CacheManager doesn't cache the failure
       }
     });
   }

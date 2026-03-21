@@ -2,17 +2,15 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 17: Deep code review — real bugs fixed, false positives filtered**
+**Phase 19: Deep-scan code review — false positive filtering, final fixes**
 
 **What happened this session:**
 
-- **Deep code review** — 4 parallel agents, manually verified every finding. Filtered 5 false positives (agents got boolean logic wrong, miscounted ARGB bytes, missed existing cleanup).
-- **import.ts fixed** — 5 callMethod sites used Alpha 5 names (`setByAttrID`, `item_ref`, `type: 16`), bypassing compat layer. Now uses Beta 2 (`setValueByAttrID`, `objectPtr`, `OBJ_API_ITEM`). Also replaced all hardcoded attribute IDs with `AttributeId.*`.
-- **info.ts fixed** — wrong import path (client → shared), replaced `ObjectType` with `OBJ_API_ITEM/OBJ_API_NODE`.
-- **node.ts fixed** — hardcoded `113` → `AttributeId.A_PIN_COUNT`, error message handles undefined pin index.
-- **scene.ts fixed** — `console.error` → `mcpLog` (2 sites in traverseGraph).
-- **index.ts fixed** — `mcpLogReset()` in shutdown handler (WriteStream leak).
-- **useRenderOutput.tsx fixed** — export format select bound to state instead of ref.
+- **Deep-scan code review** — 4 parallel agents, ~25 findings. Manually verified every one. **22 were false positives** (agents misread boolean logic, missed existing validation, invented collision scenarios). Prose report delivered.
+- **ItemService fix** — `getParameterValue` catch block returned `null` which CacheManager cached for 30s. Now re-throws so transient errors don't become cached failures.
+- **render.ts fix** — parent dir validation used regex that missed filename-only paths. Replaced with `path.dirname()`.
+- **SavePackageDialog lint fix** — broken eslint-disable directive (`—` vs `--`), rule not configured anyway — removed.
+- **Prior session fixes still in this push** — import.ts Beta 2 names, info.ts import path, node.ts A_PIN_COUNT, scene.ts mcpLog, index.ts WriteStream leak, useRenderOutput select binding, shared constants, typed interfaces, SceneCache TTL, 59 tests, full docs rewrite.
 - **Version**: 2.1.6
 
 ### TODO for Next Session
@@ -70,7 +68,8 @@ ALL documentation, reference sheets, protocols, and cheat sheets MUST be saved t
 | `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host (auto-detects `host.docker.internal` in containers)                                                                            |
 | `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                                                                                                |
 | `WORKER_1`          | `43929`     | Vite dev server port                                                                                                                            |
-| `GRPC_DEBUG_LOG`    | `1` (on)    | Set to `0` to disable gRPC debug file logging (`log_grpc.log`). Logs mutating calls only.                                                       |
+| `LOG_LEVEL`         | `debug`     | Global log level for all log files (`log_grpc.log`, `log_mcp.log`). Values: `verbose`, `debug`, `info`, `warn`, `error`, `off`.                 |
+| `GRPC_DEBUG_LOG`    | `1` (on)    | Legacy kill switch — set to `0` to disable `log_grpc.log` entirely.                                                                             |
 
 ## Key Docs
 
