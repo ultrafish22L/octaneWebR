@@ -222,7 +222,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
               objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
               index: i,
             });
-            const attrId = Number(idResult?.result ?? 0);
+            // attrIdIx returns AttributeId enum — may be string ("A_VALUE") or number
+            const rawId = idResult?.result;
+            const attrId = typeof rawId === 'string' ? rawId : Number(rawId ?? 0);
 
             // Get attribute info
             const infoResult = await client.callMethod('ApiItem', 'attrInfoIx', {
@@ -233,7 +235,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
             attrs.push({
               id: attrId,
-              name: info?.description ?? '',
+              name: info?.name ?? info?.description ?? '',
               type: info?.type ?? 'UNKNOWN',
               isArray: info?.isArray ?? false,
             });
@@ -312,6 +314,11 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         const connHandle = await getConnectedHandle(client, handle, pin_index);
         if (!connHandle) {
           return errorResult(`Pin ${pin_index} on handle ${handle} has no connected node`);
+        }
+
+        // Track discovered handle so subsequent get/set_attribute calls aren't gated
+        if (!client.sceneCache.validateHandle(connHandle).valid) {
+          client.sceneCache.addNode(connHandle, `pin_${pin_index}_child`, 'NT_UNKNOWN', 0);
         }
 
         // Read attribute from connected node

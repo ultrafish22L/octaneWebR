@@ -182,13 +182,14 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
           );
         }
 
-        // Build time sampling
+        // Build time sampling — pattern is TimeArrayT { repeated TimeT data }
+        // where TimeT = { value: float }
         const times = {
-          pattern: { data: pattern },
+          pattern: { data: pattern.map((t: number) => ({ value: t })) },
           patternSize: pattern.length,
-          period,
+          period: { value: period },
           animationType: animation_type,
-          endTime: Math.max(...pattern),
+          endTime: { value: Math.max(...pattern) },
         };
 
         // Build typed value array based on expected_type
