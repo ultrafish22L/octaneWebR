@@ -24,6 +24,7 @@ import { registerImportTools } from './tools/import';
 import { registerRenderControlTools } from './tools/render-control';
 import { registerStatsTools } from './tools/stats';
 import { registerMaterialDbTools } from './tools/materials-db';
+import { registerAnimationTools } from './tools/animation';
 import { registerArtDirectionTools } from './tools/artdirection';
 import { ArtDirectionState } from './ArtDirectionState';
 import { registerCreativeTools } from './creative/index';
@@ -122,6 +123,7 @@ async function main() {
   registerRenderControlTools(server, client);
   registerStatsTools(server, client);
   registerMaterialDbTools(server, client);
+  registerAnimationTools(server, client);
 
   // Register Art Direction tools (composition planning, critique loop)
   const artState = new ArtDirectionState();

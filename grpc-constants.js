@@ -68,8 +68,11 @@ const SERVICE_TO_PROTO_MAP = {
   ApiDiagnostics: 'apidiagnostics.proto',
   ApiCaches: 'apicaches.proto',
   ApiLogManager: 'apilogmanager.proto',
-  // Time sampling (animation)
+  // Time sampling / animation
   ApiTimeSampling: 'apitimesampling.proto',
+  ApiRootNodeGraph: 'apinodesystem_8.proto',
+  ApiAnimationTimeTransform: 'apianimationtimetransform.proto',
+  ApiLinearTimeTransform: 'apianimationtimetransform.proto',
   // Render view
   ApiRenderView: 'apirenderview.proto',
 };
