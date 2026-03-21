@@ -8,74 +8,8 @@ import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from './utils';
 
 export function registerRenderControlTools(server: McpServer, client: OctaneMcpClient) {
-  // ── Render Region ──────────────────────────────────────────────────
-
-  server.tool(
-    'set_render_region',
-    'Enable or disable a render region for fast iteration on a portion of the frame. Coordinates are in pixels relative to the film resolution. Set active=false to disable.',
-    {
-      active: z.boolean().describe('Enable (true) or disable (false) the render region'),
-      region_min_x: z.number().int().nonnegative().optional().describe('Left edge in pixels'),
-      region_min_y: z.number().int().nonnegative().optional().describe('Top edge in pixels'),
-      region_max_x: z.number().int().nonnegative().optional().describe('Right edge in pixels'),
-      region_max_y: z.number().int().nonnegative().optional().describe('Bottom edge in pixels'),
-      feather_width: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .default(0)
-        .describe('Feather width in pixels (default 0)'),
-    },
-    async ({ active, region_min_x, region_min_y, region_max_x, region_max_y, feather_width }) => {
-      try {
-        const params: Record<string, unknown> = { active };
-        if (active) {
-          if (
-            region_min_x === undefined ||
-            region_min_y === undefined ||
-            region_max_x === undefined ||
-            region_max_y === undefined
-          ) {
-            return errorResult(
-              'When active=true, all region coordinates are required (region_min_x, region_min_y, region_max_x, region_max_y)'
-            );
-          }
-          if (region_max_x <= region_min_x || region_max_y <= region_min_y) {
-            return errorResult(
-              `Region max must be greater than min (got min=${region_min_x},${region_min_y} max=${region_max_x},${region_max_y})`
-            );
-          }
-          params.regionMin = { x: region_min_x, y: region_min_y };
-          params.regionMax = { x: region_max_x, y: region_max_y };
-          params.featherWidth = feather_width ?? 0;
-        }
-        await client.callMethod('ApiRenderEngine', 'setRenderRegion', params);
-        return jsonResult({
-          success: true,
-          active,
-          region_min: params.regionMin,
-          region_max: params.regionMax,
-        });
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.tool(
-    'get_render_region',
-    'Get the current render region state (active, min/max coords, feather width).',
-    {},
-    async () => {
-      try {
-        const result = await client.callMethod('ApiRenderEngine', 'getRenderRegion', {});
-        return jsonResult(result);
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
+  // Render region removed — viewport UI interaction, not MCP-useful.
+  // Also pick_point crashes Octane when render region is active.
 
   // ── Clay Mode ──────────────────────────────────────────────────────
 

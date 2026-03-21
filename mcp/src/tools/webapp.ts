@@ -49,55 +49,28 @@ export function isLiveSyncEnabled(): boolean {
 export function registerWebappTools(server: McpServer) {
   server.tool(
     'refresh_webapp',
-    'Trigger octaneWebR to refresh its scene tree. Also controls live_sync (auto-updates on/off). Call without params for a full refresh. Set live_sync to toggle automatic UI updates after MCP changes.',
-    {
-      live_sync: z
-        .boolean()
-        .optional()
-        .describe(
-          'Toggle automatic UI sync after MCP changes. true=on (default), false=off. Omit to just refresh.'
-        ),
-    },
-    async ({ live_sync }) => {
-      // Handle live_sync toggle
-      if (live_sync !== undefined) {
-        setLiveSync(live_sync);
-        if (!live_sync) {
-          return jsonResult({
-            success: true,
-            message: 'Live sync disabled — UI will not auto-update after MCP changes',
-          });
-        }
-        // If enabling, also do a refresh to sync current state
-      }
-
+    'Force octaneWebR to refresh its scene tree. Auto-sync happens after MCP changes, but use this if the web UI gets out of sync.',
+    {},
+    async () => {
       try {
         const response = await fetch(`${WEBAPP_URL}/api/scene-event`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: 'nodeAdded' }),
         });
-
-        if (!response.ok) {
-          return errorResult(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
+        if (!response.ok) return errorResult(`HTTP ${response.status}: ${response.statusText}`);
         const result = await response.json();
         return jsonResult({
           success: true,
           clients: result.clients ?? 0,
-          live_sync: liveSyncEnabled,
           message:
             result.clients > 0
-              ? `Scene refresh sent to ${result.clients} browser client(s)${liveSyncEnabled ? ' — live sync enabled' : ''}`
-              : 'No browser clients connected — octaneWebR may not be open',
+              ? `Refresh sent to ${result.clients} client(s)`
+              : 'No browser clients connected',
         });
       } catch (error: any) {
         if (error?.cause?.code === 'ECONNREFUSED') {
-          return jsonResult({
-            success: false,
-            message: 'octaneWebR dev server not running (ECONNREFUSED). Start with: npm run dev',
-          });
+          return jsonResult({ success: false, message: 'octaneWebR not running' });
         }
         return errorResult(error);
       }

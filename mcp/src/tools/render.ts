@@ -125,45 +125,8 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
 
   // ── Pick Point ───────────────────────────────────────────────────
 
-  server.tool(
-    'pick_point',
-    'Ray-cast a pixel in the rendered image to get world position, normal, node handle, material pin, and primitive type. Requires an active render. Pixel (0,0) is top-left.',
-    {
-      x: z.number().int().nonnegative().describe('Pixel X coordinate'),
-      y: z.number().int().nonnegative().describe('Pixel Y coordinate'),
-      max_intersections: z
-        .number()
-        .int()
-        .min(1)
-        .max(10)
-        .optional()
-        .default(1)
-        .describe('Max intersections to return (default 1)'),
-    },
-    async ({ x, y, max_intersections }) => {
-      try {
-        const result = await client.callMethod('ApiRenderEngine', 'pick', {
-          x,
-          y,
-          filterDuplicateMaterialPins: true,
-          intersectionsSize: max_intersections,
-        });
-        const count = result?.result ?? 0;
-        if (count === 0) {
-          return jsonResult({
-            hit_count: 0,
-            message: 'Ray missed all geometry at this pixel.',
-          });
-        }
-        return jsonResult({
-          hit_count: count,
-          intersections: result?.intersections ?? [],
-        });
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
+  // pick_point removed — viewport UI interaction, not MCP-useful.
+  // Also crashes Octane when render region is active (ECONNRESET).
 
   // ── Render Passes ────────────────────────────────────────────────
 
@@ -295,19 +258,5 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   );
 
-  // ── Tier 2B: Render Pass Viewport ─────────────────────────────────
-
-  server.tool(
-    'get_display_pass',
-    'Get the render pass currently displayed in the viewport. Returns the RenderPassId (0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth).',
-    {},
-    async () => {
-      try {
-        const result = await client.callMethod('ApiRenderEngine', 'displayRenderPassId', {});
-        return jsonResult({ render_pass_id: result?.result ?? result });
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
+  // get_display_pass / set_display_pass removed — viewport UI interaction, not MCP-useful.
 }
