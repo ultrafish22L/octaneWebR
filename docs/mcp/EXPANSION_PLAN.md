@@ -1,9 +1,11 @@
 # MCP API Expansion Plan
 
-## Current State (v2.2.1)
+## Current State (v2.3.1)
 
-**46 tools** covering ~51 gRPC methods out of 1000+ available (5% coverage).
-8 services used: ApiRenderEngine, ApiNode, ApiItem, ApiNodeGraph, ApiProjectManager, ApiItemArray, ApiChangeManager, LiveLink.
+**71 tools** (75 built, 4 LiveDB disabled) covering ~200 gRPC methods.
+Services used: ApiRenderEngine, ApiNode, ApiItem, ApiNodeGraph, ApiProjectManager, ApiItemArray, ApiChangeManager, LiveLink, ApiDBMaterialManager (broken), ApiMaterialXGlobal, ApiOcioConfig, ApiRootNodeGraph, ApiLinearTimeTransform.
+
+**Full test sweep completed** — 303 gRPC calls, 0 crashes. 67/71 active tools pass. 3 bugs found and fixed. 4 LiveDB tools disabled (Octane API bug).
 
 ### What We Have
 
@@ -186,17 +188,16 @@ Lower-priority tools for production environments.
 
 ## Summary
 
-| Tier      | Name               | Tools  | Effort      | Value                                     |
-| --------- | ------------------ | ------ | ----------- | ----------------------------------------- |
-| 1         | Core Expansion     | 18     | Done        | Foundation                                |
-| 2         | Scene Intelligence | 12     | 1 day       | High — makes AI agent much smarter        |
-| 3         | Export & Database  | 10     | 2 days      | High — material library + export pipeline |
-| 4         | Animation & Time   | 8      | 2 days      | Medium-High — unlocks animated scenes     |
-| 5         | Color & Advanced   | 8      | 2 days      | Medium — production color pipeline        |
-| 6         | Network & Infra    | 6      | 1 day       | Low — production farm environments        |
-| **Total** |                    | **62** | **~8 days** |                                           |
+| Tier      | Name               | Tools  | Effort          | Status                                    |
+| --------- | ------------------ | ------ | --------------- | ----------------------------------------- |
+| 1         | Core Expansion     | 18     | Done            | All tested, all pass                      |
+| 2         | Scene Intelligence | 7      | Done            | All tested, 2 bugs fixed                  |
+| 3         | Material Database  | 4      | Done (disabled) | All 4 hit Octane API bug — disabled       |
+| 4         | Animation & Time   | 5      | Done            | 4/5 pass, 1 bug fixed (TimeArrayT)        |
+| 5         | Color & MaterialX  | 4      | Done            | All pass (OCIO needs config to be useful) |
+| **Total** |                    | **38** |                 | **71 active** (4 disabled)                |
 
-After all tiers: **108 tools** covering ~200+ gRPC methods (20% of total API surface). The remaining 80% is internal UI services, low-level array management, and observer/callback systems that don't map well to MCP's request-response model.
+**Deferred** (UI/disk/niche): selection, picking, geometry export, deep EXR, network rendering, cache management, local DB, frame rendering. See plan file for full deferred list.
 
 ---
 

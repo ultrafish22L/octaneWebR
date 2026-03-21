@@ -76,14 +76,14 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ## Known Octane API Limitations
 
-| Limitation                       | Details                                                               |
-| -------------------------------- | --------------------------------------------------------------------- |
-| Render engine calls ignored      | `pauseRendering`, `stopRendering`, etc. return success but do nothing |
-| Camera not reset after File→Open | LiveLink camera overrides file's saved state                          |
-| Pin value RPCs unimplemented     | `setPinValueByIx/ByPinID/ByName` all return UNIMPLEMENTED             |
-| `newStatistics` never fires      | Statistics callback is a stub                                         |
-| LiveDB `getCategory` broken      | Returns empty for all categories                                      |
-| Quad primitive (type 18)         | No geometry rendered. Use flat Box or quad.obj                        |
+| Limitation                       | Details                                                                                                                                                                                                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Render engine calls ignored      | `pauseRendering`, `stopRendering`, etc. return success but do nothing                                                                                                                                                                                                      |
+| Camera not reset after File→Open | LiveLink camera overrides file's saved state                                                                                                                                                                                                                               |
+| Pin value RPCs unimplemented     | `setPinValueByIx/ByPinID/ByName` all return UNIMPLEMENTED                                                                                                                                                                                                                  |
+| `newStatistics` never fires      | Statistics callback is a stub                                                                                                                                                                                                                                              |
+| LiveDB all 4 tools broken        | `getCategories`, `getMaterials`, `getMaterialPreview`, `downloadMaterial` all fail with "3 INVALID_ARGUMENT: invalid pointer type". The gRPC compat layer doesn't handle singleton services (no objectPtr). Tools disabled in index.ts, code preserved in materials-db.ts. |
+| Quad primitive (type 18)         | No geometry rendered. Use flat Box or quad.obj                                                                                                                                                                                                                             |
 
 ---
 

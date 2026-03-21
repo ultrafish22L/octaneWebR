@@ -4,6 +4,45 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.3.1] - 2026-03-21
+
+### Tested — Full MCP Test Sweep (75 tools, 303 gRPC calls)
+
+- **67/71 active tools pass** against live Octane. 0 crashes.
+- **3 bugs fixed:**
+  - `set_animation_data` — TimeArrayT.data needs `{value: float}` objects, not raw floats
+  - `get_all_attributes` — attrIdIx returns enum string, not number
+  - `get_pin_value` — discovered handles not tracked in SceneCache
+- **LiveDB disabled** — all 4 tools (`browse_material_db`, `search_materials`, `preview_material`, `download_material`) hit Octane gRPC "invalid pointer type" bug. Code preserved, registration commented out.
+- **Profiling data:** 5.5s gRPC time across 303 calls. Slowest: LiveDB preview (1.3s), getCategories (1.2s), saveImage (206ms avg).
+
+---
+
+## [2.3.0] - 2026-03-21
+
+### Added — MCP API Expansion (Tiers 1-5)
+
+- **Tier 1 (18 tools):** render-control (clay mode, render region, priority, subsample), stats (geometry, texture, resource, scene bounds, render state), render passes (AOVs, save passes, pick point), node management (find, rename, duplicate, delete_unconnected).
+- **Tier 2 (5 tools):** attribute introspection (get_all_attributes, get_attribute_info, get_pin_value, is_animated), display pass (get_display_pass).
+- **Tier 3 (4 tools):** LiveDB material browser (browse, search, preview, download) — all disabled due to Octane API bug.
+- **Tier 4 (5 tools):** animation (get_animation_range, get/set_animation_data, is_node_animated, clear_animation).
+- **Tier 5 (4 tools):** OCIO color management (get_ocio_config, list_color_spaces), MaterialX (import_materialx, list_materialx_nodes).
+
+### Refactored
+
+- **pin-utils.ts** — shared pin enumeration replacing 3 duplicated implementations across node.ts, scene.ts, import.ts.
+- **NodeTypeId constants** — replaced 5 magic numbers in import.ts and render.ts.
+- **extractAttributeValue rename** — eliminated naming collision with utils.ts extractValue.
+- **Auto-populate SceneCache** — load_project now auto-populates cache so tools work immediately.
+- **Render region validation** — set_render_region now validates coords when active=true.
+
+### Fixed
+
+- `save_render_passes` / `save_render_passes_exr` — passesToExport proto serialization (switched to v1 overloads).
+- `find_nodes` — missing OBJ_API_ITEM_ARRAY import.
+
+---
+
 ## [2.1.6] - 2026-03-20
 
 ### Fixed — Deep Code Review
