@@ -4,10 +4,16 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { ApiCache } from '../ApiCache';
 import { jsonResult, errorResult, validateFilePath } from './utils';
+import { populateSceneCache } from './scene';
 
-export function registerProjectTools(server: McpServer, client: OctaneMcpClient) {
+export function registerProjectTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  cache: ApiCache | null
+) {
   server.tool(
     'load_project',
     'Load an Octane project file (.orbx or .ocs). Scene takes ~2s to populate after call returns. Clears all cached handles — previous node handles become invalid.',
@@ -23,6 +29,15 @@ export function registerProjectTools(server: McpServer, client: OctaneMcpClient)
         // loadProject is async in Octane — wait for scene to populate
         await new Promise(r => setTimeout(r, 2000));
         client.clearRootGraphCache();
+
+        // Auto-populate SceneCache so tools work immediately (no manual get_scene_tree needed)
+        try {
+          await populateSceneCache(client, cache, 2);
+          mcpLog('load_project: SceneCache auto-populated', 'debug');
+        } catch (e: any) {
+          mcpLog(`load_project: SceneCache auto-populate failed: ${e.message}`, 'warn');
+        }
+
         return jsonResult({ success: true, path, callbackId: result?.callbackId });
       } catch (error: any) {
         return errorResult(error);

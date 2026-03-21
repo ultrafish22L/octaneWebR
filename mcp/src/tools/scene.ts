@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { PIN_TYPE_NAMES } from './node';
+import { enumeratePins } from './pin-utils';
 import {
   jsonResult,
   errorResult,
@@ -139,6 +140,40 @@ async function traverseGraph(
   return nodes;
 }
 
+/** Walk a SceneTreeNode[] and register all nodes in SceneCache. */
+function walkTreeIntoCache(
+  client: OctaneMcpClient,
+  cache: ApiCache | null,
+  nodes: SceneTreeNode[],
+  parentHandle?: number
+): void {
+  const childHandles: number[] = [];
+  for (const node of nodes) {
+    const typeName = cache?.getNodeTypeName(node.type) ?? `TYPE_${node.type}`;
+    client.sceneCache.addNode(node.handle, node.name, typeName, node.type);
+    childHandles.push(node.handle);
+    if (node.children) walkTreeIntoCache(client, cache, node.children, node.handle);
+  }
+  if (parentHandle !== undefined) {
+    client.sceneCache.setChildren(parentHandle, childHandles);
+  }
+}
+
+/**
+ * Populate the SceneCache by traversing the scene graph.
+ * Called automatically after load_project so tools don't need a manual get_scene_tree.
+ */
+export async function populateSceneCache(
+  client: OctaneMcpClient,
+  cache: ApiCache | null,
+  maxDepth = 2
+): Promise<void> {
+  const rootHandle = await client.getRootNodeGraph();
+  const tree = await traverseGraph(client, cache, rootHandle, 0, maxDepth);
+  walkTreeIntoCache(client, cache, tree, rootHandle);
+  client.sceneCache.markPopulated();
+}
+
 export function registerSceneTools(
   server: McpServer,
   client: OctaneMcpClient,
@@ -163,22 +198,7 @@ export function registerSceneTools(
         const tree = await traverseGraph(client, cache, rootHandle, 0, max_depth);
 
         // Populate scene cache from traversal results
-        const populateCache = (nodes: SceneTreeNode[], parentHandle?: number) => {
-          const childHandles: number[] = [];
-          for (const node of nodes) {
-            // Add node to cache (typeName from ApiCache if available)
-            const typeName = cache?.getNodeTypeName(node.type) ?? `TYPE_${node.type}`;
-            client.sceneCache.addNode(node.handle, node.name, typeName, node.type);
-            childHandles.push(node.handle);
-            if (node.children) {
-              populateCache(node.children, node.handle);
-            }
-          }
-          if (parentHandle !== undefined) {
-            client.sceneCache.setChildren(parentHandle, childHandles);
-          }
-        };
-        populateCache(tree, rootHandle);
+        walkTreeIntoCache(client, cache, tree, rootHandle);
         client.sceneCache.markPopulated();
 
         if (compact) {
@@ -324,84 +344,19 @@ export function registerSceneTools(
               info.pins.push(pin);
             }
           } else {
-            // FALLBACK: enumerate all pins via gRPC
-            const pinCountResult = await client.callMethod('ApiNode', 'pinCount', {
-              objectPtr: { handle: String(handle), type: OBJ_API_NODE },
+            // FALLBACK: enumerate all pins via shared helper
+            const enumerated = await enumeratePins(client, handle, {
+              includeOwned: true,
+              withConnectedNames: true,
             });
-            const pinCount = extractValue(pinCountResult) ?? 0;
-
-            for (let i = 0; i < pinCount; i++) {
-              try {
-                const pin: any = { index: i };
-
-                try {
-                  const pinNameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-                    index: i,
-                  });
-                  pin.name = extractValue(pinNameResult) ?? '';
-                } catch {
-                  // Some pins may not have names
-                }
-
-                try {
-                  const pinTypeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
-                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-                    index: i,
-                  });
-                  const typeRaw = extractValue(pinTypeResult);
-                  // enums: String → returns "PT_TEXTURE" (string), not 5 (number)
-                  if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) {
-                    pin.type = typeRaw;
-                  } else {
-                    const typeNum = Number(typeRaw ?? 0);
-                    pin.type = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
-                  }
-                } catch {
-                  // Some pins may not report type
-                }
-
-                let connectedHandle = 0;
-                try {
-                  const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                    objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-                    pinIx: i,
-                  });
-                  connectedHandle = extractHandle(connResult) ?? 0;
-                } catch {
-                  // Not graph-connected, try pin-owned
-                }
-                if (!connectedHandle) {
-                  try {
-                    const ownedResult = await client.callMethod('ApiNode', 'ownedItemIx', {
-                      objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-                      pinIx: i,
-                    });
-                    connectedHandle = extractHandle(ownedResult) ?? 0;
-                  } catch {
-                    // Pin has no node
-                  }
-                }
-                pin.connected_handle = connectedHandle;
-
-                if (connectedHandle && connectedHandle !== 0) {
-                  try {
-                    const connName = await client.callMethod('ApiItem', 'name', {
-                      objectPtr: { handle: String(connectedHandle), type: OBJ_API_ITEM },
-                    });
-                    pin.connected_name = extractValue(connName) ?? '';
-                  } catch {
-                    // Skip if name lookup fails
-                  }
-                }
-
-                info.pins.push(pin);
-              } catch (pinErr: any) {
-                info.pins.push({
-                  index: i,
-                  error: `failed to read pin: ${pinErr?.message || pinErr}`,
-                });
-              }
+            for (const p of enumerated) {
+              info.pins.push({
+                index: p.index,
+                name: p.name,
+                type: p.typeName,
+                connected_handle: p.connectedHandle,
+                connected_name: p.connectedName ?? '',
+              });
             }
           }
         } catch {

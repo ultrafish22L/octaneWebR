@@ -61,6 +61,16 @@ export const CRASH_TYPE_IDS = new Set([
   0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137,
 ]);
 
+// ─── NodeTypeId — well-known node type IDs ───────────────────────────────────
+
+export const NodeTypeId = {
+  NT_GEO_MESH: 1,
+  NT_GEO_PLACEMENT: 4,
+  NT_TEX_IMAGE: 34,
+  NT_RENDERTARGET: 113,
+  NT_MAT_UNIVERSAL: 130,
+} as const;
+
 // ─── Pin type names — NodePinType enum → human-readable ──────────────────────
 
 export const PIN_TYPE_NAMES: Record<number, string> = {

@@ -26,7 +26,8 @@ import {
   OBJ_API_ITEM,
 } from './utils';
 import { notifyWebapp } from './webapp';
-import { AttributeId } from '../../../shared/OctaneConstants';
+import { AttributeId, NodeTypeId } from '../../../shared/OctaneConstants';
+import { enumeratePins } from './pin-utils';
 
 const execFileAsync = promisify(execFile);
 
@@ -154,7 +155,7 @@ export function registerImportTools(
         // Phase 2: Create NT_GEO_MESH and set filename
         const rootGraph = await client.getRootNodeGraph();
         const meshResult = await client.callMethod('ApiNode', 'create', {
-          type: 1, // NT_GEO_MESH
+          type: NodeTypeId.NT_GEO_MESH,
           ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
           configurePins: true,
         });
@@ -182,7 +183,7 @@ export function registerImportTools(
 
         // Phase 3: Create NT_GEO_PLACEMENT and connect mesh
         const placementResult = await client.callMethod('ApiNode', 'create', {
-          type: 4, // NT_GEO_PLACEMENT
+          type: NodeTypeId.NT_GEO_PLACEMENT,
           ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
           configurePins: true,
         });
@@ -216,7 +217,7 @@ export function registerImportTools(
 
         // Phase 4: Create material with texture
         const matResult = await client.callMethod('ApiNode', 'create', {
-          type: 130, // NT_MAT_UNIVERSAL
+          type: NodeTypeId.NT_MAT_UNIVERSAL,
           ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
           configurePins: true,
         });
@@ -239,7 +240,7 @@ export function registerImportTools(
         // If textures were exported, create NT_TEX_IMAGE and connect to albedo
         if (conv.texturePaths.length > 0) {
           const texResult = await client.callMethod('ApiNode', 'create', {
-            type: 34, // NT_TEX_IMAGE
+            type: NodeTypeId.NT_TEX_IMAGE,
             ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
             configurePins: true,
           });
@@ -268,39 +269,15 @@ export function registerImportTools(
           }
         }
 
-        // Set metallic and roughness on material child pins
-        // Use pinNameIx + connectedNodeIx to find them by name
-        const matPinCount = Number(
-          extractValue(
-            await client.callMethod('ApiNode', 'pinCount', {
-              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-            })
-          ) ?? 0
-        );
+        // Set metallic and roughness on material child pins via shared helper
+        const matPins = await enumeratePins(client, matHandle);
         let metallicHandle = 0;
         let roughnessHandle = 0;
-        for (let i = 0; i < matPinCount && (!metallicHandle || !roughnessHandle); i++) {
-          try {
-            const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-              index: i,
-            });
-            const pinName = String(extractValue(nameResult) ?? '');
-            if (pinName !== 'metallic' && pinName !== 'roughness') continue;
-
-            const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-              pinIx: i,
-              enterWrapperNode: true,
-            });
-            const connHandle = extractHandle(connResult) ?? 0;
-            if (!connHandle) continue;
-
-            if (pinName === 'metallic') metallicHandle = connHandle;
-            if (pinName === 'roughness') roughnessHandle = connHandle;
-          } catch {
-            /* pin may not have name or connection */
-          }
+        for (const pin of matPins) {
+          if (pin.name === 'metallic' && pin.connectedHandle) metallicHandle = pin.connectedHandle;
+          if (pin.name === 'roughness' && pin.connectedHandle)
+            roughnessHandle = pin.connectedHandle;
+          if (metallicHandle && roughnessHandle) break;
         }
 
         const metallicVal = metallic ?? 0.3;

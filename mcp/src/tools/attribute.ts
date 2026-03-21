@@ -21,7 +21,7 @@ const AT_STRING = AttrType.AT_STRING;
 /**
  * Map expected_type to the correct proto oneof field for getValue responses.
  */
-function extractValue(result: any, expectedType: number): any {
+function extractAttributeValue(result: any, expectedType: number): any {
   if (!result) return null;
 
   // The response may have the value directly or nested
@@ -112,7 +112,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           attribute_id,
           expected_type,
         });
-        const value = extractValue(result, expected_type);
+        const value = extractAttributeValue(result, expected_type);
         return jsonResult({ handle, attribute_id, expected_type, value });
       } catch (error: any) {
         return errorResult(error);

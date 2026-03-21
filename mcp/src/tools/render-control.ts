@@ -31,8 +31,23 @@ export function registerRenderControlTools(server: McpServer, client: OctaneMcpC
       try {
         const params: Record<string, unknown> = { active };
         if (active) {
-          params.regionMin = { x: region_min_x ?? 0, y: region_min_y ?? 0 };
-          params.regionMax = { x: region_max_x ?? 512, y: region_max_y ?? 512 };
+          if (
+            region_min_x === undefined ||
+            region_min_y === undefined ||
+            region_max_x === undefined ||
+            region_max_y === undefined
+          ) {
+            return errorResult(
+              'When active=true, all region coordinates are required (region_min_x, region_min_y, region_max_x, region_max_y)'
+            );
+          }
+          if (region_max_x <= region_min_x || region_max_y <= region_min_y) {
+            return errorResult(
+              `Region max must be greater than min (got min=${region_min_x},${region_min_y} max=${region_max_x},${region_max_y})`
+            );
+          }
+          params.regionMin = { x: region_min_x, y: region_min_y };
+          params.regionMax = { x: region_max_x, y: region_max_y };
           params.featherWidth = feather_width ?? 0;
         }
         await client.callMethod('ApiRenderEngine', 'setRenderRegion', params);

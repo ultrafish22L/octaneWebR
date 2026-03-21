@@ -22,6 +22,7 @@ import {
   OBJ_API_ITEM_ARRAY,
 } from './utils';
 import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../../../shared/OctaneConstants';
+import { enumeratePins } from './pin-utils';
 // Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
 export { PIN_TYPE_NAMES };
 
@@ -44,57 +45,7 @@ async function getOutTypeFallback(
   }
 }
 
-/** Fallback: get pin info via gRPC */
-async function getPinInfoFallback(
-  client: OctaneMcpClient,
-  handle: number
-): Promise<{ index: number; type: string; name: string }[]> {
-  const pins: { index: number; type: string; name: string }[] = [];
-  try {
-    const countResult = await client.callMethod('ApiNode', 'pinCount', {
-      objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-    });
-    const count = Number(extractValue(countResult) ?? 0);
-    for (let i = 0; i < count; i++) {
-      let typeName = 'PT_UNKNOWN';
-      let pinName = '';
-      try {
-        const typeResult = await client.callMethod('ApiNode', 'pinTypeIx', {
-          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-          index: i,
-        });
-        const typeRaw = extractValue(typeResult);
-        if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) {
-          typeName = typeRaw;
-        } else {
-          const typeNum = Number(typeRaw ?? 0);
-          typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
-        }
-      } catch (e: any) {
-        mcpLog(
-          `getPinInfoFallback: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`,
-          'warn'
-        );
-      }
-      try {
-        const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
-          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
-          index: i,
-        });
-        pinName = String(extractValue(nameResult) ?? '');
-      } catch (e: any) {
-        mcpLog(
-          `getPinInfoFallback: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`,
-          'warn'
-        );
-      }
-      pins.push({ index: i, type: typeName, name: pinName });
-    }
-  } catch (e: any) {
-    mcpLog(`getPinInfoFallback: pinCount failed for handle ${handle}: ${e.message}`, 'warn');
-  }
-  return pins;
-}
+// getPinInfoFallback replaced by shared enumeratePins from pin-utils.ts
 
 export function registerNodeTools(
   server: McpServer,
@@ -372,9 +323,9 @@ export function registerNodeTools(
             targetPinType = pin?.type;
             resolvedPinName = pin?.staticName;
           } else {
-            const pins = await getPinInfoFallback(client, target_handle);
+            const pins = await enumeratePins(client, target_handle);
             const pin = pins.find(p => p.index === pin_index);
-            targetPinType = pin?.type;
+            targetPinType = pin?.typeName;
             resolvedPinName = pin?.name;
           }
           resolvedPinIndex = pin_index;
@@ -384,9 +335,9 @@ export function registerNodeTools(
             targetPinType = pin?.type;
             resolvedPinIndex = pin?.index;
           } else {
-            const pins = await getPinInfoFallback(client, target_handle);
+            const pins = await enumeratePins(client, target_handle);
             const pin = pins.find(p => p.name === pin_name);
-            targetPinType = pin?.type;
+            targetPinType = pin?.typeName;
             resolvedPinIndex = pin?.index;
           }
           resolvedPinName = pin_name;

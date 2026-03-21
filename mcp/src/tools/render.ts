@@ -176,7 +176,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
       try {
         const params: Record<string, unknown> = {};
         if (render_target_handle) {
-          params.renderTargetNode = { handle: String(render_target_handle), type: 17 };
+          params.renderTargetNode = { handle: String(render_target_handle), type: OBJ_API_NODE };
         }
         const result = await client.callMethod('ApiRenderEngine', 'getEnabledAovs', params);
         return jsonResult(result);
