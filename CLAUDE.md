@@ -2,27 +2,22 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 20: Logging overhaul — unified LOG_LEVEL, debug tuning, MCP log fix**
+**Phase 21: First real scene build — "The Mycelium Court" + camera up vector fix**
 
 **What happened this session:**
 
-- **Unified LOG_LEVEL env var** — single global `LOG_LEVEL` controls all 3 log files (`log_grpc.log`, `log_mcp.log`, `log_client.log`). Default: `debug`. `MCP_LOG_LEVEL` overrides for MCP only. `GRPC_DEBUG_LOG=0` is legacy kill switch.
-- **Debug level tuning for `log_grpc.log`** — debug now uses whitelist approach: mutating + lifecycle methods (create/set/connect/render/camera/save) + curated reads (device info, RT queries, license). Filters out inspector enumeration (`pinInfoIx`, `getApiNodePinInfo`, `attrInfo`, `connectedNodeIx`, `getByAttrID`) and render stats polling (`getRenderStatistics`). Result: 77 lines for a 2-sphere scene vs 2955 before.
-- **MCP log ghost file fix** — eager `initMcpLog()` opened a WriteStream at import time, then `index.ts` deleted the file via `unlinkSync`. Stream wrote to deleted inode. Fix: call `mcpLogReset()` after file delete so next `mcpLog()` recreates the stream.
-- **All 3 logs clear on fresh start** — vite plugin deletes `log_grpc.log` + `log_client.log`, MCP `index.ts` deletes `log_mcp.log`. All write startup headers immediately after.
-- **Log level behavior:**
-  - `verbose` — ALL gRPC calls (full firehose)
-  - `debug` — mutating + lifecycle + curated reads (default, good for development)
-  - `info` — mutating + lifecycle only + errors
-  - `warn`/`error` — errors only
-  - `off` — disabled
+- **Built "The Mycelium Court"** — fantasy mushroom garden scene with 50+ nodes. 5 AI-generated 3D models (OTOY Studio Hunyuan-3d v3.1 Pro), real Poly Haven HDRI, 23 render iterations from blank canvas to final composition. Recipe, crash report, and reference shots saved to `docs/recipes/mycelium-court/`.
+- **MCP `set_camera` up vector guard** — fixed silent bug where omitting the `up` parameter defaulted to `{0,0,0}`, producing a degenerate view matrix with no error. Guard now always sends `{0,1,0}` if omitted, and warns + overrides if caller explicitly passes a zero-length vector. Code change in `mcp/src/tools/camera.ts`.
+- **4 Octane crashes documented** — 4k HDR crash, NT_GEO_OBJECT primitive type crash, stale handle after load_project crash, parallel set_attribute race crash. All root-caused and rules added. See `docs/recipes/mycelium-court/CRASH.md`.
+- **GATED auto-refresh improvement proposed** — when MCP scene cache misses a handle, auto-refresh via `get_scene_tree` instead of requiring manual rediscovery. Added to `docs/project/IMPROVEMENTS.md` as item #40.
 - **Version**: 2.2.1
 
 ### TODO for Next Session
 
-1. **Scene building** — all docs and infrastructure ready. Test the new DRESS protocol order (camera first, geo second).
-2. **Consider adding more tests** — tool-level integration tests (mock callMethod, test create_node/connect_nodes logic).
-3. **Consider CI/CD** — GitHub Actions for lint+typecheck+test on PR.
+1. **Mycelium Court polish** — scene saved as `mushroom_garden_v4_final.orbx`. Still needs: atmospheric fog between depth layers, more ground cover density, emission color tuning (separate glow color from albedo).
+2. **GATED auto-refresh** — implement the improvement from #40 in IMPROVEMENTS.md.
+3. **Consider adding more tests** — tool-level integration tests (mock callMethod, test create_node/connect_nodes logic).
+4. **Consider CI/CD** — GitHub Actions for lint+typecheck+test on PR.
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools. Protocol constants now in `shared/OctaneConstants.ts`.
 
@@ -126,7 +121,8 @@ NEVER kill Octane while servers are running. NEVER start servers before Octane i
 ### Human View First (MOST IMPORTANT RULE)
 
 0. **Check Octane is running** before every build — `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`. If it's not up, nothing works.
-1. **Get an interesting render on screen ASAP.** A human is watching. Priority: RT → `set_camera` to known good frame `{0,1.5,4}→{0,0,0}` → first geometry + material wired to RT → `start_render` → contrasting environment. Set camera BEFORE connecting geometry so the object appears framed instantly. Infrastructure (kernel swap, DOF fix) comes AFTER the human sees something.
+1. **Get an interesting render on screen ASAP.** A human is watching. Priority: RT → `set_camera` to known good frame `{0,1.5,4}→{0,0,0}` with **`up:{0,1,0}` ALWAYS** → first geometry + material wired to RT → `start_render` → contrasting environment. Set camera BEFORE connecting geometry so the object appears framed instantly. Infrastructure (kernel swap, DOF fix) comes AFTER the human sees something.
+   - **NEVER omit the `up` vector in `set_camera`.** Default `{0,0,0}` = degenerate view matrix = broken renders with no error. Always pass `up:{0,1,0}`.
 2. **DRESS is the default mode.** Every step = a visible change. Never build the whole scene backstage and render at the end. See `docs/mcp/BUILD.md`.
 
 ### Crash Prevention
