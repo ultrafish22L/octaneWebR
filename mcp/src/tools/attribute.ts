@@ -194,4 +194,170 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
   // UNIMPLEMENTED from the Octane gRPC server. All 6 pin value RPCs (get/set ×
   // ByIx/ByPinID/ByName) are unimplemented as of Octane 2025.1. Use
   // get_node_info + set_attribute on child handles instead.
+
+  // ── Tier 2A: Attribute Introspection ──────────────────────────────────
+
+  server.tool(
+    'get_all_attributes',
+    'Enumerate all attributes on a node. Returns list of {id, name, type} for every attribute. Essential for discovering what properties a node supports.',
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+    },
+    async ({ handle }) => {
+      try {
+        const gated = gateHandle('get_all_attributes', handle, client.sceneCache);
+        if (gated) return gated;
+
+        // Get attribute count
+        const countResult = await client.callMethod('ApiItem', 'attrCount', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+        });
+        const count = Number(countResult?.result ?? 0);
+
+        const attrs: { id: number; name: string; type: string; isArray: boolean }[] = [];
+        for (let i = 0; i < count; i++) {
+          try {
+            // Get attribute ID at index
+            const idResult = await client.callMethod('ApiItem', 'attrIdIx', {
+              objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+              index: i,
+            });
+            const attrId = Number(idResult?.result ?? 0);
+
+            // Get attribute info
+            const infoResult = await client.callMethod('ApiItem', 'attrInfoIx', {
+              objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+              index: i,
+            });
+            const info = infoResult?.result ?? infoResult;
+
+            attrs.push({
+              id: attrId,
+              name: info?.description ?? '',
+              type: info?.type ?? 'UNKNOWN',
+              isArray: info?.isArray ?? false,
+            });
+          } catch {
+            // Skip unreadable attributes
+          }
+        }
+
+        return jsonResult({ handle, attribute_count: count, attributes: attrs });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'get_attribute_info',
+    'Get metadata for a specific attribute by ID: name, type, isArray, defaults, description. Use after get_all_attributes to dig into a specific attribute.',
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+      attribute_id: z.number().describe('Attribute ID'),
+    },
+    async ({ handle, attribute_id }) => {
+      try {
+        const gated = gateHandle('get_attribute_info', handle, client.sceneCache);
+        if (gated) return gated;
+
+        const result = await client.callMethod('ApiItem', 'attrInfo', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          id: attribute_id,
+        });
+        const info = result?.result ?? result;
+        return jsonResult({
+          handle,
+          attribute_id,
+          info: {
+            id: info?.id,
+            type: info?.type,
+            isArray: info?.isArray,
+            description: info?.description,
+            defaultInts: info?.defaultInts,
+            defaultFloats: info?.defaultFloats,
+            defaultString: info?.defaultString,
+          },
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'get_pin_value',
+    "Get the value of a pin's connected node attribute in one call. Shortcut for: get_node_info → find connected_handle → get_attribute. Returns the A_VALUE (185) of the connected node.",
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+      pin_index: z.number().int().nonnegative().describe('Pin index to read value from'),
+      attribute_id: z
+        .number()
+        .optional()
+        .default(185)
+        .describe('Attribute ID to read (default: A_VALUE=185)'),
+      expected_type: z
+        .number()
+        .optional()
+        .default(AT_FLOAT3)
+        .describe('AttrType (default: AT_FLOAT3=11)'),
+    },
+    async ({ handle, pin_index, attribute_id, expected_type }) => {
+      try {
+        const gated = gateHandle('get_pin_value', handle, client.sceneCache);
+        if (gated) return gated;
+
+        // Get connected node on this pin
+        const { getConnectedHandle } = await import('./pin-utils');
+        const connHandle = await getConnectedHandle(client, handle, pin_index);
+        if (!connHandle) {
+          return errorResult(`Pin ${pin_index} on handle ${handle} has no connected node`);
+        }
+
+        // Read attribute from connected node
+        const result = await client.callMethod('ApiItem', getMethod, {
+          objectPtr: { handle: String(connHandle), type: OBJ_API_ITEM },
+          attribute_id,
+          expected_type,
+        });
+        const value = extractAttributeValue(result, expected_type);
+        return jsonResult({
+          handle,
+          pin_index,
+          connected_handle: connHandle,
+          attribute_id,
+          value,
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'is_animated',
+    'Check if an attribute on a node has animation. Returns true if an animator is attached.',
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+      attribute_id: z.number().describe('Attribute ID to check'),
+    },
+    async ({ handle, attribute_id }) => {
+      try {
+        const gated = gateHandle('is_animated', handle, client.sceneCache);
+        if (gated) return gated;
+
+        const result = await client.callMethod('ApiItem', 'isAnimated', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          id: attribute_id,
+        });
+        return jsonResult({
+          handle,
+          attribute_id,
+          is_animated: result?.result ?? false,
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
 }

@@ -294,4 +294,20 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
       }
     }
   );
+
+  // ── Tier 2B: Render Pass Viewport ─────────────────────────────────
+
+  server.tool(
+    'get_display_pass',
+    'Get the render pass currently displayed in the viewport. Returns the RenderPassId (0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth).',
+    {},
+    async () => {
+      try {
+        const result = await client.callMethod('ApiRenderEngine', 'displayRenderPassId', {});
+        return jsonResult({ render_pass_id: result?.result ?? result });
+      } catch (error: unknown) {
+        return errorResult(error);
+      }
+    }
+  );
 }
