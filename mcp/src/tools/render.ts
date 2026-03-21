@@ -212,13 +212,16 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
         }
 
         const imageSaveFormat = FORMAT_MAP[format] ?? 2; // default EXR
-        // passesToExport: 0 = all enabled passes
-        await client.callMethod('ApiRenderEngine', 'saveRenderPasses2', {
+        // Use saveRenderPasses1 (simpler overload with NamedColorSpace enum)
+        await client.callMethod('ApiRenderEngine', 'saveRenderPasses1', {
           outputDirectory: output_directory,
-          passesToExport: 0,
+          passesToExport: { renderPassId: 0, exportName: '' },
           passesToExportLength: 0,
           imageSaveFormat,
-          imageQuality: 1.0,
+          colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
+          premultipliedAlphaType: 0,
+          exrCompressionType: 0,
+          useHalf: use_half,
           metadata: { values: [] },
           metadataLength: 0,
           asynchronous: false,
@@ -266,14 +269,15 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
           return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
         }
 
-        // passesToExport: 0 = all enabled passes
-        await client.callMethod('ApiRenderEngine', 'saveRenderPassesMultiExr', {
+        // Use saveRenderPassesMultiExr1 (simpler overload with NamedColorSpace enum)
+        await client.callMethod('ApiRenderEngine', 'saveRenderPassesMultiExr1', {
           fullPath: savePath,
-          passesToExport: 0,
+          passesToExport: { renderPassId: 0, exportName: '' },
           passesToExportLength: 0,
           useHalf: use_half,
+          colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
+          premultipliedAlpha: premultiply_alpha,
           preserveLayerNames: preserve_layer_names,
-          premultiplyAlpha: premultiply_alpha,
           metadata: { values: [] },
           metadataLength: 0,
           asynchronous: false,

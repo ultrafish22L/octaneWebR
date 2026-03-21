@@ -19,6 +19,7 @@ import {
   OBJ_API_ITEM,
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
+  OBJ_API_ITEM_ARRAY,
 } from './utils';
 import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../../../shared/OctaneConstants';
 // Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
