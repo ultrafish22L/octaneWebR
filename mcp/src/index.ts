@@ -25,6 +25,7 @@ import { registerRenderControlTools } from './tools/render-control';
 import { registerStatsTools } from './tools/stats';
 import { registerArtDirectionTools } from './tools/artdirection';
 import { ArtDirectionState } from './ArtDirectionState';
+import { registerCreativeTools } from './creative/index';
 import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 
@@ -123,6 +124,9 @@ async function main() {
   // Register Art Direction tools (composition planning, critique loop)
   const artState = new ArtDirectionState();
   registerArtDirectionTools(server, client, artState);
+
+  // Register Creative tools (lighting, materials knowledge)
+  registerCreativeTools(server, client);
 
   // Register MCP Resources (read-only type system + scene state)
   registerResources(server, client, cache);

@@ -28,6 +28,16 @@ import {
   CameraSpec,
 } from '../ArtDirectionState';
 import { jsonResult, errorResult, validateFilePath } from './utils';
+import {
+  critiqueRender as visionCritique,
+  analyzeReference as visionAnalyze,
+  detectBackend,
+} from '../vision/index';
+import {
+  buildCritiquePrompt as buildVisionCritiquePrompt,
+  buildComparisonPrompt,
+  buildReferenceAnalysisPrompt as buildVisionRefPrompt,
+} from '../vision/prompts';
 
 // ── Vector math helpers ──────────────────────────────────────────────
 
@@ -488,7 +498,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'analyze_reference',
-    'Extract composition data from a reference image. Returns a structured prompt — read the image then answer the prompt. Feed results into plan_composition.',
+    'Extract composition data from a reference image. If a vision API key is available, analyzes the image server-side and returns structured data. Otherwise returns a prompt for self-analysis.',
     {
       image_path: z.string().describe('Absolute path to reference image'),
       scene_description: z.string(),
@@ -497,12 +507,32 @@ export function registerArtDirectionTools(
     async params => {
       const resolved = path.resolve(params.image_path);
       if (!fs.existsSync(resolved)) return errorResult(`Image not found: ${resolved}`);
+
+      const analysisPrompt = buildVisionRefPrompt(params.scene_description, params.scale_hint);
+
+      // Try external vision analysis first
+      const visionResult = await visionAnalyze(resolved, analysisPrompt);
+      if (visionResult && visionResult.backend !== 'self') {
+        return jsonResult({
+          image_path: resolved,
+          analysis: visionResult.data, // structured JSON if parseable, null otherwise
+          raw_analysis: visionResult.data ? undefined : visionResult.raw, // raw text if JSON parse failed
+          backend: visionResult.backend,
+          model: visionResult.model,
+          scale_hint: params.scale_hint,
+          instruction: visionResult.data
+            ? 'Vision analysis complete. Feed the analysis data into plan_composition, scaling relative positions by scale_hint.'
+            : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_composition.',
+        });
+      }
+
+      // Fallback: return prompt for self-analysis (v1 behavior)
       return jsonResult({
         image_path: resolved,
-        analysis_prompt: buildReferencePrompt(params.scene_description, params.scale_hint),
+        analysis_prompt: analysisPrompt,
         scale_hint: params.scale_hint,
         instruction:
-          'Read the image, answer the analysis_prompt, then feed results to plan_composition.',
+          'No vision API available. Read the image, answer the analysis_prompt, then feed results to plan_composition.',
       });
     }
   );
@@ -511,10 +541,14 @@ export function registerArtDirectionTools(
 
   server.tool(
     'critique_render',
-    'Save current render and generate critique prompt. MANDATORY after every DRESS render. Read the saved image, answer the prompt, then call apply_corrections.',
+    'Save current render and generate critique prompt. If a vision API key is available, calls an external VLM to score the render (returns scores directly). Otherwise returns a prompt for self-critique. MANDATORY after every DRESS render.',
     {
       render_path: z.string().describe('Absolute path to save render'),
       spec_name: z.string(),
+      reference_image_path: z
+        .string()
+        .optional()
+        .describe('Path to reference image for side-by-side comparison'),
     },
     async params => {
       const spec = artState.getSpec(params.spec_name);
@@ -531,6 +565,9 @@ export function registerArtDirectionTools(
           fullPath: resolved,
           imageSaveFormat: 0,
           renderPassId: 0,
+          colorSpace: 1,
+          premultipliedAlphaType: 0,
+          asynchronous: false,
         });
 
         const iteration = artState.getIterationCount(params.spec_name) + 1;
@@ -542,14 +579,60 @@ export function registerArtDirectionTools(
         if (iteration > MAX_ITERATIONS)
           warnings.push(`EXHAUSTED: ${iteration} iterations. Step back and rethink the layout.`);
 
+        // Try external vision critique
+        const critiquePrompt = params.reference_image_path
+          ? buildComparisonPrompt(spec)
+          : buildVisionCritiquePrompt(spec);
+
+        const visionResult = await visionCritique(
+          resolved,
+          critiquePrompt,
+          params.reference_image_path ? path.resolve(params.reference_image_path) : undefined
+        );
+
+        if (visionResult) {
+          // External vision worked — record and return scores directly
+          const record: CritiqueRecord = {
+            iteration,
+            overallScore: visionResult.overall,
+            passed: visionResult.passed,
+            scores: visionResult.scores,
+            corrections: visionResult.corrections,
+            renderPath: resolved,
+            timestamp: Date.now(),
+          };
+          artState.addCritique(params.spec_name, record);
+
+          return jsonResult({
+            render_path: resolved,
+            spec_name: params.spec_name,
+            iteration,
+            vision_backend: visionResult.backend,
+            vision_model: visionResult.model,
+            scores: visionResult.scores,
+            overall: visionResult.overall,
+            passed: visionResult.passed,
+            corrections: visionResult.corrections,
+            observations: visionResult.observations || visionResult.differences,
+            warnings,
+            stagnating: artState.isStagnating(params.spec_name),
+            exhausted: artState.isExhausted(params.spec_name),
+            instruction: visionResult.passed
+              ? 'External vision critique PASSED. Proceed to next phase.'
+              : `External vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
+          });
+        }
+
+        // Fallback: return prompt for self-critique (v1 behavior)
         return jsonResult({
           render_path: resolved,
           critique_prompt: buildCritiquePrompt(spec),
           spec_name: params.spec_name,
           iteration,
           warnings,
+          vision_backend: 'self',
           instruction:
-            'Read the render image, answer critique_prompt, then call apply_corrections with scores.',
+            'No vision API available. Read the render image, answer critique_prompt, then call apply_corrections with scores.',
         });
       } catch (error: any) {
         return errorResult(error);

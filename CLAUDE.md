@@ -2,22 +2,25 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 21: First real scene build — "The Mycelium Court" + camera up vector fix**
+**Phase 22: Art Direction System — external vision critic + creative knowledge tools**
 
 **What happened this session:**
 
-- **Built "The Mycelium Court"** — fantasy mushroom garden scene with 50+ nodes. 5 AI-generated 3D models (OTOY Studio Hunyuan-3d v3.1 Pro), real Poly Haven HDRI, 23 render iterations from blank canvas to final composition. Recipe, crash report, and reference shots saved to `docs/recipes/mycelium-court/`.
-- **MCP `set_camera` up vector guard** — fixed silent bug where omitting the `up` parameter defaulted to `{0,0,0}`, producing a degenerate view matrix with no error. Guard now always sends `{0,1,0}` if omitted, and warns + overrides if caller explicitly passes a zero-length vector. Code change in `mcp/src/tools/camera.ts`.
-- **4 Octane crashes documented** — 4k HDR crash, NT_GEO_OBJECT primitive type crash, stale handle after load_project crash, parallel set_attribute race crash. All root-caused and rules added. See `docs/recipes/mycelium-court/CRASH.md`.
-- **GATED auto-refresh improvement proposed** — when MCP scene cache misses a handle, auto-refresh via `get_scene_tree` instead of requiring manual rediscovery. Added to `docs/project/IMPROVEMENTS.md` as item #40.
+- **Art Direction v1 built + tested** — 6 new MCP tools: `plan_composition`, `validate_layout`, `analyze_reference`, `critique_render`, `apply_corrections`, `get_art_direction_state`. Geometric validation (frustum, depth separation, proximity, composition grid, lighting angles). ArtDirectionState class for score tracking + stagnation detection. 29 new unit tests (88 total).
+- **Mycelium Court scene rebuilt 3× using new tools** — discovered self-critique is unreliable (Claude inflates scores). Identified key failures: spatial reasoning, satisficing, "Claude judging Claude" circular problem.
+- **Art Direction v2: External Vision Critic** — built `mcp/src/vision/` module with Anthropic Haiku 4.5 as primary vision backend. Tested end-to-end: `critique_render` saves render → base64 → Anthropic API → structured scores. Haiku correctly scored a black render 1.6/5 and identified all issues. Two-image comparison (ref + render) confirmed working.
+- **Creative knowledge tools** — built `mcp/src/creative/` with `suggest_lighting` (7 mood presets: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit) and `suggest_material` (30+ surface recipes from mushroom_cap to obsidian). Pure compute, no Octane calls.
+- **5 Octane crashes documented** — added crash #5: connectTo on NT_TEX_IMAGE power pin (RGB over Grayscale swap). See `docs/recipes/mycelium-court/CRASH.md`.
+- **OTOY Studio API discovery** — found `any-llm/vision` endpoint with 11 VLMs (29 vision models total, 1094 models across 38 categories). Currently blocked by auth — OTOY Studio token doesn't auth to fal.ai directly, need `FAL_KEY` or native MCP tool support.
 - **Version**: 2.2.1
 
 ### TODO for Next Session
 
-1. **Mycelium Court polish** — scene saved as `mushroom_garden_v4_final.orbx`. Still needs: atmospheric fog between depth layers, more ground cover density, emission color tuning (separate glow color from albedo).
-2. **GATED auto-refresh** — implement the improvement from #40 in IMPROVEMENTS.md.
-3. **Consider adding more tests** — tool-level integration tests (mock callMethod, test create_node/connect_nodes logic).
-4. **Consider CI/CD** — GitHub Actions for lint+typecheck+test on PR.
+1. **Test analyze_reference with vision** — maxTokens increased to 4000 + truncation-resilient JSON parsing added. Needs MCP server restart to take effect.
+2. **Test full DRESS workflow** — `analyze_reference` → `plan_composition` → `validate_layout` → build → `critique_render` (with Anthropic vision) → iterate. Rebuild Mycelium Court from scratch using all new tools.
+3. **Compare v1 vs v2 critique scores** — same render, self-critique vs Haiku. Measure score inflation.
+4. **Build `procedural_scatter`** — uses Octane's `NT_GEO_SCATTER` with computed transform matrices. Highest-impact creative tool (replaces manual N-placement pattern).
+5. **OTOY Studio vision MCP tool** — request Jules add `vision` tool wrapping `any-llm/vision` (accepts image_url + prompt → text).
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools. Protocol constants now in `shared/OctaneConstants.ts`.
 
@@ -151,6 +154,12 @@ NEVER kill Octane while servers are running. NEVER start servers before Octane i
 12. **Disable MCP server before making MCP code changes** — it auto-starts with Claude Code and will crash Octane with broken calls.
 13. **After 2 failures of the same kind, STOP** — don't add retries or pacing. Step back, list alternatives, try a different approach entirely.
 
+### Art Direction (composition planning + critique loop)
+
+14. **Art Direction Gate** — every DRESS build MUST start with `plan_composition`. No `create_node` until `validate_layout` passes. This enforces spatial planning before touching Octane.
+15. **Critique Loop** — after every `save_render`, call `critique_render`. Read the saved render. Evaluate against the critique prompt (score 5 dimensions 1-5). If overall < 3.5 or any dimension < 2, call `apply_corrections` and re-render. Max 5 iterations. If stagnating (score improved < 0.3 across 2 iterations) → redesign the plan, don't tweak.
+16. **Reference-First** — when a reference image is provided, ALWAYS start with `analyze_reference`. Feed extracted data into `plan_composition`. Never eyeball the reference and guess positions.
+
 ### Key Values (don't hallucinate — look up the rest in `docs/mcp/REFERENCE.md`)
 
 ```
@@ -165,9 +174,9 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 - **Version**: 2.2.1
 - **30 open items** (1 easy, 18 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
-- **MCP server**: 28 tools, 9 resources, 4 prompts, API cache, SceneCache (with TTL/staleness), dynamic ApiInfo cache, file path validation, incremental webapp sync
+- **MCP server**: 36 tools (6 art direction + 2 creative), 9 resources, 4 prompts, API cache, SceneCache, ArtDirectionState, VisionCritic (Anthropic/Gemini backends)
 - **Shared constants**: `shared/OctaneConstants.ts` — single source of truth for protocol enums (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS)
-- **Tests**: 59 tests (SceneCache, utils, constants) via Vitest
+- **Tests**: 88 tests (SceneCache, utils, constants, ArtDirectionState, geometric validation) via Vitest
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
 

@@ -26,6 +26,30 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
+### Phase 0: Composition Planning (before any Octane calls)
+
+Run BEFORE creating any nodes. Pure math — validates layout without touching Octane.
+
+| Step | Action                                                                          | Result                                                                          |
+| ---- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 0a   | `analyze_reference(image_path, description)` — if ref image provided            | Structured extraction prompt. Read image + answer prompt → scene data           |
+| 0b   | `plan_composition(name, objects, camera, focal_point)`                          | CompositionSpec with computed camera math + auto-validation                     |
+| 0c   | `validate_layout(spec_name)` — if plan_composition auto-validation had warnings | Detailed geometric checks: frustum, depth separation, proximity, grid alignment |
+| 0d   | Fix any validation errors, re-run plan_composition                              | Clean validated spec                                                            |
+
+**Hard gate:** Do NOT call `create_node` until `validate_layout` passes with 0 errors.
+
+### Critique Loop (after every save_render)
+
+| Step | Action                                                            | Result                                            |
+| ---- | ----------------------------------------------------------------- | ------------------------------------------------- |
+| C1   | `critique_render(render_path, spec_name)`                         | Saves render + returns structured critique prompt |
+| C2   | Read the saved render image (Read tool)                           | Visual analysis                                   |
+| C3   | Answer the critique prompt → JSON with 5 dimension scores         | Structured evaluation                             |
+| C4   | `apply_corrections(spec_name, scores, corrections)`               | Records score, detects stagnation                 |
+| C5   | If score < 3.5: apply priority-1 corrections, re-render, go to C1 | Iteration                                         |
+| C6   | If stagnating (2 iterations < 0.3 improvement): redesign plan     | Plan change, not tweaking                         |
+
 ### Phase 1: First Visual (get render on screen ASAP)
 
 | Step | Action                                                                                                                                                               | Result                                                                                                                                 |
