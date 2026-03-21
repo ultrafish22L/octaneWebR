@@ -1,0 +1,293 @@
+/**
+ * Color Management & MaterialX Tools
+ *
+ * OCIO: query loaded config for color spaces, displays, views
+ * MaterialX: import .mtlx files, list available node categories
+ */
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import {
+  jsonResult,
+  errorResult,
+  extractHandle,
+  validateFilePath,
+  OBJ_API_NODE_GRAPH,
+} from './utils';
+
+// ObjectRef type for OcioConfig handles
+const OBJ_OCIO_CONFIG = 41; // from common.proto ObjectType enum
+
+export function registerColorMaterialXTools(server: McpServer, client: OctaneMcpClient) {
+  // ── OCIO Color Management ───────────────────────────────────────────
+
+  server.tool(
+    'get_ocio_config',
+    'Load and query the current OCIO config. Returns all color spaces, displays, views, looks, and roles. Pass a config file path or omit to use the OCIO environment variable default.',
+    {
+      config_path: z
+        .string()
+        .optional()
+        .describe('Path to OCIO config file. Omit to use OCIO env variable default.'),
+    },
+    async ({ config_path }) => {
+      try {
+        // Create/load OCIO config
+        const createResult = await client.callMethod('ApiOcioConfig', 'create', {
+          filename: config_path ?? '',
+        });
+        const configHandle = extractHandle(createResult);
+        if (!configHandle) {
+          return errorResult(
+            'Failed to load OCIO config. Ensure OCIO is configured or provide a valid config file path.'
+          );
+        }
+
+        const objPtr = { handle: String(configHandle), type: OBJ_OCIO_CONFIG };
+
+        try {
+          // Query all config data
+          const [roleCountR, csCountR, displayCountR, lookCountR] = await Promise.all([
+            client
+              .callMethod('ApiOcioConfig', 'getRoleCount', { objectPtr: objPtr })
+              .catch(() => ({ result: 0 })),
+            client
+              .callMethod('ApiOcioConfig', 'getColorSpaceCount', { objectPtr: objPtr })
+              .catch(() => ({ result: 0 })),
+            client
+              .callMethod('ApiOcioConfig', 'getDisplayCount', { objectPtr: objPtr })
+              .catch(() => ({ result: 0 })),
+            client
+              .callMethod('ApiOcioConfig', 'getLookCount', { objectPtr: objPtr })
+              .catch(() => ({ result: 0 })),
+          ]);
+
+          const roleCount = Number(roleCountR?.result ?? 0);
+          const csCount = Number(csCountR?.result ?? 0);
+          const displayCount = Number(displayCountR?.result ?? 0);
+          const lookCount = Number(lookCountR?.result ?? 0);
+
+          // Enumerate color spaces (limit to first 50 to avoid huge responses)
+          const colorSpaces: string[] = [];
+          for (let i = 0; i < Math.min(csCount, 50); i++) {
+            try {
+              const nameR = await client.callMethod('ApiOcioConfig', 'getColorSpaceName', {
+                objectPtr: objPtr,
+                colorSpaceIndex: i,
+              });
+              colorSpaces.push(String(nameR?.result ?? ''));
+            } catch {
+              break;
+            }
+          }
+
+          // Enumerate displays + views
+          const displays: { name: string; views: string[] }[] = [];
+          for (let d = 0; d < Math.min(displayCount, 20); d++) {
+            try {
+              const dNameR = await client.callMethod('ApiOcioConfig', 'getDisplayName', {
+                objectPtr: objPtr,
+                displayIndex: d,
+              });
+              const dName = String(dNameR?.result ?? '');
+
+              const viewCountR = await client.callMethod('ApiOcioConfig', 'getDisplayViewCount', {
+                objectPtr: objPtr,
+                displayIndex: d,
+              });
+              const viewCount = Number(viewCountR?.result ?? 0);
+
+              const views: string[] = [];
+              for (let v = 0; v < Math.min(viewCount, 20); v++) {
+                try {
+                  const vNameR = await client.callMethod('ApiOcioConfig', 'getDisplayViewName', {
+                    objectPtr: objPtr,
+                    displayIndex: d,
+                    viewIndex: v,
+                  });
+                  views.push(String(vNameR?.result ?? ''));
+                } catch {
+                  break;
+                }
+              }
+
+              displays.push({ name: dName, views });
+            } catch {
+              break;
+            }
+          }
+
+          // Enumerate roles
+          const roles: { name: string; color_space: string }[] = [];
+          for (let r = 0; r < Math.min(roleCount, 20); r++) {
+            try {
+              const [rNameR, rCsR] = await Promise.all([
+                client.callMethod('ApiOcioConfig', 'getRoleName', {
+                  objectPtr: objPtr,
+                  roleIndex: r,
+                }),
+                client.callMethod('ApiOcioConfig', 'getRoleColorSpaceName', {
+                  objectPtr: objPtr,
+                  roleIndex: r,
+                }),
+              ]);
+              roles.push({
+                name: String(rNameR?.result ?? ''),
+                color_space: String(rCsR?.result ?? ''),
+              });
+            } catch {
+              break;
+            }
+          }
+
+          // Enumerate looks
+          const looks: string[] = [];
+          for (let l = 0; l < Math.min(lookCount, 20); l++) {
+            try {
+              const lNameR = await client.callMethod('ApiOcioConfig', 'getLookName', {
+                objectPtr: objPtr,
+                lookIndex: l,
+              });
+              looks.push(String(lNameR?.result ?? ''));
+            } catch {
+              break;
+            }
+          }
+
+          return jsonResult({
+            success: true,
+            config_path: config_path ?? '(default)',
+            color_space_count: csCount,
+            color_spaces: colorSpaces,
+            display_count: displayCount,
+            displays,
+            role_count: roleCount,
+            roles,
+            look_count: lookCount,
+            looks,
+          });
+        } finally {
+          // Always destroy the config handle
+          try {
+            await client.callMethod('ApiOcioConfig', 'destroy', { objectPtr: objPtr });
+          } catch {
+            // Non-critical
+          }
+        }
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'list_color_spaces',
+    'List all available OCIO color spaces from the current config. Shortcut that returns just the color space names.',
+    {
+      config_path: z.string().optional().describe('OCIO config path (omit for default)'),
+    },
+    async ({ config_path }) => {
+      try {
+        const createResult = await client.callMethod('ApiOcioConfig', 'create', {
+          filename: config_path ?? '',
+        });
+        const configHandle = extractHandle(createResult);
+        if (!configHandle) {
+          return errorResult('Failed to load OCIO config.');
+        }
+
+        const objPtr = { handle: String(configHandle), type: OBJ_OCIO_CONFIG };
+
+        try {
+          const countR = await client.callMethod('ApiOcioConfig', 'getColorSpaceCount', {
+            objectPtr: objPtr,
+          });
+          const count = Number(countR?.result ?? 0);
+
+          const names: string[] = [];
+          for (let i = 0; i < count; i++) {
+            try {
+              const nameR = await client.callMethod('ApiOcioConfig', 'getColorSpaceName', {
+                objectPtr: objPtr,
+                colorSpaceIndex: i,
+              });
+              names.push(String(nameR?.result ?? ''));
+            } catch {
+              break;
+            }
+          }
+
+          return jsonResult({ color_space_count: count, color_spaces: names });
+        } finally {
+          try {
+            await client.callMethod('ApiOcioConfig', 'destroy', { objectPtr: objPtr });
+          } catch {}
+        }
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── MaterialX ───────────────────────────────────────────────────────
+
+  server.tool(
+    'import_materialx',
+    'Import a MaterialX (.mtlx) file into the scene. Creates all material nodes defined in the file. Returns the output node handle.',
+    {
+      file_path: z.string().describe('Absolute path to .mtlx file'),
+      use_native_nodes: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Use native MaterialX nodes (default true). False = convert to Octane nodes.'),
+    },
+    async ({ file_path, use_native_nodes }) => {
+      try {
+        const pathError = validateFilePath(file_path);
+        if (pathError) return errorResult(new Error(pathError));
+
+        const rootHandle = await client.getRootNodeGraph();
+
+        const result = await client.callMethod('ApiMaterialXGlobal', 'importMaterialXFile', {
+          materialXFilePath: file_path,
+          parentNodeGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+          useNativeMaterialXNodes: use_native_nodes,
+        });
+
+        const outputHandle = extractHandle(result);
+        if (outputHandle) {
+          client.sceneCache.addNode(outputHandle, `MaterialX_import`, 'NT_UNKNOWN', 0);
+          mcpLog(`import_materialx: ${file_path} → handle ${outputHandle}`, 'info');
+        }
+
+        return jsonResult({
+          success: !!outputHandle,
+          file_path,
+          output_handle: outputHandle ?? null,
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'list_materialx_nodes',
+    'List all available MaterialX node categories supported by Octane. Returns category names like "standard_surface", "noise2d", etc.',
+    {},
+    async () => {
+      try {
+        const result = await client.callMethod('ApiMaterialXGlobal', 'getAllMxNodeCategories', {});
+        const categories = result?.result?.data ?? result?.result ?? [];
+        return jsonResult({
+          category_count: Array.isArray(categories) ? categories.length : 0,
+          categories,
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+}
