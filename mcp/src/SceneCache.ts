@@ -169,6 +169,21 @@ export class SceneCache {
     return this.nodes.get(handle)?.typeName;
   }
 
+  /** Get type ID for a cached node */
+  getTypeId(handle: number): number | undefined {
+    return this.nodes.get(handle)?.typeId;
+  }
+
+  /** Update display name for a cached node */
+  updateName(handle: number, name: string): void {
+    const node = this.nodes.get(handle);
+    if (node) {
+      node.name = name;
+      node.updatedAt = Date.now();
+      clog(`updateName(${handle}) → "${name}"`);
+    }
+  }
+
   hasNode(handle: number): boolean {
     return this.nodes.has(handle);
   }

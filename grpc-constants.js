@@ -53,6 +53,25 @@ const SERVICE_TO_PROTO_MAP = {
   // Callbacks
   StreamCallbackService: 'callback.proto',
   CallbackHandler: 'callback.proto',
+  // Selection manager
+  ApiSelectionManager: 'apiselectionmanager.proto',
+  // Geometry/scene export
+  ApiGeometryExporter: 'apigeometryexporter.proto',
+  ApiSceneExporter: 'apisceneexporter.proto',
+  // MaterialX
+  ApiMaterialXGlobal: 'apimaterialx.proto',
+  // OCIO color management
+  ApiOcioConfig: 'apiocioconfig.proto',
+  ApiOcioConfigLoader: 'apiocioconfigloader.proto',
+  ApiOcioContextManager: 'apiociocontextmanager.proto',
+  // System
+  ApiDiagnostics: 'apidiagnostics.proto',
+  ApiCaches: 'apicaches.proto',
+  ApiLogManager: 'apilogmanager.proto',
+  // Time sampling (animation)
+  ApiTimeSampling: 'apitimesampling.proto',
+  // Render view
+  ApiRenderView: 'apirenderview.proto',
 };
 
 /**

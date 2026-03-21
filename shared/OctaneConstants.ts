@@ -111,6 +111,113 @@ export const PIN_TYPE_NAMES: Record<number, string> = {
   47: 'PT_TRACE_SET_VISIBILITY_RULE',
 };
 
+// ─── RenderPriority — GPU render priority ────────────────────────────────────
+
+export const RenderPriority = {
+  LOW: 0,
+  MEDIUM: 1,
+  HIGH: 2,
+} as const;
+
+export type RenderPriorityValue = (typeof RenderPriority)[keyof typeof RenderPriority];
+
+// ─── ClayMode — diffuse-only rendering mode ──────────────────────────────────
+
+export const ClayMode = {
+  NONE: 0,
+  GREY: 1,
+  COLOR: 2,
+} as const;
+
+export type ClayModeValue = (typeof ClayMode)[keyof typeof ClayMode];
+
+// ─── SubSampleMode — viewport sub-sampling for performance ───────────────────
+
+export const SubSampleMode = {
+  NONE: 0,
+  '2x2': 1,
+  '4x4': 2,
+  '8x8': 3,
+} as const;
+
+// ─── RenderPassId — well-known render pass IDs ──────────────────────────────
+
+export const RenderPassId = {
+  BEAUTY: 0,
+  EMIT: 1,
+  ENVIRONMENT: 2,
+  DIFFUSE: 3,
+  DIFFUSE_DIRECT: 4,
+  DIFFUSE_INDIRECT: 5,
+  DIFFUSE_FILTER: 6,
+  REFLECTION: 7,
+  REFLECTION_DIRECT: 8,
+  REFLECTION_INDIRECT: 9,
+  REFLECTION_FILTER: 10,
+  REFRACTION: 11,
+  REFRACTION_FILTER: 12,
+  TRANSMISSION_FILTER: 13,
+  SUBSURFACE_SCATTERING: 14,
+  SHADOW: 16,
+  IRRADIANCE: 17,
+  LIGHT_DIRECTION: 18,
+  AMBIENT_OCCLUSION: 19,
+  VOLUME: 21,
+  VOLUME_MASK: 22,
+  VOLUME_Z_DEPTH_FRONT: 23,
+  VOLUME_Z_DEPTH_BACK: 24,
+  NOISE: 25,
+  DENOISER_BEAUTY: 26,
+  // Info passes (1000+)
+  GEOMETRIC_NORMAL: 1000,
+  SHADING_NORMAL: 1001,
+  POSITION: 1002,
+  Z_DEPTH: 1003,
+  MATERIAL_ID: 1004,
+  UV_COORD: 1005,
+  TANGENT_NORMAL: 1006,
+  WIREFRAME: 1007,
+  OBJECT_LAYER_COLOR: 1008,
+  BAKING_GROUP_ID: 1009,
+  LIGHT_PASS_ID: 1010,
+  RENDER_LAYER_ID: 1011,
+  RENDER_LAYER_MASK: 1012,
+  AMBIENT_LIGHT: 1013,
+  SUNLIGHT: 1014,
+  LIGHT_1: 1015,
+  LIGHT_2: 1016,
+  MOTION_VECTOR: 1030,
+  OBJECT_ID: 1031,
+  CRYPTO_MATERIAL: 1050,
+  CRYPTO_OBJECT: 1051,
+  // Custom passes (501-520)
+  CUSTOM_1: 501,
+  CUSTOM_2: 502,
+  CUSTOM_3: 503,
+  CUSTOM_4: 504,
+  CUSTOM_5: 505,
+  // Global texture passes (1101-1119)
+  GLOBAL_TEX_1: 1101,
+  GLOBAL_TEX_2: 1102,
+  GLOBAL_TEX_3: 1103,
+} as const;
+
+export type RenderPassIdValue = (typeof RenderPassId)[keyof typeof RenderPassId];
+
+// ─── ImageSaveFormat — render output formats ─────────────────────────────────
+
+export const ImageSaveFormat = {
+  PNG: 0,
+  PNG16: 1,
+  EXR: 2,
+  EXR_TONEMAP: 3,
+  TGA: 4,
+  HDR: 10,
+  TIFF: 11,
+  TIFF16: 12,
+  JPG: 13,
+} as const;
+
 // ─── RT pin layout — well-known render target pin indices ────────────────────
 
 export const RT_PINS = {

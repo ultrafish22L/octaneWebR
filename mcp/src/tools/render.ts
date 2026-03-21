@@ -122,4 +122,166 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
       }
     }
   );
+
+  // ── Pick Point ───────────────────────────────────────────────────
+
+  server.tool(
+    'pick_point',
+    'Ray-cast a pixel in the rendered image to get world position, normal, node handle, material pin, and primitive type. Requires an active render. Pixel (0,0) is top-left.',
+    {
+      x: z.number().int().nonnegative().describe('Pixel X coordinate'),
+      y: z.number().int().nonnegative().describe('Pixel Y coordinate'),
+      max_intersections: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
+        .optional()
+        .default(1)
+        .describe('Max intersections to return (default 1)'),
+    },
+    async ({ x, y, max_intersections }) => {
+      try {
+        const result = await client.callMethod('ApiRenderEngine', 'pick', {
+          x,
+          y,
+          filterDuplicateMaterialPins: true,
+          intersectionsSize: max_intersections,
+        });
+        const count = result?.result ?? 0;
+        return jsonResult({
+          hit_count: count,
+          intersections: result?.intersections ?? [],
+        });
+      } catch (error: unknown) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── Render Passes ────────────────────────────────────────────────
+
+  server.tool(
+    'get_enabled_aovs',
+    'Get the list of enabled AOV/render pass IDs on the current render target. Common IDs: 0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth.',
+    {
+      render_target_handle: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe('RT handle (uses current RT if omitted)'),
+    },
+    async ({ render_target_handle }) => {
+      try {
+        const params: Record<string, unknown> = {};
+        if (render_target_handle) {
+          params.renderTargetNode = { handle: String(render_target_handle), type: 17 };
+        }
+        const result = await client.callMethod('ApiRenderEngine', 'getEnabledAovs', params);
+        return jsonResult(result);
+      } catch (error: unknown) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'save_render_passes',
+    'Save all enabled render passes to a directory. Each pass is saved as a separate file. Use get_enabled_aovs first to see which passes are active.',
+    {
+      output_directory: z.string().describe('Absolute path to output directory'),
+      format: z
+        .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
+        .default('EXR')
+        .describe('Image format (default EXR for passes)'),
+      use_half: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Use half-float precision for EXR (default true)'),
+    },
+    async ({ output_directory, format, use_half }) => {
+      try {
+        const pathError = validateFilePath(output_directory);
+        if (pathError) return errorResult(new Error(pathError));
+
+        const fs = await import('fs');
+        if (!fs.existsSync(output_directory)) {
+          return errorResult(new Error(`Output directory does not exist: ${output_directory}`));
+        }
+
+        const imageSaveFormat = FORMAT_MAP[format] ?? 2; // default EXR
+        // passesToExport: 0 = all enabled passes
+        await client.callMethod('ApiRenderEngine', 'saveRenderPasses2', {
+          outputDirectory: output_directory,
+          passesToExport: 0,
+          passesToExportLength: 0,
+          imageSaveFormat,
+          imageQuality: 1.0,
+          metadata: { values: [] },
+          metadataLength: 0,
+          asynchronous: false,
+        });
+        return jsonResult({ success: true, output_directory, format });
+      } catch (error: unknown) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'save_render_passes_exr',
+    'Save all enabled render passes as a single multi-layer EXR file. Production standard output for compositing.',
+    {
+      path: z
+        .string()
+        .describe(
+          'Absolute file path for the multi-layer EXR (e.g. C:\\renders\\scene_passes.exr)'
+        ),
+      use_half: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Use half-float precision (default true)'),
+      preserve_layer_names: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Preserve layer names in EXR (default true)'),
+      premultiply_alpha: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Premultiply alpha (default false)'),
+    },
+    async ({ path: savePath, use_half, preserve_layer_names, premultiply_alpha }) => {
+      try {
+        const pathError = validateFilePath(savePath);
+        if (pathError) return errorResult(new Error(pathError));
+
+        const fs = await import('fs');
+        const parentDir = path.dirname(savePath);
+        if (!fs.existsSync(parentDir)) {
+          return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
+        }
+
+        // passesToExport: 0 = all enabled passes
+        await client.callMethod('ApiRenderEngine', 'saveRenderPassesMultiExr', {
+          fullPath: savePath,
+          passesToExport: 0,
+          passesToExportLength: 0,
+          useHalf: use_half,
+          preserveLayerNames: preserve_layer_names,
+          premultiplyAlpha: premultiply_alpha,
+          metadata: { values: [] },
+          metadataLength: 0,
+          asynchronous: false,
+        });
+        return jsonResult({ success: true, path: savePath });
+      } catch (error: unknown) {
+        return errorResult(error);
+      }
+    }
+  );
 }

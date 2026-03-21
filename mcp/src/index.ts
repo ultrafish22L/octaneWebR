@@ -21,6 +21,8 @@ import { registerNodeTools } from './tools/node';
 import { registerAttributeTools } from './tools/attribute';
 import { registerWebappTools } from './tools/webapp';
 import { registerImportTools } from './tools/import';
+import { registerRenderControlTools } from './tools/render-control';
+import { registerStatsTools } from './tools/stats';
 import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 
@@ -113,6 +115,8 @@ async function main() {
   registerAttributeTools(server, client);
   registerWebappTools(server);
   registerImportTools(server, client, cache);
+  registerRenderControlTools(server, client);
+  registerStatsTools(server, client);
 
   // Register MCP Resources (read-only type system + scene state)
   registerResources(server, client, cache);
@@ -124,7 +128,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('Octane MCP server running on stdio (28 tools, 9 resources, 4 prompts)');
+  console.error('Octane MCP server running on stdio (46 tools, 9 resources, 4 prompts)');
 
   // Graceful shutdown — close gRPC channels, log stream, and MCP transport
   const shutdown = async (signal: string) => {

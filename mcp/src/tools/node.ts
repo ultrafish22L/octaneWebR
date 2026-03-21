@@ -618,4 +618,198 @@ export function registerNodeTools(
       }
     }
   );
+
+  // ── Tier 1D: Node Management ─────────────────────────────────────
+
+  server.tool(
+    'rename_node',
+    'Set the display name of a node. Does not affect connections or behavior.',
+    {
+      handle: z.number().int().nonnegative().describe('Node handle'),
+      name: z.string().min(1).describe('New display name'),
+    },
+    async ({ handle, name }) => {
+      try {
+        const gated = gateHandle('rename_node', handle, client.sceneCache);
+        if (gated) return gated;
+
+        await client.callMethod('ApiItem', 'setName', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+          name,
+        });
+        // Update scene cache
+        client.sceneCache.updateName(handle, name);
+        await notifyWebapp({ type: 'nodeChanged', handle });
+        return jsonResult({ success: true, handle, name });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'find_nodes',
+    'Search the scene graph for nodes by type ID or by name. Returns matching handles. Useful for working with loaded scenes where handles are unknown.',
+    {
+      type_id: z
+        .number()
+        .int()
+        .optional()
+        .describe('Node type ID to search for (e.g. 130 for NT_MAT_UNIVERSAL)'),
+      name: z.string().optional().describe('Node name to search for (exact match)'),
+      recurse: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Search recursively into subgraphs (default true)'),
+    },
+    async ({ type_id, name, recurse }) => {
+      try {
+        if (type_id === undefined && name === undefined) {
+          return errorResult('Provide type_id or name (or both)');
+        }
+
+        const rootHandle = await client.getRootNodeGraph();
+        const rootRef = { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH };
+        const results: { handle: number; name: string }[] = [];
+
+        if (name !== undefined) {
+          // Find by name
+          const listResult = await client.callMethod('ApiNodeGraph', 'findItemsByName', {
+            objectPtr: rootRef,
+            name,
+            recurse: recurse ?? true,
+          });
+          const listHandle = extractHandle(listResult);
+          if (listHandle) {
+            // Iterate the returned ApiItemArray
+            const sizeResult = await client.callMethod('ApiItemArray', 'size', {
+              objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
+            });
+            const count = Number(extractValue(sizeResult) ?? 0);
+            for (let i = 0; i < count; i++) {
+              const itemResult = await client.callMethod('ApiItemArray', 'get', {
+                objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
+                index: i,
+              });
+              const itemHandle = extractHandle(itemResult);
+              if (itemHandle) {
+                // Optionally filter by type_id too
+                if (type_id !== undefined) {
+                  const typeResult = await client.callMethod('ApiNode', 'type', {
+                    objectPtr: { handle: String(itemHandle), type: OBJ_API_NODE },
+                  });
+                  const nodeType = Number(extractValue(typeResult) ?? -1);
+                  if (nodeType !== type_id) continue;
+                }
+                const nameResult = await client.callMethod('ApiItem', 'name', {
+                  objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
+                });
+                const nodeName = String(extractValue(nameResult) ?? '');
+                results.push({ handle: itemHandle, name: nodeName });
+                client.sceneCache.trackHandle(itemHandle);
+              }
+            }
+          }
+        } else if (type_id !== undefined) {
+          // Find by type
+          const listResult = await client.callMethod('ApiNodeGraph', 'findNodes', {
+            objectPtr: rootRef,
+            type: type_id,
+            recurse: recurse ?? true,
+          });
+          const listHandle = extractHandle(listResult);
+          if (listHandle) {
+            const sizeResult = await client.callMethod('ApiItemArray', 'size', {
+              objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
+            });
+            const count = Number(extractValue(sizeResult) ?? 0);
+            for (let i = 0; i < count; i++) {
+              const itemResult = await client.callMethod('ApiItemArray', 'get', {
+                objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
+                index: i,
+              });
+              const itemHandle = extractHandle(itemResult);
+              if (itemHandle) {
+                const nameResult = await client.callMethod('ApiItem', 'name', {
+                  objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
+                });
+                const nodeName = String(extractValue(nameResult) ?? '');
+                results.push({ handle: itemHandle, name: nodeName });
+                client.sceneCache.trackHandle(itemHandle);
+              }
+            }
+          }
+        }
+
+        return jsonResult({ count: results.length, nodes: results });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'duplicate_node',
+    'Deep-copy a node (and its subtree) within the scene. Returns the new root handle. All new handles are tracked in SceneCache.',
+    {
+      handle: z.number().int().nonnegative().describe('Handle of the node to duplicate'),
+    },
+    async ({ handle }) => {
+      try {
+        const gated = gateHandle('duplicate_node', handle, client.sceneCache);
+        if (gated) return gated;
+
+        const rootHandle = await client.getRootNodeGraph();
+        const result = await client.callMethod('ApiNodeGraph', 'copyItemTree', {
+          objectPtr: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+          rootItem: { handle: String(handle), type: OBJ_API_ITEM },
+        });
+        const newHandle = extractHandle(result);
+        if (!newHandle) return errorResult('Copy returned no handle');
+
+        // Get name and track
+        const nameResult = await client.callMethod('ApiItem', 'name', {
+          objectPtr: { handle: String(newHandle), type: OBJ_API_ITEM },
+        });
+        const nodeName = String(extractValue(nameResult) ?? '');
+        const origType = client.sceneCache.getTypeName(handle);
+        const origTypeId = client.sceneCache.getTypeId(handle);
+        client.sceneCache.addNode(newHandle, nodeName, origType ?? '', origTypeId ?? 0);
+        await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
+
+        return jsonResult({
+          success: true,
+          original_handle: handle,
+          new_handle: newHandle,
+          name: nodeName,
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'delete_unconnected',
+    'Delete all orphaned/unconnected nodes in the scene. Refreshes SceneCache after cleanup. Use with caution — may remove nodes you intended to connect later.',
+    {},
+    async () => {
+      try {
+        const rootHandle = await client.getRootNodeGraph();
+        await client.callMethod('ApiItem', 'deleteUnconnectedItems', {
+          objectPtr: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+        });
+        // Invalidate entire scene cache since we don't know which nodes were removed
+        client.sceneCache.clear();
+        await notifyWebapp({ type: 'sceneChanged' });
+        return jsonResult({
+          success: true,
+          message: 'Orphaned nodes deleted. SceneCache cleared — use get_scene_tree to refresh.',
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
 }
