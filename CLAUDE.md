@@ -2,25 +2,29 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 22: Art Direction System — external vision critic + creative knowledge tools**
+**Phase 23: MCP API Expansion — 75 tools covering Octane's gRPC API**
 
 **What happened this session:**
 
-- **Art Direction v1 built + tested** — 6 new MCP tools: `plan_composition`, `validate_layout`, `analyze_reference`, `critique_render`, `apply_corrections`, `get_art_direction_state`. Geometric validation (frustum, depth separation, proximity, composition grid, lighting angles). ArtDirectionState class for score tracking + stagnation detection. 29 new unit tests (88 total).
-- **Mycelium Court scene rebuilt 3× using new tools** — discovered self-critique is unreliable (Claude inflates scores). Identified key failures: spatial reasoning, satisficing, "Claude judging Claude" circular problem.
-- **Art Direction v2: External Vision Critic** — built `mcp/src/vision/` module with Anthropic Haiku 4.5 as primary vision backend. Tested end-to-end: `critique_render` saves render → base64 → Anthropic API → structured scores. Haiku correctly scored a black render 1.6/5 and identified all issues. Two-image comparison (ref + render) confirmed working.
-- **Creative knowledge tools** — built `mcp/src/creative/` with `suggest_lighting` (7 mood presets: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit) and `suggest_material` (30+ surface recipes from mushroom_cap to obsidian). Pure compute, no Octane calls.
-- **5 Octane crashes documented** — added crash #5: connectTo on NT_TEX_IMAGE power pin (RGB over Grayscale swap). See `docs/recipes/mycelium-court/CRASH.md`.
-- **OTOY Studio API discovery** — found `any-llm/vision` endpoint with 11 VLMs (29 vision models total, 1094 models across 38 categories). Currently blocked by auth — OTOY Studio token doesn't auth to fal.ai directly, need `FAL_KEY` or native MCP tool support.
-- **Version**: 2.2.1
+- **Full MCP code review** — 8/10 quality score. Found 5 medium issues: duplicated pin enumeration (3 files), extractValue naming collision, hardcoded type IDs, no SceneCache auto-populate after load, no render region validation.
+- **Refactoring** — Created `pin-utils.ts` (shared pin enumeration), `NodeTypeId` constants, `extractAttributeValue` rename, auto-populate SceneCache after `load_project`, render region validation. All committed.
+- **Tier 1** (already done) — 18 tools: render control, stats, render passes, node management.
+- **Tier 2** — 5 tools: `get_all_attributes`, `get_attribute_info`, `get_pin_value`, `is_animated`, `get_display_pass`.
+- **Tier 3** — 4 tools: `browse_material_db`, `search_materials`, `preview_material`, `download_material` (LiveDB).
+- **Tier 4** — 5 tools: `get_animation_range`, `get_animation_data`, `is_node_animated`, `set_animation_data`, `clear_animation`.
+- **Tier 5** — 4 tools: `get_ocio_config`, `list_color_spaces`, `import_materialx`, `list_materialx_nodes`.
+- **Bugs found during testing:** `save_render_passes` proto serialization (passesToExport), `find_nodes` missing import — both fixed.
+- **Deferred** (UI/disk): selection, picking, geometry export, deep EXR, network rendering, cache management, local DB.
+- **Version**: 2.3.0
 
 ### TODO for Next Session
 
-1. **Test analyze_reference with vision** — maxTokens increased to 4000 + truncation-resilient JSON parsing added. Needs MCP server restart to take effect.
-2. **Test full DRESS workflow** — `analyze_reference` → `plan_composition` → `validate_layout` → build → `critique_render` (with Anthropic vision) → iterate. Rebuild Mycelium Court from scratch using all new tools.
-3. **Compare v1 vs v2 critique scores** — same render, self-critique vs Haiku. Measure score inflation.
-4. **Build `procedural_scatter`** — uses Octane's `NT_GEO_SCATTER` with computed transform matrices. Highest-impact creative tool (replaces manual N-placement pattern).
-5. **OTOY Studio vision MCP tool** — request Jules add `vision` tool wrapping `any-llm/vision` (accepts image_url + prompt → text).
+1. **Live-test all new tools** — Tiers 2-5 need MCP server restart to pick up new code. Test each tool against live Octane.
+2. **Test LiveDB** — `browse_material_db` may fail (getCategory flagged as broken). Test connectivity.
+3. **Test animation tools** — create animation on teapot, verify `get_animation_data` returns correct data.
+4. **Test OCIO** — `get_ocio_config` needs a loaded OCIO config. Test with default + custom path.
+5. **Build `procedural_scatter`** — uses Octane's `NT_GEO_SCATTER`. Highest-impact creative tool.
+6. **Scene building demo** — exercise the full 75-tool suite in a DRESS build.
 
 **Key architecture note:** MCP is a thin AI wrapper around the same gRPC interface as the web UI. Same compat layer, same method names (Beta 2), same `OctaneGrpcClientBase.callMethod()`. Never use Alpha 5 method names in MCP tools. Protocol constants now in `shared/OctaneConstants.ts`.
 
@@ -171,11 +175,14 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 
 ## Status
 
-- **Version**: 2.2.1
+- **Version**: 2.3.0
 - **30 open items** (1 easy, 18 medium, 9 hard, 2 Octane API bugs) — see `docs/project/IMPROVEMENTS.md`
 - **5 known Octane API limitations** (render engine calls ignored, camera not reset after File→Open, newStatistics never fires, LiveDB getCategory broken, Quad primitive renders no geometry)
-- **MCP server**: 36 tools (6 art direction + 2 creative), 9 resources, 4 prompts, API cache, SceneCache, ArtDirectionState, VisionCritic (Anthropic/Gemini backends)
-- **Shared constants**: `shared/OctaneConstants.ts` — single source of truth for protocol enums (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS)
+- **MCP server**: 75 tools (15 tool modules), 9 resources, 4 prompts, API cache, SceneCache, ArtDirectionState, VisionCritic
+  - Core: node (9), render (9), render-control (8), attribute (6), stats (5), scene (2), camera (2), project (3), info (8), webapp (1), import (1)
+  - Art direction (6), creative (2), materials-db (4), animation (5), color-materialx (4)
+- **Shared constants**: `shared/OctaneConstants.ts` — AttrType, AttributeId, NodeTypeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES
+- **Shared utils**: `mcp/src/tools/pin-utils.ts` — enumeratePins, getPinByName, getConnectedHandle
 - **Tests**: 88 tests (SceneCache, utils, constants, ArtDirectionState, geometric validation) via Vitest
 - **Themes**: 3 themes — vibe (default), octane, debug
 - **UI**: Octane-style scrollbars (theme-aware), Octane-style number controls (arrows, scrub bar)
