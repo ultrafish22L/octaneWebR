@@ -1,6 +1,6 @@
 # OctaneWebR
 
-A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
+A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API (a network protocol for remote procedure calls), providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 
 An MCP server lets AI agents (Claude) build and modify Octane scenes programmatically while the browser UI shows every change in real time.
 
@@ -72,8 +72,8 @@ Both paths use the same shared gRPC client with a unified compatibility layer fo
 ```
 You: "Create a gold sphere on a dark floor with dramatic side lighting"
 
-Claude: Creates RT → kernel → environment → sphere mesh → gold material →
-        floor mesh → area light → frames camera → renders → saves PNG
+Claude: Creates RT → frames camera → sphere mesh + gold material → renders →
+        environment → floor mesh → area light → hero camera → final render
 
 Browser: Shows every node appearing in the outliner, connections forming in
          the graph, and the render updating in real time.
@@ -159,4 +159,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 2.1.5** | Active Development
+**Version 2.1.6** | Active Development

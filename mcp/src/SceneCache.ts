@@ -14,6 +14,15 @@
  *   `lastUpdatedMs` so the AI can judge data freshness.
  */
 
+// DEBUG: temporary cache mutation logger
+let _cacheLog: ((msg: string) => void) | null = null;
+export function setCacheLogger(fn: (msg: string) => void): void {
+  _cacheLog = fn;
+}
+function clog(msg: string): void {
+  if (_cacheLog) _cacheLog(msg);
+}
+
 export interface CachedNode {
   name: string;
   typeName: string;
@@ -60,7 +69,10 @@ export class SceneCache {
 
   /** Register a handle as known-valid (returned by some tool response) */
   trackHandle(handle: number): void {
-    if (handle > 0) this._knownHandles.add(handle);
+    if (handle > 0) {
+      this._knownHandles.add(handle);
+      clog(`TRACK ${handle} → size=${this._knownHandles.size}`);
+    }
   }
 
   /** Register multiple handles at once */
@@ -86,6 +98,11 @@ export class SceneCache {
     if (this._knownHandles.has(handle)) {
       return { valid: true };
     }
+    const knownList =
+      this._knownHandles.size <= 50
+        ? [...this._knownHandles].join(',')
+        : `${this._knownHandles.size} handles`;
+    clog(`VALIDATE_REJECT ${handle} — known=[${knownList}] populated=${this._populated}`);
     return {
       valid: false,
       reason:
@@ -105,6 +122,7 @@ export class SceneCache {
   addNode(handle: number, name: string, typeName: string, typeId: number): void {
     this.nodes.set(handle, { name, typeName, typeId, updatedAt: Date.now() });
     this._knownHandles.add(handle);
+    clog(`ADD_NODE ${handle} "${name}" (${typeName}) → size=${this._knownHandles.size}`);
   }
 
   /** Touch/refresh a node's timestamp (e.g., after confirming it still exists via gRPC) */
@@ -236,6 +254,11 @@ export class SceneCache {
   }
 
   clear(): void {
+    const prevSize = this._knownHandles.size;
+    const prevHandles = prevSize <= 50 ? [...this._knownHandles].join(',') : `${prevSize} handles`;
+    clog(
+      `CLEAR called! Was: ${prevHandles} — stack: ${new Error().stack?.split('\n').slice(1, 5).join(' | ')}`
+    );
     this.nodes.clear();
     this.connections.clear();
     this.children.clear();

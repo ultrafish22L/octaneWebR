@@ -2,11 +2,13 @@
 
 Get the browser UI and AI scene builder running in under 5 minutes.
 
+OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 28 tools for controlling Octane.
+
 ## What You Need
 
-- **Octane Render Studio 2026.1+** with gRPC enabled
+- **Octane Render Studio 2026.1+** with gRPC enabled (gRPC is how programs talk to Octane remotely)
 - **Node.js 18+**
-- **Claude Code CLI or Claude Desktop** (for MCP / AI scene building)
+- **Claude Desktop or Claude Code CLI** (for MCP / AI scene building)
 
 ## Step 1: Enable gRPC in Octane
 
@@ -40,10 +42,12 @@ This compiles to `mcp/dist/index.js`. You only need to rebuild when MCP code cha
 
 ```bash
 # 1. Launch Octane (adjust path to your installation)
-"C:/path/to/octane.exe" &
+#    On Windows: just double-click octane.exe, or run it from a terminal
+#    On bash/WSL: "C:/path/to/octane.exe" &
+"C:/path/to/octane.exe"
 
 # 2. Wait for gRPC to start (~10-15 seconds)
-#    Verify: powershell -Command "Get-NetTCPConnection -LocalPort 51022"
+#    Verify (PowerShell): Get-NetTCPConnection -LocalPort 51022
 
 # 3. Start the web UI
 npm run dev
@@ -101,8 +105,12 @@ Open http://localhost:43929. You get a full scene outliner, node graph editor, p
 If you only want AI control without the browser:
 
 ```bash
-# 1. Start Octane
-# 2. Use Claude Code in the project directory
+# 1. Build the MCP server first (if you haven't already)
+cd mcp && npm run build && cd ..
+
+# 2. Start Octane
+
+# 3. Open the project in Claude Desktop's code tab or Claude Code CLI
 #    MCP connects via .mcp.json automatically
 ```
 

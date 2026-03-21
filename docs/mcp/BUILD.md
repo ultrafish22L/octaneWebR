@@ -8,7 +8,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 **A human is watching.** Get an interesting render on screen as fast as possible. Every MCP call should be driving toward the first visible result. Don't build backstage — build on stage.
 
-**Priority order:** RT → first geometry on screen → first material on that geometry → contrasting environment → render. Everything else comes after the human has something to look at.
+**Priority order:** RT → `set_camera` to known good frame → first geometry + material wired to RT → `start_render` → contrasting environment. Set camera BEFORE connecting geometry so the object appears framed instantly. Everything else comes after the human has something to look at.
 
 **Check Octane is running** before every build. If gRPC is down, nothing works and the human sees nothing. Verify with `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`.
 
@@ -45,10 +45,10 @@ Every step produces a visible change. The human should see a render update withi
 
 | Step | Action                                                    | Notes                              |
 | ---- | --------------------------------------------------------- | ---------------------------------- |
-| 6    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
-| 7    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
-| 8    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
-| 9    | Render + save                                             | Checkpoint                         |
+| 7    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
+| 8    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
+| 9    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
+| 10   | Render + save                                             | Checkpoint                         |
 
 ### Phase 3: Assembly
 

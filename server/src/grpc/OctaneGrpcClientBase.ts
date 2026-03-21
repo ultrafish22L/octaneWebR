@@ -2,8 +2,8 @@
  * Shared gRPC Client Base
  *
  * Core gRPC functionality used by both the Vite dev plugin and Express production server.
- * Contains proto loading, service resolution, method invocation, and optional file logging.
- * Set GRPC_DEBUG_LOG=1 to log all calls to log_grpc.log.
+ * Contains proto loading, service resolution, method invocation, and file logging.
+ * Logging controlled by LOG_LEVEL env var (default: debug). Set LOG_LEVEL=off or GRPC_DEBUG_LOG=0 to disable.
  */
 
 import * as grpc from '@grpc/grpc-js';
@@ -12,12 +12,20 @@ import path from 'path';
 import * as fs from 'fs';
 
 // ── gRPC debug file logging ────────────────────────────────────────
-// On by default. Set GRPC_DEBUG_LOG=0 to disable. Logs mutating calls to log_grpc.log.
-const GRPC_LOG_ENABLED = process.env.GRPC_DEBUG_LOG !== '0';
+// Controlled by global LOG_LEVEL env var (default: debug). Set LOG_LEVEL=off to disable.
+// Legacy GRPC_DEBUG_LOG=0 also disables.
+//   verbose: log ALL gRPC calls (full firehose — every REQ/RES including pin/attr enumeration)
+//   debug:   mutating + lifecycle + curated reads (attrs, connections, device, camera, RT)
+//   info:    log mutating + lifecycle calls only (create/set/connect/render/camera) + errors
+//   warn+:   log errors only
+//   off:     disable
+type GrpcLogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'off';
+const GRPC_LOG_LEVEL: GrpcLogLevel = (process.env.LOG_LEVEL as GrpcLogLevel) || 'debug';
+const GRPC_LOG_ENABLED = GRPC_LOG_LEVEL !== 'off' && process.env.GRPC_DEBUG_LOG !== '0';
 let grpcLogStream: fs.WriteStream | null = null;
 
-// Only log mutating calls — skip reads to keep logs usable
-const GRPC_LOG_METHODS = new Set([
+// Mutating + lifecycle methods — logged at info+
+const GRPC_MUTATING_METHODS = new Set([
   'create',
   'destroy',
   'setByAttrID',
@@ -32,22 +40,70 @@ const GRPC_LOG_METHODS = new Set([
   'connectTo1',
   'connectToIx',
   'disconnectPin',
-  // 'update' omitted — ApiChangeManager.update is a no-info eval trigger ({} in, {} out)
   'setPosition',
+  'setRenderTargetNode',
+  'continueRendering',
+  'startRendering',
+  'stopRendering', // render lifecycle
+  'saveImage1',
+  'saveImage2', // render save
+  'SetCamera', // camera (LiveLink)
+  'update', // ApiChangeManager.update (scene eval)
+  'rootNodeGraph', // project open
 ]);
+
+// Methods shown at debug level (in addition to mutating/lifecycle methods above)
+// Excludes methods the web UI inspector calls 100s of times per scene load.
+const GRPC_DEBUG_METHODS = new Set([
+  'GetCamera', // camera reads (LiveLink)
+  'hasAttr', // attribute existence checks (few per tool call)
+  'getPinValue', // pin value reads
+  'getRenderTargetNode', // RT queries
+  'getDeviceName',
+  'getDeviceCount',
+  'getMemoryUsage', // device info
+  'getRealTime',
+  'clayMode',
+  'renderPriority', // render engine state
+  'getSubSampleMode', // render config
+  'octaneVersion',
+  'octaneName',
+  'isDemoVersion', // API info
+  'isSubscriptionVersion',
+  'tierIdx', // license info
+]);
+
+function initGrpcLog(): void {
+  if (!GRPC_LOG_ENABLED || grpcLogStream) return;
+  const logPath = path.resolve(__dirname, '..', '..', '..', 'log_grpc.log');
+  grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
+  grpcLogStream.write(
+    `=== gRPC Debug Log started ${new Date().toISOString()} (level: ${GRPC_LOG_LEVEL}) ===\n`
+  );
+}
+
+/** Call after log file cleanup to write the startup header. Exported for vite plugin use. */
+export { initGrpcLog };
 
 function grpcLog(prefix: string, service: string, method: string, data?: any): void {
   if (!GRPC_LOG_ENABLED) return;
-  if (!GRPC_LOG_METHODS.has(method)) return;
-  if (!grpcLogStream) {
-    // __dirname = server/src/grpc (TS) or server/dist/grpc (JS) — 3 levels to project root
-    const logPath = path.resolve(__dirname, '..', '..', '..', 'log_grpc.log');
-    grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
-    grpcLogStream.write(`=== gRPC Debug Log started ${new Date().toISOString()} ===\n`);
-  }
+  const isError = prefix === 'ERR';
+  // At warn+, only log errors
+  if ((GRPC_LOG_LEVEL === 'warn' || GRPC_LOG_LEVEL === 'error') && !isError) return;
+  // At info level, only log mutating calls and errors
+  if (GRPC_LOG_LEVEL === 'info' && !isError && !GRPC_MUTATING_METHODS.has(method)) return;
+  // At debug level, show mutating + lifecycle + curated debug reads. Skip everything else.
+  if (
+    GRPC_LOG_LEVEL === 'debug' &&
+    !isError &&
+    !GRPC_MUTATING_METHODS.has(method) &&
+    !GRPC_DEBUG_METHODS.has(method)
+  )
+    return;
+  initGrpcLog();
   const ts = new Date().toISOString().slice(11, 23);
   const json = data !== undefined ? ' ' + JSON.stringify(data).substring(0, 800) : '';
-  grpcLogStream.write(`[${ts}]  ${prefix} ${service}.${method}${json}\n`);
+  grpcLogStream!.write(`[${ts}]  ${prefix} ${service}.${method}${json}\n`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

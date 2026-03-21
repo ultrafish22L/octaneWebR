@@ -91,10 +91,20 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ### Logs
 
-| File           | Source               | Notes                                              |
-| -------------- | -------------------- | -------------------------------------------------- |
-| `log_grpc.log` | OctaneGrpcClientBase | Mutating calls only. `GRPC_DEBUG_LOG=0` to disable |
-| `log_mcp.log`  | MCP server           | All tool calls and responses                       |
+All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`).
+
+| Level     | `log_grpc.log`                                                                                                                         | `log_mcp.log`                                     |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `verbose` | ALL REQ/RES (firehose — 150K+ lines for large scenes)                                                                                  | Per-gRPC-call timings + REQ/RES                   |
+| `debug`   | Mutating + lifecycle + curated reads (device, RT, camera). Filters inspector enumeration + stats polling. ~77 lines for 2-sphere scene | Tool calls with args + timing + health + profiles |
+| `info`    | Mutating + lifecycle only (create/set/connect/render/camera/save)                                                                      | Tool calls with args only                         |
+| `warn`+   | Errors only                                                                                                                            | Health failures, gate rejections, crashes         |
+
+| File             | Source               | Notes                                                               |
+| ---------------- | -------------------- | ------------------------------------------------------------------- |
+| `log_grpc.log`   | OctaneGrpcClientBase | `GRPC_DEBUG_LOG=0` to disable entirely. Cleared on dev server start |
+| `log_mcp.log`    | MCP server           | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start       |
+| `log_client.log` | Browser (via Vite)   | Client-side logs posted to server. Cleared on dev server start      |
 
 ### On Crash (ECONNRESET/ECONNREFUSED)
 

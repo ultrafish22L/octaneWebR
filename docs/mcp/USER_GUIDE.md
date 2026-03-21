@@ -1,10 +1,10 @@
 # Octane MCP User Guide
 
-Control Octane Render from AI agents over gRPC. Build scenes, set materials, position cameras, and render — all through natural language or programmatic tool calls.
+Control Octane Render from AI agents. Build scenes, set materials, position cameras, and render — all through natural language.
 
 ## What Is This?
 
-The Octane MCP server wraps Octane's gRPC LiveLink API into 28 tools that any MCP-compatible AI client (Claude Code, Claude Desktop, etc.) can call. The AI becomes your 3D scene builder — you describe what you want, it creates nodes, wires them together, sets materials, frames the camera, and renders.
+**MCP** (Model Context Protocol) is a standard that lets AI assistants use external tools. The Octane MCP server wraps Octane's gRPC LiveLink API (a network protocol that lets programs talk to Octane remotely) into 28 tools that Claude can call. The AI becomes your 3D scene builder — you describe what you want, it creates nodes, wires them together, sets materials, frames the camera, and renders.
 
 Three ways to use it:
 
@@ -13,25 +13,29 @@ Three ways to use it:
 3. **Claude Desktop (code tab)** — Open the `octaneWebR` folder in Claude Desktop's code tab. It reads `.mcp.json` automatically and connects to all three MCP servers. This is the primary development environment — same MCP capabilities as CLI, but with Claude Desktop's conversational UI. Supports all the same scene building, rendering, and debugging workflows.
 
 ```
-┌───────────────────┐  stdio  ┌────────────┐  gRPC   ┌─────────┐
-│ Claude Code CLI   │◄───────►│            │◄───────►│         │
-│    — or —         │         │ MCP Server │         │ Octane  │
-│ Claude Desktop    │◄───────►│            │◄───────►│         │
-│  (code tab)       │         └────────────┘         └────┬────┘
+┌───────────────────┐  stdio  ┌────────────┐  gRPC   ┌──────────┐
+│ Claude Code CLI   │◄───────►│            │◄───────►│          │
+│    — or —         │         │ MCP Server │         │  Octane  │
+│ Claude Desktop    │◄───────►│            │         │          │
+│  (code tab)       │         └────────────┘         └────┬─────┘
 └───────────────────┘                                     │ gRPC
-                                                     ┌────┴────┐
-                                                     │octaneWebR│
-                                                     │ Browser  │
-                                                     └─────────┘
+                                                          │ (separate
+                                                          │  connection)
+                                                     ┌────┴─────┐
+                                                     │ octaneWebR│
+                                                     │  Browser  │
+                                                     └──────────┘
 ```
+
+> **octaneWebR and MCP are independent.** Both connect to Octane via gRPC separately. You can use either one alone, or both together for the best experience.
 
 ## Prerequisites
 
-| Requirement          | Version | Notes                                                  |
-| -------------------- | ------- | ------------------------------------------------------ |
-| Octane Render Studio | 2026.1+ | gRPC must be enabled (Preferences > GRPC API > Enable) |
-| Node.js              | 18+     | For MCP server and octaneWebR dev server               |
-| Claude Code          | Latest  | Or any MCP-compatible client                           |
+| Requirement                   | Version | Notes                                                                                 |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| Octane Render Studio          | 2026.1+ | gRPC must be enabled (Preferences > GRPC API > Enable)                                |
+| Node.js                       | 18+     | For MCP server and octaneWebR dev server                                              |
+| Claude Desktop or Claude Code | Latest  | Claude Desktop's code tab is the primary dev environment. Claude Code CLI also works. |
 
 ## Setup
 
@@ -106,11 +110,13 @@ Ask Claude something like:
 Behind the scenes, Claude will:
 
 1. Create a Render Target (the scene root)
-2. Create a Path Tracing kernel and connect it
-3. Set up a daylight environment
-4. Create a sphere mesh with a red material
-5. Position the camera
-6. Start a render and save the image
+2. Set the camera to a good viewing angle
+3. Create a sphere mesh with a loud red material — **you see it immediately**
+4. Add a daylight environment for lighting
+5. Swap in the final material, tweak lighting
+6. Render and save the image
+
+Claude prioritizes getting something on screen fast so you can watch the scene take shape, not building everything backstage first.
 
 ### What You Can Ask For
 

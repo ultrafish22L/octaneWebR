@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { notifyWebapp } from './webapp';
 import {
@@ -70,8 +70,9 @@ async function getPinInfoFallback(
           typeName = PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
         }
       } catch (e: any) {
-        console.error(
-          `getPinInfoFallback: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`
+        mcpLog(
+          `getPinInfoFallback: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`,
+          'warn'
         );
       }
       try {
@@ -81,14 +82,15 @@ async function getPinInfoFallback(
         });
         pinName = String(extractValue(nameResult) ?? '');
       } catch (e: any) {
-        console.error(
-          `getPinInfoFallback: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`
+        mcpLog(
+          `getPinInfoFallback: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`,
+          'warn'
         );
       }
       pins.push({ index: i, type: typeName, name: pinName });
     }
   } catch (e: any) {
-    console.error(`getPinInfoFallback: pinCount failed for handle ${handle}: ${e.message}`);
+    mcpLog(`getPinInfoFallback: pinCount failed for handle ${handle}: ${e.message}`, 'warn');
   }
   return pins;
 }

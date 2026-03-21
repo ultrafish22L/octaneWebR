@@ -271,14 +271,18 @@ Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set t
 ## Render Pipeline — Minimum Sequence
 
 1. `create_node(NT_RENDERTARGET)` → RT handle
-2. `create_node(NT_GEO_OBJECT)` → geometry (default Box)
-3. `connect_nodes(geo → RT, pin_index: 3)`
+2. `set_camera(position:{0,1.5,4}, target:{0,0,0})` — known good frame, BEFORE geometry
+3. Create mesh (NT_GEO_MESH + .obj) + material → placement → geo group → RT `pin_index:3`
 4. `start_render(render_target_handle: RT)`
-5. `set_camera(position, target)` — **required** to refresh geometry tree
+5. `set_camera` again — **required** to refresh geometry tree
 6. Wait 3-5s for samples
 7. `save_render(path)`
 
+**Camera before geometry:** Setting camera first means the object appears framed the instant it's wired.
+
 **Geometry refresh:** `set_camera` is the ONLY way to force geometry re-evaluation after connecting new objects. `start_render` does NOT refresh geometry.
+
+**Use NT_GEO_MESH** (not NT_GEO_OBJECT) for reliability — primitive type changes on NT_GEO_OBJECT crash non-deterministically.
 
 ---
 

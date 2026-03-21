@@ -10,7 +10,7 @@
 
 import path from 'path';
 import fs from 'fs';
-import { SceneCache } from './SceneCache';
+import { SceneCache, setCacheLogger } from './SceneCache';
 import type {
   IGrpcClientBase,
   GrpcModule,
@@ -19,25 +19,46 @@ import type {
 
 export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
 
-// Log levels: 'debug' = full REQ/RES, 'info' = tool calls + results, 'warn' = problems only, 'error' = errors, 'off' = silent
-type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'off';
-// Default 'info': logs every gRPC call name + success/fail + timing.
-// Set MCP_LOG_LEVEL=debug for full request/response JSON.
-const LOG_LEVEL: LogLevel = (process.env.MCP_LOG_LEVEL as LogLevel) || 'info';
+// Log levels (lowest → highest):
+//   verbose — per-gRPC-call REQ/RES + timings, cache mutations, health skips (firehose)
+//   debug   — tool calls with args, health checks, profile timing (normal dev)
+//   info    — tool calls (name only), import stages (production)
+//   warn    — health failures, gate rejections, crash aftermath
+//   error   — crash detection, unrecoverable errors
+//   off     — silent
+type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'off';
+// Global LOG_LEVEL env var controls all log files. Default: debug.
+// MCP_LOG_LEVEL overrides for MCP only (legacy compat).
+const LOG_LEVEL: LogLevel =
+  (process.env.MCP_LOG_LEVEL as LogLevel) || (process.env.LOG_LEVEL as LogLevel) || 'debug';
 
-const LEVEL_RANK: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3, off: 4 };
+const LEVEL_RANK: Record<LogLevel, number> = {
+  verbose: 0,
+  debug: 1,
+  info: 2,
+  warn: 3,
+  error: 4,
+  off: 5,
+};
 
 // Use a WriteStream (like log_grpc.log) so writes are ordered.
 // fs.appendFile is fire-and-forget and can interleave out of order.
 let mcpLogStream: fs.WriteStream | null = null;
 
+function initMcpLog(): void {
+  if (mcpLogStream || LOG_LEVEL === 'off') return;
+  mcpLogStream = fs.createWriteStream(MCP_LOG_PATH, { flags: 'a' });
+  mcpLogStream.write(`=== MCP Log started ${new Date().toISOString()} (level: ${LOG_LEVEL}) ===\n`);
+}
+
+// Initialize eagerly so startup is always recorded
+if (LOG_LEVEL !== 'off') initMcpLog();
+
 export function mcpLog(msg: string, level: LogLevel = 'debug'): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
-  if (!mcpLogStream) {
-    mcpLogStream = fs.createWriteStream(MCP_LOG_PATH, { flags: 'a' });
-  }
+  initMcpLog();
   const ts = new Date().toISOString().substring(11, 23);
-  mcpLogStream.write(`[${ts}] ${msg}\n`);
+  mcpLogStream!.write(`[${ts}] ${msg}\n`);
 }
 
 /** Reset the log stream after clear_log truncates the file. */
@@ -78,7 +99,7 @@ export function profileStart(label: string): void {
   trimSpansIfNeeded();
   profileSpans.push(entry);
   openSpans.set(label, entry);
-  mcpLog(`PROFILE START: ${label}`);
+  mcpLog(`PROFILE START: ${label}`, 'debug');
 }
 
 export function profileEnd(label: string): number {
@@ -88,10 +109,10 @@ export function profileEnd(label: string): number {
     entry.endMs = now;
     entry.durationMs = now - entry.startMs;
     openSpans.delete(label);
-    mcpLog(`PROFILE END: ${label} — ${entry.durationMs.toFixed(1)}ms`);
+    mcpLog(`PROFILE END: ${label} — ${entry.durationMs.toFixed(1)}ms`, 'debug');
     return entry.durationMs;
   }
-  mcpLog(`PROFILE END: ${label} — no matching start`);
+  mcpLog(`PROFILE END: ${label} — no matching start`, 'debug');
   return 0;
 }
 
@@ -166,7 +187,7 @@ export function profileReset(): void {
   profileSpans.length = 0;
   openSpans.clear();
   sessionStartMs = 0;
-  mcpLog('PROFILE RESET');
+  mcpLog('PROFILE RESET', 'debug');
 }
 
 /** Crash signature patterns in gRPC error messages */
@@ -252,6 +273,8 @@ export class OctaneMcpClient {
 
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
+    // Cache mutation logger — verbose level for deep debugging
+    setCacheLogger(msg => mcpLog(`[CACHE] ${msg}`, 'verbose'));
   }
 
   async initialize(): Promise<void> {
@@ -283,11 +306,11 @@ export class OctaneMcpClient {
 
       const transformed = transformParams(service, method, params);
       const options = timeoutMs ? { timeout: timeoutMs } : {};
-      const isDebug = LEVEL_RANK['debug'] >= LEVEL_RANK[LOG_LEVEL];
-      if (isDebug)
+      const isVerbose = LEVEL_RANK[LOG_LEVEL] <= LEVEL_RANK['verbose'];
+      if (isVerbose)
         mcpLog(
           `REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`,
-          'debug'
+          'verbose'
         );
       const startMs = Date.now();
       const endProfile = profileGrpc(service, method);
@@ -296,9 +319,9 @@ export class OctaneMcpClient {
       const elapsed = Date.now() - startMs;
       this.lastSuccessMs = Date.now();
       const ok = result?.success !== false && !result?.error_message;
-      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'info');
-      if (isDebug)
-        mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'debug');
+      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'verbose');
+      if (isVerbose)
+        mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'verbose');
       return result;
     } catch (error: any) {
       throw enhanceCrashError(error, service, method, this);
@@ -317,18 +340,31 @@ export class OctaneMcpClient {
     // Skip health check for the ping call itself (avoid recursion)
     if (service === 'ApiProjectManager' && method === 'getPing') return;
     // Skip if we had a recent successful call
-    if (
-      this.lastSuccessMs &&
-      Date.now() - this.lastSuccessMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS
-    )
+    const idleMs = this.lastSuccessMs ? Date.now() - this.lastSuccessMs : -1;
+    if (this.lastSuccessMs && idleMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS) {
+      mcpLog(`[HEALTH] skip — idle ${idleMs}ms`, 'verbose');
       return;
+    }
 
+    mcpLog(`[HEALTH] ping — idle ${idleMs}ms, cache=${this.sceneCache.knownHandleCount}`, 'debug');
     try {
       await this.base.callMethod('ApiProjectManager', 'getPing', {}, { timeout: 5000 });
       this.lastSuccessMs = Date.now();
-    } catch {
-      mcpLog(`Health check failed — Octane connection stale. Resetting channels.`, 'warn');
-      this.clearRootGraphCache();
+      mcpLog(`[HEALTH] ping OK`, 'debug');
+    } catch (e: any) {
+      // BUG FIX: Only reset gRPC channels here, NOT the scene cache.
+      // A failed health check means the channel is stale (e.g., Octane restarted
+      // or first call with leftover channels). Resetting channels lets the next
+      // real call get a fresh connection. If Octane truly crashed, that real call
+      // will fail with ECONNRESET and the crash handler (enhanceCrashError) will
+      // clear the scene cache then. Clearing the cache here was destroying valid
+      // handles from create_node calls in the current session — causing spurious
+      // GATED rejections on connect_nodes.
+      mcpLog(
+        `[HEALTH] ping FAILED (${e.message}) — resetting channels only (preserving cache, size=${this.sceneCache.knownHandleCount})`,
+        'warn'
+      );
+      this.rootGraphHandle = null;
       this.resetGrpcChannels();
     }
   }

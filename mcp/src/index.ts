@@ -10,7 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { OctaneMcpClient, MCP_LOG_PATH, mcpLogReset } from './OctaneMcpClient';
+import { OctaneMcpClient, MCP_LOG_PATH, mcpLog, mcpLogReset } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
 import { registerInfoTools } from './tools/info';
 import { registerProjectTools } from './tools/project';
@@ -25,19 +25,19 @@ import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 
 async function main() {
-  // Clear log files at startup — fresh logs each session
+  // Clear MCP log at startup — fresh log each session
+  // Only clears log_mcp.log (MCP's own log). log_grpc.log is owned by Vite.
   const fs = await import('fs');
-  const path = await import('path');
-  const grpcLogPath = path.resolve(__dirname, '..', '..', 'log_grpc.log');
-  for (const logFile of [MCP_LOG_PATH, grpcLogPath]) {
-    try {
-      if (fs.existsSync(logFile)) {
-        fs.unlinkSync(logFile);
-      }
-    } catch {
-      /* ignore */
+  try {
+    if (fs.existsSync(MCP_LOG_PATH)) {
+      fs.unlinkSync(MCP_LOG_PATH);
     }
+  } catch {
+    /* ignore */
   }
+  // Reset stream after delete — eager init in OctaneMcpClient may have already
+  // opened a stream to the now-deleted file. This ensures the next mcpLog() recreates it.
+  mcpLogReset();
 
   // Connect to Octane via gRPC
   const client = new OctaneMcpClient();
@@ -56,6 +56,39 @@ async function main() {
     name: 'octane-mcp',
     version: '1.0.0',
   });
+
+  // Wrap server.tool to auto-log tool invocations at info/debug level.
+  // info: "TOOL create_node" (name only)
+  // debug: "TOOL create_node {type_id: 117, ...}" (name + args)
+  const origTool = server.tool.bind(server);
+  server.tool = function (...args: any[]) {
+    // server.tool(name, description, schema, handler) — handler is last arg
+    const toolName = args[0] as string;
+    const handlerIdx = args.length - 1;
+    const origHandler = args[handlerIdx] as (...a: any[]) => any;
+    args[handlerIdx] = async (...handlerArgs: any[]) => {
+      const toolArgs = handlerArgs[0]; // first arg is the parsed params object
+      const hasArgs = toolArgs && Object.keys(toolArgs).length > 0;
+      // Single TOOL line: at debug show args, at info show name only
+      if (hasArgs) {
+        mcpLog(`TOOL ${toolName} ${JSON.stringify(toolArgs).substring(0, 300)}`, 'info');
+      } else {
+        mcpLog(`TOOL ${toolName}`, 'info');
+      }
+      const startMs = Date.now();
+      try {
+        const result = await origHandler(...handlerArgs);
+        const elapsed = Date.now() - startMs;
+        mcpLog(`TOOL ${toolName} done ${elapsed}ms`, 'debug');
+        return result;
+      } catch (err: any) {
+        const elapsed = Date.now() - startMs;
+        mcpLog(`TOOL ${toolName} FAILED ${elapsed}ms: ${err.message}`, 'error');
+        throw err;
+      }
+    };
+    return (origTool as any)(...args);
+  } as any;
 
   // Load static API cache (graceful fallback if missing)
   const cache = ApiCache.load();

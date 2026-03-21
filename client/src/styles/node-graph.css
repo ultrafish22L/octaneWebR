@@ -101,6 +101,24 @@
   overflow-y: auto;
 }
 
+.modal-status {
+  padding: 8px 16px;
+  font-size: 0.85em;
+  border-left: 3px solid;
+}
+.modal-status--success {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+.modal-status--error {
+  border-color: #f44336;
+  color: #f44336;
+}
+.modal-status--warn {
+  border-color: #ff9800;
+  color: #ff9800;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;

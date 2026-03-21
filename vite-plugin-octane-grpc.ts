@@ -20,6 +20,7 @@ import { IncomingMessage } from 'http';
 import {
   OctaneGrpcClientBase,
   transformObjectPtrParams,
+  initGrpcLog,
 } from './server/src/grpc/OctaneGrpcClientBase';
 
 // ============================================================================
@@ -514,6 +515,11 @@ export function octaneGrpcPlugin(): Plugin {
           slog.warn(`Could not delete ${logFile}:`, error.message);
         }
       }
+
+      // Write startup headers — AFTER deleting old files
+      const startupTs = new Date().toISOString();
+      fs.appendFileSync('log_client.log', `=== Client Log started ${startupTs} ===\n`);
+      initGrpcLog(); // writes startup header to log_grpc.log
 
       // Initialize gRPC client
       grpcClient = new OctaneGrpcClient();

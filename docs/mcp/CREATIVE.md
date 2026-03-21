@@ -152,10 +152,12 @@ PMC for better convergence. Small lights = sharper caustics. Disable "fake shado
 
 ## Demo Presentation (DRESS)
 
-Build order: mood first → shapes second → beauty last.
+Build order: object on screen ASAP → mood → beauty.
 
-1. **Environment** — lighting visible from first frame
-2. **Bare geometry** — objects appear one by one
-3. **Materials** — each object "dresses up"
+1. **Camera + first geometry + loud material** — human sees something framed immediately
+2. **Environment** — contrasting sky/lighting appears
+3. **Real materials** — each object "dresses up"
+4. **Additional objects** — one at a time, render between each
+5. **Polish** — floor, lighting tweaks, hero camera, final render
 
-Every step renders. Every render is a visible, meaningful change.
+Every step renders. Every render is a visible, meaningful change. See `BUILD.md` for exact protocol.

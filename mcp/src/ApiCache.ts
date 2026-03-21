@@ -8,6 +8,7 @@
  */
 
 import fs from 'fs';
+import { mcpLog } from './OctaneMcpClient';
 import path from 'path';
 
 const CACHE_PATH = path.resolve(__dirname, '../data/octane-api-cache.json');
@@ -67,7 +68,7 @@ export class ApiCache {
     try {
       return new ApiCache(CACHE_PATH);
     } catch (e) {
-      console.error('Failed to load API cache:', e);
+      mcpLog(`Failed to load API cache: ${e}`, 'error');
       return null;
     }
   }
