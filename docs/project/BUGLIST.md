@@ -1,1 +1,0 @@
-Merged into IMPROVEMENTS.md.

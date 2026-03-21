@@ -50,16 +50,26 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | C5   | If score < 3.5: apply priority-1 corrections, re-render, go to C1 | Iteration                                         |
 | C6   | If stagnating (2 iterations < 0.3 improvement): redesign plan     | Plan change, not tweaking                         |
 
+### Vision Critic
+
+`critique_render` uses an external vision model (Anthropic Haiku 4.5 via `ANTHROPIC_CLAUDE_KEY` env var in `.mcp.json`) for render quality assessment. **Self-critique is unreliable** — Claude rating its own renders inflates scores by 1-2 points because it's judging its own work.
+
+- **Two-image comparison** (reference + render) is most effective — harder to inflate when the diff is visible
+- **Standalone critique** (render only) is still too generous — Haiku called a mediocre scene "enchanting"
+- Vision module: `mcp/src/vision/` with `anthropic.ts`, `gemini.ts`, `index.ts` (fallback chain), `prompts.ts`
+- `maxTokens` must be ≥4000 for `analyze_reference` (1500 truncates structured JSON)
+- Truncation-resilient JSON parsing added: closes unclosed brackets/braces
+
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                                                                                                               | Result                                                                                                                                 |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                       | RT handle + pin handles                                                                                                                |
-| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                     | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.      |
-| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                          | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. |
-| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                              | **FIRST VISUAL — human sees something**                                                                                                |
-| 5    | Create environment → `connect_nodes(env, RT, pin_id:43)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                  |
-| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                         | Sharp render                                                                                                                           |
+| Step | Action                                                                                                                                                                 | Result                                                                                                                                 |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                |
+| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                       | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.      |
+| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. |
+| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                                | **FIRST VISUAL — human sees something**                                                                                                |
+| 5    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                  |
+| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                           | Sharp render                                                                                                                           |
 
 **Why camera before geometry:** `set_camera` is needed to evaluate geometry anyway. Setting it early means the object appears framed the instant it's wired — no black viewport, no lost object, no "where is it?" moment.
 
@@ -83,6 +93,20 @@ Each object = a visible change. Never batch multiple objects without rendering b
 ### Phase 4: Polish
 
 Floor, fine-tune lighting, hero camera, final `save_render`.
+
+### Render Status — Don't Blind Sleep
+
+After `start_render` or `set_camera`, call `get_render_status` to check `state: "RSTATE_FINISHED"`. Renders typically finish in 2-9s. If still rendering, wait 2s and check again. Don't `sleep 8` and hope.
+
+### GLB Texture Extraction
+
+trimesh OBJ export strips baked textures. Extract baseColorTexture as PNG immediately after conversion:
+
+```python
+scene.geometry[name].visual.material.baseColorTexture.save('name_diffuse.png')
+```
+
+Apply as NT_TEX_IMAGE on material albedo pin.
 
 ---
 
@@ -174,6 +198,8 @@ Y = target_Y + D_z * tan(elevation)
 
 ## 3D Asset Pipeline (OTOY Studio → Octane)
 
+**CRITICAL:** The only working domain is `https://otoy.studio/` (NOT `studio.otoy.com`). Navigate to `https://otoy.studio/image-to-3d` for 3D mesh generation. Never click upload buttons (pops OS file dialog) — use "USE URL" toggle + `request_upload_url` instead.
+
 **Generate:** `generate_image_pro` → reference image → OTOY Studio image-to-3D (Chrome UI) → GLB
 
 **Convert:** Python trimesh: `trimesh.load(glb)` → `export('name.obj')` → OBJ + MTL + diffuse PNG
@@ -206,6 +232,21 @@ Y = target_Y + D_z * tan(elevation)
 **Diffuse:** `[material] surface, seamless tileable texture, flat orthographic top-down material scan, evenly lit diffuse studio lighting, no shadows no highlights no reflections, PBR albedo map, photorealistic, square 1:1`
 
 **Environment:** `360 degree equirectangular panorama, [scene], high dynamic range, seamless horizon, photorealistic, landscape 16:9`
+
+---
+
+## Video Pipeline (OTOY Studio)
+
+Chain clips via start/end frames for seamless continuity. End frame of clip N = start frame of clip N+1.
+
+**Multi-phase pipeline (each with AA gate):**
+
+1. **Writers Room** — narrative, character, world, emotion → showrunner approval
+2. **Storyboard** — keyframes for every beat in one consistent style → AA side-by-side review
+3. **Video Chain** — start/end frame continuity → Kling i2v for frame-faithful, Veo3 for standalone audio moments
+4. **Editor** — final assembly with music, pacing, titles
+
+Lock the story FIRST. Generate ALL hero keyframes before any video gen. Don't submit for video until all frames are consistent. Octane 3D scenes come after the trailer is approved.
 
 **Seed3D reference:** `[object] isolated on pure black background, clean silhouette, soft studio lighting, single centered object, high detail, square 1:1`
 

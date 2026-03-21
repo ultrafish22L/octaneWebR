@@ -63,14 +63,20 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ## MCP-Specific
 
-| Problem                                    | Fix                                                                                                 |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| NT_GEO_MESH has no transform               | Wrap in NT_GEO_PLACEMENT.                                                                           |
-| GLB direct load times out                  | Convert to OBJ + PNG. Load OBJ via mesh, texture via NT_TEX_IMAGE.                                  |
-| Auto-created materials reject emission     | Create standalone NT_MAT_DIFFUSE, connect emission via `pin_name: "emission"`, then connect to geo. |
-| Inspector doesn't refresh after MCP update | Re-select node in octaneWebR.                                                                       |
-| `set_camera` resets up vector              | Always (0,1,0). Rotate MODEL, never flip camera up.                                                 |
-| MCP server left active during code changes | Stop server, rebuild, restart.                                                                      |
+| Problem                                    | Fix                                                                                                                                                                                                      |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NT_GEO_MESH has no transform               | Wrap in NT_GEO_PLACEMENT.                                                                                                                                                                                |
+| GLB direct load times out                  | Convert to OBJ + PNG. Load OBJ via mesh, texture via NT_TEX_IMAGE.                                                                                                                                       |
+| Auto-created materials reject emission     | Create standalone NT_MAT_DIFFUSE, connect emission via `pin_name: "emission"`, then connect to geo.                                                                                                      |
+| Inspector doesn't refresh after MCP update | Re-select node in octaneWebR.                                                                                                                                                                            |
+| `set_camera` resets up vector              | Always (0,1,0). Rotate MODEL, never flip camera up.                                                                                                                                                      |
+| MCP server left active during code changes | Stop server, rebuild, restart.                                                                                                                                                                           |
+| ORBX save resets ALL handles               | After `save_project` to .orbx, re-query scene tree with `get_scene_tree`.                                                                                                                                |
+| ORBX embeds assets with relative paths     | `.orbx` packages copy textures/meshes inside. On reload, paths become relative. Use `.ocs` during MCP iteration (keeps absolute paths). Only `.orbx` for final delivery.                                 |
+| ORBX mesh node corruption                  | Mesh nodes from ORBX that survived heavy scene surgery (delete siblings, swap filenames) become corrupted. Always create FRESH `NT_GEO_MESH` nodes.                                                      |
+| Viewport resolution max ~1100px            | Larger resolutions clip in Octane viewport — human sees cropped image while `save_render` captures full frame. Use 1024x576 or 1024x1024 for interactive work. Bump to 1920x1080 for final renders only. |
+| `ApiNode.type` vs `ApiItem.type`           | The `type` RPC (returns NodeType enum) is on `ApiNode` (objectType=17), NOT `ApiItem` (objectType=16). `ApiItem` only has `name`, `outType`, `isGraph`.                                                  |
+| Render time diagnostic                     | Env-only render ~3-4s. With 500K face mesh ~8-11s. If render time stays at env-only level, mesh isn't in pipeline.                                                                                       |
 
 ---
 
@@ -112,6 +118,24 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 2. Read `log_mcp.log` — last successful call, first error
 3. Isolate the exact gRPC call
 4. Stop all servers BEFORE restarting Octane
+
+### Debugging Philosophy
+
+1. **Default assumption: our code is wrong.** Only escalate to "Octane bug" after reading SDK/proto docs, testing minimal repro, and checking with the user.
+2. **After 2 failures of the same kind, STOP.** Don't add retries or pacing to a broken approach — step back, list alternatives, try a different strategy entirely.
+3. **Don't rush forward on shaky ground.** When something fails unexpectedly, stop the build and debug properly. Building on broken foundations compounds failures.
+4. **Disable MCP before code changes.** The MCP server auto-starts with Claude Code. Rebuilding with broken code spawns a broken process that makes bad gRPC calls, crashing Octane.
+5. **No deferred evaluation batching.** Always use `evaluate: true` (default). Deferred eval means each call after the first operates on stale state — subsequent calls send params against fiction.
+6. **Never parallel `set_attribute` on the same node.** Causes race conditions that crash Octane. Always sequential on one handle.
+7. **SDK headers are the source of truth.** When something silently fails, check `C:\otoyla\GRPC\dev\sdk\src\api\` (especially `apinodesystem.h`) for the actual C++ API semantics.
+
+### Proto Loader Settings
+
+The gRPC proto loader uses: `longs: String`, `enums: String`, `keepCase: true`, `defaults: true`. This means enum values come back as strings (e.g. `"PT_TEXTURE"` not `5`), and longs as strings (e.g. `"1000042"` not `1000042`). Never `Number(enumValue)` — use the string directly or look up in PIN_TYPE_NAMES.
+
+### gRPC Deadline Pattern
+
+Use `Date.now() + timeoutMs` (number), NOT `new Date()` objects. Match octaneWebR's pattern in `OctaneGrpcClientBase.ts`.
 
 ### Thread Safety
 

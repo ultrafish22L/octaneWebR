@@ -24,7 +24,7 @@ npm run dev                                      # Start web UI (port 43929)
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
 │  Vite Dev Server    │              │   MCP Server       │
 │  HTTP proxy + WS    │              │   stdio transport   │
-│  port 43929         │              │   28 tools          │
+│  port 43929         │              │   67 tools          │
 └──────────┬──────────┘              └─────────┬──────────┘
            │ HTTP/WS                            │ stdio
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
@@ -51,21 +51,23 @@ Both paths use the same shared gRPC client with a unified compatibility layer fo
 
 ### MCP Server (AI Scene Builder)
 
-28 tools let AI agents control Octane through natural language:
+67 tools let AI agents control Octane through natural language:
 
-| Category       | Tools                                                                                                  | What They Do                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| **Project**    | `load_project`, `save_project`, `reset_project`                                                        | Open/save/clear scenes                          |
-| **Camera**     | `get_camera`, `set_camera`                                                                             | Read and set camera position/target             |
-| **Render**     | `start_render`, `stop_render`, `get_render_status`, `save_render`                                      | Control rendering, export images                |
-| **Scene**      | `get_scene_tree`, `list_node_types`                                                                    | Query scene hierarchy and available types       |
-| **Nodes**      | `create_node`, `delete_node`, `get_node_info`, `connect_nodes`, `disconnect_pin`, `create_and_connect` | Build the node graph                            |
-| **Attributes** | `set_attribute`, `get_attribute`                                                                       | Read and write node properties                  |
-| **Import**     | `import_glb`                                                                                           | Import GLB → OBJ + textures + material + wiring |
-| **Webapp**     | `refresh_webapp`                                                                                       | Sync octaneWebR with current scene state        |
-| **Info**       | `get_octane_version`, `get_device_info`                                                                | System information                              |
-| **Debug**      | `clear_log`                                                                                            | Clear MCP log                                   |
-| **Profiling**  | `profile_start`, `profile_end`, `profile_report`, `profile_reset`                                      | Performance timing                              |
+| Category            | Count | What They Do                                                                  |
+| ------------------- | ----- | ----------------------------------------------------------------------------- |
+| **Nodes**           | 11    | Create, delete, connect, disconnect, find, duplicate, rename, inspect         |
+| **Attributes**      | 6     | Get/set values, enumerate all attributes, pin value shortcut, animation check |
+| **Render**          | 7     | Start/stop, status, save image, AOVs, multi-pass export                       |
+| **Render Control**  | 6     | Clay mode, GPU priority, sub-sampling (get/set each)                          |
+| **Stats**           | 5     | Geometry, texture, resource stats, scene bounds, render state                 |
+| **Camera**          | 2     | Get/set position, target, up vector                                           |
+| **Animation**       | 5     | Read/write keyframes, animation range, clear animation                        |
+| **Art Direction**   | 6     | Composition planning, spatial validation, vision critic loop                  |
+| **Creative**        | 2     | Material and lighting recipe suggestions                                      |
+| **Color/MaterialX** | 4     | OCIO config, color spaces, MaterialX import/list                              |
+| **Project**         | 3     | Load, save, reset scenes                                                      |
+| **Import**          | 1     | GLB → OBJ + textures + material + wiring                                      |
+| **System**          | 9     | Version, device info, node types, profiling, log, webapp sync                 |
 
 **MCP + octaneWebR together** is the best experience: ask Claude to build a scene in your terminal while watching every node, connection, and render update live in the browser.
 
@@ -100,7 +102,7 @@ octaneWebR/
 │   └── styles/                  # CSS themes (134 variables each)
 ├── server/proto/                # Protobuf definitions (Beta 2)
 ├── shared/                      # Shared constants (AttrType, AttributeId, etc.)
-├── mcp/src/                     # MCP server (28 tools, SceneCache, ApiCache)
+├── mcp/src/                     # MCP server (67 tools, SceneCache, ApiCache)
 │   ├── tools/                   # Tool implementations by category
 │   ├── types/                   # TypeScript interfaces (GrpcClientTypes)
 │   └── __tests__/               # Unit tests
@@ -130,7 +132,7 @@ octaneWebR/
 npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint
-npm test             # 59 tests (SceneCache, utils, constants)
+npm test             # 88 tests (Vitest)
 npx tsc --noEmit     # Type check
 ```
 
@@ -141,7 +143,7 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 | Doc                                                            | What's In It                                                    |
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
 | [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — get everything running in 5 minutes          |
-| [docs/mcp/USER_GUIDE.md](./docs/mcp/USER_GUIDE.md)             | Complete MCP user guide — all 28 tools, tips, pitfalls          |
+| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 67 tools, tips, pitfalls          |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
 | [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (demo) and SPEED (batch) workflows      |
 | [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition, OTOY Studio  |
@@ -159,4 +161,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 2.1.6** | Active Development
+**Version 2.2.2** | Active Development

@@ -2,7 +2,7 @@
 
 Get the browser UI and AI scene builder running in under 5 minutes.
 
-OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 28 tools for controlling Octane.
+OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 67 tools for controlling Octane.
 
 ## What You Need
 
@@ -84,7 +84,7 @@ The `.mcp.json` registers three MCP servers:
 
 | Server          | What It Does                                                   |
 | --------------- | -------------------------------------------------------------- |
-| **octane**      | Scene control — nodes, materials, camera, rendering (28 tools) |
+| **octane**      | Scene control — nodes, materials, camera, rendering (67 tools) |
 | **octane-docs** | Search Octane's API documentation and examples                 |
 | **otoy-studio** | Generate AI images, 3D assets, video, and music                |
 
@@ -139,7 +139,7 @@ Claude can build scenes, render, and save images without octaneWebR running.
 
 ## Next Steps
 
-- **[docs/mcp/USER_GUIDE.md](docs/mcp/USER_GUIDE.md)** — Full MCP user guide with all 28 tools, tips, and pitfalls
+- **[docs/mcp/README.md](docs/mcp/README.md)** — Full MCP user guide with all 67 tools, tips, and pitfalls
 - **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Scene building protocols (DRESS demo mode, SPEED batch mode)
 - **[docs/mcp/CREATIVE.md](docs/mcp/CREATIVE.md)** — Lighting, materials, composition guide
 - **[docs/mcp/REFERENCE.md](docs/mcp/REFERENCE.md)** — Node types, pin layouts, attribute IDs

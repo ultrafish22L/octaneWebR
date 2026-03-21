@@ -43,9 +43,25 @@ How to make scenes look good. For values and pin layouts, see `REFERENCE.md`. Fo
 
 Env fill only (power 1-2) supplements quad lights. Env as primary (3-5) for floating objects. Real HDRI: gamma 1.0, power 1.0. Source: Poly Haven (free CC0).
 
+### HDRI Backlight Trick
+
+Set rotation `{0, Y, 0}` on the spherical projection's transform to position the sun/bright area behind the scene for golden hour backlight. Requires NT_PROJ_SPHERICAL connected to image texture pin 6.
+
 ### Lights Through Glass — Avoid
 
 Light through glass shows refracted shapes. Move lights out of frame or use env-only lighting for glass scenes.
+
+### Underwater Scenes
+
+Volumetric medium FIRST: NT_MED_SCATTERING on env + NT_KERN_PATHTRACING. Simple RGB env color, NOT flat images. Calibrate density before building any scene.
+
+---
+
+## Quality Bar
+
+- Below B+ → REJECT. "Would a stranger stop scrolling?" is the bar.
+- Two meshes in empty void = F-tier regardless of texture quality. Build the STAGE first (environment, depth, atmosphere), then place heroes.
+- Before any camera adjustment: "Is this scene worth rendering at any angle?" If no, add content first.
 
 ---
 
@@ -59,6 +75,12 @@ Light through glass shows refracted shapes. Move lights out of frame or use env-
 2. Know every object's position in 3D space
 3. Know Z-depth relationships
 4. For demos: hero camera FIRST
+
+### Scene Complexity Rules
+
+- **Simple scenes** (few objects): framing carries everything. Depth arrangements matter most because there's nothing else to look at.
+- **Complex scenes**: focus on PRIMARY subject with good PERIPHERAL context. Peripherals support, don't compete. Usually env/daylight — set up early so every object appears in a lit, atmospheric frame.
+- **Animation**: all of the above plus FLOW — how the eye moves through the scene over time.
 
 ### Composition Rules
 
@@ -104,6 +126,11 @@ Low camera = massive. High camera = miniature. 1 unit = 1 meter. Human eye ~1.5,
 | Gold + Deep Blue | Luxury, elegance          |
 | Red + Cyan       | Sci-fi, tension           |
 | Purple + Gold    | Royal, mystical           |
+
+### CG Craft Notes
+
+- **Gold metal**: IOR 30 is the sweet spot — IOR 1.5 = painted plastic, IOR 100 = pure mirror that reflects cool sky and looks silver. Gold reflects its environment, so the environment must be warm (warm sky_color, sunset_color) or it won't read as gold.
+- **Eclipse/backlight effects**: A matte sphere with backlight produces no visible corona. Needs bloom/glare post-processing to sell the effect.
 
 ---
 
