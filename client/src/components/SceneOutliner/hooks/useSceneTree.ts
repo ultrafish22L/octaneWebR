@@ -16,6 +16,25 @@ import { SceneNode, NodeAddedEvent, NodeDeletedEvent } from '../../../services/O
 import { requestQueue } from '../../../utils/RequestQueue';
 import { cacheManager } from '../../../services/CacheManager';
 
+/**
+ * Deep-clone a SceneNode tree, breaking shared object references from the
+ * scene map.  Tracks visited handles to break cycles — if the same handle
+ * appears twice in a traversal path, its children are omitted on the second
+ * visit (the node itself is still included so the outliner can show it).
+ */
+function deepCloneNode(node: SceneNode, visited?: Set<number | undefined>): SceneNode {
+  const seen = visited ?? new Set<number | undefined>();
+  if (node.handle != null && seen.has(node.handle)) {
+    // Cycle detected — return a shallow copy with no children to break the loop
+    return { ...node, children: [] };
+  }
+  if (node.handle != null) seen.add(node.handle);
+  return {
+    ...node,
+    children: node.children ? node.children.map(c => deepCloneNode(c, seen)) : [],
+  };
+}
+
 interface UseSceneTreeProps {
   onSceneTreeChange?: (sceneTree: SceneNode[]) => void;
   onSyncStateChange?: (syncing: boolean) => void;
@@ -175,13 +194,22 @@ export function useSceneTree({
      * React sees new references along the path → re-renders only affected subtrees.
      * All sibling nodes keep their original references (no re-render).
      */
-    const clonePathToHandle = (nodes: SceneNode[], targetHandle: number): SceneNode[] => {
+    const clonePathToHandle = (
+      nodes: SceneNode[],
+      targetHandle: number,
+      visited?: Set<number | undefined>
+    ): SceneNode[] => {
+      const seen = visited ?? new Set<number | undefined>();
       return nodes.map(node => {
+        // Cycle detection: skip children if we've already visited this handle
+        if (node.handle != null && seen.has(node.handle)) return node;
+        if (node.handle != null) seen.add(node.handle);
+
         if (node.handle === targetHandle) {
           return { ...node, children: node.children ? [...node.children] : [] };
         }
         if (node.children && node.children.length > 0) {
-          const cloned = clonePathToHandle(node.children, targetHandle);
+          const cloned = clonePathToHandle(node.children, targetHandle, seen);
           if (cloned !== node.children) {
             return { ...node, children: cloned };
           }
@@ -305,7 +333,12 @@ export function useSceneTree({
         // Optimized delete with structural sharing
         // Only creates new objects in the path to the deleted node
         // Keeps all other nodes unchanged (same reference) for React optimization
-        const filterDeleted = (nodes: SceneNode[]): { updated: SceneNode[]; changed: boolean } => {
+        // Uses visited set to prevent infinite recursion from shared SceneNode refs
+        const filterDeleted = (
+          nodes: SceneNode[],
+          visited?: Set<number | undefined>
+        ): { updated: SceneNode[]; changed: boolean } => {
+          const seen = visited ?? new Set<number | undefined>();
           let changed = false;
           const filtered: SceneNode[] = [];
 
@@ -315,8 +348,15 @@ export function useSceneTree({
               continue;
             }
 
+            // Cycle detection: if we've already visited this handle, keep node as-is
+            if (node.handle != null && seen.has(node.handle)) {
+              filtered.push(node);
+              continue;
+            }
+            if (node.handle != null) seen.add(node.handle);
+
             if (node.children && node.children.length > 0) {
-              const childResult = filterDeleted(node.children);
+              const childResult = filterDeleted(node.children, seen);
 
               if (childResult.changed) {
                 filtered.push({
@@ -349,11 +389,17 @@ export function useSceneTree({
       // gets the fresh (complete) node object instead of a stale reference.
       const selHandle = selectedNodeRef.current?.handle;
       if (selHandle) {
-        const findByHandle = (nodes: SceneNode[]): SceneNode | null => {
+        const findByHandle = (
+          nodes: SceneNode[],
+          visited?: Set<number | undefined>
+        ): SceneNode | null => {
+          const seen = visited ?? new Set<number | undefined>();
           for (const n of nodes) {
             if (n.handle === selHandle) return n;
+            if (n.handle != null && seen.has(n.handle)) continue;
+            if (n.handle != null) seen.add(n.handle);
             if (n.children) {
-              const found = findByHandle(n.children);
+              const found = findByHandle(n.children, seen);
               if (found) return found;
             }
           }
@@ -375,10 +421,13 @@ export function useSceneTree({
     // Strategy: incremental add/delete (instant), debounced rebuild for connects only.
 
     // Structural sharing delete helper (reused by MCP delete + post-load delete)
+    // Uses visited set to prevent infinite recursion from shared SceneNode refs
     const filterDeleted = (
       nodes: SceneNode[],
-      targetHandle: number
+      targetHandle: number,
+      visited?: Set<number | undefined>
     ): { updated: SceneNode[]; changed: boolean } => {
+      const seen = visited ?? new Set<number | undefined>();
       let changed = false;
       const filtered: SceneNode[] = [];
       for (const node of nodes) {
@@ -386,8 +435,15 @@ export function useSceneTree({
           changed = true;
           continue;
         }
+        // Cycle detection: if we've already visited this handle, keep node as-is
+        if (node.handle != null && seen.has(node.handle)) {
+          filtered.push(node);
+          continue;
+        }
+        if (node.handle != null) seen.add(node.handle);
+
         if (node.children && node.children.length > 0) {
-          const childResult = filterDeleted(node.children, targetHandle);
+          const childResult = filterDeleted(node.children, targetHandle, seen);
           if (childResult.changed) {
             filtered.push({ ...node, children: childResult.updated });
             changed = true;
@@ -412,19 +468,23 @@ export function useSceneTree({
       try {
         const node = await client.buildNewNode(handle);
         if (node) {
-          setSceneTree(prev => [...prev, node]);
+          // Deep-clone to break shared references from the scene map.
+          // Without this, the same SceneNode object can appear at multiple
+          // levels in the React tree, creating cycles that crash filterDeleted.
+          const cloned = deepCloneNode(node);
+          setSceneTree(prev => [...prev, cloned]);
 
           // Auto-select RenderTarget: activate in render engine AND select in UI
-          if (node.type === 'PT_RENDERTARGET' && node.handle && node.handle !== -1) {
+          if (cloned.type === 'PT_RENDERTARGET' && cloned.handle && cloned.handle !== -1) {
             client
-              .setRenderTargetNode(node.handle)
+              .setRenderTargetNode(cloned.handle)
               .then(success => {
                 if (success) {
                   Logger.debug(
-                    `MCP: RenderTarget auto-activated: "${node.name}" (handle: ${node.handle})`
+                    `MCP: RenderTarget auto-activated: "${cloned.name}" (handle: ${cloned.handle})`
                   );
                   // Select in inspector/outliner so the UI reflects the active RT
-                  onNodeSelectRef.current?.(node);
+                  onNodeSelectRef.current?.(cloned);
                 }
               })
               .catch(err => {
@@ -459,8 +519,12 @@ export function useSceneTree({
       if (refreshed) {
         const updatedNode = client.lookupItem(handle);
         if (updatedNode) {
-          // Structural sharing: clone only the path to this node to trigger React update
-          setSceneTree(prev => prev.map(n => (n.handle === handle ? { ...updatedNode } : n)));
+          // Deep-clone to break shared references from the scene map.
+          // A shallow spread of updatedNode would keep children pointing
+          // into the scene map, creating cycles when those children are
+          // also top-level nodes in the React tree.
+          const cloned = deepCloneNode(updatedNode);
+          setSceneTree(prev => prev.map(n => (n.handle === handle ? cloned : n)));
         }
       }
     };

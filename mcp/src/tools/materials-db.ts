@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, extractHandle, OBJ_API_NODE_GRAPH } from './utils';
 
 // ObjectRef type constants for LiveDB array handles
@@ -47,7 +47,8 @@ export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClie
           await client.callMethod('ApiDBMaterialManager_DBCategoryArray', 'free', {
             objectPtr: { handle: String(listHandle), type: OBJ_DB_CATEGORY_ARRAY },
           });
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[materials-db:browse:free_array] ${e?.message ?? e}`);
           // Non-critical
         }
 
@@ -102,7 +103,8 @@ export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClie
           await client.callMethod('ApiDBMaterialManager_DBMaterialArray', 'free1', {
             objectPtr: { handle: String(listHandle), type: OBJ_DB_MATERIAL_ARRAY },
           });
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[materials-db:search:free_array] ${e?.message ?? e}`);
           // Non-critical
         }
 

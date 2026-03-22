@@ -5,7 +5,7 @@
  * loops. This module provides a single implementation to prevent code drift.
  */
 
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { extractHandle, extractValue, OBJ_API_ITEM, OBJ_API_NODE } from './utils';
 import { PIN_TYPE_NAMES } from '../../../shared/OctaneConstants';
 
@@ -93,7 +93,8 @@ export async function enumeratePins(
         enterWrapperNode: true,
       });
       connectedHandle = extractHandle(connResult) ?? 0;
-    } catch {
+    } catch (e: any) {
+      mcpLogLazy('verbose', () => `[pin-utils:enumerate:connectedNode:${i}] ${e?.message ?? e}`);
       // Not graph-connected
     }
 
@@ -105,7 +106,8 @@ export async function enumeratePins(
           pinIx: i,
         });
         connectedHandle = extractHandle(ownedResult) ?? 0;
-      } catch {
+      } catch (e: any) {
+        mcpLogLazy('verbose', () => `[pin-utils:enumerate:ownedItem:${i}] ${e?.message ?? e}`);
         // Pin has no node
       }
     }
@@ -117,7 +119,11 @@ export async function enumeratePins(
           objectPtr: { handle: String(connectedHandle), type: OBJ_API_ITEM },
         });
         connectedName = String(extractValue(nameRes) ?? '');
-      } catch {
+      } catch (e: any) {
+        mcpLogLazy(
+          'verbose',
+          () => `[pin-utils:enumerate:connName:${connectedHandle}] ${e?.message ?? e}`
+        );
         // Skip if name lookup fails
       }
     }
@@ -157,7 +163,8 @@ export async function getConnectedHandle(
     });
     const h = extractHandle(connResult);
     if (h) return h;
-  } catch {
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[pin-utils:getConnected:graph:${pinIndex}] ${e?.message ?? e}`);
     // Not graph-connected
   }
   try {
@@ -166,7 +173,8 @@ export async function getConnectedHandle(
       pinIx: pinIndex,
     });
     return extractHandle(ownedResult) ?? 0;
-  } catch {
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[pin-utils:getConnected:owned:${pinIndex}] ${e?.message ?? e}`);
     return 0;
   }
 }

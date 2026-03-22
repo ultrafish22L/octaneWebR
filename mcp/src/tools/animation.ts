@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, extractValue, OBJ_API_ITEM } from './utils';
 import { enumeratePins } from './pin-utils';
 
@@ -133,7 +133,11 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
                 description: infoResult?.result?.description ?? '',
               });
             }
-          } catch {
+          } catch (e: any) {
+            mcpLogLazy(
+              'verbose',
+              () => `[animation:is_node_animated:attr:${i}] ${e?.message ?? e}`
+            );
             // Skip unreadable attributes
           }
         }

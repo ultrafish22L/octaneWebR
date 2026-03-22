@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { notifyWebapp } from './webapp';
 import {
@@ -40,7 +40,8 @@ async function getOutTypeFallback(
     if (typeof typeRaw === 'string' && typeRaw.startsWith('PT_')) return typeRaw;
     const typeNum = Number(typeRaw ?? 0);
     return PIN_TYPE_NAMES[typeNum] ?? `PT_${typeNum}`;
-  } catch {
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[node:getOutTypeFallback] ${e?.message ?? e}`);
     return undefined;
   }
 }
@@ -123,8 +124,8 @@ export function registerNodeTools(
                   enterWrapperNode: true,
                 });
                 childHandle = extractHandle(connResult) ?? 0;
-              } catch {
-                /* no child */
+              } catch (e: any) {
+                mcpLogLazy('verbose', () => `[node:create_node:pin_child] ${e?.message ?? e}`);
               }
             }
             pins.push({
@@ -150,13 +151,13 @@ export function registerNodeTools(
                   enterWrapperNode: true,
                 });
                 childHandle = extractHandle(connResult) ?? 0;
-              } catch {
-                /* */
+              } catch (e: any) {
+                mcpLogLazy('verbose', () => `[node:create_node:pin_query:${i}] ${e?.message ?? e}`);
               }
               pins.push({ index: i, handle: childHandle });
             }
-          } catch {
-            /* */
+          } catch (e: any) {
+            mcpLogLazy('verbose', () => `[node:create_node:pinCount_fallback] ${e?.message ?? e}`);
           }
         }
 
@@ -297,7 +298,11 @@ export function registerNodeTools(
                   await client.callMethod('ApiChangeManager', 'update', {});
                 }
               }
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy(
+                'verbose',
+                () => `[node:connect_nodes:materialize_pins] ${e?.message ?? e}`
+              );
               // Best-effort: if we can't materialize pins, the connect call
               // will proceed anyway and may succeed or fail on its own.
             }
@@ -403,7 +408,8 @@ export function registerNodeTools(
               `Connection verification FAILED: pin ${verifyPinIdx} shows connected_handle=${connectedHandle} ` +
               `(expected ${source_handle}). Check pin type compatibility with get_node_info.`;
           }
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[node:connect_nodes:verify] ${e?.message ?? e}`);
           // If verify call itself fails, don't block — just warn
           verifyWarning =
             'Connection verification skipped (verify call failed). Check with get_node_info.';
@@ -537,7 +543,8 @@ export function registerNodeTools(
             verified = false;
             verifyWarning = `Connection verification FAILED: pin ${pin_index} shows handle=${connectedHandle} (expected ${newHandle}).`;
           }
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[node:create_and_connect:verify] ${e?.message ?? e}`);
           verifyWarning = 'Connection verification skipped (verify call failed).';
         }
 

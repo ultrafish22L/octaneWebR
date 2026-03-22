@@ -21,7 +21,7 @@
  * STRUCTURE: Same variable set as theme-octane.css.
  */
 
-:root {
+[data-theme='debug'] {
   /* ── Backgrounds ── each a distinct hue ── */
   --bg-primary: #0a0a28; /* Navy — app shell */
   --bg-secondary: #0a2020; /* Teal — panels */

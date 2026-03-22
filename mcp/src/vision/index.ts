@@ -9,7 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { mcpLog } from '../OctaneMcpClient';
+import { mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { callAnthropicVision, getAnthropicKey } from './anthropic';
 import { callGeminiVision, getGeminiKey } from './gemini';
 import { parseCritiqueResponse } from './prompts';
@@ -207,7 +207,8 @@ export async function analyzeReference(
     if (data) break;
     try {
       data = JSON.parse(candidate);
-    } catch {
+    } catch (e: any) {
+      mcpLogLazy('verbose', () => `[vision:analyzeRef:jsonParse] ${e?.message ?? e}`);
       // Try repairing truncated JSON by closing open brackets/braces
       let repaired = candidate.trim();
       // Remove trailing comma
@@ -226,7 +227,8 @@ export async function analyzeReference(
           `VISION: repaired truncated JSON (added ${opens - closes} ] and ${openBraces - closeBraces} })`,
           'info'
         );
-      } catch {
+      } catch (e2: any) {
+        mcpLogLazy('verbose', () => `[vision:analyzeRef:jsonRepair] ${e2?.message ?? e2}`);
         /* truly unparseable */
       }
     }

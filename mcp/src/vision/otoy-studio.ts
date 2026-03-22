@@ -15,7 +15,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { mcpLog } from '../OctaneMcpClient';
+import { mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 
 export interface UploadResult {
   uploadUrl: string;
@@ -48,7 +48,8 @@ export function extractOtoyStudioToken(mcpJsonPath?: string): string | null {
         const match = args[headerIdx + 1].match(/Bearer\s+(\S+)/);
         if (match) return match[1];
       }
-    } catch {
+    } catch (e: any) {
+      mcpLogLazy('verbose', () => `[vision:otoy-studio:extractToken:${p}] ${e?.message ?? e}`);
       /* continue */
     }
   }

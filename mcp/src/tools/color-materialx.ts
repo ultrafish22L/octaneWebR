@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import {
   jsonResult,
   errorResult,
@@ -77,7 +77,8 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
                 colorSpaceIndex: i,
               });
               colorSpaces.push(String(nameR?.result ?? ''));
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[color:ocio:colorSpaceName:${i}] ${e?.message ?? e}`);
               break;
             }
           }
@@ -107,13 +108,15 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
                     viewIndex: v,
                   });
                   views.push(String(vNameR?.result ?? ''));
-                } catch {
+                } catch (e: any) {
+                  mcpLogLazy('verbose', () => `[color:ocio:viewName:${d}:${v}] ${e?.message ?? e}`);
                   break;
                 }
               }
 
               displays.push({ name: dName, views });
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[color:ocio:display:${d}] ${e?.message ?? e}`);
               break;
             }
           }
@@ -136,7 +139,8 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
                 name: String(rNameR?.result ?? ''),
                 color_space: String(rCsR?.result ?? ''),
               });
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[color:ocio:role:${r}] ${e?.message ?? e}`);
               break;
             }
           }
@@ -150,7 +154,8 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
                 lookIndex: l,
               });
               looks.push(String(lNameR?.result ?? ''));
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[color:ocio:look:${l}] ${e?.message ?? e}`);
               break;
             }
           }
@@ -171,7 +176,8 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
           // Always destroy the config handle
           try {
             await client.callMethod('ApiOcioConfig', 'destroy', { objectPtr: objPtr });
-          } catch {
+          } catch (e: any) {
+            mcpLogLazy('verbose', () => `[color:ocio:destroy] ${e?.message ?? e}`);
             // Non-critical
           }
         }
@@ -213,7 +219,8 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
                 colorSpaceIndex: i,
               });
               names.push(String(nameR?.result ?? ''));
-            } catch {
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[color:list_color_spaces:name:${i}] ${e?.message ?? e}`);
               break;
             }
           }
@@ -222,7 +229,9 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
         } finally {
           try {
             await client.callMethod('ApiOcioConfig', 'destroy', { objectPtr: objPtr });
-          } catch {}
+          } catch (e: any) {
+            mcpLogLazy('verbose', () => `[color:list_color_spaces:destroy] ${e?.message ?? e}`);
+          }
         }
       } catch (error: any) {
         return errorResult(error);

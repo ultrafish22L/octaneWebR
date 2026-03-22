@@ -7,6 +7,7 @@
  * instead of vague subjective scoring.
  */
 
+import { mcpLogLazy } from '../OctaneMcpClient';
 import type { CompositionSpec } from '../ArtDirectionState';
 import { PASS_THRESHOLD, MIN_DIMENSION_SCORE } from '../ArtDirectionState';
 
@@ -170,7 +171,8 @@ export function parseCritiqueResponse(response: string): {
     if (data.scores && typeof data.overall === 'number') {
       return { ...data, raw: response };
     }
-  } catch {
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[vision:parseCritique:directJSON] ${e?.message ?? e}`);
     // Try extracting JSON from markdown code blocks
     const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -179,7 +181,8 @@ export function parseCritiqueResponse(response: string): {
         if (data.scores && typeof data.overall === 'number') {
           return { ...data, raw: response };
         }
-      } catch {
+      } catch (e2: any) {
+        mcpLogLazy('verbose', () => `[vision:parseCritique:codeBlock] ${e2?.message ?? e2}`);
         /* continue */
       }
     }
@@ -191,7 +194,8 @@ export function parseCritiqueResponse(response: string): {
         if (data.scores && typeof data.overall === 'number') {
           return { ...data, raw: response };
         }
-      } catch {
+      } catch (e3: any) {
+        mcpLogLazy('verbose', () => `[vision:parseCritique:braceMatch] ${e3?.message ?? e3}`);
         /* give up */
       }
     }

@@ -61,6 +61,12 @@ export function mcpLog(msg: string, level: LogLevel = 'debug'): void {
   mcpLogStream!.write(`[${ts}] ${msg}\n`);
 }
 
+/** Lazy variant — callback only evaluated if level is active. Use for hot paths. */
+export function mcpLogLazy(level: LogLevel, msgFn: () => string): void {
+  if (LEVEL_RANK[level] < LEVEL_RANK[LOG_LEVEL]) return;
+  mcpLog(msgFn(), level);
+}
+
 /** Reset the log stream after clear_log truncates the file. */
 export function mcpLogReset(): void {
   if (mcpLogStream) {
@@ -342,7 +348,7 @@ export class OctaneMcpClient {
     // Skip if we had a recent successful call
     const idleMs = this.lastSuccessMs ? Date.now() - this.lastSuccessMs : -1;
     if (this.lastSuccessMs && idleMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS) {
-      mcpLog(`[HEALTH] skip — idle ${idleMs}ms`, 'verbose');
+      mcpLogLazy('verbose', () => `[HEALTH] skip — idle ${idleMs}ms`);
       return;
     }
 

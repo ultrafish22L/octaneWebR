@@ -14,13 +14,13 @@
  *   `lastUpdatedMs` so the AI can judge data freshness.
  */
 
-// DEBUG: temporary cache mutation logger
+// DEBUG: cache mutation logger — lazy variant avoids string interpolation when log is off
 let _cacheLog: ((msg: string) => void) | null = null;
-export function setCacheLogger(fn: (msg: string) => void): void {
+export function setCacheLogger(fn: ((msg: string) => void) | null): void {
   _cacheLog = fn;
 }
-function clog(msg: string): void {
-  if (_cacheLog) _cacheLog(msg);
+function clog(msgFn: string | (() => string)): void {
+  if (_cacheLog) _cacheLog(typeof msgFn === 'function' ? msgFn() : msgFn);
 }
 
 export interface CachedNode {
@@ -71,7 +71,7 @@ export class SceneCache {
   trackHandle(handle: number): void {
     if (handle > 0) {
       this._knownHandles.add(handle);
-      clog(`TRACK ${handle} → size=${this._knownHandles.size}`);
+      clog(() => `TRACK ${handle} → size=${this._knownHandles.size}`);
     }
   }
 
@@ -98,11 +98,13 @@ export class SceneCache {
     if (this._knownHandles.has(handle)) {
       return { valid: true };
     }
-    const knownList =
-      this._knownHandles.size <= 50
-        ? [...this._knownHandles].join(',')
-        : `${this._knownHandles.size} handles`;
-    clog(`VALIDATE_REJECT ${handle} — known=[${knownList}] populated=${this._populated}`);
+    clog(() => {
+      const knownList =
+        this._knownHandles.size <= 50
+          ? [...this._knownHandles].join(',')
+          : `${this._knownHandles.size} handles`;
+      return `VALIDATE_REJECT ${handle} — known=[${knownList}] populated=${this._populated}`;
+    });
     return {
       valid: false,
       reason:
@@ -122,7 +124,7 @@ export class SceneCache {
   addNode(handle: number, name: string, typeName: string, typeId: number): void {
     this.nodes.set(handle, { name, typeName, typeId, updatedAt: Date.now() });
     this._knownHandles.add(handle);
-    clog(`ADD_NODE ${handle} "${name}" (${typeName}) → size=${this._knownHandles.size}`);
+    clog(() => `ADD_NODE ${handle} "${name}" (${typeName}) → size=${this._knownHandles.size}`);
   }
 
   /** Touch/refresh a node's timestamp (e.g., after confirming it still exists via gRPC) */
@@ -180,7 +182,7 @@ export class SceneCache {
     if (node) {
       node.name = name;
       node.updatedAt = Date.now();
-      clog(`updateName(${handle}) → "${name}"`);
+      clog(() => `updateName(${handle}) → "${name}"`);
     }
   }
 
@@ -269,11 +271,12 @@ export class SceneCache {
   }
 
   clear(): void {
-    const prevSize = this._knownHandles.size;
-    const prevHandles = prevSize <= 50 ? [...this._knownHandles].join(',') : `${prevSize} handles`;
-    clog(
-      `CLEAR called! Was: ${prevHandles} — stack: ${new Error().stack?.split('\n').slice(1, 5).join(' | ')}`
-    );
+    clog(() => {
+      const prevSize = this._knownHandles.size;
+      const prevHandles =
+        prevSize <= 50 ? [...this._knownHandles].join(',') : `${prevSize} handles`;
+      return `CLEAR called! Was: ${prevHandles} — stack: ${new Error().stack?.split('\n').slice(1, 5).join(' | ')}`;
+    });
     this.nodes.clear();
     this.connections.clear();
     this.children.clear();

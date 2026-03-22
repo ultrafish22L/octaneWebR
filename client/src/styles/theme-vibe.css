@@ -17,7 +17,7 @@
  * Import this file INSTEAD of theme-octane.css to activate.
  */
 
-:root {
+[data-theme='vibe'] {
   /* ── Backgrounds ── deep muted purples ── */
   --bg-primary: #1e1a2e; /* Main background — very dark purple-gray */
   --bg-secondary: #2d2840; /* Panel backgrounds */

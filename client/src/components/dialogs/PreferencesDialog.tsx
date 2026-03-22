@@ -97,10 +97,55 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
   );
 }
 
+const THEMES = [
+  { value: 'octane', label: 'Octane (Default)' },
+  { value: 'vibe', label: 'Vibe' },
+  { value: 'debug', label: 'Debug' },
+] as const;
+
+type ThemeName = (typeof THEMES)[number]['value'];
+
+function getStoredTheme(): ThemeName {
+  return (localStorage.getItem('octaneweb-theme') as ThemeName) || 'octane';
+}
+
+function applyTheme(theme: ThemeName): void {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('octaneweb-theme', theme);
+}
+
+// Apply stored theme on first load (before React renders)
+applyTheme(getStoredTheme());
+
 function ApplicationTab() {
+  const [theme, setTheme] = useState<ThemeName>(getStoredTheme);
+
+  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newTheme = e.target.value as ThemeName;
+    setTheme(newTheme);
+    applyTheme(newTheme);
+  };
+
   return (
     <div className="preferences-tab-content">
       <h3>Application Settings</h3>
+
+      <div className="preference-section">
+        <h4>Theme</h4>
+        <label className="preference-field">
+          <span>Color theme:</span>
+          <select value={theme} onChange={handleThemeChange}>
+            {THEMES.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="preference-description">
+          Choose a color theme for the interface. Changes take effect immediately.
+        </p>
+      </div>
 
       <div className="preference-section">
         <h4>Statistics</h4>

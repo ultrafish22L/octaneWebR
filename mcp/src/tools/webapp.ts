@@ -13,6 +13,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from './utils';
 
 const WEBAPP_URL = process.env.OCTANE_WEBAPP_URL || 'http://127.0.0.1:43929';
@@ -33,7 +34,8 @@ export async function notifyWebapp(event: { type: string; handle?: number }): Pr
       body: JSON.stringify(event),
       signal: AbortSignal.timeout(2000),
     });
-  } catch {
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[webapp:notifyWebapp] ${e?.message ?? e}`);
     // Silent — webapp may not be running
   }
 }

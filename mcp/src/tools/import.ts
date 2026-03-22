@@ -13,7 +13,7 @@ import path from 'path';
 import fs from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import {
   jsonResult,
@@ -211,7 +211,8 @@ export function registerImportTools(
             enterWrapperNode: true,
           });
           transformHandle = extractHandle(connResult) ?? 0;
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[import:glb:transform_child] ${e?.message ?? e}`);
           /* no transform child */
         }
 

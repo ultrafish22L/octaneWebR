@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
-import { OctaneMcpClient } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
 import { AttrType } from '../../../shared/OctaneConstants';
 
@@ -239,7 +239,11 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
               type: info?.type ?? 'UNKNOWN',
               isArray: info?.isArray ?? false,
             });
-          } catch {
+          } catch (e: any) {
+            mcpLogLazy(
+              'verbose',
+              () => `[attribute:get_all_attributes:attr:${i}] ${e?.message ?? e}`
+            );
             // Skip unreadable attributes
           }
         }

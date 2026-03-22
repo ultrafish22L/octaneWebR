@@ -34,7 +34,7 @@ ALL docs go in `docs/`. Never store project knowledge in memory files or local-o
 | Test scene   | `ORBX/teapot.orbx`                                                                                  |
 | MCP server   | auto-starts via `.mcp.json` — never run manually                                                    |
 | Octane       | `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true` |
-| Tests        | `npm test` (88 tests), `npm run lint`, `npm run build`                                              |
+| Tests        | `npm test` (133 tests), `npm run lint`, `npm run build`                                             |
 | Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                       |
 | Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                             |
 
@@ -100,7 +100,7 @@ WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), pla
 
 ## Status
 
-- **Version**: 2.2.2 — 67 active tools, 4 disabled (LiveDB), 88 tests, 3 themes
+- **Version**: 2.2.2 — 67 active tools, 4 disabled (LiveDB), 133 tests, 3 themes
 - **MCP**: 14 tool modules, 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, VisionCritic
 - **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `shared/OctaneConstants.ts`.
 

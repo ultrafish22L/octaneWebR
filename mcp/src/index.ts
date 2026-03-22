@@ -10,7 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { OctaneMcpClient, MCP_LOG_PATH, mcpLog, mcpLogReset } from './OctaneMcpClient';
+import { OctaneMcpClient, MCP_LOG_PATH, mcpLog, mcpLogLazy, mcpLogReset } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
 import { registerInfoTools } from './tools/info';
 import { registerProjectTools } from './tools/project';
@@ -41,8 +41,8 @@ async function main() {
     if (fs.existsSync(MCP_LOG_PATH)) {
       fs.unlinkSync(MCP_LOG_PATH);
     }
-  } catch {
-    /* ignore */
+  } catch (e: any) {
+    mcpLogLazy('verbose', () => `[index:startup:log_cleanup] ${e?.message ?? e}`);
   }
   // Reset stream after delete — eager init in OctaneMcpClient may have already
   // opened a stream to the now-deleted file. This ensures the next mcpLog() recreates it.

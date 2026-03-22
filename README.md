@@ -132,7 +132,7 @@ octaneWebR/
 npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint
-npm test             # 88 tests (Vitest)
+npm test             # 133 tests (Vitest)
 npx tsc --noEmit     # Type check
 ```
 

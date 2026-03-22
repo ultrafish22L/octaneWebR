@@ -45,7 +45,7 @@ octaneWebR/
 ├── mcp/                  MCP server (separate package)
 │   ├── src/              Tool implementations
 │   ├── src/types/        Typed interfaces (GrpcClientTypes.ts)
-│   ├── src/__tests__/    Integration tests (88 tests via Vitest)
+│   ├── src/__tests__/    Tests (133 tests via Vitest)
 │   └── data/             API cache (octane-api-cache.json)
 ├── ORBX/assets/          3D meshes (.obj) and textures
 ├── renders/              Render output
@@ -124,5 +124,5 @@ Both the web UI (via HTTP → Vite plugin → base) and MCP (via OctaneMcpClient
 - **Prod**: `npm run build` (tsc + vite build, output in `dist/`)
 - **Type check**: `npx tsc --noEmit`
 - **Lint**: `npm run lint`
-- **Test**: `npm test` (88 tests: SceneCache, utils, constants, ArtDirectionState, geometric validation)
+- **Test**: `npm test` (133 tests: SceneCache, tools, utils, constants, ArtDirectionState, geometric validation)
 - **MCP**: `cd mcp && npm run build` (esbuild)

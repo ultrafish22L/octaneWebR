@@ -9,7 +9,8 @@
  * Import this file FIRST before component stylesheets.
  */
 
-:root {
+:root,
+[data-theme='octane'] {
   /* ── Backgrounds ── neutral grays ── */
   --bg-primary: #252525; /* App shell */
   --bg-secondary: #454545; /* Panels */

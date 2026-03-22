@@ -7,7 +7,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { PIN_TYPE_NAMES } from './node';
 import { enumeratePins } from './pin-utils';
@@ -93,7 +93,8 @@ async function traverseGraph(
           } else {
             typeId = Number(typeRaw ?? 0);
           }
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[scene:tree:nodeType:${itemHandle}] ${e?.message ?? e}`);
           // Some items (pure graphs) may not support ApiNode.type()
         }
 
@@ -122,7 +123,8 @@ async function traverseGraph(
               objectPtr: { handle: String(itemHandle), type: OBJ_API_NODE },
             });
             node.pinCount = extractValue(pinResult) ?? 0;
-          } catch {
+          } catch (e: any) {
+            mcpLogLazy('verbose', () => `[scene:tree:pinCount:${itemHandle}] ${e?.message ?? e}`);
             // Some items may not support pinCount
           }
         }
@@ -282,7 +284,8 @@ export function registerSceneTools(
                 client.sceneCache.addNode(handle, String(info.name), nodeTypeName, typeId);
               }
             }
-          } catch {
+          } catch (e: any) {
+            mcpLogLazy('verbose', () => `[scene:get_node_info:type_lookup] ${e?.message ?? e}`);
             // Fall through to gRPC path
           }
         }
@@ -314,7 +317,11 @@ export function registerSceneTools(
                   enterWrapperNode: true,
                 });
                 connectedHandle = extractHandle(connResult) ?? 0;
-              } catch {
+              } catch (e: any) {
+                mcpLogLazy(
+                  'verbose',
+                  () => `[scene:get_node_info:connectedNode:${cp.index}] ${e?.message ?? e}`
+                );
                 // Not graph-connected, try pin-owned
               }
               if (!connectedHandle) {
@@ -324,7 +331,11 @@ export function registerSceneTools(
                     pinIx: cp.index,
                   });
                   connectedHandle = extractHandle(ownedResult) ?? 0;
-                } catch {
+                } catch (e: any) {
+                  mcpLogLazy(
+                    'verbose',
+                    () => `[scene:get_node_info:ownedItem:${cp.index}] ${e?.message ?? e}`
+                  );
                   // Pin has no node
                 }
               }
@@ -336,7 +347,12 @@ export function registerSceneTools(
                     objectPtr: { handle: String(connectedHandle), type: OBJ_API_ITEM },
                   });
                   pin.connected_name = extractValue(connName) ?? '';
-                } catch {
+                } catch (e: any) {
+                  mcpLogLazy(
+                    'verbose',
+                    () =>
+                      `[scene:get_node_info:connectedName:${connectedHandle}] ${e?.message ?? e}`
+                  );
                   // Skip if name lookup fails
                 }
               }
@@ -359,7 +375,8 @@ export function registerSceneTools(
               });
             }
           }
-        } catch {
+        } catch (e: any) {
+          mcpLogLazy('verbose', () => `[scene:get_node_info:pins] ${e?.message ?? e}`);
           // Node may not support pins
         }
 
