@@ -30,6 +30,7 @@ import { registerColorMaterialXTools } from './tools/color-materialx';
 import { registerArtDirectionTools } from './tools/artdirection';
 import { ArtDirectionState } from './ArtDirectionState';
 import { registerCreativeTools } from './creative/index';
+import { registerSegaTools, SemanticState } from './sega/index';
 import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 
@@ -114,7 +115,12 @@ async function main() {
 
   // ArtDirectionState — cleared automatically on load/reset/crash via client.onClear()
   const artState = new ArtDirectionState();
-  client.onClear(() => artState.clear());
+  // SemanticState (SEGA) — cleared alongside ArtDirectionState
+  const segaState = new SemanticState();
+  client.onClear(() => {
+    artState.clear();
+    segaState.clear();
+  });
 
   // Register all tool groups
   registerInfoTools(server, client, cache);
@@ -137,6 +143,9 @@ async function main() {
 
   // Register Creative tools (lighting, materials knowledge)
   registerCreativeTools(server, client);
+
+  // Register SEGA tools (semantic artistic guidance — intent vectors, presets, parameter mapping)
+  registerSegaTools(server, segaState);
 
   // Register MCP Resources (read-only type system + scene state)
   registerResources(server, client, cache);

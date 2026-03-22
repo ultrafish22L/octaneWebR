@@ -2,24 +2,25 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 27: SEGA system design — semantic artistic guidance research & architecture**
+**Phase 28: SEGA Phases 1-4 complete — full semantic artistic guidance system**
 
 **What happened this session:**
 
-- **Deep research** — Academic and industry sources: SEGA (Brack et al. 2023), PAD model (Mehrabian & Russell 1974), Berlyne aesthetics, CineTechBench (Wu et al. 2025), ASC Manual, Itten color theory, Stanford 3D scene graphs, BYU DARCI.
-- **SEGA system designed** — Semantic vector layer (S-space) between natural language and DCC commands. ~15 seed dimensions from PAD, CineTechBench, Itten, ASC, CG craft. Open registry for more. Weighted parameter mapping, NL parsing, preset system, pixel+VLM hybrid measurement, semantic gap critique loop.
-- **Gemini suggestions analyzed** — Adopted: scene graph semantics, relationship mapping, style-as-constraints, mood boarding, DARCI-style evaluation, feedback loops. Skipped: latent-space SEGA (no diffusion model), portfolio style transfer. Deferred: sketch steering.
-- **5 design decisions locked** — LLM-generated presets + review; pixel+VLM hybrid measurement; no forced orthogonality; 6-12 active dims per scene; global default + per-object overrides.
-- **Existing spatial math unchanged** — `projectToScreen()`, `validateComposition()`, frustum/depth/grid checks stay as-is. SEGA handles artistic intent, spatial math handles correctness. Separate concerns, no overlap.
-- **2 docs written** — `docs/project/SEGA_SYSTEM_DESIGN.md` (full architecture + implementation plan), `docs/project/SEGA_USER_GUIDE.md` (research foundations + Gemini analysis + user interaction patterns).
-- **Version**: 2.2.3
+- **SEGA Phase 1** — Foundation: types, registry (15 dimensions), presets (25), SemanticState, MappingEngine. 3 core tools: `set_artistic_intent`, `get_artistic_intent`, `adjust_artistic_intent`.
+- **SEGA Phase 2** — NL parser: `NLParser.ts` with prompt builder, response parser. `natural_language` parameter added to `set_artistic_intent`. Returns structured prompt for LLM to parse speech → dimension vectors.
+- **SEGA Phase 3** — Measurement + critique: `PixelAnalyzer.ts` (PNG pixel analysis for contrast, warmth, saturation, atmosphere), `SemanticCritic.ts` (gap vector computation, convergence detection, VLM estimation prompts). 2 new tools: `semantic_critique`, `get_vlm_estimation_prompt`.
+- **SEGA Phase 4** — User presets: `save_user_preset` tool (session-scoped). Berlyne warnings wired through all tools.
+- **Aspect ratio fix** — `projectToScreen()` accepts `aspectRatio` parameter.
+- **Self-learning hooks** — `LearnedAdjustment`, `confidence`/`source` on mappings, `contributions` per parameter. Data structures ready, no learning logic yet.
+- **10 files created/modified**, 131 new tests (281 total), 6 new MCP tools (76 total).
+- **Version**: 2.2.5
 
 ### TODO for Next Session
 
-1. **SEGA Phase 1 implementation** — Start with dimension registry data file (1.1), then SemanticState class (1.2), then mapping engine (1.3). Read `docs/project/SEGA_SYSTEM_DESIGN.md` section 11 for full plan.
-2. **Fix aspect ratio in `projectToScreen()`** — Accept ratio parameter instead of assuming square. Only remaining code fix from review.
-3. **Scene building demo** — full DRESS build with art direction loop.
-4. **Re-test LiveDB** after Octane update.
+1. **Scene building demo** — full DRESS build using SEGA tools for art direction. Test the complete flow: preset → resolve → build → critique → iterate.
+2. **Self-learning Phase 1** — Implement learning engine that reads `LearnedAdjustment` records and adjusts mapping weights/confidence. Persist adjustments across sessions.
+3. **Re-test LiveDB** after Octane update.
+4. **Correlation documentation** — Empirically test dimension correlations with real Octane renders.
 
 ## #0 Rule: Read Before Doing
 
@@ -37,7 +38,7 @@ ALL docs go in `docs/`. Never store project knowledge in memory files or local-o
 | Test scene   | `ORBX/teapot.orbx`                                                                                  |
 | MCP server   | auto-starts via `.mcp.json` — never run manually                                                    |
 | Octane       | `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true` |
-| Tests        | `npm test` (150 tests), `npm run lint`, `npm run build`                                             |
+| Tests        | `npm test` (281 tests), `npm run lint`, `npm run build`                                             |
 | Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                       |
 | Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                             |
 
@@ -103,7 +104,7 @@ WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), pla
 
 ## Status
 
-- **Version**: 2.2.3 — 67 active tools, 4 disabled (LiveDB), 150 tests, 3 themes
+- **Version**: 2.2.5 — 76 active tools, 4 disabled (LiveDB), 281 tests, 3 themes
 - **MCP**: 14 tool modules, 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, VisionCritic
 - **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `shared/OctaneConstants.ts`.
 

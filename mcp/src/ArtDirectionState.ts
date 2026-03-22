@@ -45,6 +45,8 @@ export interface CompositionSpec {
   lightingMood: string;
   referenceImagePath?: string;
   sceneExtents: { min: Vec3; max: Vec3 };
+  /** SEGA semantic target vector — links composition to artistic intent. */
+  semanticTarget?: Record<string, number>;
 }
 
 export interface CorrectionEntry {

@@ -86,7 +86,7 @@ interface ScreenPos {
  * Project a world-space point onto screen [0,1]x[0,1] given camera spec.
  * Uses a simple pinhole model — sufficient for composition validation.
  */
-export function projectToScreen(point: Vec3, cam: CameraSpec): ScreenPos {
+export function projectToScreen(point: Vec3, cam: CameraSpec, aspectRatio = 1): ScreenPos {
   const forward = vec3Normalize(vec3Sub(cam.target, cam.position));
   const up = vec3Normalize(cam.up);
   // Right vector = forward × up
@@ -109,7 +109,7 @@ export function projectToScreen(point: Vec3, cam: CameraSpec): ScreenPos {
 
   const halfFovRad = degToRad(cam.fovHorizontalDeg / 2);
   const halfWidth = Math.tan(halfFovRad) * depth;
-  const halfHeight = halfWidth; // assume square aspect
+  const halfHeight = halfWidth / aspectRatio; // width/height ratio (e.g. 16/9 = 1.778)
 
   const screenX = vec3Dot(toPoint, rightN);
   const screenY = vec3Dot(toPoint, upN);

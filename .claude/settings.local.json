@@ -156,7 +156,8 @@
       "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue | Select-Object -Property LocalPort,State\")",
       "Bash(find /c/otoyla/GRPC/dev/octaneWebR/mcp/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)",
       "Bash(echo $ANTHOPIC_CLAUDE_KEY)",
-      "mcp__octane__analyze_reference"
+      "mcp__octane__analyze_reference",
+      "Bash(npm test:*)"
     ]
   }
 }

@@ -144,6 +144,20 @@ describe('projectToScreen', () => {
     const p = projectToScreen({ x: 0, y: 3, z: 0 }, cam);
     expect(p.v).toBeLessThan(0.5);
   });
+
+  it('wide aspect ratio compresses vertical range', () => {
+    // Same point, but 16:9 aspect should push v further from center than 1:1
+    const square = projectToScreen({ x: 0, y: 3, z: 0 }, cam, 1);
+    const wide = projectToScreen({ x: 0, y: 3, z: 0 }, cam, 16 / 9);
+    // Wide aspect has smaller halfHeight, so same Y offset produces larger v deviation
+    expect(Math.abs(wide.v - 0.5)).toBeGreaterThan(Math.abs(square.v - 0.5));
+  });
+
+  it('aspect ratio does not affect u projection', () => {
+    const square = projectToScreen({ x: 3, y: 0, z: 0 }, cam, 1);
+    const wide = projectToScreen({ x: 3, y: 0, z: 0 }, cam, 16 / 9);
+    expect(wide.u).toBeCloseTo(square.u, 5);
+  });
 });
 
 describe('vector math', () => {
