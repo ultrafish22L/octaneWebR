@@ -31,8 +31,8 @@
 - **Time**: ~18:40 local
 - **Action**: Created NT_GEO_OBJECT for ground plane (handle 1000310). Called 3 `set_attribute` in parallel on its transform child (1000314): primitive type, scale, position.
 - **Error**: `ECONNRESET` on first `setValueByAttrID` — remaining calls got `ECONNREFUSED`
-- **Likely cause**: Parallel `set_attribute` calls on the same node create a race condition in Octane's gRPC handler. The primitive type enum set (value=20) may also be incorrect for this node type.
-- **Resolution**: ALWAYS call `set_attribute` SEQUENTIALLY on the same node. Never fire multiple attribute sets in parallel on one handle. Also: leave NT_GEO_OBJECT as default Box — changing primitive type crashes non-deterministically (documented in REFERENCE.md).
+- **Likely cause**: The primitive type enum set (value=20) crashes non-deterministically on NT_GEO_OBJECT (known issue). gRPC calls are synchronous/serialized at the server — parallelism was not the cause.
+- **Resolution**: Leave NT_GEO_OBJECT as default Box — changing primitive type crashes non-deterministically (documented in REFERENCE.md).
 
 ## Crash #5: connectTo on NT_TEX_IMAGE power pin — RGB over Grayscale swap
 

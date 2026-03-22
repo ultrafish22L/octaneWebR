@@ -126,7 +126,7 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 3. **Don't rush forward on shaky ground.** When something fails unexpectedly, stop the build and debug properly. Building on broken foundations compounds failures.
 4. **Disable MCP before code changes.** The MCP server auto-starts with Claude Code. Rebuilding with broken code spawns a broken process that makes bad gRPC calls, crashing Octane.
 5. **No deferred evaluation batching.** Always use `evaluate: true` (default). Deferred eval means each call after the first operates on stale state — subsequent calls send params against fiction.
-6. **Never parallel `set_attribute` on the same node.** Causes race conditions that crash Octane. Always sequential on one handle.
+6. **gRPC calls are synchronous** — they serialize at the server, so parallel tool invocations from the client are safe. Crashes previously blamed on "parallelism" were caused by invalid attributes (e.g. primitive type changes on NT_GEO_OBJECT).
 7. **SDK headers are the source of truth.** When something silently fails, check `C:\otoyla\GRPC\dev\sdk\src\api\` (especially `apinodesystem.h`) for the actual C++ API semantics.
 
 ### Proto Loader Settings
