@@ -459,3 +459,100 @@ describe('jsonResult/errorResult format', () => {
     expect(parsed.error).toBe('42');
   });
 });
+
+// ────────────────────────────────────────────────────────────
+// delete_node: connection guard
+// ────────────────────────────────────────────────────────────
+
+describe('delete_node: connection guard', () => {
+  let cache: SceneCache;
+
+  beforeEach(() => {
+    cache = new SceneCache();
+  });
+
+  it('blocks deletion when node is a source in a connection', () => {
+    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+    cache.setConnection(100, 0, 200); // camera connected to RT
+
+    const conns = cache.getConnectionsInvolving(200);
+    expect(conns.length).toBeGreaterThan(0);
+    // delete_node would check this and return errorResult
+  });
+
+  it('blocks deletion when node is a target with connections', () => {
+    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+    cache.setConnection(100, 0, 200);
+
+    const conns = cache.getConnectionsInvolving(100);
+    expect(conns.length).toBeGreaterThan(0);
+  });
+
+  it('allows deletion when node has no connections', () => {
+    cache.addNode(100, 'Orphan', 'NT_MAT_UNIVERSAL', 130);
+
+    const conns = cache.getConnectionsInvolving(100);
+    expect(conns).toHaveLength(0);
+  });
+
+  it('allows deletion after disconnect clears connections', () => {
+    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+    cache.setConnection(100, 0, 200);
+
+    // Disconnect
+    cache.removeConnection(100, 0);
+
+    // Now both nodes have no connections
+    expect(cache.getConnectionsInvolving(100)).toHaveLength(0);
+    expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// connect_nodes: edge cases
+// ────────────────────────────────────────────────────────────
+
+describe('connect_nodes: edge cases', () => {
+  let cache: SceneCache;
+
+  beforeEach(() => {
+    cache = new SceneCache();
+  });
+
+  it('double-connect same pin overwrites in cache', () => {
+    cache.setConnection(100, 0, 200);
+    cache.setConnection(100, 0, 300);
+
+    expect(cache.getConnection(100, 0)).toBe(300);
+    // Old source no longer appears
+    expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+  });
+
+  it('self-connection is stored in cache (no guard exists)', () => {
+    cache.addNode(100, 'Node', 'NT_MAT_UNIVERSAL', 130);
+    cache.setConnection(100, 0, 100); // self-connect
+
+    const conns = cache.getConnectionsInvolving(100);
+    // Should appear once (same entry, handle is both source and target)
+    expect(conns).toHaveLength(1);
+    expect(conns[0].source).toBe(100);
+    expect(conns[0].target).toBe(100);
+  });
+
+  it('getConnectionsInvolving after overwrite reflects new state', () => {
+    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(200, 'OldCam', 'NT_CAM_THINLENS', 10);
+    cache.addNode(300, 'NewCam', 'NT_CAM_THINLENS', 10);
+
+    cache.setConnection(100, 0, 200);
+    expect(cache.getConnectionsInvolving(200)).toHaveLength(1);
+
+    // Overwrite
+    cache.setConnection(100, 0, 300);
+    expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+    expect(cache.getConnectionsInvolving(300)).toHaveLength(1);
+  });
+});

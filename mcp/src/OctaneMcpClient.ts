@@ -277,6 +277,10 @@ export class OctaneMcpClient {
   // Tracks nodes, connections, and children for scene awareness.
   readonly sceneCache = new SceneCache();
 
+  // Lifecycle callbacks — fired on clearRootGraphCache (load/reset/crash).
+  // Used to clear ArtDirectionState and other session-scoped state.
+  private _onClearCallbacks: Array<() => void> = [];
+
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
     // Cache mutation logger — verbose level for deep debugging
@@ -386,12 +390,18 @@ export class OctaneMcpClient {
     return handle;
   }
 
+  /** Register a callback to fire when all caches are cleared (load/reset/crash). */
+  onClear(callback: () => void): void {
+    this._onClearCallbacks.push(callback);
+  }
+
   /** Clear all session caches (call on load_project / reset_project / crash) */
   clearRootGraphCache(): void {
     this.rootGraphHandle = null;
     this.sceneCache.clear();
     this.clearDynamicCache();
     this.sessionInfo = { deviceNames: new Map() };
+    for (const cb of this._onClearCallbacks) cb();
   }
 
   /**

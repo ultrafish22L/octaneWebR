@@ -4,6 +4,29 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.2.3] - 2026-03-21
+
+### Added — Crash Probe Testing & Guard Deployment
+
+- **Systematic crash probe** — 19 test categories executed against live Octane with 460+ primitive enum transitions. Only 1 crash found (<0.2% rate on primitive enum cycling). All other operations confirmed safe.
+- **Delete guard deployed** — `getConnectionsInvolving` check in `delete_node` now live. Prevents deletion of connected nodes.
+- **Under-render testing** — all tests re-run with active GPU render (1024x512, 100k samples). No crash-rate difference.
+- **New test coverage:** image texture hot-swap with file I/O, cycle detection (self/2-node/3-node), RT deletion mid-render, disconnect mid-evaluation, subgraph duplication, loaded .orbx + fresh node interop, 20-cycle build/teardown stress.
+- **SceneCache coherence audit** — 86 connections audited, perfect match between cache and Octane state.
+
+### Fixed
+
+- **Delete guard (code review)** — `getConnectionsInvolving` method added to SceneCache, delete_node now checks for active connections before reaching Octane.
+- **Version sync** — root and MCP `package.json` both at 2.2.3.
+
+### Docs Cleanup
+
+- Deleted 6 obsolete files: 2 stale test reports (docs/temp/), 4 research docs (SEGA*\*, SEMANTIC_MODEL*\*).
+- Updated TROUBLESHOOTING.md with crash probe findings.
+- Updated CLAUDE.md session info for Phase 26.
+
+---
+
 ## [2.3.1] - 2026-03-21
 
 ### Tested — Full MCP Test Sweep (75 tools, 303 gRPC calls)

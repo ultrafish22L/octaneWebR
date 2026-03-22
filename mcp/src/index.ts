@@ -112,6 +112,10 @@ async function main() {
     );
   }
 
+  // ArtDirectionState — cleared automatically on load/reset/crash via client.onClear()
+  const artState = new ArtDirectionState();
+  client.onClear(() => artState.clear());
+
   // Register all tool groups
   registerInfoTools(server, client, cache);
   registerProjectTools(server, client, cache);
@@ -129,7 +133,6 @@ async function main() {
   registerColorMaterialXTools(server, client);
 
   // Register Art Direction tools (composition planning, critique loop)
-  const artState = new ArtDirectionState();
   registerArtDirectionTools(server, client, artState);
 
   // Register Creative tools (lighting, materials knowledge)

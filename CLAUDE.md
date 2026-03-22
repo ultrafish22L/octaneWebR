@@ -2,21 +2,24 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 25: Docs cleanup, MCP tool pruning (pick/region/display removed), full scene build test**
+**Phase 27: SEGA system design — semantic artistic guidance research & architecture**
 
 **What happened this session:**
 
-- **Doc cleanup** — deleted legacy `.claude/MEMORY.md` (166 lines, v1.4.6 era). Migrated 13 unique items to repo docs. Deleted all 5 memory files — everything lives in the repo now.
-- **MCP tool pruning** — removed 4 viewport-only tools (pick_point, render_region get/set, display_pass). Not MCP-useful.
-- **Scene build test** — built gold sphere scene from scratch exercising 55+ tools. 1 crash (import_materialx), 1 quirk (get_subsample_mode stale). See `docs/mcp/SCENE_BUILD_LOG.md`.
-- **CLAUDE.md restructured** — cut from 206 to ~100 lines. Heavy content moved to docs where it belongs.
-- **Version**: 2.2.2
+- **Deep research** — Academic and industry sources: SEGA (Brack et al. 2023), PAD model (Mehrabian & Russell 1974), Berlyne aesthetics, CineTechBench (Wu et al. 2025), ASC Manual, Itten color theory, Stanford 3D scene graphs, BYU DARCI.
+- **SEGA system designed** — Semantic vector layer (S-space) between natural language and DCC commands. ~15 seed dimensions from PAD, CineTechBench, Itten, ASC, CG craft. Open registry for more. Weighted parameter mapping, NL parsing, preset system, pixel+VLM hybrid measurement, semantic gap critique loop.
+- **Gemini suggestions analyzed** — Adopted: scene graph semantics, relationship mapping, style-as-constraints, mood boarding, DARCI-style evaluation, feedback loops. Skipped: latent-space SEGA (no diffusion model), portfolio style transfer. Deferred: sketch steering.
+- **5 design decisions locked** — LLM-generated presets + review; pixel+VLM hybrid measurement; no forced orthogonality; 6-12 active dims per scene; global default + per-object overrides.
+- **Existing spatial math unchanged** — `projectToScreen()`, `validateComposition()`, frustum/depth/grid checks stay as-is. SEGA handles artistic intent, spatial math handles correctness. Separate concerns, no overlap.
+- **2 docs written** — `docs/project/SEGA_SYSTEM_DESIGN.md` (full architecture + implementation plan), `docs/project/SEGA_USER_GUIDE.md` (research foundations + Gemini analysis + user interaction patterns).
+- **Version**: 2.2.3
 
 ### TODO for Next Session
 
-1. **Scene building demo** — full DRESS build with art direction loop.
-2. **Re-test LiveDB** after Octane update.
-3. **OCIO testing** — requires OCIO config loaded.
+1. **SEGA Phase 1 implementation** — Start with dimension registry data file (1.1), then SemanticState class (1.2), then mapping engine (1.3). Read `docs/project/SEGA_SYSTEM_DESIGN.md` section 11 for full plan.
+2. **Fix aspect ratio in `projectToScreen()`** — Accept ratio parameter instead of assuming square. Only remaining code fix from review.
+3. **Scene building demo** — full DRESS build with art direction loop.
+4. **Re-test LiveDB** after Octane update.
 
 ## #0 Rule: Read Before Doing
 
@@ -34,7 +37,7 @@ ALL docs go in `docs/`. Never store project knowledge in memory files or local-o
 | Test scene   | `ORBX/teapot.orbx`                                                                                  |
 | MCP server   | auto-starts via `.mcp.json` — never run manually                                                    |
 | Octane       | `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true` |
-| Tests        | `npm test` (133 tests), `npm run lint`, `npm run build`                                             |
+| Tests        | `npm test` (150 tests), `npm run lint`, `npm run build`                                             |
 | Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                       |
 | Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                             |
 
@@ -100,7 +103,7 @@ WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), pla
 
 ## Status
 
-- **Version**: 2.2.2 — 67 active tools, 4 disabled (LiveDB), 133 tests, 3 themes
+- **Version**: 2.2.3 — 67 active tools, 4 disabled (LiveDB), 150 tests, 3 themes
 - **MCP**: 14 tool modules, 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, VisionCritic
 - **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `shared/OctaneConstants.ts`.
 

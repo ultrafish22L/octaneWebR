@@ -244,6 +244,20 @@ export class SceneCache {
     return this.connections.get(this.connKey(targetHandle, pinIndex));
   }
 
+  /** Find all cached connections involving this handle (as source or target) */
+  getConnectionsInvolving(
+    handle: number
+  ): Array<{ target: number; pinIndex: number; source: number }> {
+    const results: Array<{ target: number; pinIndex: number; source: number }> = [];
+    for (const [key, source] of this.connections) {
+      const [target, pinIndex] = key.split(':').map(Number);
+      if (target === handle || source === handle) {
+        results.push({ target, pinIndex, source });
+      }
+    }
+    return results;
+  }
+
   // ── Children operations ──────────────────────────────────────────
 
   setChildren(graphHandle: number, childHandles: number[]): void {

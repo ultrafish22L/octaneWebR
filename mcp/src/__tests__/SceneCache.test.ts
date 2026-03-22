@@ -273,4 +273,122 @@ describe('SceneCache', () => {
       expect(matNode.stale).toBe(false);
     });
   });
+
+  // ── getConnectionsInvolving ─────────────────────────────────────
+
+  describe('getConnectionsInvolving', () => {
+    it('returns connections where handle is source', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.setConnection(100, 0, 200); // camera → RT pin 0
+
+      const conns = cache.getConnectionsInvolving(200);
+      expect(conns).toHaveLength(1);
+      expect(conns[0]).toEqual({ target: 100, pinIndex: 0, source: 200 });
+    });
+
+    it('returns connections where handle is target', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.setConnection(100, 0, 200);
+
+      const conns = cache.getConnectionsInvolving(100);
+      expect(conns).toHaveLength(1);
+      expect(conns[0]).toEqual({ target: 100, pinIndex: 0, source: 200 });
+    });
+
+    it('returns empty for unconnected handles', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.addNode(300, 'Orphan', 'NT_MAT_UNIVERSAL', 130);
+      cache.setConnection(100, 0, 200);
+
+      expect(cache.getConnectionsInvolving(300)).toHaveLength(0);
+    });
+
+    it('returns empty after removeNode cleans up connections', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.setConnection(100, 0, 200);
+
+      cache.removeNode(200);
+      expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+      // RT side also cleaned up
+      expect(cache.getConnectionsInvolving(100)).toHaveLength(0);
+    });
+
+    it('returns empty after clear()', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.setConnection(100, 0, 200);
+
+      cache.clear();
+      expect(cache.getConnectionsInvolving(100)).toHaveLength(0);
+      expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+    });
+
+    it('returns multiple connections when handle has several', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
+      cache.addNode(300, 'Env', 'NT_ENV_DAYLIGHT', 37);
+      cache.addNode(400, 'Geo', 'NT_GEO_GROUP', 27);
+      cache.setConnection(100, 0, 200); // camera → RT pin 0
+      cache.setConnection(100, 1, 300); // env → RT pin 1
+      cache.setConnection(100, 3, 400); // geo → RT pin 3
+
+      const conns = cache.getConnectionsInvolving(100);
+      expect(conns).toHaveLength(3);
+    });
+
+    it('handles node that is both source and target', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'Group', 'NT_GEO_GROUP', 27);
+      cache.addNode(300, 'Placement', 'NT_GEO_PLACEMENT', 29);
+      cache.setConnection(100, 3, 200); // group → RT pin 3
+      cache.setConnection(200, 0, 300); // placement → group pin 0
+
+      const conns = cache.getConnectionsInvolving(200);
+      expect(conns).toHaveLength(2); // both as source (to RT) and target (from placement)
+    });
+  });
+
+  // ── Drift scenarios ─────────────────────────────────────────────
+
+  describe('drift scenarios', () => {
+    it('tracked handle survives removeNode of unrelated node', () => {
+      cache.addNode(100, 'A', 'NT_MAT_UNIVERSAL', 130);
+      cache.addNode(200, 'B', 'NT_GEO_MESH', 30);
+      cache.trackHandle(300); // tracked but not a full node
+
+      cache.removeNode(200);
+      expect(cache.validateHandle(100).valid).toBe(true);
+      expect(cache.validateHandle(300).valid).toBe(true);
+      expect(cache.validateHandle(200).valid).toBe(false);
+    });
+
+    it('after markPopulated, unknown handles are rejected', () => {
+      cache.addNode(100, 'A', 'NT_MAT_UNIVERSAL', 130);
+      cache.markPopulated();
+
+      expect(cache.validateHandle(100).valid).toBe(true);
+      expect(cache.validateHandle(999).valid).toBe(false);
+    });
+
+    it('overwriting a connection drops old source from getConnectionsInvolving', () => {
+      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(200, 'OldCam', 'NT_CAM_THINLENS', 10);
+      cache.addNode(300, 'NewCam', 'NT_CAM_THINLENS', 10);
+      cache.setConnection(100, 0, 200); // old camera
+
+      // Overwrite with new camera
+      cache.setConnection(100, 0, 300);
+
+      // Old camera should no longer appear
+      expect(cache.getConnectionsInvolving(200)).toHaveLength(0);
+      // New camera should be connected
+      const conns = cache.getConnectionsInvolving(300);
+      expect(conns).toHaveLength(1);
+      expect(conns[0].source).toBe(300);
+    });
+  });
 });

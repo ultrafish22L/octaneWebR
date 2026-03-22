@@ -209,6 +209,22 @@ export function registerNodeTools(
         const gated = gateHandle('delete_node', handle, client.sceneCache);
         if (gated) return gated;
 
+        // Guard: reject deletion of nodes with active connections (crashes Octane)
+        const activeConns = client.sceneCache.getConnectionsInvolving(handle);
+        if (activeConns.length > 0) {
+          const pinList = activeConns
+            .map(c =>
+              c.source === handle
+                ? `source for ${c.target}:pin${c.pinIndex}`
+                : `target pin ${c.pinIndex} ← ${c.source}`
+            )
+            .join(', ');
+          return errorResult(
+            `Cannot delete handle ${handle} — ${activeConns.length} active connection(s): ${pinList}. ` +
+              `Disconnect pins first. Deleting connected nodes crashes Octane.`
+          );
+        }
+
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
