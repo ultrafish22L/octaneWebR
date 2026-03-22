@@ -52,6 +52,8 @@ ORBX/*.ocs
 ORBX/tour/
 
 # Icon extraction temporary files
+astro-engine/
+OctaneRenderSDK_Studio+_2026_2_win/
 extracted_icons/
 extracted_icons_v2/
 icon_backup_before_remap/

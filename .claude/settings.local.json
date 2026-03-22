@@ -157,7 +157,8 @@
       "Bash(find /c/otoyla/GRPC/dev/octaneWebR/mcp/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)",
       "Bash(echo $ANTHOPIC_CLAUDE_KEY)",
       "mcp__octane__analyze_reference",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(pip --version)"
     ]
   }
 }

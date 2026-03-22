@@ -76,6 +76,15 @@ export function registerProjectTools(
           }
         }
 
+        // Trigger scene evaluation — without this, MCP-loaded scenes render white.
+        // The web UI triggers eval automatically, but gRPC loadProject does not.
+        try {
+          await client.callMethod('ApiChangeManager', 'update', {});
+          mcpLog('load_project: scene evaluation triggered', 'info');
+        } catch (e: any) {
+          mcpLog(`load_project: scene eval failed: ${e.message}`, 'warn');
+        }
+
         // Auto-populate SceneCache (depth 1 only — safe for any scene size)
         try {
           await populateSceneCache(client, cache, 1);

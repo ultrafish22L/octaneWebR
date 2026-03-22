@@ -135,8 +135,15 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           z.object({ x: z.number(), y: z.number().optional(), z: z.number().optional() }),
         ])
         .describe('Value to set (boolean, number, string, or {x, y, z} for float3)'),
+      skip_evaluate: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'If true, skip ApiChangeManager.update() after setting. Caller must call update_scene manually. Use for batching multiple attribute changes to avoid crashes from overlapping evaluations.'
+        ),
     },
-    async ({ handle, attribute_id, expected_type, value }) => {
+    async ({ handle, attribute_id, expected_type, value, skip_evaluate }) => {
       try {
         // Gate: reject handles never seen by any MCP tool
         const gated = gateHandle('set_attribute', handle, client.sceneCache);
@@ -180,10 +187,26 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           evaluate: false,
         });
 
-        // Always flush — matches web UI's ItemService.setParameterValue() pattern
-        await client.callMethod('ApiChangeManager', 'update', {});
+        // Flush scene evaluation unless caller explicitly skips (for batching)
+        if (!skip_evaluate) {
+          await client.callMethod('ApiChangeManager', 'update', {});
+        }
 
         return jsonResult({ success: true, handle, attribute_id, value });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.tool(
+    'update_scene',
+    'Flush pending attribute changes by calling ApiChangeManager.update(). Required after set_attribute calls made with skip_evaluate:true. Batching multiple attribute changes and flushing once avoids crashes from overlapping scene evaluations (e.g. multiple primitive type changes).',
+    {},
+    async () => {
+      try {
+        await client.callMethod('ApiChangeManager', 'update', {});
+        return jsonResult({ success: true, message: 'Scene evaluation flushed.' });
       } catch (error: any) {
         return errorResult(error);
       }
