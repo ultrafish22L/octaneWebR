@@ -6,16 +6,27 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ## Crashes
 
-| Trigger                                | Symptom                                                                                            | Mitigation                                                                                                                                                        |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                 | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                                           |
-| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                            | Valid absolute paths only                                                                                                                                         |
-| Primitive type enum changes            | Non-deterministic ECONNRESET (<0.2% per transition, ~1 crash in 460 transitions across 2 sessions) | Use NT_GEO_MESH with .obj file, or `import_glb` for non-box geometry. Crash may be session/state-dependent — 339 consecutive transitions survived in one session. |
-| Deleting connected nodes               | ECONNRESET                                                                                         | **GUARDED** — `delete_node` checks `getConnectionsInvolving()`. Disconnect all pins first.                                                                        |
+| Trigger                                | Symptom                                                                                            | Mitigation                                                                                                                                                                          |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                 | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                                                             |
+| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                            | Valid absolute paths only                                                                                                                                                           |
+| Primitive type enum changes            | Non-deterministic ECONNRESET (<0.2% per transition, ~1 crash in 460 transitions across 2 sessions) | Use NT_GEO_MESH with .obj file, or `import_glb` for non-box geometry. Crash may be session/state-dependent — 339 consecutive transitions survived in one session.                   |
+| Deleting connected nodes               | ECONNRESET                                                                                         | **GUARDED** — `delete_node` checks `getConnectionsInvolving()`. Disconnect all pins first.                                                                                          |
+| `get_scene_tree` on large loaded ORBX  | Traversing nodes before Octane finishes internal loading                                           | **FIXED** — `load_project` now waits for `projectManagerChanged` callback via `CallbackStreamManager`. Traversal also skips dangerous type IDs and aborts on first connection loss. |
 
 ### nodeInfo Crash Types
 
-These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137`. Also all `_NT_*` deprecated types. The MCP server and API cache script already skip these.
+These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137`. Also all `_NT_*` deprecated types. The MCP server and API cache script already skip these. Scene traversal also skips any node with `typeId <= 0`.
+
+---
+
+## Build
+
+| Problem                         | Cause                                                              | Fix                                                            |
+| ------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `tsc -p mcp/tsconfig.json` OOMs | tsc 5.9.3 uses unbounded memory. **NEVER use tsc for MCP builds.** | `cd mcp && npm run build` — uses **esbuild** (10ms).           |
+| `OctaneConstants.ts` not found  | File moved from `shared/` to `mcp/src/shared/`                     | Update import paths: `from '../shared/OctaneConstants'`        |
+| MCP server running stale code   | `mcp/dist/index.js` not rebuilt after source changes               | Run `cd mcp && npm run build`, then kill+restart MCP processes |
 
 ---
 

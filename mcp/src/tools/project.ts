@@ -1,9 +1,14 @@
 /**
  * Project Tools — load_project, save_project, reset_project
+ *
+ * Load readiness: waits for Octane's projectManagerChanged callback via
+ * StreamCallbackService (shared/CallbackStreamManager.ts). Falls back to
+ * a fixed delay if callback streaming is unavailable.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import fs from 'fs';
 import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { jsonResult, errorResult, validateFilePath } from './utils';
@@ -23,22 +28,69 @@ export function registerProjectTools(
         const pathError = validateFilePath(path);
         if (pathError) return errorResult(new Error(pathError));
 
+        // Get file size for logging
+        let fileSizeMB = 0;
+        try {
+          const stat = fs.statSync(path);
+          fileSizeMB = stat.size / (1024 * 1024);
+        } catch {
+          // Can't stat — no big deal
+        }
+
+        mcpLog(`load_project: loading ${fileSizeMB.toFixed(0)}MB scene: ${path}`, 'info');
+
+        // Register callback listener BEFORE sending loadProject — the
+        // projectManagerChanged event can fire while loadProject is still
+        // being awaited, and we'd miss it if the listener wasn't set up yet.
+        const loadStartMs = Date.now();
+        const changePromise = client.waitForProjectChange(120_000);
+
         const result = await client.callMethod('ApiProjectManager', 'loadProject', {
           projectPath: path,
         });
-        // loadProject is async in Octane — wait for scene to populate
-        await new Promise(r => setTimeout(r, 2000));
+
+        const event = await changePromise;
+        const loadMs = Date.now() - loadStartMs;
+
+        if (event) {
+          mcpLog(`load_project: projectManagerChanged received after ${loadMs}ms`, 'info');
+        } else {
+          mcpLog(
+            `load_project: no callback received after ${loadMs}ms — proceeding anyway`,
+            'warn'
+          );
+        }
+
         client.clearRootGraphCache();
 
-        // Auto-populate SceneCache so tools work immediately (no manual get_scene_tree needed)
+        // Verify Octane is still alive — but only if the callback didn't confirm it.
+        // If projectManagerChanged fired, Octane is obviously alive.
+        if (!event) {
+          const alive = await client.checkHealth();
+          if (!alive) {
+            return jsonResult({
+              success: false,
+              path,
+              error: 'Octane crashed or disconnected while loading the scene.',
+            });
+          }
+        }
+
+        // Auto-populate SceneCache (depth 1 only — safe for any scene size)
         try {
-          await populateSceneCache(client, cache, 2);
-          mcpLog('load_project: SceneCache auto-populated', 'debug');
+          await populateSceneCache(client, cache, 1);
+          mcpLog('load_project: SceneCache auto-populated', 'info');
         } catch (e: any) {
           mcpLog(`load_project: SceneCache auto-populate failed: ${e.message}`, 'warn');
         }
 
-        return jsonResult({ success: true, path, callbackId: result?.callbackId });
+        return jsonResult({
+          success: true,
+          path,
+          callbackId: result?.callbackId,
+          loadTimeMs: loadMs,
+          fileSizeMB: Math.round(fileSizeMB),
+        });
       } catch (error: any) {
         return errorResult(error);
       }

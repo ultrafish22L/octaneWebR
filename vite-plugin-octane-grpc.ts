@@ -22,6 +22,7 @@ import {
   transformObjectPtrParams,
   initGrpcLog,
 } from './server/src/grpc/OctaneGrpcClientBase';
+import { CallbackStreamManager } from './mcp/src/shared/CallbackStreamManager';
 
 // ============================================================================
 // SERVER LOGGING CONFIGURATION
@@ -160,12 +161,17 @@ function buildClientCachePayload(): string | null {
  */
 class OctaneGrpcClient {
   private base: OctaneGrpcClientBase;
+  // newImage callbacks — kept inline (tightly coupled to render viewport data pipeline)
   private callbacks: Set<(data: any) => void> = new Set();
   private statisticsCallbacks: Set<(data: any) => void> = new Set();
+  // Shared callback stream manager — handles projectManagerChanged, renderFailure, newStatistics
+  private sharedStream: CallbackStreamManager;
+  // Legacy Sets wired to the shared manager for backward compat with WebSocket handlers
   private renderFailureCallbacks: Set<(data: any) => void> = new Set();
   private projectManagerCallbacks: Set<(data: any) => void> = new Set();
   private callbackId: number = 0;
   private isCallbackRegistered: boolean = false;
+  // newImage stream — separate from shared manager (carries render image data)
   private callbackStream: any = null;
   private streamActive: boolean = false;
 
@@ -179,6 +185,51 @@ class OctaneGrpcClient {
     if (isSandbox) {
       slog.info(`Using Docker networking (sandbox environment detected)`);
     }
+
+    // Initialize shared callback stream manager
+    this.sharedStream = new CallbackStreamManager((name: string) => this.base.getService(name), {
+      log: (msg: string, level?: string) => {
+        const lvl =
+          level === 'error'
+            ? ServerLogLevel.ERROR
+            : level === 'warn'
+              ? ServerLogLevel.WARN
+              : level === 'info'
+                ? ServerLogLevel.INFO
+                : ServerLogLevel.DEBUG;
+        if (lvl <= slog.level) slog.info(`[CallbackStream] ${msg}`);
+      },
+      onConnectionLost: () => {
+        slog.warn('Octane connection lost via callback stream — closing gRPC channels');
+        this.isCallbackRegistered = false;
+        this.base.close();
+      },
+    });
+
+    // Wire shared manager events to legacy callback Sets
+    this.sharedStream.on('renderFailure', event => {
+      slog.error('Render failure callback received');
+      this.renderFailureCallbacks.forEach(cb => {
+        try {
+          cb({ user_data: event.userData, timestamp: event.timestamp });
+        } catch (e) {
+          slog.error('Error in renderFailure callback:', e);
+        }
+      });
+    });
+    this.sharedStream.on('projectManagerChanged', event => {
+      slog.debug('Project manager changed callback received');
+      this.projectManagerCallbacks.forEach(cb => {
+        try {
+          cb({ user_data: event.userData, timestamp: event.timestamp });
+        } catch (e) {
+          slog.error('Error in projectManagerChanged callback:', e);
+        }
+      });
+    });
+    this.sharedStream.on('newStatistics', () => {
+      this.pollRenderStatistics();
+    });
   }
 
   async initialize(): Promise<void> {
@@ -232,6 +283,9 @@ class OctaneGrpcClient {
         slog.warn('Statistics callback registration failed (non-fatal):', statsError.message);
       }
 
+      // Start shared stream (projectManagerChanged, renderFailure, newStatistics)
+      this.sharedStream.start();
+      // Start newImage stream (separate — carries render image data)
       this.startCallbackStreaming();
       this.isCallbackRegistered = true;
       slog.info('Callback registration complete');
@@ -249,6 +303,10 @@ class OctaneGrpcClient {
     this.isCallbackRegistered = false;
 
     try {
+      // Stop shared stream (projectManagerChanged, renderFailure, newStatistics)
+      this.sharedStream.stop();
+
+      // Stop newImage stream
       if (this.callbackStream) {
         this.streamActive = false;
         this.callbackStream.cancel();
@@ -269,7 +327,9 @@ class OctaneGrpcClient {
   }
 
   /**
-   * Dispatch a single callback stream response to the appropriate handler.
+   * Dispatch a newImage callback stream response.
+   * Non-image callbacks (renderFailure, projectManagerChanged, newStatistics)
+   * are handled by the shared CallbackStreamManager.
    */
   private handleCallbackData(callbackRequest: any): void {
     if (callbackRequest.newImage) {
@@ -284,32 +344,9 @@ class OctaneGrpcClient {
       }
       // Poll render statistics on each image callback
       this.pollRenderStatistics();
-    } else if (callbackRequest.renderFailure) {
-      slog.error('Render failure callback received');
-      this.renderFailureCallbacks.forEach(cb => {
-        try {
-          cb({ user_data: callbackRequest.renderFailure?.user_data, timestamp: Date.now() });
-        } catch (e) {
-          slog.error('Error in renderFailure callback:', e);
-        }
-      });
-    } else if (callbackRequest.newStatistics) {
-      // Note: Octane never sends newStatistics stream events in practice (see known-issues.md).
-      // Kept for forward-compatibility; the newImage handler above is the real stats trigger.
-      this.pollRenderStatistics();
-    } else if (callbackRequest.projectManagerChanged) {
-      slog.debug('Project manager changed callback received');
-      this.projectManagerCallbacks.forEach(cb => {
-        try {
-          cb({
-            user_data: callbackRequest.projectManagerChanged?.user_data,
-            timestamp: Date.now(),
-          });
-        } catch (e) {
-          slog.error('Error in projectManagerChanged callback:', e);
-        }
-      });
     }
+    // renderFailure, newStatistics, projectManagerChanged are handled
+    // by the shared CallbackStreamManager wired in the constructor.
   }
 
   private isPollingStatistics = false;
@@ -476,7 +513,9 @@ class OctaneGrpcClient {
   }
 
   close(): void {
-    // Cancel the callback stream first — this is the long-lived gRPC streaming
+    // Stop shared callback stream (projectManagerChanged, renderFailure, etc.)
+    this.sharedStream.stop();
+    // Cancel the newImage callback stream — long-lived gRPC streaming
     // connection that blocks Octane from shutting down if left open.
     this.isCallbackRegistered = false;
     if (this.callbackStream) {

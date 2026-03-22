@@ -21,7 +21,7 @@ import {
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
 } from './utils';
-import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../../../shared/OctaneConstants';
+import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../shared/OctaneConstants';
 import { enumeratePins } from './pin-utils';
 // Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
 export { PIN_TYPE_NAMES };
@@ -687,11 +687,16 @@ export function registerNodeTools(
             }
           }
         } else if (type_id !== undefined) {
-          // Find by type
+          // Find by type — use NON-RECURSIVE Octane API to avoid crashes on
+          // scenes with dangerous node types (negative IDs, crash-prone types).
+          // Octane's internal recursive findNodes traverses ALL subgraphs including
+          // nodes with bad type IDs, which crashes the engine.
+          // Instead: search top-level only, then optionally recurse ourselves
+          // using the safe traversal that skips dangerous types.
           const listResult = await client.callMethod('ApiNodeGraph', 'findNodes', {
             objectPtr: rootRef,
             type: type_id,
-            recurse: recurse ?? true,
+            recurse: false, // NEVER let Octane recurse — it crashes on bad types
           });
           const listHandle = extractHandle(listResult);
           if (listHandle) {
@@ -712,6 +717,90 @@ export function registerNodeTools(
                 const nodeName = String(extractValue(nameResult) ?? '');
                 results.push({ handle: itemHandle, name: nodeName });
                 client.sceneCache.trackHandle(itemHandle);
+              }
+            }
+          }
+
+          // If recurse was requested and we found nothing at top level,
+          // do a safe manual search through subgraphs (skipping dangerous types).
+          if ((recurse ?? true) && results.length === 0) {
+            // Get top-level items and search their subgraphs safely
+            const topListResult = await client.callMethod('ApiNodeGraph', 'getItems', {
+              objectPtr: rootRef,
+            });
+            const topListHandle = extractHandle(topListResult);
+            if (topListHandle) {
+              const topSizeResult = await client.callMethod('ApiItemArray', 'size', {
+                objectPtr: { handle: String(topListHandle), type: OBJ_API_ITEM_ARRAY },
+              });
+              const topCount = Number(extractValue(topSizeResult) ?? 0);
+              for (let i = 0; i < topCount && results.length < 100; i++) {
+                try {
+                  const itemResult = await client.callMethod('ApiItemArray', 'get', {
+                    objectPtr: { handle: String(topListHandle), type: OBJ_API_ITEM_ARRAY },
+                    index: i,
+                  });
+                  const itemHandle = extractHandle(itemResult);
+                  if (!itemHandle) continue;
+
+                  // Check if this item is a graph we can safely recurse into
+                  const graphResult = await client.callMethod('ApiItem', 'isGraph', {
+                    objectPtr: { handle: String(itemHandle), type: OBJ_API_ITEM },
+                  });
+                  const isGraph = extractValue(graphResult) ?? false;
+                  if (!isGraph) continue;
+
+                  // Check the item's type — skip dangerous types
+                  let itemTypeId = 0;
+                  try {
+                    const typeResult = await client.callMethod('ApiNode', 'type', {
+                      objectPtr: { handle: String(itemHandle), type: OBJ_API_NODE },
+                    });
+                    const typeRaw = extractValue(typeResult);
+                    itemTypeId = Number(typeRaw ?? 0);
+                  } catch {
+                    // Can't get type → skip
+                    continue;
+                  }
+
+                  if (itemTypeId <= 0 || CRASH_TYPE_IDS.has(itemTypeId)) continue;
+
+                  // Safe to search this subgraph (non-recursive at each level)
+                  try {
+                    const subRef = { handle: String(itemHandle), type: OBJ_API_NODE_GRAPH };
+                    const subListResult = await client.callMethod('ApiNodeGraph', 'findNodes', {
+                      objectPtr: subRef,
+                      type: type_id,
+                      recurse: false,
+                    });
+                    const subListHandle = extractHandle(subListResult);
+                    if (subListHandle) {
+                      const subSizeResult = await client.callMethod('ApiItemArray', 'size', {
+                        objectPtr: { handle: String(subListHandle), type: OBJ_API_ITEM_ARRAY },
+                      });
+                      const subCount = Number(extractValue(subSizeResult) ?? 0);
+                      for (let j = 0; j < subCount; j++) {
+                        const subItemResult = await client.callMethod('ApiItemArray', 'get', {
+                          objectPtr: { handle: String(subListHandle), type: OBJ_API_ITEM_ARRAY },
+                          index: j,
+                        });
+                        const subItemHandle = extractHandle(subItemResult);
+                        if (subItemHandle) {
+                          const subNameResult = await client.callMethod('ApiItem', 'name', {
+                            objectPtr: { handle: String(subItemHandle), type: OBJ_API_ITEM },
+                          });
+                          const subNodeName = String(extractValue(subNameResult) ?? '');
+                          results.push({ handle: subItemHandle, name: subNodeName });
+                          client.sceneCache.trackHandle(subItemHandle);
+                        }
+                      }
+                    }
+                  } catch {
+                    // Subgraph search failed — skip this graph, continue to next
+                  }
+                } catch {
+                  continue;
+                }
               }
             }
           }

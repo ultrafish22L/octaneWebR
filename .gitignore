@@ -43,6 +43,7 @@ Thumbs.db
 server/src/generated/
 
 # Octane scene files, renders, and imported 3D assets (large binaries)
+temp/
 assets/
 renders/
 ORBX/assets/

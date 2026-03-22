@@ -20,7 +20,7 @@ import {
   profileEnd,
 } from '../OctaneMcpClient';
 
-import { AttrType, AttributeId, OBJ_API_ITEM, OBJ_API_NODE } from '../../../shared/OctaneConstants';
+import { AttrType, AttributeId, OBJ_API_ITEM, OBJ_API_NODE } from '../shared/OctaneConstants';
 import { ApiCache } from '../ApiCache';
 
 import { jsonResult, errorResult } from './utils';

@@ -7,7 +7,7 @@
 
 import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { extractHandle, extractValue, OBJ_API_ITEM, OBJ_API_NODE } from './utils';
-import { PIN_TYPE_NAMES } from '../../../shared/OctaneConstants';
+import { PIN_TYPE_NAMES } from '../shared/OctaneConstants';
 
 export interface PinInfo {
   index: number;

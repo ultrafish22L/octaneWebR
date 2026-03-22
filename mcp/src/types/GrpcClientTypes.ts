@@ -34,6 +34,12 @@ export interface IGrpcClientBase {
     options?: GrpcCallOptions
   ): Promise<Record<string, unknown>>;
 
+  /**
+   * Get a raw gRPC service stub for streaming RPCs.
+   * Used by CallbackStreamManager for StreamCallbackService.
+   */
+  getService(serviceName: string): any;
+
   /** Lightweight health check — true if Octane responds to ping. */
   checkHealth(): Promise<boolean>;
 

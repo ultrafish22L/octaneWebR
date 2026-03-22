@@ -91,4 +91,4 @@ export {
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
-} from '../../../shared/OctaneConstants';
+} from '../shared/OctaneConstants';

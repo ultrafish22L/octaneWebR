@@ -94,9 +94,30 @@ Each object = a visible change. Never batch multiple objects without rendering b
 
 Floor, fine-tune lighting, hero camera, final `save_render`.
 
-### Render Status — Don't Blind Sleep
+### Render Status — Don't Blind Sleep, Always Check Samples
 
-After `start_render` or `set_camera`, call `get_render_status` to check `state: "RSTATE_FINISHED"`. Renders typically finish in 2-9s. If still rendering, wait 2s and check again. Don't `sleep 8` and hope.
+After `start_render` or `set_camera`, call `get_render_status` to check `state: "RSTATE_FINISHED"`. Renders typically finish in 2-9s. If still rendering, wait 2s and check again. Don't `sleep 8` and hope — **`sleep 3` then check is the maximum wait**.
+
+**ALWAYS call `get_render_status` before `save_render`** and record the result:
+
+- `resolution` — actual pixel dimensions (e.g. "1024x512")
+- `samples` — how many samples accumulated
+- `maxSamples` — target sample count
+- `renderTime` — wall clock seconds
+- `state` — must be `RSTATE_FINISHED` before saving
+
+Log these alongside every saved render for calibration and debugging. A low-res or noisy render is a data quality issue — knowing the sample count explains it.
+
+**Polling pattern** (do NOT sleep-then-save):
+
+```
+start_render(rt_handle)
+loop:
+  sleep 2
+  status = get_render_status()
+  if status.state == "RSTATE_FINISHED": break
+save_render(path)
+```
 
 ### GLB Texture Extraction
 

@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SceneCache } from '../SceneCache';
 import { jsonResult, errorResult, gateHandle, extractHandle, extractValue } from '../tools/utils';
-import { CRASH_TYPE_IDS } from '../../../shared/OctaneConstants';
+import { CRASH_TYPE_IDS } from '../shared/OctaneConstants';
 import { parseCritiqueResponse } from '../vision/prompts';
 
 // ────────────────────────────────────────────────────────────

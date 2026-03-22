@@ -8,7 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
-import { AttrType } from '../../../shared/OctaneConstants';
+import { AttrType } from '../shared/OctaneConstants';
 
 const AT_BOOL = AttrType.AT_BOOL;
 const AT_INT = AttrType.AT_INT;

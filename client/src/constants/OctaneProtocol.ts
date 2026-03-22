@@ -12,7 +12,7 @@
  */
 
 // Re-export shared constants so existing client imports keep working
-export { AttrType, AttributeId } from '../../../shared/OctaneConstants';
+export { AttrType, AttributeId } from '../../../mcp/src/shared/OctaneConstants';
 
 // ─── ObjectType ──────────────────────────────────────────────────────────────
 

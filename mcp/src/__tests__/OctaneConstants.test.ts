@@ -9,7 +9,7 @@ import {
   CRASH_TYPE_IDS,
   PIN_TYPE_NAMES,
   RT_PINS,
-} from '../../../shared/OctaneConstants';
+} from '../shared/OctaneConstants';
 
 describe('shared OctaneConstants', () => {
   describe('AttrType', () => {

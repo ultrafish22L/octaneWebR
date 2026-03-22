@@ -2,25 +2,27 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 28: SEGA Phases 1-4 complete — full semantic artistic guidance system**
+**Phase 29: SEGA calibration runs + crash-safe scene loading + shared constants migration**
 
 **What happened this session:**
 
-- **SEGA Phase 1** — Foundation: types, registry (15 dimensions), presets (25), SemanticState, MappingEngine. 3 core tools: `set_artistic_intent`, `get_artistic_intent`, `adjust_artistic_intent`.
-- **SEGA Phase 2** — NL parser: `NLParser.ts` with prompt builder, response parser. `natural_language` parameter added to `set_artistic_intent`. Returns structured prompt for LLM to parse speech → dimension vectors.
-- **SEGA Phase 3** — Measurement + critique: `PixelAnalyzer.ts` (PNG pixel analysis for contrast, warmth, saturation, atmosphere), `SemanticCritic.ts` (gap vector computation, convergence detection, VLM estimation prompts). 2 new tools: `semantic_critique`, `get_vlm_estimation_prompt`.
-- **SEGA Phase 4** — User presets: `save_user_preset` tool (session-scoped). Berlyne warnings wired through all tools.
-- **Aspect ratio fix** — `projectToScreen()` accepts `aspectRatio` parameter.
-- **Self-learning hooks** — `LearnedAdjustment`, `confidence`/`source` on mappings, `contributions` per parameter. Data structures ready, no learning logic yet.
-- **10 files created/modified**, 131 new tests (281 total), 6 new MCP tools (76 total).
-- **Version**: 2.2.5
+- **SEGA self-refinement runs** — 444 concept images generated via OTOY Studio (Runs 1+2, 222 each). Pixel-analyzed all 444 with jpeg-js. VLM-analyzed all 444 with Anthropic Haiku 4.5. Established VLM bias profile: arousal/dominance well-calibrated, pleasure/groundedness/surface_detail systematically over-estimated.
+- **Self-refinement design doc** — `docs/project/SEGA_SELF_REFINEMENT.md` with Phase A (concept calibration, no Octane), Phase B (render matching, Octane required), Phase C (autonomous preset generation). Multi-provider prompt comparison detail added.
+- **Crash-safe scene traversal** — `scene.ts` now skips nodes with typeId ≤ 0 or in `CRASH_TYPE_IDS`, aborts traversal on first connection loss (`ECONNRESET`/`ECONNREFUSED`/`UNAVAILABLE`/`OCTANE CRASHED`).
+- **CallbackStreamManager** — `mcp/src/shared/CallbackStreamManager.ts` for gRPC callback streaming. `load_project` now waits for `projectManagerChanged` callback instead of fixed delays.
+- **Shared constants migration** — Moved `OctaneConstants.ts` from `shared/` to `mcp/src/shared/`. Removed `../shared/**/*` from `mcp/tsconfig.json` include — this was causing tsc to expand rootDir to repo root, scanning all directories.
+- **OctaneMcpClient** — Added `waitForProjectChange()`, callback stream lifecycle, `getService()` on `IGrpcClientBase`.
+- **Gemini VLM discovery** — Confirmed OTOY Studio `chat_completion` (Gemini Flash 1.5) cannot see images, produces hallucinated measurements. Only Anthropic Haiku 4.5 via vision module is reliable for VLM analysis.
+- **ORBX test library** — Found collection at `temp/testing/ORBX/` (keloid, chess, airport, hospital, forest, bot, horse, etc.). Large scenes crash Octane during aggressive auto-populate — callback streaming fixes this.
+- **Version**: 2.2.6
 
 ### TODO for Next Session
 
-1. **Scene building demo** — full DRESS build using SEGA tools for art direction. Test the complete flow: preset → resolve → build → critique → iterate.
-2. **Self-learning Phase 1** — Implement learning engine that reads `LearnedAdjustment` records and adjusts mapping weights/confidence. Persist adjustments across sessions.
-3. **Re-test LiveDB** after Octane update.
-4. **Correlation documentation** — Empirically test dimension correlations with real Octane renders.
+1. **Load ORBX scenes** — Test with teapot.orbx first (small), then keloid/chess/forest. Verify callback streaming prevents crashes on large scenes.
+2. **Phase B calibration** — Load ORBX → render → VLM analyze baseline → apply SEGA preset → re-render → measure gap → iterate. Calibrate actual Octane parameter mappings.
+3. **Run 3 concept calibration** — OTOY Studio quota resets daily. 222 more images with corrected bias compensation + dimension sweeps.
+4. **Self-learning Phase 1** — Implement learning engine that reads `LearnedAdjustment` records and adjusts mapping weights/confidence.
+5. **Re-test LiveDB** after Octane update.
 
 ## #0 Rule: Read Before Doing
 
@@ -39,6 +41,7 @@ ALL docs go in `docs/`. Never store project knowledge in memory files or local-o
 | MCP server   | auto-starts via `.mcp.json` — never run manually                                                    |
 | Octane       | `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true` |
 | Tests        | `npm test` (281 tests), `npm run lint`, `npm run build`                                             |
+| MCP build    | `cd mcp && npm run build` — uses **esbuild** (9ms). Do NOT use `tsc -p mcp/tsconfig.json` (OOM).    |
 | Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                       |
 | Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                             |
 
@@ -94,6 +97,15 @@ RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), placement → geo group (pin_index N)
 ```
 
+**Restarting MCP server** (after code changes):
+
+```
+cd mcp && npm run build                    # esbuild, 10ms
+# Find and kill MCP processes:
+powershell -Command "Get-CimInstance Win32_Process -Filter \"Name='node.exe' AND CommandLine LIKE '%mcp/dist/index.js%'\" | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+# MCP auto-restarts via Claude Code — verify with any MCP tool call
+```
+
 **Critical gotchas** (full list in `docs/mcp/TROUBLESHOOTING.md`):
 
 - `set_camera` — ALWAYS pass `up:{0,1,0}`. Default `{0,0,0}` = broken render.
@@ -104,9 +116,10 @@ WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), pla
 
 ## Status
 
-- **Version**: 2.2.5 — 76 active tools, 4 disabled (LiveDB), 281 tests, 3 themes
-- **MCP**: 14 tool modules, 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, VisionCritic
-- **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `shared/OctaneConstants.ts`.
+- **Version**: 2.2.6 — 82 active tools, 4 disabled (LiveDB), 281 tests, 3 themes
+- **MCP**: 15 tool modules (incl. SEGA), 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, SemanticState, VisionCritic, CallbackStreamManager
+- **SEGA**: 6 tools (`set/get/adjust_artistic_intent`, `semantic_critique`, `get_vlm_estimation_prompt`, `save_user_preset`), 15 dimensions, 25 presets, NLParser, PixelAnalyzer, SemanticCritic
+- **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `mcp/src/shared/OctaneConstants.ts`.
 
 ## Vocabulary
 

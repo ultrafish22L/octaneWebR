@@ -4,8 +4,9 @@
  * Single source of truth for protocol-level enums used by both
  * client/src and mcp/src. Values come from .proto files and are immutable.
  *
- * Import path from client: '../../../shared/OctaneConstants'
- * Import path from MCP:    '../../shared/OctaneConstants'
+ * Lives in mcp/src/shared/ — inside MCP's rootDir for clean tsc compilation.
+ * Import from tools:    '../shared/OctaneConstants'
+ * Import from __tests__: '../shared/OctaneConstants'
  */
 
 // ─── AttrType — attribute value types ────────────────────────────────────────

@@ -26,7 +26,7 @@ import {
   OBJ_API_ITEM,
 } from './utils';
 import { notifyWebapp } from './webapp';
-import { AttributeId, NodeTypeId } from '../../../shared/OctaneConstants';
+import { AttributeId, NodeTypeId } from '../shared/OctaneConstants';
 import { enumeratePins } from './pin-utils';
 
 const execFileAsync = promisify(execFile);

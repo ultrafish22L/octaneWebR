@@ -281,6 +281,11 @@ export class OctaneMcpClient {
   // Used to clear ArtDirectionState and other session-scoped state.
   private _onClearCallbacks: Array<() => void> = [];
 
+  // Callback stream manager — shared with Vite plugin.
+  // Receives projectManagerChanged, renderFailure, newStatistics from Octane.
+  private _callbackStream: import('./shared/CallbackStreamManager').CallbackStreamManager | null =
+    null;
+
   constructor() {
     this.base = new GrpcClientBase(undefined, undefined, SERVER_ROOT);
     // Cache mutation logger — verbose level for deep debugging
@@ -289,6 +294,39 @@ export class OctaneMcpClient {
 
   async initialize(): Promise<void> {
     await this.base.initialize();
+
+    // Start callback streaming after gRPC is ready
+    try {
+      const { CallbackStreamManager } = require('./shared/CallbackStreamManager') as {
+        CallbackStreamManager: typeof import('./shared/CallbackStreamManager').CallbackStreamManager;
+      };
+      this._callbackStream = new CallbackStreamManager(
+        (name: string) => this.base.getService(name),
+        {
+          log: (msg: string, level?: string) => mcpLog(`[CALLBACK] ${msg}`, level || 'debug'),
+          onConnectionLost: () => {
+            mcpLog('[CALLBACK] Octane connection lost via callback stream', 'warn');
+          },
+        }
+      );
+      this._callbackStream.start();
+      mcpLog('Callback streaming started', 'info');
+    } catch (e: any) {
+      mcpLog(`Callback streaming unavailable: ${e.message}`, 'warn');
+    }
+  }
+
+  /**
+   * Wait for Octane to signal a project change (load/reset complete).
+   * Returns the event, or null if timed out.
+   */
+  async waitForProjectChange(timeoutMs = 120_000): Promise<any> {
+    if (!this._callbackStream) {
+      mcpLog('No callback stream — falling back to delay', 'warn');
+      await new Promise(r => setTimeout(r, 3000));
+      return null;
+    }
+    return this._callbackStream.waitFor('projectManagerChanged', timeoutMs);
   }
 
   async callMethod(
@@ -512,6 +550,8 @@ export class OctaneMcpClient {
   }
 
   close(): void {
+    this._callbackStream?.stop();
+    this._callbackStream = null;
     this.base.close();
   }
 }

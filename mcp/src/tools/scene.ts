@@ -22,6 +22,7 @@ import {
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
 } from './utils';
+import { CRASH_TYPE_IDS } from '../shared/OctaneConstants';
 
 interface SceneTreeNode {
   handle: number;
@@ -58,7 +59,10 @@ async function traverseGraph(
     const count = extractValue(sizeResult) ?? 0;
 
     // Iterate items
+    let crashed = false;
     for (let i = 0; i < count; i++) {
+      if (crashed) break; // Stop after first crash — Octane may be dead
+
       try {
         const itemResult = await client.callMethod('ApiItemArray', 'get', {
           objectPtr: { handle: String(listHandle), type: OBJ_API_ITEM_ARRAY },
@@ -98,6 +102,25 @@ async function traverseGraph(
           // Some items (pure graphs) may not support ApiNode.type()
         }
 
+        // SAFETY: skip nodes with dangerous type IDs — negative, zero, unknown, or crash-prone.
+        // These cause Octane to crash when we recurse into them or query their pins.
+        const isDangerousType = typeId <= 0 || CRASH_TYPE_IDS.has(typeId);
+        if (isDangerousType) {
+          const typeName = cache?.getNodeTypeName(typeId) ?? `TYPE_${typeId}`;
+          mcpLog(
+            `traverseGraph: skipping dangerous node ${itemHandle} "${name}" (type=${typeId} ${typeName}) — would crash Octane`,
+            'warn'
+          );
+          // Still add to tree (for visibility) but never recurse or query pins
+          nodes.push({
+            handle: Number(itemHandle),
+            name: String(name),
+            type: typeId,
+            isGraph: Boolean(isGraph),
+          });
+          continue;
+        }
+
         const node: SceneTreeNode = {
           handle: Number(itemHandle),
           name: String(name),
@@ -131,7 +154,22 @@ async function traverseGraph(
 
         nodes.push(node);
       } catch (e: any) {
-        mcpLog(`traverseGraph: skipping item ${i} in graph ${graphHandle}: ${e.message}`, 'warn');
+        const msg = e.message || '';
+        const isConnectionDead =
+          msg.includes('ECONNRESET') ||
+          msg.includes('ECONNREFUSED') ||
+          msg.includes('UNAVAILABLE') ||
+          msg.includes('OCTANE CRASHED') ||
+          msg.includes('connection lost');
+        if (isConnectionDead) {
+          mcpLog(
+            `traverseGraph: Octane dead at item ${i}/${count} in graph ${graphHandle} — aborting ALL traversal`,
+            'error'
+          );
+          crashed = true;
+          break;
+        }
+        mcpLog(`traverseGraph: skipping item ${i} in graph ${graphHandle}: ${msg}`, 'warn');
         continue;
       }
     }
