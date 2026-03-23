@@ -50,7 +50,7 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
         if (gated) return gated;
 
         const result = await client.callMethod('ApiItem', 'getAnimByAttr', {
-          item_ref: { handle: String(handle), type: OBJ_API_ITEM },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
           expected_type,
           want_num_samples: true,
@@ -217,7 +217,7 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
         }
 
         const result = await client.callMethod('ApiItem', 'setAnimByAttr', {
-          item_ref: { handle: String(handle), type: OBJ_API_ITEM },
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
           times,
           num_time_samples: pattern.length,

@@ -417,19 +417,19 @@ message ApiNode
     // --- For scalar retrieval --- 
     message getPinValueByIDRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         PinId           pin_id  = 2; // which property inside the object
         PinTypeId       expected_type = 3; // optional type enum for validation
     }
     message getPinValueByIxRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         uint32          index         = 2; // property index
         PinTypeId       expected_type = 3; // optional
     }
     message getPinValueByNameRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         string          name          = 2; // property name
         PinTypeId       expected_type = 3; // optional
     }
@@ -863,7 +863,7 @@ message ApiNode
     }
     message setPinValueByIDRequest
     {
-        ObjectRef    item_ref     = 1; 
+        ObjectRef    objectPtr     = 1; 
         PinId        pin_id = 2;
         optional bool evaluate = 3;
         oneof value 
@@ -888,7 +888,7 @@ message ApiNode
     // E) Index-based (scalar)
     message setPinValueByIxRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         uint32    index    = 2;
         optional bool evaluate = 3;
         oneof value 
@@ -911,7 +911,7 @@ message ApiNode
     }
     message setPinValueByNameRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         string    name     = 2;
         optional bool evaluate = 3;
         oneof value 

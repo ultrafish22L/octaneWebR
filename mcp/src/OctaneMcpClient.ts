@@ -283,6 +283,7 @@ export class OctaneMcpClient {
 
   // Callback stream manager — shared with Vite plugin.
   // Receives projectManagerChanged, renderFailure, newStatistics from Octane.
+  private _callbackRelay: import('./shared/CallbackRelay').CallbackRelay | null = null;
   private _callbackStream: import('./shared/CallbackStreamManager').CallbackStreamManager | null =
     null;
 
@@ -307,10 +308,25 @@ export class OctaneMcpClient {
           onConnectionLost: () => {
             mcpLog('[CALLBACK] Octane connection lost via callback stream', 'warn');
           },
+          // Enable newImage dispatch — relay needs it to forward viewport frames to Vite
+          handleNewImage: true,
         }
       );
       this._callbackStream.start();
       mcpLog('Callback streaming started', 'info');
+
+      // Start relay so Vite can consume callbacks without opening a second gRPC stream
+      try {
+        const { CallbackRelay } = require('./shared/CallbackRelay') as {
+          CallbackRelay: typeof import('./shared/CallbackRelay').CallbackRelay;
+        };
+        this._callbackRelay = new CallbackRelay(this._callbackStream, {
+          log: (msg: string, level?: string) => mcpLog(`[RELAY] ${msg}`, level || 'debug'),
+        });
+        this._callbackRelay.start();
+      } catch (relayErr: any) {
+        mcpLog(`Callback relay unavailable: ${relayErr.message}`, 'warn');
+      }
     } catch (e: any) {
       mcpLog(`Callback streaming unavailable: ${e.message}`, 'warn');
     }
@@ -385,8 +401,8 @@ export class OctaneMcpClient {
    * connection to whichever Octane instance is currently running.
    */
   private async ensureConnection(service: string, method: string): Promise<void> {
-    // Skip health check for the ping call itself (avoid recursion)
-    if (service === 'ApiProjectManager' && method === 'getPing') return;
+    // Skip health check for the health check call itself (avoid recursion)
+    if (service === 'ApiInfo' && method === 'octaneVersion') return;
     // Skip if we had a recent successful call
     const idleMs = this.lastSuccessMs ? Date.now() - this.lastSuccessMs : -1;
     if (this.lastSuccessMs && idleMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS) {
@@ -396,7 +412,7 @@ export class OctaneMcpClient {
 
     mcpLog(`[HEALTH] ping — idle ${idleMs}ms, cache=${this.sceneCache.knownHandleCount}`, 'debug');
     try {
-      await this.base.callMethod('ApiProjectManager', 'getPing', {}, { timeout: 5000 });
+      await this.base.callMethod('ApiInfo', 'octaneVersion', {}, { timeout: 5000 });
       this.lastSuccessMs = Date.now();
       mcpLog(`[HEALTH] ping OK`, 'debug');
     } catch (e: any) {
@@ -550,6 +566,8 @@ export class OctaneMcpClient {
   }
 
   close(): void {
+    this._callbackRelay?.stop();
+    this._callbackRelay = null;
     this._callbackStream?.stop();
     this._callbackStream = null;
     this.base.close();

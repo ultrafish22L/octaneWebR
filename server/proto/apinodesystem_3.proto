@@ -378,7 +378,7 @@ message ApiItem
     // --- For animation array retrieval ---
     message getAnimByIDRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         AttributeId     attribute_id  = 2; // which property inside the object
         AttributeTypeId expected_type = 3;
 	bool            want_num_samples = 4;
@@ -387,7 +387,7 @@ message ApiItem
     }
     message getAnimByIxRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         uint32          index         = 2; // property index
         AttributeTypeId expected_type = 3;
         bool            want_num_samples = 4;
@@ -396,7 +396,7 @@ message ApiItem
     }
     message getAnimByNameRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         string          name          = 2; // property name
         AttributeTypeId expected_type = 3;
         bool            want_num_samples = 4;
@@ -406,19 +406,19 @@ message ApiItem
     // --- For array retrieval ---
     message getArrayByIDRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         AttributeId     attribute_id  = 2; // which property inside the object
         AttributeTypeId expected_type = 3; // optional
     }
     message getArrayByIxRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         uint32          index         = 2; // property index
         AttributeTypeId expected_type = 3; // optional
     }
     message getArrayByNameRequest
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         string          name          = 2; // property name
         AttributeTypeId expected_type = 3; // optional
     }
@@ -446,19 +446,19 @@ message ApiItem
     // --- For scalar retrieval --- 
     message getValueByIDRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         AttributeId     attribute_id  = 2; // which property inside the object
         AttributeTypeId expected_type = 3; // optional type enum for validation
     }
     message getValueByIxRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         uint32          index         = 2; // property index
         AttributeTypeId expected_type = 3; // optional
     }
     message getValueByNameRequest 
     {
-        ObjectRef       item_ref      = 1; // which object
+        ObjectRef       objectPtr      = 1; // which object
         string          name          = 2; // property name
         AttributeTypeId expected_type = 3; // optional
     }
@@ -794,7 +794,7 @@ message ApiItem
     }    // Request packet corresponding to '[in] parameters in ApiItem::destroy'
     message setAnimByIDRequest
     {
-        ObjectRef   item_ref     = 1;
+        ObjectRef   objectPtr     = 1;
         AttributeId attribute_id = 2;
         ApiTimeSampling times         = 3;
         optional uint32 num_time_samples = 4; // optional:: pass-through to C++ overload
@@ -819,7 +819,7 @@ message ApiItem
     }
     message setAnimByIxRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         uint32    index    = 2;
         ApiTimeSampling times         = 3;
         optional uint32 num_time_samples = 4;
@@ -845,7 +845,7 @@ message ApiItem
    // D) Name-based (array)
     message setAnimByNameRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         string    name     = 2;
         ApiTimeSampling times         = 3;
         optional uint32 num_time_samples = 4;
@@ -871,7 +871,7 @@ message ApiItem
     // B) ID-based (array)
     message setArrayByIDRequest
     {
-        ObjectRef   item_ref     = 1;
+        ObjectRef   objectPtr     = 1;
         AttributeId attribute_id = 2;
         optional bool evaluate = 3;
         oneof array_value 
@@ -895,7 +895,7 @@ message ApiItem
     // F) Index-based (array)
     message setArrayByIxRequest 
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         uint32    index    = 2;
         optional bool evaluate = 3;
         oneof array_value 
@@ -919,7 +919,7 @@ message ApiItem
     // D) Name-based (array)
     message setArrayByNameRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         string    name     = 2;
         optional bool evaluate = 3;
         oneof array_value 
@@ -969,7 +969,7 @@ message ApiItem
     // A) ID-based (scalar)
     message setValueByIDRequest
     {
-        ObjectRef   item_ref     = 1; 
+        ObjectRef   objectPtr     = 1; 
         AttributeId attribute_id = 2;
         optional bool evaluate = 3;
         oneof value 
@@ -993,7 +993,7 @@ message ApiItem
     // E) Index-based (scalar)
     message setValueByIxRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         uint32    index    = 2;
         optional bool evaluate = 3;
         oneof value 
@@ -1016,7 +1016,7 @@ message ApiItem
     // C) Name-based (scalar)
     message setValueByNameRequest
     {
-        ObjectRef item_ref = 1;
+        ObjectRef objectPtr = 1;
         string    name     = 2;
         optional bool evaluate = 3;
         oneof value 

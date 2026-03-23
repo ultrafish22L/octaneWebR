@@ -51,7 +51,7 @@ const SERVICE_TO_PROTO_MAP = {
   // Change manager (scene evaluation)
   ApiChangeManager: 'apichangemanager.proto',
   // Callbacks
-  StreamCallbackService: 'callback.proto',
+  StreamCallbackService: 'callbackstream.proto',
   CallbackHandler: 'callback.proto',
   // Selection manager
   ApiSelectionManager: 'apiselectionmanager.proto',

@@ -122,12 +122,12 @@ class GrpcClient {
   private callbackId: number = 0;
   private isCallbackRegistered: boolean = false;
   private isRegistering = false;
-  private callbackStream: any = null;
-  private streamActive: boolean = false;
   private isPollingStatistics = false;
   private lastStatsPollTime = 0;
+  private mcpRelayWs: import('ws').WebSocket | null = null;
+  private usingRelay = false;
   private static readonly STATS_POLL_INTERVAL = 250;
-  private static readonly CALLBACK_STREAM_DEADLINE_MS = 60_000;
+  private static readonly MCP_RELAY_URL = 'ws://127.0.0.1:51023';
 
   constructor(protoBasePath: string) {
     this.base = new OctaneGrpcClientBase(undefined, undefined, protoBasePath);
@@ -161,6 +161,7 @@ class GrpcClient {
       });
     });
     this.sharedStream.on('newStatistics', () => this.pollRenderStatistics());
+    this.sharedStream.on('newImage', () => this.grabAndNotifyImage());
   }
 
   async initialize(): Promise<void> {
@@ -197,8 +198,10 @@ class GrpcClient {
       } catch {
         /* non-fatal */
       }
-      this.sharedStream.start();
-      this.startCallbackStreaming();
+
+      // Try MCP relay first (single shared stream), fall back to own gRPC stream
+      this.connectToMcpRelay();
+
       this.isCallbackRegistered = true;
       log.info('Callbacks registered');
     } catch (error: any) {
@@ -212,12 +215,8 @@ class GrpcClient {
     if (!this.isCallbackRegistered) return;
     this.isCallbackRegistered = false;
     try {
+      this.disconnectMcpRelay();
       this.sharedStream.stop();
-      if (this.callbackStream) {
-        this.streamActive = false;
-        this.callbackStream.cancel();
-        this.callbackStream = null;
-      }
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
         callback: null,
         userData: 0,
@@ -228,19 +227,126 @@ class GrpcClient {
     }
   }
 
-  private handleCallbackData(callbackRequest: any): void {
-    if (callbackRequest.newImage) {
-      const renderImages = callbackRequest.newImage.render_images;
-      if (renderImages?.data?.length > 0) {
-        this.notifyCallbacks({
-          callback_source: callbackRequest.newImage.callback_source || 'grpc',
-          callback_id: callbackRequest.newImage.callback_id || this.callbackId,
-          user_data: callbackRequest.newImage.user_data,
-          render_images: renderImages,
-        });
-      }
-      this.pollRenderStatistics();
+  /**
+   * Try connecting to MCP's callback relay on ws://127.0.0.1:51023.
+   * If MCP is running, we consume its single gRPC callback stream — no duplicate.
+   * If MCP isn't there, fall back to our own gRPC stream.
+   */
+  private connectToMcpRelay(): void {
+    try {
+      const { WebSocket: WsClient } = require('ws') as typeof import('ws');
+      log.debug(`Attempting MCP relay connection to ${GrpcClient.MCP_RELAY_URL}`);
+      const ws = new WsClient(GrpcClient.MCP_RELAY_URL, { handshakeTimeout: 2000 });
+      let settled = false;
+
+      ws.on('open', () => {
+        settled = true;
+        log.info('Connected to MCP callback relay — using shared stream');
+        this.usingRelay = true;
+        this.mcpRelayWs = ws;
+        this.sharedStream.stop();
+      });
+
+      ws.on('message', (raw: Buffer | string) => {
+        try {
+          const msg = JSON.parse(String(raw));
+          if (msg.type === 'newImage') {
+            this.grabAndNotifyImage();
+            this.pollRenderStatistics();
+          } else if (msg.type === 'newStatistics') {
+            this.pollRenderStatistics();
+          } else if (msg.type === 'renderFailure') {
+            this.renderFailureCallbacks.forEach(cb => {
+              try {
+                cb({ user_data: msg.userData, timestamp: msg.timestamp });
+              } catch {
+                /* */
+              }
+            });
+          } else if (msg.type === 'projectManagerChanged') {
+            this.projectManagerCallbacks.forEach(cb => {
+              try {
+                cb({ user_data: msg.userData, timestamp: msg.timestamp });
+              } catch {
+                /* */
+              }
+            });
+          }
+        } catch (e: any) {
+          log.error('MCP relay message error:', e.message);
+        }
+      });
+
+      ws.on('error', (err: any) => {
+        if (!settled) {
+          settled = true;
+          log.debug(`MCP relay error: ${err?.message || 'unknown'}`);
+          this.fallbackToOwnStream('MCP relay unavailable');
+        }
+      });
+
+      ws.on('close', () => {
+        if (this.usingRelay) {
+          this.usingRelay = false;
+          this.mcpRelayWs = null;
+          this.fallbackToOwnStream('MCP relay disconnected');
+        } else if (!settled) {
+          settled = true;
+          this.fallbackToOwnStream('MCP relay closed before open');
+        }
+      });
+    } catch (e: any) {
+      log.debug(`MCP relay require failed: ${e?.message}`);
+      this.fallbackToOwnStream('ws module unavailable');
     }
+  }
+
+  private disconnectMcpRelay(): void {
+    this.usingRelay = false;
+    if (this.mcpRelayWs) {
+      try {
+        this.mcpRelayWs.close();
+      } catch {
+        /* */
+      }
+      this.mcpRelayWs = null;
+    }
+  }
+
+  private fallbackToOwnStream(reason: string): void {
+    if (this.usingRelay) return;
+    this.mcpRelayWs = null;
+    if (!this.isCallbackRegistered) {
+      log.debug(`${reason} — but callbacks not registered, skipping fallback`);
+      return;
+    }
+    log.info(`${reason} — falling back to own gRPC callback stream`);
+    this.sharedStream.start();
+  }
+
+  private isGrabbingFrame = false;
+
+  /** Fetch pixel data on demand after a newImage notification. Gated to prevent flooding. */
+  private grabAndNotifyImage(): void {
+    if (this.isGrabbingFrame) return;
+    this.isGrabbingFrame = true;
+    this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
+      .then((result: any) => {
+        if (result?.result && result.renderImages?.data?.length > 0) {
+          this.notifyCallbacks({
+            callback_source: 'grpc',
+            callback_id: this.callbackId,
+            user_data: 0,
+            render_images: result.renderImages,
+          });
+        }
+      })
+      .catch(() => {
+        /* non-fatal */
+      })
+      .finally(() => {
+        this.isGrabbingFrame = false;
+      });
   }
 
   private pollRenderStatistics(): void {
@@ -264,54 +370,6 @@ class GrpcClient {
       .finally(() => {
         this.isPollingStatistics = false;
       });
-  }
-
-  private startCallbackStreaming(): void {
-    if (this.callbackStream || this.streamActive) return;
-    try {
-      this.streamActive = true;
-      const streamService = this.base.getService('StreamCallbackService');
-      const deadline = Date.now() + GrpcClient.CALLBACK_STREAM_DEADLINE_MS;
-      this.callbackStream = streamService.callbackChannel({}, null, { deadline });
-
-      this.callbackStream.on('data', (req: any) => {
-        try {
-          this.handleCallbackData(req);
-        } catch (e: any) {
-          log.error('Callback data error:', e.message);
-        }
-      });
-      this.callbackStream.on('error', (error: any) => {
-        this.streamActive = false;
-        try {
-          this.callbackStream?.cancel();
-        } catch {
-          /* */
-        }
-        this.callbackStream = null;
-        const msg = String(error?.message || '');
-        if (/DEADLINE_EXCEEDED/i.test(msg) && this.isCallbackRegistered) {
-          this.startCallbackStreaming();
-        } else if (this.isCallbackRegistered && !/ECONNRESET|ECONNREFUSED|CANCELLED/i.test(msg)) {
-          setTimeout(() => {
-            if (this.isCallbackRegistered) this.startCallbackStreaming();
-          }, 5000);
-        } else if (/ECONNRESET|ECONNREFUSED|CANCELLED/i.test(msg)) {
-          this.isCallbackRegistered = false;
-          this.base.close();
-        }
-      });
-      this.callbackStream.on('end', () => {
-        this.streamActive = false;
-        this.callbackStream = null;
-        if (this.isCallbackRegistered) this.startCallbackStreaming();
-      });
-      log.info('Callback streaming active');
-    } catch (error: any) {
-      log.error('Failed to start callback streaming:', error.message);
-      this.streamActive = false;
-      this.callbackStream = null;
-    }
   }
 
   registerCallback(cb: (data: any) => void): void {
@@ -359,17 +417,9 @@ class GrpcClient {
   }
 
   close(): void {
+    this.disconnectMcpRelay();
     this.sharedStream.stop();
     this.isCallbackRegistered = false;
-    if (this.callbackStream) {
-      this.streamActive = false;
-      try {
-        this.callbackStream.cancel();
-      } catch {
-        /* */
-      }
-      this.callbackStream = null;
-    }
     this.base.close();
   }
 }

@@ -147,16 +147,24 @@ export class CallbackStreamManager {
   // ── Private ───────────────────────────────────────────────────────
 
   private openStream(): void {
-    if (this.stream || this.active || !this.running) return;
+    if (this.stream || this.active || !this.running) {
+      this.log(
+        `openStream skipped: stream=${!!this.stream} active=${this.active} running=${this.running}`,
+        'debug'
+      );
+      return;
+    }
 
     try {
       this.active = true;
       const streamService = this.getService('StreamCallbackService');
+      this.log(`Opening stream with deadline ${this.deadlineMs}ms`, 'debug');
       const deadline = Date.now() + this.deadlineMs;
       this.stream = streamService.callbackChannel({}, null, { deadline });
 
       this.stream.on('data', (callbackRequest: any) => {
         try {
+          this.log(`Stream data received: ${Object.keys(callbackRequest).join(',')}`, 'debug');
           this.dispatch(callbackRequest);
         } catch (error: any) {
           this.log(`Error processing callback: ${error.message}`, 'error');

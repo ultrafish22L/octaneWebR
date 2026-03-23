@@ -114,10 +114,13 @@ function grpcLog(prefix: string, service: string, method: string, data?: any): v
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getProtoDir, USE_ALPHA5_API } = require('../../../api-version.config.js') as {
-  getProtoDir: () => string;
-  USE_ALPHA5_API: boolean;
-};
+const { getProtoDir, USE_ALPHA5_API, USE_BETA2_API, IS_PASSTHROUGH } =
+  require('../../../api-version.config.js') as {
+    getProtoDir: () => string;
+    USE_ALPHA5_API: boolean;
+    USE_BETA2_API: boolean;
+    IS_PASSTHROUGH: boolean;
+  };
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS } =
@@ -132,15 +135,25 @@ const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS }
 // Both web UI (via vite plugin) and MCP (via OctaneMcpClient) flow through
 // callMethod() below, so everyone gets the same compat handling automatically.
 
-/** Beta 2 → Alpha 5 method name mappings */
-const METHOD_NAME_MAP: Record<string, string> = {
-  // ApiNode pin value methods: Beta 2 → Alpha 5
-  // Alpha 5 proto_old has getPinValue/setPinValue (different request type: objectPtr + id)
-  // Beta 2 has getPinValueByPinID/setPinValueByPinID (item_ref + pin_id + expected_type)
-  // Param transforms in transformRequestParams() handle the field renames.
+/**
+ * API Compat Levels:
+ *
+ *   IS_PASSTHROUGH (API_VERSION='2026.2'):
+ *     Canonical — pure pass-through, zero transforms.
+ *     All protos use 'objectPtr', method names are canonical.
+ *
+ *   USE_BETA2_API (API_VERSION='beta2'):
+ *     Team Beta 2 build — objectPtr→item_ref for value get/set methods.
+ *     Same proto dir (proto/), same method names. Only field rename.
+ *
+ *   USE_ALPHA5_API (API_VERSION='alpha5'):
+ *     Team Alpha 5 build — method name renames + field renames + proto_old/.
+ */
+
+/** Alpha 5 method name mappings */
+const ALPHA5_METHOD_NAME_MAP: Record<string, string> = {
   getPinValueByPinID: 'getPinValue',
   setPinValueByPinID: 'setPinValue',
-  // ApiItem methods
   setValueByAttrID: 'setByAttrID',
   getValueByAttrID: 'getByAttrID',
   setValueByIx: 'setByIx',
@@ -150,12 +163,13 @@ const METHOD_NAME_MAP: Record<string, string> = {
 };
 
 /**
- * Translate a Beta 2 method name to the current API version's equivalent.
- * Callers should always use Beta 2 names; this handles the rest.
+ * Translate a canonical method name to the target API version's equivalent.
+ * Callers always use canonical (2026.2) names; this handles the rest.
  */
 export function getCompatibleMethodName(methodName: string): string {
-  if (!USE_ALPHA5_API) return methodName;
-  return METHOD_NAME_MAP[methodName] ?? methodName;
+  if (IS_PASSTHROUGH || USE_BETA2_API) return methodName; // Beta 2 uses same method names as 2026.2
+  if (USE_ALPHA5_API) return ALPHA5_METHOD_NAME_MAP[methodName] ?? methodName;
+  return methodName;
 }
 
 /**
@@ -166,7 +180,47 @@ export function transformRequestParams(
   methodName: string,
   params: Record<string, unknown>
 ): Record<string, unknown> {
+  // 2026.2: pure pass-through, zero transforms.
+  if (IS_PASSTHROUGH) return params;
+
+  // Beta 2 compat: team Beta 2 build uses item_ref in value get/set methods.
+  // Same method names, same proto dir — only rename objectPtr→item_ref for these.
+  if (USE_BETA2_API) {
+    const BETA2_ITEM_REF_METHODS = new Set([
+      'setValueByAttrID',
+      'getValueByAttrID',
+      'setValueByIx',
+      'getValueByIx',
+      'setValueByName',
+      'getValueByName',
+    ]);
+    if (BETA2_ITEM_REF_METHODS.has(methodName) && 'objectPtr' in params) {
+      const transformed: Record<string, unknown> = { ...params };
+      transformed.item_ref = transformed.objectPtr;
+      delete transformed.objectPtr;
+      return transformed;
+    }
+    return params;
+  }
+
+  // Alpha 5 compat below
   if (!USE_ALPHA5_API) return params;
+
+  // Alpha 5 also uses item_ref (not objectPtr) for value get/set methods — same as Beta 2.
+  const ALPHA5_ITEM_REF_METHODS = new Set([
+    'setValueByAttrID',
+    'getValueByAttrID',
+    'setValueByIx',
+    'getValueByIx',
+    'setValueByName',
+    'getValueByName',
+  ]);
+  if (ALPHA5_ITEM_REF_METHODS.has(methodName) && 'objectPtr' in params) {
+    const transformed: Record<string, unknown> = { ...params };
+    transformed.item_ref = transformed.objectPtr;
+    delete transformed.objectPtr;
+    return transformed;
+  }
 
   // getPinValueByPinID/setPinValueByPinID → getPinValue/setPinValue
   // Beta 2 uses: item_ref, pin_id, expected_type, typed values (bool_value, int_value, etc.)
@@ -402,8 +456,7 @@ export class OctaneGrpcClientBase {
       'grpc.max_receive_message_length': 64 * 1024 * 1024,
       'grpc.max_send_message_length': 64 * 1024 * 1024,
       // Keepalive: detect dead server (Octane closed/crashed) within ~15s.
-      // Without this, gRPC holds TCP connections open indefinitely, blocking
-      // Octane's graceful shutdown (it waits for all clients to disconnect).
+      // octaneServGrpc allows pings as frequent as 5s (GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS).
       'grpc.keepalive_time_ms': 10_000, // send ping every 10s
       'grpc.keepalive_timeout_ms': 5_000, // close channel if no pong within 5s
       'grpc.keepalive_permit_without_calls': 1, // ping even when no RPCs active
@@ -520,24 +573,8 @@ const OBJECT_PTR_REMAPPINGS: ObjectPtrRemapping[] = [
     field: 'nodePinInfoRef',
     exclusive: true,
   },
-  // ApiItem value methods: objectPtr → item_ref
-  // Use Beta 2 names — callMethod() translates before reaching here
-  {
-    methods: ['getValueByAttrID', 'setValueByAttrID', 'getValue'],
-    field: 'item_ref',
-  },
-  // ApiNode pin value methods: objectPtr → item_ref (apinodesystem_7.proto)
-  {
-    methods: [
-      'getPinValueByIx',
-      'getPinValueByPinID',
-      'getPinValueByName',
-      'setPinValueByIx',
-      'setPinValueByPinID',
-      'setPinValueByName',
-    ],
-    field: 'item_ref',
-  },
+  // 2026.2 canonical: all protos use 'objectPtr'. No remapping needed.
+  // For Beta 2 compat (old protos with item_ref), add entries here with field: 'item_ref'.
 ];
 
 export function transformObjectPtrParams(

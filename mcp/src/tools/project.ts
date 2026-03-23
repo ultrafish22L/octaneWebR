@@ -47,6 +47,7 @@ export function registerProjectTools(
 
         const result = await client.callMethod('ApiProjectManager', 'loadProject', {
           projectPath: path,
+          evaluate: true,
         });
 
         const event = await changePromise;

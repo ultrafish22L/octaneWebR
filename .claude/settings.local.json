@@ -159,7 +159,9 @@
       "mcp__octane__analyze_reference",
       "Bash(npm test:*)",
       "Bash(pip --version)",
-      "mcp__octane__get_device_info"
+      "mcp__octane__get_device_info",
+      "Bash(cp \"C:/otoyla/GRPC/dev/octaneWebR/server/proto/\"*.proto \"C:/otoyla/GRPC/octane-grpc-bridge/proto/\")",
+      "Read(//c/otoyla/GRPC/octane-grpc-bridge/proto/**)"
     ]
   }
 }
