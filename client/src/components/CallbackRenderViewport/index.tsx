@@ -20,6 +20,8 @@ import React, {
 import { useOctane } from '../../hooks/useOctane';
 import { ViewportContextMenu } from './ViewportContextMenu';
 import { useImageBufferProcessor } from './hooks/useImageBufferProcessor';
+import { useSharedSurfaceRenderer } from './hooks/useSharedSurfaceRenderer';
+import { useRendererSelection } from './hooks/useRendererSelection';
 import { useCameraSync } from './hooks/useCameraSync';
 import { useMouseInteraction } from './hooks/useMouseInteraction';
 import { useViewportActions } from './hooks/useViewportActions';
@@ -193,14 +195,34 @@ export const CallbackRenderViewport = React.memo(
         setContextMenuVisible,
       });
 
+      // Renderer selection: auto-detects shared-surface (Electron+Win+addon) vs canvas2d
+      const { activeRenderer, reason: rendererReason } = useRendererSelection('auto');
+
       // Phase 3: Image buffer processor hook (now receives isDragging for throttling)
       // Phase 4: Now returns flushPendingFrame to clear stale progressive renders
-      const { displayImage, flushPendingFrame } = useImageBufferProcessor({
+      const canvas2d = useImageBufferProcessor({
         canvasRef,
         onFrameRendered: () => setFrameCount(prev => prev + 1),
         onStatusUpdate: setStatus,
         isDragging, // Phase 3: Pass drag state for input-side throttling
       });
+
+      // Shared surface renderer (stub — delegates to canvas2d internally)
+      const sharedSurface = useSharedSurfaceRenderer({
+        canvasRef,
+        onFrameRendered: () => setFrameCount(prev => prev + 1),
+        onStatusUpdate: setStatus,
+        isDragging,
+      });
+
+      // Select active renderer
+      const { displayImage, flushPendingFrame } =
+        activeRenderer === 'shared-surface' ? sharedSurface : canvas2d;
+
+      // Log renderer selection once
+      useEffect(() => {
+        Logger.info(`[Viewport] Renderer: ${activeRenderer} (${rendererReason})`);
+      }, [activeRenderer, rendererReason]);
 
       // Expose methods to parent via ref
       useImperativeHandle(

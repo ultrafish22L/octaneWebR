@@ -1,0 +1,20 @@
+{
+  "name": "octanewebr-dx-shared-surface",
+  "version": "0.1.0",
+  "description": "Native addon for DirectX shared surface access in octaneWebR",
+  "main": "build/Release/dx_shared_surface.node",
+  "private": true,
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

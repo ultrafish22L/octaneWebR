@@ -465,7 +465,7 @@ export class OctaneGrpcClientBase {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      await this.callMethod('ApiProjectManager', 'getPing', {}, { timeout: 5000 });
+      await this.callMethod('ApiInfo', 'octaneVersion', {}, { timeout: 5000 });
       return true;
     } catch {
       return false;
