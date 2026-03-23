@@ -39,6 +39,26 @@ export type SharedSurfaceStatus =
   | { state: 'error'; error: string };
 
 // ============================================================================
+// SHARED SURFACE MESSAGE (from server via WebSocket)
+// ============================================================================
+
+/** Lightweight descriptor sent over WebSocket when sharedSurface is available */
+export interface SharedSurfaceMessage {
+  /** Adapter LUID from ApiSharedSurface.getD3D11AdapterLuid (uint64 as string) */
+  luid: string;
+  /** Texture width in pixels */
+  width: number;
+  /** Texture height in pixels */
+  height: number;
+  /** Row stride in bytes */
+  pitch: number;
+  /** Image type (e.g. "IMAGE_TYPE_LDR_RGBA") */
+  imageType: string;
+  /** ObjectRef handle for ApiSharedSurface RPCs (release, getType, etc.) */
+  surfaceRef: string;
+}
+
+// ============================================================================
 // RENDERER INTERFACE
 // ============================================================================
 

@@ -15,10 +15,10 @@
  * and falls through to canvas2d rendering via useImageBufferProcessor.
  */
 
-import { useEffect, useMemo, useRef, RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, RefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useImageBufferProcessor } from './useImageBufferProcessor';
-import type { SharedSurfaceStatus } from '../renderers/types';
+import type { SharedSurfaceMessage, SharedSurfaceStatus } from '../renderers/types';
 
 interface UseSharedSurfaceRendererParams {
   canvasRef: RefObject<HTMLCanvasElement>;
@@ -36,7 +36,7 @@ export function useSharedSurfaceRenderer({
   const surfaceStatus = useMemo<SharedSurfaceStatus>(
     () => ({
       state: 'unavailable',
-      reason: 'Stub implementation — DX shared surface not yet implemented',
+      reason: 'Waiting for native addon (Phase 2) — detection active, rendering via canvas2d',
     }),
     []
   );
@@ -47,13 +47,13 @@ export function useSharedSurfaceRenderer({
     if (!hasLoggedRef.current) {
       hasLoggedRef.current = true;
       Logger.info(
-        '[SharedSurface] Stub renderer active — falling through to canvas2d pipeline. ' +
-          'Future: DX shared handle → native addon → WebGL texture upload'
+        '[SharedSurface] Detection active — shared surface descriptors will be logged. ' +
+          'Rendering via canvas2d until native addon is available (Phase 2).'
       );
     }
   }, []);
 
-  // Delegate to canvas2d pipeline (the stub just passes through)
+  // Delegate to canvas2d pipeline (fallback until native addon is built)
   const { displayImage, flushPendingFrame } = useImageBufferProcessor({
     canvasRef,
     onFrameRendered,
@@ -61,9 +61,32 @@ export function useSharedSurfaceRenderer({
     isDragging,
   });
 
+  /**
+   * Handle a shared surface descriptor from the server.
+   * Phase 1: Log the descriptor for validation. Falls through to canvas2d via displayImage.
+   * Phase 2+: Will use native addon to open DXGI handle and map texture.
+   */
+  const sharedSurfaceCountRef = useRef(0);
+  const displaySharedSurface = useCallback((descriptor: SharedSurfaceMessage) => {
+    sharedSurfaceCountRef.current++;
+    // Log first occurrence and then every 100th to avoid spam
+    if (sharedSurfaceCountRef.current === 1 || sharedSurfaceCountRef.current % 100 === 0) {
+      Logger.info(
+        `[SharedSurface] Descriptor #${sharedSurfaceCountRef.current}: ` +
+          `${descriptor.width}x${descriptor.height} ${descriptor.imageType} ` +
+          `LUID=${descriptor.luid} ref=${descriptor.surfaceRef}`
+      );
+    }
+    // Phase 1: No native addon yet — the server also sends render_images as fallback,
+    // so the standard pixel buffer path will handle rendering via the else branch
+    // in handleNewImage. This method is only called when activeRenderer === 'shared-surface',
+    // which requires hasNativeAddon to be true (Phase 2).
+  }, []);
+
   return {
     displayImage,
     flushPendingFrame,
+    displaySharedSurface,
     surfaceStatus,
   };
 }

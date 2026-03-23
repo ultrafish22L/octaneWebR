@@ -322,20 +322,78 @@ class OctaneGrpcClient {
   /**
    * Handle newImage events from the shared CallbackStreamManager.
    * Feeds render image data into the WebSocket pipeline for the browser viewport.
+   *
+   * When Octane provides a DXGI shared surface (sharedSurface non-null on ApiRenderImage),
+   * extracts the adapter LUID and sends a lightweight descriptor alongside the pixel buffer.
+   * The browser can use the descriptor for GPU-to-GPU rendering in Electron (Phase 2+).
    */
   private handleNewImageEvent(event: NewImageEvent): void {
     const raw = event.raw;
     const renderImages = raw?.render_images;
     if (renderImages?.data?.length > 0) {
-      this.notifyCallbacks({
+      const payload: Record<string, any> = {
         callback_source: raw.callback_source || 'grpc',
         callback_id: raw.callback_id || this.callbackId,
         user_data: raw.user_data,
         render_images: renderImages,
-      });
+      };
+
+      // Detect DXGI shared surface (Phase 1: detection + metadata extraction)
+      const firstImage = renderImages.data[0];
+      if (firstImage.sharedSurface?.handle) {
+        this.extractSharedSurfaceMetadata(firstImage, payload);
+      }
+
+      this.notifyCallbacks(payload);
     }
     // Poll render statistics on each image callback
     this.pollRenderStatistics();
+  }
+
+  /** Log tracking for shared surface detection */
+  private sharedSurfaceLogCount = 0;
+
+  /**
+   * Extract DXGI shared surface metadata and add to the WebSocket payload.
+   * Runs async (fire-and-forget) to avoid blocking the image callback pipeline.
+   * The pixel buffer (render_images) is always sent as fallback.
+   */
+  private extractSharedSurfaceMetadata(imageData: any, payload: Record<string, any>): void {
+    this.sharedSurfaceLogCount++;
+    if (this.sharedSurfaceLogCount === 1) {
+      slog.info(
+        '[SharedSurface] Detected non-null sharedSurface on render image — DXGI fast path available'
+      );
+    }
+
+    // Extract LUID async — don't block the render pipeline
+    this.callMethod('ApiSharedSurfaceService', 'getD3D11AdapterLuid', {
+      objectPtr: imageData.sharedSurface,
+    })
+      .then((luidResponse: any) => {
+        // Add lightweight descriptor to future frames (cached LUID)
+        payload.shared_surface = {
+          luid: String(luidResponse?.result || '0'),
+          width: imageData.size?.x || 0,
+          height: imageData.size?.y || 0,
+          pitch: imageData.pitch || 0,
+          imageType: String(imageData.type || 'unknown'),
+          surfaceRef: imageData.sharedSurface.handle || '',
+        };
+      })
+      .catch((err: any) => {
+        if (this.sharedSurfaceLogCount <= 3) {
+          slog.warn('[SharedSurface] Failed to get adapter LUID:', err.message);
+        }
+      })
+      .finally(() => {
+        // Release the shared surface reference to prevent memory leaks
+        this.callMethod('ApiSharedSurfaceService', 'release', {
+          objectPtr: imageData.sharedSurface,
+        }).catch(() => {
+          // Silently ignore release failures
+        });
+      });
   }
 
   private isPollingStatistics = false;

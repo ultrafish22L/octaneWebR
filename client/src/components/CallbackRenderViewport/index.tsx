@@ -26,6 +26,7 @@ import { useCameraSync } from './hooks/useCameraSync';
 import { useMouseInteraction } from './hooks/useMouseInteraction';
 import { useViewportActions } from './hooks/useViewportActions';
 import { Logger } from '../../utils/Logger';
+import type { SharedSurfaceMessage } from './renderers/types';
 
 interface OctaneImageData {
   type: number | string; // Can be numeric (0, 1) or string enum ("IMAGE_TYPE_LDR_RGBA", etc.)
@@ -45,6 +46,8 @@ interface CallbackData {
   render_images?: {
     data: OctaneImageData[];
   };
+  /** Present when Octane provides a DXGI shared surface (Electron fast path) */
+  shared_surface?: SharedSurfaceMessage;
   timestamp?: number;
   callback_id?: string;
 }
@@ -294,10 +297,20 @@ export const CallbackRenderViewport = React.memo(
 
         const handleNewImage = (data: CallbackData) => {
           Logger.debugV('[VIEWPORT] handleNewImage CALLED');
+
+          // Shared surface fast path (Electron + Windows + native addon)
+          if (data.shared_surface && activeRenderer === 'shared-surface') {
+            Logger.debugV('[VIEWPORT] Shared surface descriptor received');
+            sharedSurface.displaySharedSurface(data.shared_surface);
+            return;
+          }
+
+          // Standard pixel buffer path
           Logger.debugV('[VIEWPORT] Callback data:', {
             hasRenderImages: !!data.render_images,
             hasData: !!data.render_images?.data,
             imageCount: data.render_images?.data?.length || 0,
+            hasSharedSurface: !!data.shared_surface,
           });
 
           if (data.render_images && data.render_images.data && data.render_images.data.length > 0) {
@@ -305,7 +318,6 @@ export const CallbackRenderViewport = React.memo(
             displayImage(data.render_images.data[0]);
           } else {
             Logger.warn('[VIEWPORT] No valid image data in callback');
-            // Logger.warn('   [VIEWPORT] data:', data);
           }
         };
         client.on('OnNewImage', handleNewImage);
@@ -313,7 +325,7 @@ export const CallbackRenderViewport = React.memo(
         return () => {
           client.off('OnNewImage', handleNewImage);
         };
-      }, [connected, client, displayImage]);
+      }, [connected, client, displayImage, activeRenderer, sharedSurface]);
 
       /**
        * Phase 4: Flush stale progressive render images when camera drag starts/changes
