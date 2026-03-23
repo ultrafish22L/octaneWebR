@@ -158,7 +158,8 @@
       "Bash(echo $ANTHOPIC_CLAUDE_KEY)",
       "mcp__octane__analyze_reference",
       "Bash(npm test:*)",
-      "Bash(pip --version)"
+      "Bash(pip --version)",
+      "mcp__octane__get_device_info"
     ]
   }
 }

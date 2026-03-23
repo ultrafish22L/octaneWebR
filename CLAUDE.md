@@ -95,6 +95,7 @@ TRANSFORMS:  A_TRANSLATION=172  A_ROTATION=137 (DEGREES!)  A_SCALE=139  (all AT_
 KEY ATTRS:   A_VALUE=185  A_FILENAME=34  A_RELOAD=124
 RT PINS:     0=camera  1=environment  3=geometry  4=film  6=kernel
 WIRING:      material → mesh (pin 0), mesh → placement (pin "geometry"), placement → geo group (pin_index N)
+GEOMETRY:    Prefer NT_GEO_MESH + .obj for non-box shapes (sphere_hd.obj, floor.obj). NT_GEO_OBJECT primitive type changes are unstable.
 ```
 
 **Restarting MCP server** (after code changes):
