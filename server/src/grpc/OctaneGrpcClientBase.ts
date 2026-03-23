@@ -21,7 +21,7 @@ import * as fs from 'fs';
 //   off:     disable
 type GrpcLogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'off';
 const GRPC_LOG_LEVEL: GrpcLogLevel = (process.env.LOG_LEVEL as GrpcLogLevel) || 'debug';
-const GRPC_LOG_ENABLED = GRPC_LOG_LEVEL !== 'off' && process.env.GRPC_DEBUG_LOG !== '0';
+let GRPC_LOG_ENABLED = GRPC_LOG_LEVEL !== 'off' && process.env.GRPC_DEBUG_LOG !== '0';
 let grpcLogStream: fs.WriteStream | null = null;
 
 // Mutating + lifecycle methods — logged at info+
@@ -76,10 +76,17 @@ const GRPC_DEBUG_METHODS = new Set([
 function initGrpcLog(): void {
   if (!GRPC_LOG_ENABLED || grpcLogStream) return;
   const logPath = path.resolve(__dirname, '..', '..', '..', 'log_grpc.log');
-  grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
-  grpcLogStream.write(
-    `=== gRPC Debug Log started ${new Date().toISOString()} (level: ${GRPC_LOG_LEVEL}) ===\n`
-  );
+  try {
+    // Test if the directory is writable (fails inside Electron asar)
+    fs.accessSync(path.dirname(logPath), fs.constants.W_OK);
+    grpcLogStream = fs.createWriteStream(logPath, { flags: 'a' });
+    grpcLogStream.write(
+      `=== gRPC Debug Log started ${new Date().toISOString()} (level: ${GRPC_LOG_LEVEL}) ===\n`
+    );
+  } catch {
+    // Inside packaged Electron app — asar is read-only, skip file logging
+    GRPC_LOG_ENABLED = false;
+  }
 }
 
 /** Call after log file cleanup to write the startup header. Exported for vite plugin use. */

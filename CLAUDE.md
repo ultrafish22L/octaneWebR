@@ -2,26 +2,25 @@
 
 ## Current Session (agent updates this at session end)
 
-**Phase 29: SEGA calibration runs + crash-safe scene loading + shared constants migration**
+**Phase 30: Electron production build fixes + human-like UI testing**
 
 **What happened this session:**
 
-- **SEGA self-refinement runs** — 444 concept images generated via OTOY Studio (Runs 1+2, 222 each). Pixel-analyzed all 444 with jpeg-js. VLM-analyzed all 444 with Anthropic Haiku 4.5. Established VLM bias profile: arousal/dominance well-calibrated, pleasure/groundedness/surface_detail systematically over-estimated.
-- **Self-refinement design doc** — `docs/project/SEGA_SELF_REFINEMENT.md` with Phase A (concept calibration, no Octane), Phase B (render matching, Octane required), Phase C (autonomous preset generation). Multi-provider prompt comparison detail added.
-- **Crash-safe scene traversal** — `scene.ts` now skips nodes with typeId ≤ 0 or in `CRASH_TYPE_IDS`, aborts traversal on first connection loss (`ECONNRESET`/`ECONNREFUSED`/`UNAVAILABLE`/`OCTANE CRASHED`).
-- **CallbackStreamManager** — `mcp/src/shared/CallbackStreamManager.ts` for gRPC callback streaming. `load_project` now waits for `projectManagerChanged` callback instead of fixed delays.
-- **Shared constants migration** — Moved `OctaneConstants.ts` from `shared/` to `mcp/src/shared/`. Removed `../shared/**/*` from `mcp/tsconfig.json` include — this was causing tsc to expand rootDir to repo root, scanning all directories.
-- **OctaneMcpClient** — Added `waitForProjectChange()`, callback stream lifecycle, `getService()` on `IGrpcClientBase`.
-- **Gemini VLM discovery** — Confirmed OTOY Studio `chat_completion` (Gemini Flash 1.5) cannot see images, produces hallucinated measurements. Only Anthropic Haiku 4.5 via vision module is reliable for VLM analysis.
-- **ORBX test library** — Found collection at `temp/testing/ORBX/` (keloid, chess, airport, hospital, forest, bot, horse, etc.). Large scenes crash Octane during aggressive auto-populate — callback streaming fixes this.
-- **Version**: 2.2.6
+- **Human-like UI testing** — Pre-flight checks (281 tests pass, lint clean, MCP build OK), Vite dev server verified with screenshots and interactive testing via Claude Preview tools. Confirmed 5-column grid layout, menu interactions, panel headers, connection status all working.
+- **Electron build: log_grpc.log ENOENT fix** — Production build crashed on launch because log file tried to write inside read-only asar. Fixed to use writable `app.getPath('userData')` directory.
+- **Electron build: icon fix** — Added `octane_window_icon.ico` (Octane gear logo) for taskbar/titlebar. Previously used default Electron icon.
+- **Electron build: broken icons fix** — All icons with spaces in filenames (e.g. `PLAY window.png`, `RENDER TARGET node.png`) failed to load in production. Root cause: `GrpcProxyServer` static file serving didn't `decodeURIComponent(pathname)` — URL-encoded `%20` didn't match filesystem filenames with actual spaces.
+- **Electron build: GrpcProxyServer compilation** — Was excluded from `server/tsconfig.json` (cross-boundary import from `mcp/src/shared/`). Previous builds had a manually compiled copy that was lost. Added `build:grpc-server` npm script that compiles it separately and copies to correct output path.
+- **MCP metal+glass test run** — Built scene via MCP tools (RT, camera, kernel, daylight env, sphere meshes with silver and glass materials, floor). Confirmed NT_GEO_OBJECT primitive type 20 (sphere) still crashes Octane non-deterministically. Scene rendered successfully using NT_GEO_MESH + sphere_hd.obj.
+- **Octane path correction** — Actual path is `C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe` (not in `dev/`).
+- **Version**: 2.2.3
 
 ### TODO for Next Session
 
 1. **Load ORBX scenes** — Test with teapot.orbx first (small), then keloid/chess/forest. Verify callback streaming prevents crashes on large scenes.
-2. **Phase B calibration** — Load ORBX → render → VLM analyze baseline → apply SEGA preset → re-render → measure gap → iterate. Calibrate actual Octane parameter mappings.
-3. **Run 3 concept calibration** — OTOY Studio quota resets daily. 222 more images with corrected bias compensation + dimension sweeps.
-4. **Self-learning Phase 1** — Implement learning engine that reads `LearnedAdjustment` records and adjusts mapping weights/confidence.
+2. **Phase B calibration** — Load ORBX → render → VLM analyze baseline → apply SEGA preset → re-render → measure gap → iterate.
+3. **Connection LED bug** — Shows "Connected" (green) even when Octane is offline. Investigate `ConnectionStatus` component.
+4. **Console error spam** — 136+ ECONNREFUSED errors on startup when Octane is offline. Should be suppressed or rate-limited.
 5. **Re-test LiveDB** after Octane update.
 
 ## #0 Rule: Read Before Doing
@@ -34,16 +33,17 @@ ALL docs go in `docs/`. Never store project knowledge in memory files or local-o
 
 ## Quick Start
 
-| What         | How                                                                                                 |
-| ------------ | --------------------------------------------------------------------------------------------------- |
-| Dev server   | `npm run dev` (port 43929)                                                                          |
-| Test scene   | `ORBX/teapot.orbx`                                                                                  |
-| MCP server   | auto-starts via `.mcp.json` — never run manually                                                    |
-| Octane       | `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true` |
-| Tests        | `npm test` (281 tests), `npm run lint`, `npm run build`                                             |
-| MCP build    | `cd mcp && npm run build` — uses **esbuild** (9ms). Do NOT use `tsc -p mcp/tsconfig.json` (OOM).    |
-| Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                       |
-| Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                             |
+| What         | How                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| Dev server   | `npm run dev` (port 43929)                                                                       |
+| Test scene   | `ORBX/teapot.orbx`                                                                               |
+| MCP server   | auto-starts via `.mcp.json` — never run manually                                                 |
+| Octane       | `"C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe" &` with `dangerouslyDisableSandbox: true`  |
+| Tests        | `npm test` (281 tests), `npm run lint`, `npm run build`                                          |
+| MCP build    | `cd mcp && npm run build` — uses **esbuild** (9ms). Do NOT use `tsc -p mcp/tsconfig.json` (OOM). |
+| Octane check | `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`                                    |
+| Electron     | `npm run electron:build` — NSIS installer + portable exe in `dist/electron-build/`               |
+| Fresh start  | See `docs/mcp/TROUBLESHOOTING.md` — servers die first, Octane dies last                          |
 
 ## Docs Index (read on-demand by task)
 
@@ -117,7 +117,7 @@ powershell -Command "Get-CimInstance Win32_Process -Filter \"Name='node.exe' AND
 
 ## Status
 
-- **Version**: 2.2.6 — 82 active tools, 4 disabled (LiveDB), 281 tests, 3 themes
+- **Version**: 2.2.4 — 82 active tools, 4 disabled (LiveDB), 281 tests, 3 themes
 - **MCP**: 15 tool modules (incl. SEGA), 9 resources, 4 prompts, SceneCache, ApiCache, ArtDirectionState, SemanticState, VisionCritic, CallbackStreamManager
 - **SEGA**: 6 tools (`set/get/adjust_artistic_intent`, `semantic_critique`, `get_vlm_estimation_prompt`, `save_user_preset`), 15 dimensions, 25 presets, NLParser, PixelAnalyzer, SemanticCritic
 - **Architecture**: MCP is a thin gRPC wrapper using Beta 2 method names. Constants in `mcp/src/shared/OctaneConstants.ts`.

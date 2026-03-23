@@ -7,7 +7,8 @@
     "generate:proto": "bash scripts/generate-proto.sh",
     "cache:refresh": "node scripts/fetch-api-cache.js",
     "dev": "vite",
-    "build": "tsc && tsc -p server/tsconfig.json && vite build",
+    "build:grpc-server": "npx tsc --target ES2020 --module commonjs --esModuleInterop --skipLibCheck --resolveJsonModule --moduleResolution node --outDir server/dist/.grpc-build server/src/grpc/GrpcProxyServer.ts && node -e \"const fs=require('fs'),p=require('path');const s='server/dist/.grpc-build/server/src/grpc',d='server/dist/grpc';fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s))fs.copyFileSync(p.join(s,f),p.join(d,f));const ms='server/dist/.grpc-build/mcp/src/shared',md='server/dist/grpc/mcp/src/shared';fs.mkdirSync(md,{recursive:true});for(const f of fs.readdirSync(ms))fs.copyFileSync(p.join(ms,f),p.join(md,f));fs.rmSync('server/dist/.grpc-build',{recursive:true})\"",
+    "build": "tsc && tsc -p server/tsconfig.json && npm run build:grpc-server && vite build",
     "preview": "vite preview",
     "format": "prettier --write \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,css,json}\" \"*.md\"",
@@ -24,18 +25,19 @@
     "electron:build:dir": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win --dir"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@tanstack/react-query": "^5.90.20",
     "@xyflow/react": "^12.10.0",
     "jpeg-js": "^0.4.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-error-boundary": "^6.1.0",
-    "react-window": "^2.2.5"
+    "react-window": "^2.2.5",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@grpc/grpc-js": "^1.14.3",
-    "@grpc/proto-loader": "^0.8.0",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@types/google-protobuf": "^3.15.12",
     "@types/node": "^20.10.5",
@@ -60,7 +62,6 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^4.0.18",
-    "ws": "^8.18.3",
     "electron": "^35.0.0",
     "electron-builder": "^26.0.0",
     "concurrently": "^9.0.0",
@@ -85,12 +86,12 @@
     "files": [
       "dist/client/**/*",
       "dist/electron/**/*",
-      "server/src/grpc/**/*",
+      "server/dist/**/*",
       "server/proto/**/*",
-      "mcp/src/shared/CallbackStreamManager.ts",
+      "mcp/src/shared/CallbackStreamManager.*",
       "mcp/data/octane-api-cache.json",
-      "node_modules/@grpc/**/*",
-      "node_modules/ws/**/*"
+      "api-version.config.js",
+      "grpc-constants.js"
     ],
     "extraResources": [
       {
@@ -98,8 +99,16 @@
         "to": "server/proto"
       },
       {
+        "from": "server/proto_old",
+        "to": "server/proto_old"
+      },
+      {
         "from": "mcp/data/octane-api-cache.json",
         "to": "mcp/data/octane-api-cache.json"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
       }
     ],
     "win": {
@@ -107,7 +116,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "client/public/favicon.ico"
+      "icon": "build/icon.ico"
     }
   }
 }

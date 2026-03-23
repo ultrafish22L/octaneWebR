@@ -6,13 +6,15 @@
  * - projectManagerChanged: project loaded/reset/modified
  * - renderFailure: render failed
  * - newStatistics: render stats updated (rarely sent by Octane in practice)
- *
- * newImage is NOT handled here — Vite has its own render viewport pipeline,
- * and MCP uses save_render on demand.
+ * - newImage: render image data (opt-in via handleNewImage, used by Vite only)
  *
  * The stream auto-expires every DEADLINE_MS to prevent Octane shutdown deadlock
  * (Octane waits for in-progress RPCs to finish, infinite streams never finish).
  * On expiry, reconnects immediately.
+ *
+ * IMPORTANT: Only ONE stream should be opened per gRPC channel. Opening multiple
+ * streams causes Octane to send large newImage data to each, which can trigger
+ * RESOURCE_EXHAUSTED errors.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CallbackStreamManager = void 0;
@@ -32,8 +34,14 @@ class CallbackStreamManager {
         this.deadlineMs = options?.deadlineMs ?? DEFAULT_DEADLINE_MS;
         this.log = options?.log ?? ((msg) => console.log(`[CallbackStream] ${msg}`));
         this.onConnectionLost = options?.onConnectionLost;
+        this.handleNewImage = options?.handleNewImage ?? false;
         // Initialize listener sets
-        for (const type of ['projectManagerChanged', 'renderFailure', 'newStatistics']) {
+        for (const type of [
+            'projectManagerChanged',
+            'renderFailure',
+            'newStatistics',
+            'newImage',
+        ]) {
             this.listeners.set(type, new Set());
         }
     }
@@ -154,8 +162,28 @@ class CallbackStreamManager {
         }
     }
     dispatch(callbackRequest) {
-        // newImage is intentionally NOT dispatched — handled separately by consumers
-        if (callbackRequest.renderFailure) {
+        if (callbackRequest.newImage) {
+            // Only dispatch newImage if opt-in (Vite). MCP skips this cheaply.
+            if (this.handleNewImage) {
+                const event = {
+                    type: 'newImage',
+                    raw: callbackRequest.newImage,
+                    timestamp: Date.now(),
+                };
+                const listeners = this.listeners.get('newImage');
+                if (listeners) {
+                    for (const cb of listeners) {
+                        try {
+                            cb(event);
+                        }
+                        catch (e) {
+                            this.log(`Error in newImage listener: ${e.message}`, 'error');
+                        }
+                    }
+                }
+            }
+        }
+        else if (callbackRequest.renderFailure) {
             this.emit('renderFailure', callbackRequest.renderFailure?.user_data ?? 0);
         }
         else if (callbackRequest.newStatistics) {
@@ -164,7 +192,6 @@ class CallbackStreamManager {
         else if (callbackRequest.projectManagerChanged) {
             this.emit('projectManagerChanged', callbackRequest.projectManagerChanged?.user_data ?? 0);
         }
-        // newImage deliberately ignored — Vite handles via its own pipeline
     }
     emit(type, userData) {
         const event = { type, userData, timestamp: Date.now() };

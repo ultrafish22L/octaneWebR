@@ -4,6 +4,27 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.2.4] - 2026-03-22
+
+### Fixed — Electron Production Build
+
+- **log_grpc.log ENOENT crash** — Log file tried to write inside read-only asar. Now writes to `app.getPath('userData')`.
+- **Broken icons in production** — All icon filenames with spaces (e.g. `PLAY window.png`) failed to load. Added `decodeURIComponent(pathname)` in `GrpcProxyServer` static file serving.
+- **GrpcProxyServer not compiled** — Was excluded from `server/tsconfig.json` due to cross-boundary import from `mcp/src/shared/`. Added `build:grpc-server` npm script that compiles separately and copies to `server/dist/grpc/`.
+- **App icon** — Added `octane_window_icon.ico` (Octane gear logo) for taskbar, titlebar, and installer. Previously used default Electron icon.
+
+### Changed
+
+- **Octane path corrected** — All docs updated from `C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/` to `C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/`.
+- **Build script** — `npm run build` now includes `build:grpc-server` step for GrpcProxyServer compilation.
+
+### Tested
+
+- **Human-like UI testing** — 281 unit tests pass, lint clean, Vite dev server verified with interactive browser testing (menus, panels, viewport, connection status).
+- **MCP metal+glass scene** — Built via MCP tools with RT, camera, kernel, daylight, sphere meshes (silver metal + glass), floor. Confirmed NT_GEO_OBJECT primitive type changes still crash non-deterministically.
+
+---
+
 ## [2.2.3] - 2026-03-21
 
 ### Added — Crash Probe Testing & Guard Deployment
@@ -319,4 +340,4 @@ Production-ready release with:
 ---
 
 **Status**: Active Development
-**Last Updated**: 2026-03-19
+**Last Updated**: 2026-03-22

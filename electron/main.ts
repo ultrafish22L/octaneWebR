@@ -22,24 +22,21 @@ async function createWindow(): Promise<void> {
   if (!isDev) {
     // Start standalone gRPC proxy server for production
     // Dynamic import since GrpcProxyServer has heavy dependencies
+    const appRoot = app.getAppPath();
     const { startGrpcProxyServer } = require(
-      path.join(__dirname, '../server/src/grpc/GrpcProxyServer')
+      path.join(appRoot, 'server/dist/grpc/GrpcProxyServer')
     );
 
-    const protoBasePath = path.join(process.resourcesPath, 'proto')
-      ? path.join(process.resourcesPath)
-      : path.resolve(__dirname, '../server');
-
-    // Determine proto path: packaged app uses extraResources, dev uses source
+    // Proto and cache paths: packaged app uses extraResources, dev uses source
     const protoServerPath = app.isPackaged
       ? path.join(process.resourcesPath, 'server')
-      : path.resolve(__dirname, '../server');
+      : path.join(appRoot, 'server');
 
     const apiCachePath = app.isPackaged
       ? path.join(process.resourcesPath, 'mcp/data/octane-api-cache.json')
-      : path.resolve(__dirname, '../mcp/data/octane-api-cache.json');
+      : path.join(appRoot, 'mcp/data/octane-api-cache.json');
 
-    const staticDir = path.resolve(__dirname, '../dist/client');
+    const staticDir = path.join(appRoot, 'dist/client');
 
     const instance = await startGrpcProxyServer({
       port: 43930,
@@ -63,7 +60,9 @@ async function createWindow(): Promise<void> {
       nodeIntegration: false,
       webSecurity: true,
     },
-    icon: path.join(__dirname, '../client/public/favicon.ico'),
+    icon: isDev
+      ? path.join(__dirname, '../client/public/octane_icon.ico')
+      : path.join(process.resourcesPath, 'icon.ico'),
     title: 'octaneWebR',
     backgroundColor: '#1e1e1e',
     show: false, // Show after ready-to-show to avoid flash

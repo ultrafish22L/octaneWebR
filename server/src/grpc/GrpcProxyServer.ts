@@ -518,7 +518,7 @@ export async function startGrpcProxyServer(
 
     const url = req.url || '';
     const urlObj = new URL(url, `http://localhost:${port}`);
-    const pathname = urlObj.pathname;
+    const pathname = decodeURIComponent(urlObj.pathname);
 
     try {
       // Health check

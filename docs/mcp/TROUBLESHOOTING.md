@@ -22,11 +22,23 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ## Build
 
-| Problem                         | Cause                                                              | Fix                                                            |
-| ------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `tsc -p mcp/tsconfig.json` OOMs | tsc 5.9.3 uses unbounded memory. **NEVER use tsc for MCP builds.** | `cd mcp && npm run build` — uses **esbuild** (10ms).           |
-| `OctaneConstants.ts` not found  | File moved from `shared/` to `mcp/src/shared/`                     | Update import paths: `from '../shared/OctaneConstants'`        |
-| MCP server running stale code   | `mcp/dist/index.js` not rebuilt after source changes               | Run `cd mcp && npm run build`, then kill+restart MCP processes |
+| Problem                              | Cause                                                              | Fix                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `tsc -p mcp/tsconfig.json` OOMs      | tsc 5.9.3 uses unbounded memory. **NEVER use tsc for MCP builds.** | `cd mcp && npm run build` — uses **esbuild** (10ms).                                |
+| `OctaneConstants.ts` not found       | File moved from `shared/` to `mcp/src/shared/`                     | Update import paths: `from '../shared/OctaneConstants'`                             |
+| MCP server running stale code        | `mcp/dist/index.js` not rebuilt after source changes               | Run `cd mcp && npm run build`, then kill+restart MCP processes                      |
+| GrpcProxyServer changes not compiled | Excluded from `server/tsconfig.json` (cross-boundary mcp/ import)  | Uses separate `build:grpc-server` script in `npm run build`. Always run full build. |
+
+---
+
+## Electron Production Build
+
+| Problem                            | Cause                                                                | Fix                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ENOENT crash on `log_grpc.log`     | Log file tried to write inside read-only asar                        | Write to `app.getPath('userData')` instead of `app.getAppPath()`                    |
+| Icons show text labels, not images | `GrpcProxyServer` didn't `decodeURIComponent` on URL pathname        | Added `decodeURIComponent(urlObj.pathname)` — filenames have spaces                 |
+| Default Electron icon              | No `.ico` configured in build                                        | `build/icon.ico` (Octane gear logo) + `win.icon` in package.json                    |
+| GrpcProxyServer module not found   | `server/tsconfig.json` excludes it; no separate compile step existed | Added `build:grpc-server` npm script (standalone tsc + copy to `server/dist/grpc/`) |
 
 ---
 
@@ -165,6 +177,6 @@ Octane serializes all API calls on a single thread. MCP serializes via mutex. Tw
 
 ### Startup
 
-4. Launch Octane with `dangerouslyDisableSandbox: true`: `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &`
+4. Launch Octane with `dangerouslyDisableSandbox: true`: `"C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe" &`
 5. Wait 10-15s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
 6. `preview_start` — LAST (after gRPC is listening)

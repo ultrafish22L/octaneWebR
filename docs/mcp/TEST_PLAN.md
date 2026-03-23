@@ -17,7 +17,7 @@
 1. Stop immediately. Note which tool/call caused the crash.
 2. Log the crash in `docs/mcp/SCENE_BUILD_LOG.md` with severity.
 3. Check `log_mcp.log` for the last successful call before the crash.
-4. Relaunch Octane: `"C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/octane.exe" &`
+4. Relaunch Octane: `"C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe" &`
 5. Wait 15s, verify gRPC: `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`
 6. Reload checkpoint: `load_project` with the last saved .orbx.
 7. Continue testing from where you left off.
