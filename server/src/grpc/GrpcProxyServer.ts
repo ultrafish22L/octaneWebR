@@ -22,11 +22,7 @@ import * as http from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
-import {
-  OctaneGrpcClientBase,
-  transformObjectPtrParams,
-  initGrpcLog,
-} from './OctaneGrpcClientBase';
+import { OctaneGrpcClientBase, initGrpcLog } from './OctaneGrpcClientBase';
 import { CallbackStreamManager } from '../../../mcp/src/shared/CallbackStreamManager';
 
 // ============================================================================
@@ -728,8 +724,8 @@ export async function startGrpcProxyServer(
       if (grpcMatch && req.method === 'POST') {
         const [, service, method] = grpcMatch;
         const body = await readBody(req);
-        let params = body ? JSON.parse(body) : {};
-        params = transformObjectPtrParams(service, method, params);
+        const params = body ? JSON.parse(body) : {};
+        // All param transforms happen inside callMethod() via transformRequestParams.
         const response = await grpcClient.callMethod(service, method, params);
         sendJson(res, 200, response || {});
         return;

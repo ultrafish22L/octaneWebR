@@ -50,8 +50,13 @@ const SERVICE_TO_PROTO_MAP = {
   LiveLink: 'livelink.proto',
   // Change manager (scene evaluation)
   ApiChangeManager: 'apichangemanager.proto',
-  // Callbacks
-  StreamCallbackService: 'callbackstream.proto',
+  // Callbacks — Alpha 5 has StreamCallbackService in callback.proto,
+  // 2026.2/octaneServGrpc has it in callbackstream.proto.
+  // getProtoDir() already selects the right proto dir, but the filename differs too.
+  get StreamCallbackService() {
+    const { getProtoDir } = require('./api-version.config.js');
+    return getProtoDir() === 'proto_old' ? 'callback.proto' : 'callbackstream.proto';
+  },
   CallbackHandler: 'callback.proto',
   // Selection manager
   ApiSelectionManager: 'apiselectionmanager.proto',

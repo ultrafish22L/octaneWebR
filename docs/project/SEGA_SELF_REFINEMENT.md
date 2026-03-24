@@ -184,32 +184,9 @@ Auto-generate new presets from successful scene vectors.
 
 ---
 
-## Data Structures (Already in Place)
+## Implementation Status
 
-```typescript
-// LearnedAdjustment — already in types.ts
-interface LearnedAdjustment {
-  timestamp: number;
-  dimension: string;
-  parameter: string;
-  targetValue: number; // what SEGA computed
-  actualValue: number; // what VLM/pixel measured
-  delta: number; // difference
-  context: string; // scene description
-}
-
-// ParameterMapping.confidence — already on every mapping
-// ParameterMapping.source — 'manual' | 'industry' | 'learned'
-
-// SemanticPreset.source — 'industry-derived' | 'user-created' | 'learned'
-```
-
-All data structures exist. Implementation needs:
-
-1. Calibration runner (orchestrates the pipeline)
-2. Bias tracker (accumulates per-provider, per-dimension bias)
-3. Confidence updater (adjusts mapping confidence from results)
-4. Preset generator (Phase C)
+Data structures in place (`LearnedAdjustment`, `ParameterMapping.confidence/source`, `SemanticPreset.source`). Remaining: calibration runner, bias tracker, confidence updater, preset generator.
 
 ---
 
@@ -242,68 +219,6 @@ This is how the system gets better over time without manual tuning of the 15×3+
 
 ---
 
-## Multi-Provider Prompt Comparison Detail
+## Multi-Provider Comparison
 
-The power of the multi-provider approach is not just measuring dimensions — it's **comparing how different VLMs interpret the same image**. Each provider generates a natural language response before structured output. These narrative descriptions reveal:
-
-### Prompt-Level Comparison
-
-```
-Image: concept_dramatic_003.png
-Target: { contrast: 0.7, warmth: -0.2, arousal: 0.5 }
-
-Haiku 4.5 narrative:
-  "High contrast scene with deep shadows. Cool-toned lighting creates
-   a tense atmosphere. The composition feels dynamic and slightly unsettling."
-
-Gemini narrative:
-  "Strong shadow contrast. The lighting leans cool but not extremely.
-   There's energy in the composition, with dramatic angles."
-
-Self-critique (Claude in conversation):
-  "Very contrasty with hard shadows. Slightly cool color temperature.
-   The scene has an intense, driven quality."
-
-COMPARE:
-  - All three agree: high contrast ✓, cool-toned ✓, dynamic/intense ✓
-  - Haiku adds "unsettling" (arousal reading higher than others)
-  - Gemini hedges on warmth ("not extremely")
-  - Self-critique most direct, least hedging
-
-LESSON: Haiku tends to read more emotional intensity (arousal inflation).
-        Gemini is conservative on warmth estimates.
-        Self-critique most aligned with literal dimension definitions.
-```
-
-### What Prompt Comparison Teaches
-
-| Signal                                         | What It Means                                         |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| All providers use same word                    | Dimension is unambiguous at this value                |
-| Providers use different words for same concept | Dimension aliases may need updating                   |
-| One provider consistently disagrees            | That provider has systematic bias                     |
-| All providers miss a target dimension          | The prompt language for that dimension is ineffective |
-| Providers mention dimensions not in target     | Reveals correlations we didn't expect                 |
-
-### Prompt Diff Format
-
-For each calibration run, store the raw narrative from each provider alongside the structured measurements. The narrative diff is often more informative than the number diff:
-
-```typescript
-interface CalibrationRecord {
-  vector: SemanticVector;
-  prompt: string;
-  imageUrl: string;
-  providers: {
-    [providerName: string]: {
-      narrative: string; // raw text response
-      measurements: SemanticVector; // structured measurement
-      processingTimeMs: number;
-    };
-  };
-  pixelTruth: PixelMeasurement;
-  agreement: DimensionAgreement[];
-  lessons: string[];
-  timestamp: number;
-}
-```
+Comparing how different VLMs interpret the same image reveals systematic biases per provider and per dimension. Key signals: all providers agreeing = dimension is unambiguous; one consistently disagreeing = systematic bias; all missing a target dimension = ineffective prompt language; mentioning unexpected dimensions = hidden correlations. See `CalibrationRecord` type in code for data structure.

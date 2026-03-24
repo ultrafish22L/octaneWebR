@@ -1,6 +1,6 @@
 # OctaneWebR — Test Plan
 
-**Scene:** `teapot.orbx` (reload via File→Open after destructive tests; user must click confirm in Octane)
+**Scene:** `ORBX/teapot.orbx` (reload via File→Open after destructive tests; user must click confirm in Octane)
 **Tests:** 181 total (161 base + 20 Round 3)
 
 ---
@@ -103,7 +103,7 @@ while (fiber) {
 
 | ID  | Test                        | Pass Criteria                                                     |
 | --- | --------------------------- | ----------------------------------------------------------------- |
-| A16 | File → New                  | Creates empty scene (reload teapot.orbx after)                    |
+| A16 | File → New                  | Creates empty scene (reload ORBX/teapot.orbx after)               |
 | A17 | File → Save as package      | PackageDialog opens                                               |
 | A18 | Disabled menu items audit   | Module, Cloud, Window stubs are disabled                          |
 | A19 | Keyboard accelerator labels | Menu labels match actual shortcuts (Ctrl+N, Ctrl+O, Ctrl+S, etc.) |
@@ -128,15 +128,15 @@ while (fiber) {
 
 ### Medium (B8–B14)
 
-| ID  | Test                                | Pass Criteria                                                                      |
-| --- | ----------------------------------- | ---------------------------------------------------------------------------------- |
-| B8  | Rapid node clicks (5+)              | Inspector keeps up, no stale data                                                  |
-| B9  | Outliner ↔ Graph sync               | Selecting in outliner highlights in graph (and vice versa)                         |
-| B10 | Right-click node → context menu     | Menu appears with correct items (9 expected)                                       |
-| B11 | Context menu → Delete               | Node removed from tree + graph. Screenshot before/after. Reload teapot.orbx after. |
-| B12 | Context menu → Copy → Paste         | Duplicate node appears. Screenshot. Reload teapot.orbx after.                      |
-| B13 | Context menu → Show in Graph Editor | Graph pans/zooms to the node                                                       |
-| B14 | F5 refresh → outliner rebuilds      | Tree repopulates (check for BUG-F5-1b flash)                                       |
+| ID  | Test                                | Pass Criteria                                                                           |
+| --- | ----------------------------------- | --------------------------------------------------------------------------------------- |
+| B8  | Rapid node clicks (5+)              | Inspector keeps up, no stale data                                                       |
+| B9  | Outliner ↔ Graph sync               | Selecting in outliner highlights in graph (and vice versa)                              |
+| B10 | Right-click node → context menu     | Menu appears with correct items (9 expected)                                            |
+| B11 | Context menu → Delete               | Node removed from tree + graph. Screenshot before/after. Reload ORBX/teapot.orbx after. |
+| B12 | Context menu → Copy → Paste         | Duplicate node appears. Screenshot. Reload ORBX/teapot.orbx after.                      |
+| B13 | Context menu → Show in Graph Editor | Graph pans/zooms to the node                                                            |
+| B14 | F5 refresh → outliner rebuilds      | Tree repopulates (check for BUG-F5-1b flash)                                            |
 
 ### Hard (B15–B18)
 
@@ -166,21 +166,21 @@ while (fiber) {
 
 ### Medium (C8–C20)
 
-| ID  | Test                            | Pass Criteria                                                             |
-| --- | ------------------------------- | ------------------------------------------------------------------------- |
-| C8  | Right-click empty area          | NodeTypeContextMenu opens with all categories (26 expected)               |
-| C9  | Hover category                  | Subtypes appear (e.g. 7 camera types)                                     |
-| C10 | Click type → create node        | Node appears in graph. Screenshot before/after. Reload teapot.orbx after. |
-| C11 | Geometry → Mesh                 | File browser opens for mesh import                                        |
-| C12 | Textures → Image Texture        | File browser opens for texture import                                     |
-| C13 | Ctrl+F → search                 | SearchDialog opens, type query → results appear → click selects node      |
-| C14 | Search → Select All             | All matching nodes selected                                               |
-| C15 | Drag node to reposition         | `left_click_drag` from node center → node moves                           |
-| C16 | Multi-select with Ctrl+click    | `left_click` with modifier → multiple nodes selected                      |
-| C17 | Delete selected node(s)         | `key "Delete"` → node removed. Screenshot. Reload teapot.orbx after.      |
-| C18 | Right-click node → context menu | `right_click` on node → NodeContextMenu appears                           |
-| C19 | Recenter View button            | fitView triggered, all nodes visible                                      |
-| C20 | Re-arrange Graph button         | DAG layout applied, nodes repositioned                                    |
+| ID  | Test                            | Pass Criteria                                                                  |
+| --- | ------------------------------- | ------------------------------------------------------------------------------ |
+| C8  | Right-click empty area          | NodeTypeContextMenu opens with all categories (26 expected)                    |
+| C9  | Hover category                  | Subtypes appear (e.g. 7 camera types)                                          |
+| C10 | Click type → create node        | Node appears in graph. Screenshot before/after. Reload ORBX/teapot.orbx after. |
+| C11 | Geometry → Mesh                 | File browser opens for mesh import                                             |
+| C12 | Textures → Image Texture        | File browser opens for texture import                                          |
+| C13 | Ctrl+F → search                 | SearchDialog opens, type query → results appear → click selects node           |
+| C14 | Search → Select All             | All matching nodes selected                                                    |
+| C15 | Drag node to reposition         | `left_click_drag` from node center → node moves                                |
+| C16 | Multi-select with Ctrl+click    | `left_click` with modifier → multiple nodes selected                           |
+| C17 | Delete selected node(s)         | `key "Delete"` → node removed. Screenshot. Reload ORBX/teapot.orbx after.      |
+| C18 | Right-click node → context menu | `right_click` on node → NodeContextMenu appears                                |
+| C19 | Recenter View button            | fitView triggered, all nodes visible                                           |
+| C20 | Re-arrange Graph button         | DAG layout applied, nodes repositioned                                         |
 
 ### Hard (C21–C28)
 
@@ -211,20 +211,20 @@ while (fiber) {
 
 ### Medium (D6–D17)
 
-| ID  | Test                             | Pass Criteria                                                                            |
-| --- | -------------------------------- | ---------------------------------------------------------------------------------------- |
-| D6  | Toggle boolean (Orthographic)    | Checkbox toggles; gRPC `setPinValueByPinID` in log                                       |
-| D7  | Edit integer (Bokeh power 6→8)   | Spinner changes value; gRPC call in log                                                  |
-| D8  | Edit float (FOV 36→40)           | Value changes; gRPC call in log                                                          |
-| D9  | Change dropdown (Stereo output)  | Selection changes; gRPC call in log                                                      |
-| D10 | Quick-access: Camera             | Inspector jumps to Camera node                                                           |
-| D11 | Quick-access: Render Target      | Inspector jumps to Render Target node                                                    |
-| D12 | Quick-access: Environment        | Inspector jumps to Environment node                                                      |
-| D13 | Quick-access: Kernel             | Inspector jumps to Kernel node                                                           |
-| D14 | FileNodeToolbar → Load           | File browser opens (requires file-type node selected)                                    |
-| D15 | FileNodeToolbar → Reload         | Reloads file; gRPC call in log                                                           |
-| D16 | Node type dropdown → change type | Connected node changes type in-place. Screenshot before/after. Reload teapot.orbx after. |
-| D17 | F5 → inspector re-populates      | Values match pre-refresh state                                                           |
+| ID  | Test                             | Pass Criteria                                                                                 |
+| --- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| D6  | Toggle boolean (Orthographic)    | Checkbox toggles; gRPC `setPinValueByPinID` in log                                            |
+| D7  | Edit integer (Bokeh power 6→8)   | Spinner changes value; gRPC call in log                                                       |
+| D8  | Edit float (FOV 36→40)           | Value changes; gRPC call in log                                                               |
+| D9  | Change dropdown (Stereo output)  | Selection changes; gRPC call in log                                                           |
+| D10 | Quick-access: Camera             | Inspector jumps to Camera node                                                                |
+| D11 | Quick-access: Render Target      | Inspector jumps to Render Target node                                                         |
+| D12 | Quick-access: Environment        | Inspector jumps to Environment node                                                           |
+| D13 | Quick-access: Kernel             | Inspector jumps to Kernel node                                                                |
+| D14 | FileNodeToolbar → Load           | File browser opens (requires file-type node selected)                                         |
+| D15 | FileNodeToolbar → Reload         | Reloads file; gRPC call in log                                                                |
+| D16 | Node type dropdown → change type | Connected node changes type in-place. Screenshot before/after. Reload ORBX/teapot.orbx after. |
+| D17 | F5 → inspector re-populates      | Values match pre-refresh state                                                                |
 
 ### Hard (D18–D24)
 
@@ -323,19 +323,19 @@ while (fiber) {
 
 ### Easy (G1–G3)
 
-| ID  | Test   | Pass Criteria                                                             |
-| --- | ------ | ------------------------------------------------------------------------- |
-| G1  | F5     | Scene refreshes (outliner + graph + inspector rebuild)                    |
-| G2  | Escape | Deselects nodes / closes open menu / closes dialog                        |
-| G3  | Delete | Deletes selected node. Screenshot before/after. Reload teapot.orbx after. |
+| ID  | Test   | Pass Criteria                                                                  |
+| --- | ------ | ------------------------------------------------------------------------------ |
+| G1  | F5     | Scene refreshes (outliner + graph + inspector rebuild)                         |
+| G2  | Escape | Deselects nodes / closes open menu / closes dialog                             |
+| G3  | Delete | Deletes selected node. Screenshot before/after. Reload ORBX/teapot.orbx after. |
 
 ### Medium (G4–G9)
 
 | ID  | Test            | Pass Criteria                                                        |
 | --- | --------------- | -------------------------------------------------------------------- |
 | G4  | Ctrl+F          | Search dialog opens in Node Graph                                    |
-| G5  | Ctrl+C / Ctrl+V | Node copied then pasted. Screenshot. Reload teapot.orbx after.       |
-| G6  | Ctrl+X / Ctrl+V | Node cut then pasted. Screenshot. Reload teapot.orbx after.          |
+| G5  | Ctrl+C / Ctrl+V | Node copied then pasted. Screenshot. Reload ORBX/teapot.orbx after.  |
+| G6  | Ctrl+X / Ctrl+V | Node cut then pasted. Screenshot. Reload ORBX/teapot.orbx after.     |
 | G7  | Ctrl+Z / Ctrl+Y | Undo/redo menu items present (correctly disabled if not implemented) |
 | G8  | Ctrl+,          | Preferences dialog opens                                             |
 | G9  | F1              | Help/documentation handler fires                                     |
@@ -414,7 +414,7 @@ while (fiber) {
 | **2: Medium** (71) | H4–H6, B8–B14, D6–D17, G4–G9, C8–C20, A8–A15, F5+F7–F10, E5–E17, I3–I6       |
 | **3: Hard** (47)   | H7–H8, B15–B18, D18–D24, G10–G12, C21–C28, A16–A21, F11–F14, E18–E26, I7–I10 |
 
-> Destructive tests last within each pass. Reload `teapot.orbx` after each.
+> Destructive tests last within each pass. Reload `ORBX/teapot.orbx` after each.
 
 ---
 
@@ -449,12 +449,12 @@ while (fiber) {
 
 ### Keyboard Shortcuts (G13–G16)
 
-| ID  | Test                           | Pass Criteria                                |
-| --- | ------------------------------ | -------------------------------------------- |
-| G13 | F11 → fullscreen               | Fullscreen toggles                           |
-| G14 | Ctrl+N → new scene             | New scene created (reload teapot.orbx after) |
-| G15 | Ctrl+Shift+S → Save As         | Save As dialog opens                         |
-| G16 | Ctrl+Shift+R → run last script | Script handler fires                         |
+| ID  | Test                           | Pass Criteria                                     |
+| --- | ------------------------------ | ------------------------------------------------- |
+| G13 | F11 → fullscreen               | Fullscreen toggles                                |
+| G14 | Ctrl+N → new scene             | New scene created (reload ORBX/teapot.orbx after) |
+| G15 | Ctrl+Shift+S → Save As         | Save As dialog opens                              |
+| G16 | Ctrl+Shift+R → run last script | Script handler fires                              |
 
 ### Layout & Status (H9–H10)
 

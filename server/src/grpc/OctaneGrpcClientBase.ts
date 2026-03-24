@@ -114,13 +114,24 @@ function grpcLog(prefix: string, service: string, method: string, data?: any): v
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getProtoDir, USE_ALPHA5_API, USE_BETA2_API, IS_PASSTHROUGH } =
-  require('../../../api-version.config.js') as {
-    getProtoDir: () => string;
+const apiVersionConfig = require('../../../api-version.config.js') as {
+  apiVersionState: {
+    API_VERSION: string;
     USE_ALPHA5_API: boolean;
     USE_BETA2_API: boolean;
     IS_PASSTHROUGH: boolean;
   };
+  getProtoDir: () => string;
+  setApiVersion: (version: string) => { changed: boolean; previousVersion: string };
+  detectApiVersion: (versionNumber: number, versionName?: string) => string;
+};
+
+// Read compat flags from mutable state at call time — not captured as const.
+// This allows runtime auto-detection to update the compat level.
+const { apiVersionState, getProtoDir } = apiVersionConfig;
+const USE_ALPHA5_API = (): boolean => apiVersionState.USE_ALPHA5_API;
+const USE_BETA2_API = (): boolean => apiVersionState.USE_BETA2_API;
+const IS_PASSTHROUGH = (): boolean => apiVersionState.IS_PASSTHROUGH;
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS } =
@@ -150,10 +161,8 @@ const { SERVICE_TO_PROTO_MAP, PROTO_LOADER_OPTIONS, SERVICE_NAMESPACE_PATTERNS }
  *     Team Alpha 5 build — method name renames + field renames + proto_old/.
  */
 
-/** Alpha 5 method name mappings */
+/** Alpha 5 method name mappings (non-pin methods) */
 const ALPHA5_METHOD_NAME_MAP: Record<string, string> = {
-  getPinValueByPinID: 'getPinValue',
-  setPinValueByPinID: 'setPinValue',
   setValueByAttrID: 'setByAttrID',
   getValueByAttrID: 'getByAttrID',
   setValueByIx: 'setByIx',
@@ -163,64 +172,172 @@ const ALPHA5_METHOD_NAME_MAP: Record<string, string> = {
 };
 
 /**
+ * Alpha 5 pin value type dispatch.
+ *
+ * 2026.2 uses a single getPinValueByPinID with an expected_type enum.
+ * Alpha 5 splits this into 24 type-specific methods:
+ *   getPinValue  (bool)   getPinValue1  (float)   getPinValue2  (float_2)
+ *   getPinValue3 (float_3) getPinValue4 (float_4)  getPinValue5  (int32)
+ *   getPinValue6 (int32_2) getPinValue7 (int32_3)  getPinValue8  (int32_4)
+ *   getPinValue9 (MatrixF) getPinValue10(string)   getPinValue11 (ApiFilePath)
+ *   getPinValue12..23 = same types but by name instead of PinId
+ *
+ * Maps PinTypeId (2026.2 expected_type) → { suffix, canonicalField }
+ * where suffix is appended to 'getPinValue'/'setPinValue',
+ * and canonicalField is the oneof field name in getPinValueByXResponse.
+ */
+const ALPHA5_PIN_TYPE_MAP: Record<number, { suffix: string; field: string }> = {
+  // PinTypeId → alpha5 suffix + canonical response field
+  0: { suffix: '', field: 'bool_value' }, // PIN_ID_UNDEFINED → bool default
+  1: { suffix: '', field: 'bool_value' }, // PIN_ID_BOOL
+  3: { suffix: '5', field: 'int_value' }, // PIN_ID_INT
+  4: { suffix: '6', field: 'int2_value' }, // PIN_ID_INT2
+  5: { suffix: '7', field: 'int3_value' }, // PIN_ID_INT3
+  6: { suffix: '8', field: 'int4_value' }, // PIN_ID_INT4
+  9: { suffix: '1', field: 'float_value' }, // PIN_ID_FLOAT
+  90: { suffix: '2', field: 'float2_value' }, // PIN_ID_FLOAT2
+  11: { suffix: '3', field: 'float3_value' }, // PIN_ID_FLOAT3
+  12: { suffix: '4', field: 'float4_value' }, // PIN_ID_FLOAT4
+  13: { suffix: '9', field: 'matrix_value' }, // PIN_ID_MATRIX
+  14: { suffix: '10', field: 'string_value' }, // PIN_ID_STRING
+  15: { suffix: '11', field: 'file_path_value' }, // PIN_ID_FILEPATH
+};
+
+/**
+ * Typed value field names used in 2026.2 pin value requests/responses.
+ * Alpha 5 collapses these into a single generic 'value' field.
+ */
+const TYPED_VALUE_FIELDS = [
+  'bool_value',
+  'int_value',
+  'int2_value',
+  'int3_value',
+  'int4_value',
+  'long_value',
+  'long2_value',
+  'float_value',
+  'float2_value',
+  'float3_value',
+  'float4_value',
+  'string_value',
+] as const;
+
+/** Collapse typed value fields (bool_value, float_value, etc.) into generic 'value'. */
+function collapseTypedValue(params: Record<string, unknown>): void {
+  for (const field of TYPED_VALUE_FIELDS) {
+    if (field in params) {
+      params.value = params[field];
+      delete params[field];
+      break;
+    }
+  }
+}
+
+/**
+ * Value get/set methods that use item_ref instead of objectPtr.
+ * Shared by both Beta 2 and Alpha 5 compat layers.
+ */
+const ITEM_REF_METHODS = new Set([
+  'setValueByAttrID',
+  'getValueByAttrID',
+  'setValueByIx',
+  'getValueByIx',
+  'setValueByName',
+  'getValueByName',
+]);
+
+/**
+ * Pin info methods that use nodePinInfoRef instead of objectPtr.
+ * Beta 2 and Alpha 5 protos use the original field name.
+ */
+const PIN_INFO_REF_METHODS = new Set([
+  'deleteNodePinInfo',
+  'updateNodePinInfo',
+  'getNodePinInfo',
+  'getApiNodePinInfo',
+]);
+
+/**
  * Translate a canonical method name to the target API version's equivalent.
  * Callers always use canonical (2026.2) names; this handles the rest.
+ *
+ * For alpha5 pin value methods, params.expected_type drives type dispatch
+ * to the correct getPinValue{N} / setPinValue{N} method.
  */
-export function getCompatibleMethodName(methodName: string): string {
-  if (IS_PASSTHROUGH || USE_BETA2_API) return methodName; // Beta 2 uses same method names as 2026.2
-  if (USE_ALPHA5_API) return ALPHA5_METHOD_NAME_MAP[methodName] ?? methodName;
-  return methodName;
+export function getCompatibleMethodName(
+  methodName: string,
+  params?: Record<string, unknown>
+): string {
+  if (IS_PASSTHROUGH() || USE_BETA2_API()) return methodName;
+  if (!USE_ALPHA5_API()) return methodName;
+
+  // Alpha 5 pin value dispatch: getPinValueByPinID → getPinValue{N}
+  if (methodName === 'getPinValueByPinID' || methodName === 'setPinValueByPinID') {
+    const base = methodName === 'getPinValueByPinID' ? 'getPinValue' : 'setPinValue';
+    const expectedType = Number(params?.expected_type ?? 0);
+    const mapping = ALPHA5_PIN_TYPE_MAP[expectedType];
+    return base + (mapping?.suffix ?? '');
+  }
+
+  // Alpha 5 pin value by name: getPinValueByName → getPinValue{12+N}
+  if (methodName === 'getPinValueByName' || methodName === 'setPinValueByName') {
+    const base = methodName === 'getPinValueByName' ? 'getPinValue' : 'setPinValue';
+    const expectedType = Number(params?.expected_type ?? 0);
+    const mapping = ALPHA5_PIN_TYPE_MAP[expectedType];
+    if (mapping) {
+      // byName variants are offset +12 from byPinId variants
+      const suffixNum = mapping.suffix === '' ? 12 : Number(mapping.suffix) + 12;
+      return base + String(suffixNum);
+    }
+    return base + '12'; // default to bool by name
+  }
+
+  // Alpha 5 pin value by index: getPinValueByIx → getPinValueIx{N}
+  if (methodName === 'getPinValueByIx' || methodName === 'setPinValueByIx') {
+    const base = methodName === 'getPinValueByIx' ? 'getPinValueIx' : 'setPinValueIx';
+    const expectedType = Number(params?.expected_type ?? 0);
+    const mapping = ALPHA5_PIN_TYPE_MAP[expectedType];
+    return base + (mapping?.suffix ?? '');
+  }
+
+  // Non-pin method renames
+  return ALPHA5_METHOD_NAME_MAP[methodName] ?? methodName;
 }
 
 /**
  * Transform request parameters for API version compatibility.
- * Called with the ORIGINAL (Beta 2) method name, before method name translation.
+ * This is the SINGLE transform path — callMethod() calls this.
+ * Callers must send correct proto field names (e.g. nodePinInfoRef, not objectPtr).
+ * 2026.2 is pure pass-through — zero transforms.
  */
 export function transformRequestParams(
   methodName: string,
   params: Record<string, unknown>
 ): Record<string, unknown> {
   // 2026.2: pure pass-through, zero transforms.
-  if (IS_PASSTHROUGH) return params;
+  if (IS_PASSTHROUGH()) return params;
 
-  // Beta 2 compat: team Beta 2 build uses item_ref in value get/set methods.
-  // Same method names, same proto dir — only rename objectPtr→item_ref for these.
-  if (USE_BETA2_API) {
-    const BETA2_ITEM_REF_METHODS = new Set([
-      'setValueByAttrID',
-      'getValueByAttrID',
-      'setValueByIx',
-      'getValueByIx',
-      'setValueByName',
-      'getValueByName',
-    ]);
-    if (BETA2_ITEM_REF_METHODS.has(methodName) && 'objectPtr' in params) {
-      const transformed: Record<string, unknown> = { ...params };
-      transformed.item_ref = transformed.objectPtr;
-      delete transformed.objectPtr;
-      return transformed;
-    }
-    return params;
-  }
-
-  // Alpha 5 compat below
-  if (!USE_ALPHA5_API) return params;
-
-  // Alpha 5 also uses item_ref (not objectPtr) for value get/set methods — same as Beta 2.
-  const ALPHA5_ITEM_REF_METHODS = new Set([
-    'setValueByAttrID',
-    'getValueByAttrID',
-    'setValueByIx',
-    'getValueByIx',
-    'setValueByName',
-    'getValueByName',
-  ]);
-  if (ALPHA5_ITEM_REF_METHODS.has(methodName) && 'objectPtr' in params) {
+  // Beta 2 + Alpha 5: value get/set methods use item_ref instead of objectPtr.
+  if (ITEM_REF_METHODS.has(methodName) && 'objectPtr' in params) {
     const transformed: Record<string, unknown> = { ...params };
     transformed.item_ref = transformed.objectPtr;
     delete transformed.objectPtr;
     return transformed;
   }
+
+  // Beta 2 + Alpha 5: pin info methods use nodePinInfoRef instead of objectPtr.
+  if (PIN_INFO_REF_METHODS.has(methodName) && 'objectPtr' in params) {
+    const transformed: Record<string, unknown> = { ...params };
+    transformed.nodePinInfoRef = transformed.objectPtr;
+    delete transformed.objectPtr;
+    return transformed;
+  }
+
+  // Beta 2 has no further transforms beyond the renames above.
+  if (USE_BETA2_API()) return params;
+
+  // Alpha 5 compat below
+  if (!USE_ALPHA5_API()) return params;
 
   // getPinValueByPinID/setPinValueByPinID → getPinValue/setPinValue
   // Beta 2 uses: item_ref, pin_id, expected_type, typed values (bool_value, int_value, etc.)
@@ -245,29 +362,25 @@ export function transformRequestParams(
       delete transformed.expected_type;
     }
 
-    // Typed value fields → generic 'value' (for set calls)
-    const valueFields = [
-      'bool_value',
-      'int_value',
-      'int2_value',
-      'int3_value',
-      'int4_value',
-      'long_value',
-      'long2_value',
-      'float_value',
-      'float2_value',
-      'float3_value',
-      'float4_value',
-      'string_value',
-    ];
-    for (const field of valueFields) {
-      if (field in transformed) {
-        transformed.value = transformed[field];
-        delete transformed[field];
-        break;
-      }
-    }
+    collapseTypedValue(transformed);
+    return transformed;
+  }
 
+  // getPinValueByName/setPinValueByName → getPinValue12..23
+  // Alpha 5 uses: objectPtr, name, no expected_type, generic value
+  if (methodName === 'getPinValueByName' || methodName === 'setPinValueByName') {
+    const transformed: Record<string, unknown> = { ...params };
+    delete transformed.expected_type;
+    collapseTypedValue(transformed);
+    return transformed;
+  }
+
+  // getPinValueByIx/setPinValueByIx → getPinValueIx{N}
+  // Alpha 5 uses: objectPtr, index, no expected_type, generic value
+  if (methodName === 'getPinValueByIx' || methodName === 'setPinValueByIx') {
+    const transformed: Record<string, unknown> = { ...params };
+    delete transformed.expected_type;
+    collapseTypedValue(transformed);
     return transformed;
   }
 
@@ -481,10 +594,10 @@ export class OctaneGrpcClientBase {
     params: any = {},
     options: GrpcCallOptions = {}
   ): Promise<any> {
-    // API version compat: transform params first (uses original method name),
-    // then translate the method name for the wire call
-    const compatParams = transformRequestParams(methodName, params);
-    const compatMethod = getCompatibleMethodName(methodName);
+    // API version compat: translate method name first (needs original params for
+    // alpha5 pin type dispatch), then transform params for the wire call.
+    const compatMethod = getCompatibleMethodName(methodName, params);
+    const compatParams = transformRequestParams(methodName, params, serviceName);
 
     const service = this.getService(serviceName);
     const method = service[compatMethod];
@@ -530,6 +643,61 @@ export class OctaneGrpcClientBase {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Auto-detect API version from the connected Octane instance.
+   *
+   * Queries octaneVersion + octaneName (version-agnostic RPCs), parses the
+   * response, and updates the global compat flags. If the proto dir changes
+   * (alpha5 ↔ 2026.2), clears loaded services so they reload with the
+   * correct protos on next access.
+   *
+   * Safe to call multiple times — no-ops if version hasn't changed.
+   *
+   * @returns Detected version string and whether it changed
+   */
+  async detectAndSetApiVersion(): Promise<{
+    detectedVersion: string;
+    changed: boolean;
+    versionNumber: number;
+    versionName: string;
+  }> {
+    // octaneVersion and octaneName are identical across all API versions
+    const [versionResp, nameResp] = await Promise.all([
+      this.callMethod('ApiInfo', 'octaneVersion', {}, { timeout: 5000 }),
+      this.callMethod('ApiInfo', 'octaneName', {}, { timeout: 5000 }),
+    ]);
+
+    const versionNumber = versionResp?.result ?? 0;
+    const versionName = nameResp?.result ?? '';
+
+    const detected = apiVersionConfig.detectApiVersion(versionNumber, versionName);
+    const prevProtoDir = getProtoDir();
+    const { changed } = apiVersionConfig.setApiVersion(detected);
+    const newProtoDir = getProtoDir();
+
+    // If proto dir changed, clear loaded services — they'll reload from the
+    // correct proto dir on next getService() call.
+    if (changed && prevProtoDir !== newProtoDir) {
+      grpcLog('INFO', 'detectApiVersion', 'protoDir changed', {
+        from: prevProtoDir,
+        to: newProtoDir,
+      });
+      this.services.clear();
+      this.packageDefinition = null;
+      this.protoDescriptor = null;
+    }
+
+    if (changed) {
+      grpcLog('INFO', 'detectApiVersion', 'version changed', {
+        detected,
+        versionNumber,
+        versionName,
+      });
+    }
+
+    return { detectedVersion: detected, changed, versionNumber, versionName };
   }
 
   /**

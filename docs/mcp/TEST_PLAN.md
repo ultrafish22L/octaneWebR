@@ -1,23 +1,19 @@
 # MCP Server — Test Plan
 
-## Rules
+## §1 Rules
 
-1. **Fix one, verify, then next.** No batching fixes. Each fix gets its own verify cycle.
-2. **Fresh state per test.** Reload scene (`load_project`) between destructive tests. For full sweeps, start from empty Octane.
-3. **Detect crashes immediately.** After every gRPC call, check for `ECONNRESET`/`ECONNREFUSED`. If crashed, STOP — log the crash, note which tool caused it, and relaunch Octane before continuing.
-4. **Anything that affects render — check the render.** After any visual change (material, lighting, camera, geometry, clay mode, etc.), call `save_render` → read the PNG → verify the change is visible. Don't trust `success: true` alone.
-5. **Save the scene periodically.** Call `save_project` to a checkpoint path after each major phase. If Octane crashes, you can recover with `load_project` instead of rebuilding from scratch.
-6. **Run unit tests before push.** `npm test` — all tests must pass.
-7. **Lint and build before push.** `npm run lint` + `cd mcp && npm run build`.
-8. **Verify gRPC calls.** Read `log_mcp.log` after tests that change values. Look for `TOOL <name>` entries with timing.
-9. **Don't rationalize failures.** If the render doesn't change, it FAILED. If the response is `{}` or garbage data, it FAILED. Log it and investigate.
+1. **Fresh state per test.** Reload scene (`load_project`) between destructive tests. For full sweeps, start from empty Octane.
+2. **Detect crashes immediately.** After every gRPC call, check for `ECONNRESET`/`ECONNREFUSED`. If crashed, STOP — log the crash, note which tool caused it, and relaunch Octane before continuing.
+3. **Visual changes need render proof.** After any visual change, call `save_render` → read the PNG → verify. Don't trust `success: true` alone.
+4. **Save checkpoints.** Call `save_project` after each major phase. Recover with `load_project` after crashes.
+5. **Before push:** `npm test` + `npm run lint` + `cd mcp && npm run build`.
 
 ### If Octane Crashes
 
 1. Stop immediately. Note which tool/call caused the crash.
-2. Log the crash in `docs/mcp/SCENE_BUILD_LOG.md` with severity.
+2. Log the crash with severity.
 3. Check `log_mcp.log` for the last successful call before the crash.
-4. Relaunch Octane: `"C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe" &`
+4. Relaunch Octane: `octane.exe &`
 5. Wait 15s, verify gRPC: `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`
 6. Reload checkpoint: `load_project` with the last saved .orbx.
 7. Continue testing from where you left off.
@@ -31,7 +27,20 @@
 
 ---
 
-## Test Categories
+## §2 Test Categories
+
+### SMOKE — Full MCP Scene Build (run after any infra change)
+
+Stop everything, start fresh, build a red sphere scene via MCP, check logs at every checkpoint.
+
+1. Stop all servers and preview window
+2. Start server (octaneServGrpc or octane.exe)
+3. Start dev server + preview window
+4. Build red sphere scene with MCP:
+   1. Create RT, start render — check logs
+   2. Set camera to known good position (back and up) — check render
+   3. Create and connect sphere — check logs
+   4. Set sphere material to red — check render + preview + logs
 
 ### A. Smoke Test (run at session start)
 
@@ -39,7 +48,7 @@
 | --- | ----------------------------------------- | -------------------------------- |
 | 1   | `get_octane_version`                      | Returns version string, no error |
 | 2   | `get_device_info`                         | Returns GPU name + memory        |
-| 3   | `load_project` (teapot.orbx)              | Returns success, scene populates |
+| 3   | `load_project` (ORBX/teapot.orbx)         | Returns success, scene populates |
 | 4   | `get_scene_tree`                          | Returns 2+ nodes (mesh + RT)     |
 | 5   | `start_render` → `save_render` → read PNG | Teapot visible in render         |
 
@@ -166,7 +175,7 @@
 
 ---
 
-## Full Sweep Checklist
+## §3 Full Sweep
 
 Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, ~5 minutes wall time.
 
@@ -189,7 +198,7 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 ---
 
-## Known Issues
+## §4 Known Issues
 
 | Tool                 | Issue                                             | Severity  |
 | -------------------- | ------------------------------------------------- | --------- |

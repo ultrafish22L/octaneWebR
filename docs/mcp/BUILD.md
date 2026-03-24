@@ -4,7 +4,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 ---
 
-## Core Principle: Human View First
+## §1 Core Principle: Human View First
 
 **A human is watching.** Get an interesting render on screen as fast as possible. Every MCP call should be driving toward the first visible result. Don't build backstage — build on stage.
 
@@ -14,7 +14,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 ---
 
-## Build Modes
+## §2 Build Modes
 
 **DRESS (Demo):** 1 object at a time, render after each step, hero camera from the start. For presentations. **Default mode** — always use unless told otherwise.
 
@@ -22,7 +22,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 ---
 
-## DRESS Protocol
+## §3 DRESS Protocol
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
@@ -70,10 +70,6 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                                | **FIRST VISUAL — human sees something**                                                                                                |
 | 5    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                  |
 | 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                           | Sharp render                                                                                                                           |
-
-**Why camera before geometry:** `set_camera` is needed to evaluate geometry anyway. Setting it early means the object appears framed the instant it's wired — no black viewport, no lost object, no "where is it?" moment.
-
-**Why geometry before kernel/env:** A sphere with a red material on default DL kernel is more interesting to watch than an empty sky. The human wants to see objects, not infrastructure.
 
 ### Phase 2: Materials & Lighting
 
@@ -131,7 +127,7 @@ Apply as NT_TEX_IMAGE on material albedo pin.
 
 ---
 
-## Setup Order Variants
+## §4 Setup Order Variants
 
 **Demos (Hero Camera First):** Set final camera BEFORE creating objects. Objects pop into the composed frame.
 
@@ -141,7 +137,7 @@ Apply as NT_TEX_IMAGE on material albedo pin.
 
 ---
 
-## NT_GEO_OBJECT Variant
+## §5 NT_GEO_OBJECT Variant
 
 Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 
@@ -149,14 +145,14 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Transform pin:** Pin 3 (NT_TRANSFORM_VALUE).
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
-- **Primitive type change is UNSAFE** — non-deterministic ECONNRESET crash. Use NT_GEO_MESH with .obj files for non-box geometry. Only `sphere_hd.obj` and `floor.obj` are available in `ORBX/assets/`.
+- **Primitive type change is UNSAFE** — non-deterministic ECONNRESET crash. Use NT_GEO_MESH with .obj files for non-box geometry. Only `sphere_hd.obj` and `floor.obj` are available in `ORBX/assets_test/`.
 - **Silent death during connect chains** — Octane can die silently during rapid state mutations even when all calls report success. Check Octane is alive before `start_render`.
 
 Primitive values: Box=1, Sphere=20, Torus=22, Cylinder=4, Cone=3 (full list in `REFERENCE.md`).
 
 ---
 
-## Camera Workflow
+## §6 Camera Workflow
 
 ### Pull-Back Rule
 
@@ -207,7 +203,7 @@ Y = target_Y + D_z * tan(elevation)
 
 ---
 
-## Scene Clear (Delete Method)
+## §7 Scene Clear
 
 `reset_project` triggers save dialog. Instead:
 
@@ -217,7 +213,7 @@ Y = target_Y + D_z * tan(elevation)
 
 ---
 
-## 3D Asset Pipeline (OTOY Studio → Octane)
+## §8 3D Asset Pipeline
 
 **CRITICAL:** The only working domain is `https://otoy.studio/` (NOT `studio.otoy.com`). Navigate to `https://otoy.studio/image-to-3d` for 3D mesh generation. Never click upload buttons (pops OS file dialog) — use "USE URL" toggle + `request_upload_url` instead.
 
@@ -234,41 +230,10 @@ Y = target_Y + D_z * tan(elevation)
 
 **Orient:** Set film aspect first → orbit 3 views → fix rotation → scale 2-3x → frame hero shot.
 
-### OTOY Studio MCP Tools
-
-| Category   | Tools                                                                    | Notes               |
-| ---------- | ------------------------------------------------------------------------ | ------------------- |
-| Image gen  | `generate_image`, `generate_image_pro`, `generate_image_nano`            | Text-to-image       |
-| Image edit | `edit_image`, `edit_image_nano`                                          | Needs image_url     |
-| Upscale    | `upscale_image`, `upscale_video`                                         | 1-4x                |
-| Video gen  | `generate_video_veo3`, `generate_video_kling`, `generate_video_seedance` | Text-to-video       |
-| Animate    | `image_to_video_kling`                                                   | Animate still image |
-| Music      | `generate_music`                                                         | Lyrics + reference  |
-| Utility    | `check_job`, `list_jobs`, `forget_job`, `request_upload_url`             | Job mgmt            |
-
-**3D mesh generation** (Rodin/Hunyuan) requires Chrome MCP — no API exists.
+OTOY Studio tools available via `mcp__otoy-studio__*`. **3D mesh generation** (Rodin/Hunyuan) requires Chrome MCP — no API exists.
 
 ### Texture Prompt Templates
 
 **Diffuse:** `[material] surface, seamless tileable texture, flat orthographic top-down material scan, evenly lit diffuse studio lighting, no shadows no highlights no reflections, PBR albedo map, photorealistic, square 1:1`
 
 **Environment:** `360 degree equirectangular panorama, [scene], high dynamic range, seamless horizon, photorealistic, landscape 16:9`
-
----
-
-## Video Pipeline (OTOY Studio)
-
-Chain clips via start/end frames for seamless continuity. End frame of clip N = start frame of clip N+1.
-
-**Multi-phase pipeline (each with AA gate):**
-
-1. **Writers Room** — narrative, character, world, emotion → showrunner approval
-2. **Storyboard** — keyframes for every beat in one consistent style → AA side-by-side review
-3. **Video Chain** — start/end frame continuity → Kling i2v for frame-faithful, Veo3 for standalone audio moments
-4. **Editor** — final assembly with music, pacing, titles
-
-Lock the story FIRST. Generate ALL hero keyframes before any video gen. Don't submit for video until all frames are consistent. Octane 3D scenes come after the trailer is approved.
-
-**Seed3D reference:** `[object] isolated on pure black background, clean silhouette, soft studio lighting, single centered object, high detail, square 1:1`
-
-**Warning:** AI "panoramas" are NOT equirectangular — use as backdrops, not spherical env maps. Use real HDRIs from Poly Haven.

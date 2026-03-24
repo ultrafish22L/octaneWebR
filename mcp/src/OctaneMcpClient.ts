@@ -255,7 +255,6 @@ const GRPC_CLIENT_PATH = path.join(SERVER_ROOT, 'dist/grpc/OctaneGrpcClientBase'
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires */
 const grpcModule = require(GRPC_CLIENT_PATH) as GrpcModule;
 const GrpcClientBase = grpcModule.OctaneGrpcClientBase;
-const transformParams: TransformObjectPtrParams = grpcModule.transformObjectPtrParams;
 /* eslint-enable */
 
 export class OctaneMcpClient {
@@ -295,6 +294,19 @@ export class OctaneMcpClient {
 
   async initialize(): Promise<void> {
     await this.base.initialize();
+
+    // Auto-detect API version from connected Octane instance.
+    // This must happen before any compat-sensitive calls.
+    try {
+      const { detectedVersion, changed, versionNumber, versionName } =
+        await this.base.detectAndSetApiVersion();
+      mcpLog(
+        `API version: ${detectedVersion} (${versionName}, v${versionNumber})${changed ? ' — compat layer updated' : ''}`,
+        'info'
+      );
+    } catch (e: any) {
+      mcpLog(`API version auto-detect failed (using default 2026.2): ${e.message}`, 'warn');
+    }
 
     // Start callback streaming after gRPC is ready
     try {
@@ -368,17 +380,14 @@ export class OctaneMcpClient {
       // trigger ECONNRESET (because no call was in-flight at the time).
       await this.ensureConnection(service, method);
 
-      const transformed = transformParams(service, method, params);
+      // All param transforms happen inside callMethod() via transformRequestParams.
       const options = timeoutMs ? { timeout: timeoutMs } : {};
       const isVerbose = LEVEL_RANK[LOG_LEVEL] <= LEVEL_RANK['verbose'];
       if (isVerbose)
-        mcpLog(
-          `REQ ${service}.${method} ${JSON.stringify(transformed).substring(0, 500)}`,
-          'verbose'
-        );
+        mcpLog(`REQ ${service}.${method} ${JSON.stringify(params).substring(0, 500)}`, 'verbose');
       const startMs = Date.now();
       const endProfile = profileGrpc(service, method);
-      const result = await this.base.callMethod(service, method, transformed, options);
+      const result = await this.base.callMethod(service, method, params, options);
       endProfile();
       const elapsed = Date.now() - startMs;
       this.lastSuccessMs = Date.now();

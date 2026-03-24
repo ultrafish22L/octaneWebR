@@ -68,36 +68,9 @@ Dimensions come from established academic and industry standards:
 
 ## 3. Dimension Registry
 
-### 3.1 Structure
+Each dimension has: name, aliases (NL triggers), negative/positive labels, source, parameter mappings (with ranges and weights), and observed correlations. See `mcp/src/sega/registry.ts` for full definitions.
 
-```typescript
-interface DimensionDefinition {
-  name: string; // canonical name: "warmth"
-  aliases: string[]; // NL triggers: ["warm", "cozy", "golden", "cool", "cold", "icy"]
-  negativeAliases: string[]; // words that push toward -1: ["cool", "cold", "icy", "clinical"]
-  source: string; // "itten" | "pad" | "cinetech" | "asc" | "craft"
-  description: string; // human-readable: "Color temperature tendency"
-  negativeLabel: string; // "cool"
-  positiveLabel: string; // "warm"
-  parameterMappings: ParameterMapping[]; // how this dimension affects DCC parameters
-  correlations: Correlation[]; // observed relationships with other dimensions
-}
-
-interface ParameterMapping {
-  parameter: string; // "key_light_temperature" | "fill_ratio" | "roughness" etc.
-  range: [number, number]; // parameter value at dimension = [-1, +1]
-  weight: number; // 0-1, how strongly this dimension controls this parameter
-  scope: 'global' | 'hero' | 'light' | 'environment'; // what it applies to
-}
-
-interface Correlation {
-  dimension: string; // other dimension name
-  coefficient: number; // -1 to +1, observed correlation strength
-  note: string; // "warmth and pleasure correlate in most natural scenes"
-}
-```
-
-### 3.2 Seed Dimensions (~15)
+### 3.1 Seed Dimensions (15)
 
 | #   | Name             | Source        | Negative (-1)          | Positive (+1)         | Key Parameters Affected                 |
 | --- | ---------------- | ------------- | ---------------------- | --------------------- | --------------------------------------- |
@@ -189,20 +162,7 @@ Return JSON: { "deltas": {...}, "mode": "absolute"|"relative", "confidence": 0-1
 
 ## 6. Presets
 
-### 6.1 Structure
-
-```typescript
-interface SemanticPreset {
-  name: string; // "vermeer", "blade_runner", "product_clean"
-  category: 'artist' | 'film' | 'genre' | 'mood' | 'user';
-  description: string; // "Warm side-lit intimacy with soft shadows"
-  vector: SemanticVector; // the actual dimension values
-  tags: string[]; // NL trigger words: ["dutch master", "old master", "golden age"]
-  source: string; // "AI-derived from art analysis" | "user-created"
-}
-```
-
-### 6.2 Seed Presets (20-30)
+### 6.1 Seed Presets (25)
 
 **Mood presets**: dramatic, ethereal, natural, studio, noir, golden_hour, moonlit (align with existing suggest_lighting moods)
 
@@ -272,16 +232,7 @@ Warn, never block. The user might genuinely want |0.95| for a specific effect.
 
 ## 9. Per-Object Overrides
 
-Global vector applies scene-wide. Per-object overrides for exceptions:
-
-```typescript
-interface SceneSemanticState {
-  global: SemanticVector; // { warmth: 0.7, contrast: 0.6 }
-  overrides: Map<string, SemanticVector>; // "hero" → { surface_detail: 0.8 }
-}
-```
-
-Effective vector for an object = `global + override`. Most scenes use global only. Override is for "the hero should be more textured than the background."
+Global vector applies scene-wide. Per-object overrides add to global for specific objects (e.g. "hero should be more textured"). Effective vector = `global + override`. Most scenes use global only.
 
 ---
 
@@ -298,69 +249,4 @@ Effective vector for an object = `global + override`. Most scenes use global onl
 | Existing spatial math | Stays as-is, separate concern         | SEGA = intent, spatial = correctness             |
 | Old critique scores   | Replaced by semantic gap vector       | Meaningful vectors instead of arbitrary 1-5      |
 
----
-
-## 11. Implementation Plan
-
-### Phase 1: Foundation (registry + vector engine)
-
-| Step | What                                                                                                   | Depends On |
-| ---- | ------------------------------------------------------------------------------------------------------ | ---------- |
-| 1.1  | Dimension registry data file (~15 dimensions with aliases + parameter mappings)                        | Nothing    |
-| 1.2  | `SemanticVector` type + `SemanticState` class (state management, delta application, undo stack, clamp) | 1.1        |
-| 1.3  | Parameter mapping engine (weighted linear interpolation, multi-dimension resolution, clamping)         | 1.1, 1.2   |
-| 1.4  | Unit tests for mapping engine                                                                          | 1.3        |
-
-### Phase 2: NL Interface + Presets
-
-| Step | What                                                                         | Depends On    |
-| ---- | ---------------------------------------------------------------------------- | ------------- |
-| 2.1  | NL parser prompt (LLM parses speech against registry, returns deltas)        | 1.1           |
-| 2.2  | Preset data file (20-30 mood/genre/artist vectors, LLM-generated + reviewed) | 1.1           |
-| 2.3  | Preset loader (exact match, fuzzy match, tag search)                         | 2.2           |
-| 2.4  | MCP tool: `set_artistic_intent` (accepts NL or preset name or raw vector)    | 1.2, 2.1, 2.3 |
-
-### Phase 3: Measurement + Critique
-
-| Step | What                                                                               | Depends On         |
-| ---- | ---------------------------------------------------------------------------------- | ------------------ |
-| 3.1  | Pixel measurement module (histogram contrast, white point temp, chroma saturation) | Nothing            |
-| 3.2  | VLM semantic estimation prompt (extend existing vision critic)                     | Existing VLM infra |
-| 3.3  | Calibration logic (pixel vs VLM bias correction)                                   | 3.1, 3.2           |
-| 3.4  | Semantic gap vector computation + convergence detection                            | 1.2, 3.1, 3.2      |
-| 3.5  | Replace old `critique_render` with semantic critique                               | 3.4                |
-
-### Phase 4: Polish
-
-| Step | What                                                                  | Depends On |
-| ---- | --------------------------------------------------------------------- | ---------- |
-| 4.1  | Berlyne warnings                                                      | 1.2        |
-| 4.2  | Per-object override support                                           | 1.2        |
-| 4.3  | Preset save/load (user creates presets from current vector)           | 2.2        |
-| 4.4  | Correlation documentation (observed relationships between dimensions) | Usage data |
-
-### Key Risk
-
-Getting the parameter mappings right. The dimension-to-parameter values (e.g., contrast 0.7 → key:fill 5.6:1) need to produce good-looking results on first pass. Plan: generate initial mappings from industry standards (ASC Manual ratios, CineTechBench measurements), test empirically with real Octane renders, tune.
-
----
-
-## 12. File Structure
-
-```
-mcp/src/
-  sega/
-    registry.ts          # DimensionDefinition[], seed dimensions
-    presets.ts           # SemanticPreset[], mood/genre/artist vectors
-    SemanticState.ts     # SemanticVector ops, delta, undo, clamp, per-object
-    MappingEngine.ts     # Dimension → parameter resolution
-    NLParser.ts          # Prompt builder for NL → delta vector
-    PixelAnalyzer.ts     # Histogram, white point, chroma measurement
-    SemanticCritic.ts    # Gap vector, convergence, Berlyne warnings
-    index.ts             # Public API
-  sega/__tests__/
-    registry.test.ts
-    MappingEngine.test.ts
-    SemanticState.test.ts
-    PixelAnalyzer.test.ts
-```
+Implementation complete — see `mcp/src/sega/` for code. File structure derivable from the directory.

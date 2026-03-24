@@ -32,7 +32,7 @@ Implemented across all 3 themes (octane, vibe, debug).
 - `client/src/styles/theme-octane.css` — depth variables
 - `client/src/styles/theme-vibe.css` — depth variables
 - `client/src/styles/theme-octane-debug.css` — depth variables
-- `client/src/components/NodeInspector/index.tsx` — `ParameterGroup` level prop
+- `client/src/components/NodeInspector/index.tsx` — `NodeParameter` applies `data-depth={level}`
 
 ---
 
@@ -76,7 +76,7 @@ Some nodes (e.g., NT_TRANSFORM_VALUE) have a handle and pin type but no `attrInf
 
 - **"Add input" button** after the node header (calls `addMovableInput` → increments `A_PIN_COUNT`)
 - **Per-pin "✕" delete and "≡" move** (up/down dropdown) buttons INLINE with the dropdown
-- **Pin names** use "Input N:" prefix from `MOVABLE_INPUT_TYPES` inputName
+- **Pin names** use "Input N:" prefix from `OctaneCacheService.getMovableInputInfo()`
 
 ### Layout
 
@@ -86,5 +86,5 @@ File toolbar for mesh nodes goes INSIDE the collapsed section (only shows when e
 
 ### Files
 
-- `client/src/types/OctaneTypes.ts` — `MOVABLE_INPUT_TYPES` maps all 23 types
+- `OctaneCacheService.getMovableInputInfo(nodeType)` — runtime API-driven, replaces old hardcoded map
 - `client/src/components/NodeInspector/index.tsx` — `AddInputButton` and `MovableInputPinActions` components

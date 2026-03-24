@@ -17,11 +17,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { IncomingMessage } from 'http';
 
-import {
-  OctaneGrpcClientBase,
-  transformObjectPtrParams,
-  initGrpcLog,
-} from './server/src/grpc/OctaneGrpcClientBase';
+import { OctaneGrpcClientBase, initGrpcLog } from './server/src/grpc/OctaneGrpcClientBase';
 import { CallbackStreamManager, NewImageEvent } from './mcp/src/shared/CallbackStreamManager';
 
 // ============================================================================
@@ -242,6 +238,20 @@ class OctaneGrpcClient {
     // Vite uses lazy loading — no batch proto loading
     await this.base.initialize();
     slog.info(`Proto files ready for lazy loading`);
+
+    // Auto-detect API version from connected Octane instance.
+    // Switches compat layer (method names, field transforms, proto dir)
+    // so the Vite proxy works with Alpha 5, Beta 2, or 2026.2.
+    try {
+      const { detectedVersion, changed } = await this.base.detectAndSetApiVersion();
+      if (changed) {
+        slog.info(`API version auto-detected: ${detectedVersion} — reloading protos`);
+      } else {
+        slog.info(`API version confirmed: ${detectedVersion}`);
+      }
+    } catch (e: any) {
+      slog.warn(`API version detection failed (using default 2026.2): ${e.message}`);
+    }
   }
 
   async callMethod(
@@ -344,11 +354,38 @@ class OctaneGrpcClient {
 
         ws.on('message', (raw: Buffer | string) => {
           try {
-            const msg = JSON.parse(String(raw));
+            // Binary wire format: [4B headerLen LE] [JSON header] [optional pixel payload]
+            const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+            if (buf.length < 4) return;
+            const headerLen = buf.readUInt32LE(0);
+            if (buf.length < 4 + headerLen) return;
+            const msg = JSON.parse(buf.slice(4, 4 + headerLen).toString('utf8'));
+            const pixelPayload = buf.length > 4 + headerLen ? buf.slice(4 + headerLen) : null;
+
             if (msg.type === 'newImage') {
-              // Relay sends notification only — fetch pixels on demand
-              slog.info(`[Relay] newImage received, isGrabbingFrame=${this.isGrabbingFrame}`);
-              if (!this.isGrabbingFrame) {
+              if (pixelPayload && msg.renderImage) {
+                // Alpha 5: pixel data in binary payload
+                const ri = msg.renderImage;
+                this.notifyCallbacks({
+                  callback_source: ri.callback_source || 'grpc',
+                  callback_id: ri.callback_id || this.callbackId,
+                  user_data: ri.user_data ?? 0,
+                  render_images: {
+                    data: [
+                      {
+                        // Match Alpha 5 ApiRenderImage structure:
+                        // buffer.data = pixel bytes, size = {x: width, y: height}
+                        buffer: { data: pixelPayload, size: pixelPayload.length },
+                        size: { x: ri.width, y: ri.height },
+                        type: ri.format,
+                        pitch: ri.pitch,
+                        sharedSurface: ri.sharedSurface,
+                      },
+                    ],
+                  },
+                });
+              } else if (!this.isGrabbingFrame) {
+                // 2026.2: no pixels in callback — fetch via grabRenderResult
                 this.isGrabbingFrame = true;
                 this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
                   .then((result: any) => {
@@ -1079,10 +1116,8 @@ export function octaneGrpcPlugin(): Plugin {
           req.on('end', async () => {
             if (aborted) return;
             try {
-              let params = body ? JSON.parse(body) : {};
-
-              // Unified parameter transforms (shared with Express server)
-              params = transformObjectPtrParams(service, method, params);
+              const params = body ? JSON.parse(body) : {};
+              // All param transforms happen inside callMethod() via transformRequestParams.
 
               const isHighFreq = method === 'getValueByAttrID';
               // DEBUG: log mutations (set*, create*, destroy, update, connect, disconnect, etc.)

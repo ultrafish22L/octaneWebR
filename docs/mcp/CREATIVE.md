@@ -4,7 +4,7 @@ How to make scenes look good. For values and pin layouts, see `REFERENCE.md`. Fo
 
 ---
 
-## Lighting
+## §1 Lighting
 
 ### Three-Light Setup
 
@@ -57,7 +57,7 @@ Volumetric medium FIRST: NT_MED_SCATTERING on env + NT_KERN_PATHTRACING. Simple 
 
 ---
 
-## Quality Bar
+## §2 Quality Bar
 
 - Below B+ → REJECT. "Would a stranger stop scrolling?" is the bar.
 - Two meshes in empty void = F-tier regardless of texture quality. Build the STAGE first (environment, depth, atmosphere), then place heroes.
@@ -65,7 +65,7 @@ Volumetric medium FIRST: NT_MED_SCATTERING on env + NT_KERN_PATHTRACING. Simple 
 
 ---
 
-## Camera & Composition
+## §3 Camera & Composition
 
 **Framing is 70% of the result.** Camera + object placement >> materials + lighting.
 
@@ -118,7 +118,7 @@ Low camera = massive. High camera = miniature. 1 unit = 1 meter. Human eye ~1.5,
 
 ---
 
-## Color & Mood
+## §4 Color & Mood
 
 | Pair             | Mood                      |
 | ---------------- | ------------------------- |
@@ -134,7 +134,7 @@ Low camera = massive. High camera = miniature. 1 unit = 1 meter. Human eye ~1.5,
 
 ---
 
-## Anti-CG Checklist
+## §5 Anti-CG Checklist
 
 Run before saving final renders:
 
@@ -150,7 +150,7 @@ Run before saving final renders:
 
 ---
 
-## Environment Types
+## §6 Environment Types
 
 | Type                  | Provides Lighting? | Notes                                        |
 | --------------------- | ------------------ | -------------------------------------------- |
@@ -161,7 +161,7 @@ Run before saving final renders:
 
 ---
 
-## Kernel Selection
+## §7 Kernel Selection
 
 | Kernel              | Best For                          | Speed                     |
 | ------------------- | --------------------------------- | ------------------------- |
@@ -174,17 +174,3 @@ PMC + Spectral AI denoiser = incompatible — use OIDN. Denoiser OFF during buil
 ### Caustics
 
 PMC for better convergence. Small lights = sharper caustics. Disable "fake shadows" on specular materials for real dispersion.
-
----
-
-## Demo Presentation (DRESS)
-
-Build order: object on screen ASAP → mood → beauty.
-
-1. **Camera + first geometry + loud material** — human sees something framed immediately
-2. **Environment** — contrasting sky/lighting appears
-3. **Real materials** — each object "dresses up"
-4. **Additional objects** — one at a time, render between each
-5. **Polish** — floor, lighting tweaks, hero camera, final render
-
-Every step renders. Every render is a visible, meaningful change. See `BUILD.md` for exact protocol.

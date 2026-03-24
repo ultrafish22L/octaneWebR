@@ -2,15 +2,15 @@
 
 Get the browser UI and AI scene builder running in under 5 minutes.
 
-OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 67 tools for controlling Octane.
+OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 78 tools for controlling Octane.
 
-## What You Need
+## §1 What You Need
 
 - **Octane Render Studio 2026.1+** with gRPC enabled (gRPC is how programs talk to Octane remotely)
 - **Node.js 18+**
 - **Claude Desktop or Claude Code CLI** (for MCP / AI scene building)
 
-## Step 1: Enable gRPC in Octane
+## §2 Enable gRPC in Octane
 
 Open Octane → File → Preferences → GRPC API:
 
@@ -19,7 +19,7 @@ Open Octane → File → Preferences → GRPC API:
 
 Restart Octane after changing this setting.
 
-## Step 2: Install
+## §3 Install
 
 ```bash
 git clone <repo-url> octaneWebR
@@ -28,7 +28,7 @@ npm install
 cd mcp && npm install && cd ..
 ```
 
-## Step 3: Build the MCP Server
+## §4 Build MCP Server
 
 ```bash
 cd mcp && npm run build && cd ..
@@ -36,15 +36,13 @@ cd mcp && npm run build && cd ..
 
 This compiles to `mcp/dist/index.js`. You only need to rebuild when MCP code changes.
 
-## Step 4: Launch Everything
+## §5 Launch
 
 **Order matters.** Octane must be running before anything connects to it.
 
 ```bash
 # 1. Launch Octane (adjust path to your installation)
-#    On Windows: just double-click octane.exe, or run it from a terminal
-#    On bash/WSL: "C:/path/to/octane.exe" &
-"C:/path/to/octane.exe"
+octane.exe
 
 # 2. Wait for gRPC to start (~10-15 seconds)
 #    Verify (PowerShell): Get-NetTCPConnection -LocalPort 51022
@@ -55,14 +53,14 @@ npm run dev
 
 Open **http://localhost:43929** in your browser.
 
-## Step 5: Verify It Works
+## §6 Verify
 
 1. In Octane, load any scene (or create a Render Target)
 2. In the browser, the scene tree should populate in the left panel
 3. The render viewport should show a live image
 4. Try selecting a node — the inspector panel shows its properties
 
-## Using the AI Scene Builder (MCP)
+## §7 MCP Setup
 
 Open Claude Code CLI or Claude Desktop's code tab in the `octaneWebR` directory. Both read `.mcp.json` automatically and connect to the Octane MCP server. Claude Desktop's code tab is the primary development environment for this project.
 
@@ -84,11 +82,11 @@ The `.mcp.json` registers three MCP servers:
 
 | Server          | What It Does                                                   |
 | --------------- | -------------------------------------------------------------- |
-| **octane**      | Scene control — nodes, materials, camera, rendering (67 tools) |
+| **octane**      | Scene control — nodes, materials, camera, rendering (78 tools) |
 | **octane-docs** | Search Octane's API documentation and examples                 |
 | **otoy-studio** | Generate AI images, 3D assets, video, and music                |
 
-## Running Just the Web UI (No AI)
+## §8 Web UI Only
 
 If you only want the browser interface:
 
@@ -100,7 +98,7 @@ npm run dev
 
 Open http://localhost:43929. You get a full scene outliner, node graph editor, parameter inspector, and live render viewport.
 
-## Running Just MCP (No Web UI)
+## §9 MCP Only
 
 If you only want AI control without the browser:
 
@@ -116,7 +114,7 @@ cd mcp && npm run build && cd ..
 
 Claude can build scenes, render, and save images without octaneWebR running.
 
-## Environment Variables
+## §10 Environment Variables
 
 | Variable            | Default     | What It Does                                            |
 | ------------------- | ----------- | ------------------------------------------------------- |
@@ -139,7 +137,7 @@ Claude can build scenes, render, and save images without octaneWebR running.
 
 ## Next Steps
 
-- **[docs/mcp/README.md](docs/mcp/README.md)** — Full MCP user guide with all 67 tools, tips, and pitfalls
+- **[docs/mcp/README.md](docs/mcp/README.md)** — Full MCP user guide with all 78 tools, tips, and pitfalls
 - **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Scene building protocols (DRESS demo mode, SPEED batch mode)
 - **[docs/mcp/CREATIVE.md](docs/mcp/CREATIVE.md)** — Lighting, materials, composition guide
 - **[docs/mcp/REFERENCE.md](docs/mcp/REFERENCE.md)** — Node types, pin layouts, attribute IDs

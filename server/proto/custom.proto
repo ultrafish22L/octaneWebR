@@ -45,7 +45,7 @@ message ApiNodePinInfoEx
     // Request packet corresponding to '[in] parameters in ApiNodePinInfo::create'
     message deleteNodePinInfoRequest
     {
-        ObjectRef nodePinInfoRef = 1;
+        ObjectRef objectPtr = 1;
     }
 
     // Response packet corresponding to '[out] parameters in 'ApiNodePinInfo::create'
@@ -56,7 +56,7 @@ message ApiNodePinInfoEx
 
     message updateNodePinInfoRequest
     {
-        ObjectRef nodePinInfoRef = 1;
+        ObjectRef objectPtr = 1;
         ApiNodePinInfo nodePinInfo = 2;
     }
 

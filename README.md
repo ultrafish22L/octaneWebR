@@ -24,7 +24,7 @@ npm run dev                                      # Start web UI (port 43929)
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
 │  Vite Dev Server    │              │   MCP Server       │
 │  HTTP proxy + WS    │              │   stdio transport   │
-│  port 43929         │              │   67 tools          │
+│  port 43929         │              │   78 tools          │
 └──────────┬──────────┘              └─────────┬──────────┘
            │ HTTP/WS                            │ stdio
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
@@ -51,7 +51,7 @@ Both paths use the same shared gRPC client with a unified compatibility layer fo
 
 ### MCP Server (AI Scene Builder)
 
-67 tools let AI agents control Octane through natural language:
+78 tools let AI agents control Octane through natural language:
 
 | Category            | Count | What They Do                                                                  |
 | ------------------- | ----- | ----------------------------------------------------------------------------- |
@@ -102,12 +102,13 @@ octaneWebR/
 │   └── styles/                  # CSS themes (134 variables each)
 ├── server/proto/                # Protobuf definitions (Beta 2)
 ├── shared/                      # Shared constants (AttrType, AttributeId, etc.)
-├── mcp/src/                     # MCP server (67 tools, SceneCache, ApiCache)
+├── mcp/src/                     # MCP server (78 tools, SceneCache, ApiCache)
 │   ├── tools/                   # Tool implementations by category
 │   ├── types/                   # TypeScript interfaces (GrpcClientTypes)
 │   └── __tests__/               # Unit tests
 ├── vite-plugin-octane-grpc.ts   # Vite plugin: proxy, WebSocket, file browser
 ├── .mcp.json                    # MCP server configuration
+├── temp/                        # Renders, test output, scratch (not committed)
 └── docs/
     ├── mcp/                     # MCP docs: user guide, reference, build protocols, creative
     ├── project/                 # Architecture, changelog, improvements, test plan
@@ -132,7 +133,7 @@ octaneWebR/
 npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint
-npm test             # 133 tests (Vitest)
+npm test             # 281 tests (Vitest)
 npx tsc --noEmit     # Type check
 ```
 
@@ -143,7 +144,7 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 | Doc                                                            | What's In It                                                    |
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
 | [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — get everything running in 5 minutes          |
-| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 67 tools, tips, pitfalls          |
+| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls          |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
 | [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (demo) and SPEED (batch) workflows      |
 | [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition, OTOY Studio  |
@@ -161,4 +162,4 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
 
-**Version 2.2.2** | Active Development
+Active Development

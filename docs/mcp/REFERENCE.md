@@ -2,25 +2,25 @@
 
 Lookup tables for MCP scene building. Don't read front-to-back — find what you need.
 
-**Live type system discovery**: Use MCP resources instead of memorizing values. See [MCP Resources](#mcp-resources) at the end of this file.
+**Live type system discovery**: Use MCP resources instead of memorizing values (§11).
 
 Hardcoded protocol constants (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS) live in `shared/OctaneConstants.ts`.
 
 ---
 
-## Paths
+## §1 Paths
 
-| Path                                         | Purpose             |
-| -------------------------------------------- | ------------------- |
-| `C:/otoyla/GRPC/dev/octaneWebR/renders/`     | Render output       |
-| `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/` | Meshes and textures |
+| Path                | Purpose             |
+| ------------------- | ------------------- |
+| `temp/renders/`     | Render output       |
+| `ORBX/assets_test/` | Meshes and textures |
 
 Always use absolute paths for `A_FILENAME`. Relative paths depend on Octane's working dir.
 
 ### File Loading Pattern
 
 ```
-set_attribute(handle, A_FILENAME=34, AT_STRING=14, "C:/otoyla/.../file.obj")
+set_attribute(handle, A_FILENAME=34, AT_STRING=14, "/absolute/path/to/file.obj")
 set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # CRITICAL for meshes
 ```
 
@@ -28,7 +28,7 @@ Image textures don't need A_RELOAD — they load on connect.
 
 ---
 
-## Attributes
+## §2 Attributes
 
 ### Transform (all AT_FLOAT3=11)
 
@@ -53,7 +53,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 
 ---
 
-## RT Pin Layout (NT_RENDERTARGET)
+## §3 RT Pin Layout
 
 | Pin | Name        | Type            | Notes                                            |
 | --- | ----------- | --------------- | ------------------------------------------------ |
@@ -69,7 +69,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 
 ---
 
-## Node Types (common)
+## §4 Node Types
 
 | Category     | Type Key                 | ID  | Description               |
 | ------------ | ------------------------ | --- | ------------------------- |
@@ -120,7 +120,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 
 ---
 
-## Connection Patterns
+## §5 Connection Patterns
 
 ### Wiring Chain
 
@@ -158,7 +158,7 @@ Environment → RT pin_id: 43
 
 ```
 create_node(NT_TEX_IMAGE) → TEX
-set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "C:/absolute/path/image.jpg")
+set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "/absolute/path/image.jpg")
 connect_nodes(TEX → material, pin_index: 0)   # replaces auto-created RGB child
 ```
 
@@ -179,7 +179,7 @@ Auto-created materials on NT_GEO_OBJECT reject emission. Create standalone NT_MA
 
 ---
 
-## Material Presets
+## §6 Material Presets
 
 All use `get_node_info` to find child handles, then `set_attribute(child, 185, type, value)`.
 
@@ -216,7 +216,7 @@ Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 ---
 
-## Emission (NT_EMIS_BLACKBODY)
+## §7 Emission
 
 | Pin | Name        | Type  | Notes                                          |
 | --- | ----------- | ----- | ---------------------------------------------- |
@@ -226,7 +226,7 @@ Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 ---
 
-## Primitive Types (NT_GEO_OBJECT pin 0)
+## §7a Primitive Types
 
 | Val | Shape         | Val | Shape          |
 | --- | ------------- | --- | -------------- |
@@ -242,7 +242,7 @@ Type 18 (Quad) crashes. Full list: 1-17, 19-23 (alphabetical). Workaround: flat 
 
 ---
 
-## Daylight Presets
+## §7b Daylight Presets
 
 ### Sunset
 
@@ -256,7 +256,7 @@ Hour: `12.0`. Turbidity: `2.4` (default).
 
 ---
 
-## Camera Presets
+## §7c Camera Presets
 
 | Scenario        | Position       | Target       |
 | --------------- | -------------- | ------------ |
@@ -268,7 +268,7 @@ Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set t
 
 ---
 
-## Render Pipeline
+## §7d Render Pipeline
 
 See `BUILD.md` Phase 1 for the full setup sequence. Key points:
 
@@ -279,19 +279,19 @@ See `BUILD.md` Phase 1 for the full setup sequence. Key points:
 
 ---
 
-## .obj Assets
+## §7e Assets
 
-Path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`
+Path prefix: `ORBX/assets_test/`
 
 **Available:** `sphere_hd.obj`, `floor.obj`
 
 **Also in directory (textures/images):** `art_cyber.jpg`, `art_surreal.jpg`, `gallery_env.jpg`, `hdri_sunset_ocean.png`, `lava_env.jpg`, `space_env.jpg`
 
-**Not available (listed previously but missing):** sphere.obj, sphere_uv.obj, cube.obj, torus.obj, teapot.obj, diamond.obj, ring.obj, monolith.obj, prism.obj, pillar.obj, quad.obj. Use `sphere_hd.obj` as the only sphere mesh, or use NT_GEO_OBJECT (crash risk) or NT_GEO_PLANE for flat surfaces.
+Only these two .obj files exist. For other shapes use NT_GEO_OBJECT (crash risk) or NT_GEO_PLANE.
 
 ---
 
-## Coordinate System
+## §8 Coordinate System
 
 +X=right, -X=left, +Y=up, -Y=down, +Z=toward camera, -Z=into scene.
 
@@ -299,7 +299,7 @@ Path prefix: `C:/otoyla/GRPC/dev/octaneWebR/ORBX/assets/`
 
 ---
 
-## Procedural Textures
+## §9 Procedural Textures
 
 ### NT_TEX_MIX (blend workhorse)
 
@@ -319,7 +319,7 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ---
 
-## ApiInfo Methods
+## §10 ApiInfo Methods
 
 | Method                                    | Returns                                 |
 | ----------------------------------------- | --------------------------------------- |
@@ -330,7 +330,7 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ---
 
-## MCP Resources
+## §11 MCP Resources
 
 9 read-only resources for live type system discovery. Use these instead of hardcoded values when exploring unfamiliar node types.
 
@@ -357,20 +357,3 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 | Resource | URI              | Use For                                                             |
 | -------- | ---------------- | ------------------------------------------------------------------- |
 | `scene`  | `octane://scene` | Current scene snapshot: all nodes, connections, children, staleness |
-
-### When to Use Resources vs Hardcoded Values
-
-- **Known patterns** (RT pins, transforms, materials): use hardcoded values in this doc — they're proven and faster.
-- **Unfamiliar node types**: query `pin-layout` and `node-info-dynamic` to discover pin names, indices, and compatible connections.
-- **"What can connect here?"**: query `compatibility` with the pin type.
-- **Debugging silent failures**: query `pin-layout` to verify you're using the right pin_index vs pin_id.
-
----
-
-## Discovery Workflow
-
-**Fresh nodes:** `create_node` returns handle + pins array with all child handles. Set attributes directly.
-
-**Material color:** `get_node_info(material)`→pin 0→RGB child→`set_attribute`.
-
-**Unknown nodes:** Query `octane://pin-layout/{typeName}` resource, or `get_node_info`→see all pins→`set_attribute`/`connect_nodes` on discovered handles.

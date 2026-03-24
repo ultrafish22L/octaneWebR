@@ -140,8 +140,8 @@ export function useCanvasRenderer({
           lastStatusUpdateRef.current = now;
           const newStatus =
             `${width}x${height} | ` +
-            `${(imageData.buffer.size / 1024).toFixed(1)}KB | ` +
-            `${imageData.tonemappedSamplesPerPixel.toFixed(1)} spp`;
+            `${((imageData.buffer?.size ?? 0) / 1024).toFixed(1)}KB | ` +
+            `${(imageData.tonemappedSamplesPerPixel ?? 0).toFixed(1)} spp`;
           onStatusUpdate(newStatus);
         }
       }

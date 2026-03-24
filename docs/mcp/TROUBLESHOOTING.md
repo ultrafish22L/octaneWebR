@@ -4,15 +4,15 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ---
 
-## Crashes
+## §1 Crashes
 
-| Trigger                                | Symptom                                                                                                                                                                                                                                             | Mitigation                                                                                                                                                                                                                                                                                                    |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                                                                                                                                                                  | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                                                                                                                                                                                       |
-| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                                                                                                                                                                             | Valid absolute paths only                                                                                                                                                                                                                                                                                     |
-| Primitive type enum changes            | Non-deterministic ECONNRESET (~10% per build with 3 sphere changes, ~50% without mitigations). Race condition in Octane's internal geometry rebuild during `setValueByAttrID`. Cumulative across process lifetime — `reset_project` doesn't fix it. | **MITIGATED** — use `skip_evaluate:true` on all primitive enum `set_attribute` calls, set all primitives sequentially before connecting to scene graph, use fresh Octane restart per build. For 100% reliability, use NT_GEO_MESH + .obj files instead. See `docs/temp/crash_test_log.md` for full test data. |
-| Deleting connected nodes               | ECONNRESET                                                                                                                                                                                                                                          | **GUARDED** — `delete_node` checks `getConnectionsInvolving()`. Disconnect all pins first.                                                                                                                                                                                                                    |
-| `get_scene_tree` on large loaded ORBX  | Traversing nodes before Octane finishes internal loading                                                                                                                                                                                            | **FIXED** — `load_project` now waits for `projectManagerChanged` callback via `CallbackStreamManager`. Traversal also skips dangerous type IDs and aborts on first connection loss.                                                                                                                           |
+| Trigger                                | Symptom                                                                                                                                                                                                                                             | Mitigation                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                                                                                                                                                                  | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                                                                                                                                                                                                                                       |
+| Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                                                                                                                                                                             | Valid absolute paths only                                                                                                                                                                                                                                                                                                                                     |
+| Primitive type enum changes            | Non-deterministic ECONNRESET (~10% per build with 3 sphere changes, ~50% without mitigations). Race condition in Octane's internal geometry rebuild during `setValueByAttrID`. Cumulative across process lifetime — `reset_project` doesn't fix it. | **MITIGATED** — use `skip_evaluate:true` on all primitive enum `set_attribute` calls, set all primitives sequentially before connecting to scene graph, use fresh Octane restart per build. For 100% reliability, use NT_GEO_MESH + .obj files instead. Tested: ~50% crash rate standard, ~10-20% with skip_evaluate, ~90% success with fresh Octane restart. |
+| Deleting connected nodes               | ECONNRESET                                                                                                                                                                                                                                          | **GUARDED** — `delete_node` checks `getConnectionsInvolving()`. Disconnect all pins first.                                                                                                                                                                                                                                                                    |
+| `get_scene_tree` on large loaded ORBX  | Traversing nodes before Octane finishes internal loading                                                                                                                                                                                            | **FIXED** — `load_project` now waits for `projectManagerChanged` callback via `CallbackStreamManager`. Traversal also skips dangerous type IDs and aborts on first connection loss.                                                                                                                                                                           |
 
 ### nodeInfo Crash Types
 
@@ -20,7 +20,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Build
+## §2 Build
 
 | Problem                              | Cause                                                              | Fix                                                                                 |
 | ------------------------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -31,7 +31,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Electron Production Build
+## §3 Electron Build
 
 | Problem                            | Cause                                                                | Fix                                                                                 |
 | ---------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -42,7 +42,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Silent Failures
+## §4 Silent Failures
 
 ### Connections
 
@@ -68,7 +68,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Render Issues
+## §5 Render Issues
 
 | Symptom                             | Fix                                                                                        |
 | ----------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -83,7 +83,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## MCP-Specific
+## §6 MCP-Specific
 
 | Problem                                    | Fix                                                                                                                                                                                                      |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -102,7 +102,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Known Octane API Limitations
+## §7 Octane API Limitations
 
 | Limitation                       | Details                                                                                                                                                                                                                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -115,7 +115,7 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ---
 
-## Debugging
+## §8 Debugging
 
 ### Logs
 
@@ -141,31 +141,15 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 3. Isolate the exact gRPC call
 4. Stop all servers BEFORE restarting Octane
 
-### Debugging Philosophy
+### Key Rules
 
-1. **Default assumption: our code is wrong.** Only escalate to "Octane bug" after reading SDK/proto docs, testing minimal repro, and checking with the user.
-2. **After 2 failures of the same kind, STOP.** Don't add retries or pacing to a broken approach — step back, list alternatives, try a different strategy entirely.
-3. **Don't rush forward on shaky ground.** When something fails unexpectedly, stop the build and debug properly. Building on broken foundations compounds failures.
-4. **Disable MCP before code changes.** The MCP server auto-starts with Claude Code. Rebuilding with broken code spawns a broken process that makes bad gRPC calls, crashing Octane.
-5. **No deferred evaluation batching.** Always use `evaluate: true` (default). Deferred eval means each call after the first operates on stale state — subsequent calls send params against fiction.
-6. **gRPC calls are synchronous** — they serialize at the server, so parallel tool invocations from the client are safe. Crashes previously blamed on "parallelism" were caused by invalid attributes (e.g. primitive type changes on NT_GEO_OBJECT).
-7. **SDK headers are the source of truth.** When something silently fails, check `C:\otoyla\GRPC\dev\sdk\src\api\` (especially `apinodesystem.h`) for the actual C++ API semantics.
-
-### Proto Loader Settings
-
-The gRPC proto loader uses: `longs: String`, `enums: String`, `keepCase: true`, `defaults: true`. This means enum values come back as strings (e.g. `"PT_TEXTURE"` not `5`), and longs as strings (e.g. `"1000042"` not `1000042`). Never `Number(enumValue)` — use the string directly or look up in PIN_TYPE_NAMES.
-
-### gRPC Deadline Pattern
-
-Use `Date.now() + timeoutMs` (number), NOT `new Date()` objects. Match octaneWebR's pattern in `OctaneGrpcClientBase.ts`.
-
-### Thread Safety
-
-Octane serializes all API calls on a single thread. MCP serializes via mutex. Two gRPC peers (MCP + Vite) can interleave — avoid simultaneous use.
+- Disable MCP before code changes — auto-start spawns broken processes that crash Octane.
+- Always `evaluate: true` (default) — deferred eval means subsequent calls operate on stale state.
+- After 2 failures of same kind, STOP and try a different approach entirely.
 
 ---
 
-## Fresh Start Procedure
+## §9 Fresh Start
 
 **Servers die first, Octane dies last.** Killing Octane while servers are connected causes hangs.
 
@@ -177,6 +161,6 @@ Octane serializes all API calls on a single thread. MCP serializes via mutex. Tw
 
 ### Startup
 
-4. Launch Octane with `dangerouslyDisableSandbox: true`: `"C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/octane.exe" &`
+4. Launch Octane with `dangerouslyDisableSandbox: true`: `octane.exe &`
 5. Wait 10-15s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
 6. `preview_start` — LAST (after gRPC is listening)

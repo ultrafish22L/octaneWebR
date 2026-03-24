@@ -8,7 +8,7 @@ Browser-based UI for Octane Render Studio. Communicates with Octane via gRPC Liv
 React Client (browser)
     |
     v
-Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (67 tools, stdio)
+Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (78 tools, stdio)
     |                                                         |
     +------- Shared: OctaneGrpcClientBase.ts ----------------+
                             |
@@ -18,7 +18,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (67 tools, st
 
 **Vite plugin** (`vite-plugin-octane-grpc.ts`) handles everything server-side: gRPC proxying, WebSocket callback streaming, REST endpoints for health and file operations. No separate Express server.
 
-**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 67 active tools (14 modules) for scene building, camera, render, nodes, attributes, animation, art direction, and color management. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
+**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 78 active tools (15 modules) for scene building, camera, render, nodes, attributes, animation, art direction, and color management. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
 
 **Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
 
@@ -45,10 +45,10 @@ octaneWebR/
 ├── mcp/                  MCP server (separate package)
 │   ├── src/              Tool implementations
 │   ├── src/types/        Typed interfaces (GrpcClientTypes.ts)
-│   ├── src/__tests__/    Tests (133 tests via Vitest)
+│   ├── src/__tests__/    Tests (281 tests via Vitest)
 │   └── data/             API cache (octane-api-cache.json)
-├── ORBX/assets/          3D meshes (.obj) and textures
-├── renders/              Render output
+├── ORBX/assets_test/          3D meshes (.obj) and textures
+├── temp/renders/         Render output
 ├── api-version.config.js API version switch (Alpha 5 vs Beta 2)
 └── vite-plugin-octane-grpc.ts  Embedded proxy plugin
 ```
@@ -124,5 +124,15 @@ Both the web UI (via HTTP → Vite plugin → base) and MCP (via OctaneMcpClient
 - **Prod**: `npm run build` (tsc + vite build, output in `dist/`)
 - **Type check**: `npx tsc --noEmit`
 - **Lint**: `npm run lint`
-- **Test**: `npm test` (133 tests: SceneCache, tools, utils, constants, ArtDirectionState, geometric validation)
+- **Test**: `npm test` (281 tests: SceneCache, tools, utils, constants, ArtDirectionState, geometric validation)
 - **MCP**: `cd mcp && npm run build` (esbuild)
+
+## gRPC Internals
+
+**Proto loader**: `longs: String`, `enums: String`, `keepCase: true`, `defaults: true`. Enums come back as strings (`"PT_TEXTURE"` not `5`), longs as strings. Use string directly or look up in PIN_TYPE_NAMES.
+
+**Deadline pattern**: `Date.now() + timeoutMs` (number), NOT `new Date()` objects.
+
+**Thread safety**: Octane serializes all API calls on a single thread. MCP serializes via mutex. Two gRPC peers (MCP + Vite) can interleave — avoid simultaneous use.
+
+**SDK headers**: Source of truth when something silently fails — `apinodesystem.h` in the Octane SDK `src/api/` directory.

@@ -2,7 +2,7 @@
 
 ## Generated 3D Models (OTOY Studio Hunyuan-3d v3.1 Pro)
 
-All assets stored in `ORBX/assets/`. GLBs are Z-up, require rotation {90,Y,0} on import.
+All assets stored in `ORBX/assets_test/`. GLBs are Z-up, require rotation {90,Y,0} on import.
 
 | Asset               | GLB File               | OBJ (converted)                                | Texture                                    | Faces | Notes                                             |
 | ------------------- | ---------------------- | ---------------------------------------------- | ------------------------------------------ | ----- | ------------------------------------------------- |
