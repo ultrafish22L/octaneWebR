@@ -198,10 +198,7 @@ COMMON MATERIAL TYPES:
 - Octane has terminated. ALL handles are now invalid.
 - Recovery: restart octaneServGrpc, wait ~5s for gRPC on port 51022, rebuild scene from scratch
 - Never retry the same call — the connection is dead
-- Common crash causes:
-  - nodeInfo on crash type IDs [0, 116, 408, 40000, 50000, 50106-50108, 50136-50137]
-  - reset_project without save_project first (blocking dialog)
-  - Bad A_FILENAME path (30s gRPC hang)
+- Common crash cause: import_materialx on certain .mtlx files
 
 ## Connection Appears to Succeed but Nothing Changes
 - connect_nodes returns success:true even on silent failures

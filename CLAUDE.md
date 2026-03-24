@@ -6,7 +6,7 @@
 - **fit_camera tool** — Computes camera position/target from bounding box with elevation, yaw, and margin controls.
 - **FRESH / SCRATCH concepts** — FRESH clears the scene (`reset_project`). SCRATCH kills all processes and restarts (session start or after crashes). See `docs/mcp/BUILD.md` §7.
 - **DOF auto-disable** — `create_node` for RT now sets camera aperture to 0 automatically. No more blurry-by-default renders.
-- **Proto consolidation** — Beta 2 proto files cleaned up. `proto_old/` retained for Alpha 5 compat only.
+- **Proto consolidation** — Beta 2 proto files cleaned up. `proto_old/` removed (Alpha 5 compat is handled in the compat layer, not via separate protos).
 - **Build version tracking** — Root and MCP `package.json` both at 2.4.0.
 - **SetCamera fix** — gRPC `SetCamera` now persists to both LiveLink and node graph attributes.
 

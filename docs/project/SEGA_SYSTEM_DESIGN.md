@@ -239,13 +239,13 @@ Global vector applies scene-wide. Per-object overrides add to global for specifi
 ## 10. Locked-In Design Decisions
 
 | Decision              | Choice                                | Rationale                                        |
-| --------------------- | ------------------------------------- | ------------------------------------------------ | ------ | ----------------- |
+| --------------------- | ------------------------------------- | ------------------------------------------------ |
 | Preset seeding        | LLM-generated + human review          | Fast cold start, labeled as AI-derived           |
 | Measurement           | Pixel math + VLM hybrid               | Pixel provides ground truth calibration for VLM  |
 | Orthogonality         | No enforcement, document correlations | Fighting natural perception is counterproductive |
 | Active dimensions     | 6-12 per scene, rest dormant          | Registry holds 50+, only active ones shown       |
 | Scoping               | Global default + per-object overrides | Most scenes stay global-only                     |
-| Extreme values        | Berlyne warning at                    | value                                            | > 0.85 | Warn, never block |
+| Extreme values        | Berlyne warning at \|value\| > 0.85   | Warn, never block                                |
 | Existing spatial math | Stays as-is, separate concern         | SEGA = intent, spatial = correctness             |
 | Old critique scores   | Replaced by semantic gap vector       | Meaningful vectors instead of arbitrary 1-5      |
 

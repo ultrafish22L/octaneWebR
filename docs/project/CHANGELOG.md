@@ -25,7 +25,7 @@ All notable changes to octaneWebR.
 
 ---
 
-## [2.3.0] - 2026-03-24
+## [2.3.2] - 2026-03-24
 
 ### Added
 
@@ -66,29 +66,6 @@ All notable changes to octaneWebR.
 
 ---
 
-## [2.2.3] - 2026-03-21
-
-### Added — Crash Probe Testing & Guard Deployment
-
-- **Systematic crash probe** — 19 test categories executed against live Octane with 460+ primitive enum transitions. Only 1 crash found (<0.2% rate on primitive enum cycling). All other operations confirmed safe.
-- **Delete guard deployed** — `getConnectionsInvolving` check in `delete_node` now live. Prevents deletion of connected nodes.
-- **Under-render testing** — all tests re-run with active GPU render (1024x512, 100k samples). No crash-rate difference.
-- **New test coverage:** image texture hot-swap with file I/O, cycle detection (self/2-node/3-node), RT deletion mid-render, disconnect mid-evaluation, subgraph duplication, loaded .orbx + fresh node interop, 20-cycle build/teardown stress.
-- **SceneCache coherence audit** — 86 connections audited, perfect match between cache and Octane state.
-
-### Fixed
-
-- **Delete guard (code review)** — `getConnectionsInvolving` method added to SceneCache, delete_node now checks for active connections before reaching Octane.
-- **Version sync** — root and MCP `package.json` both at 2.2.3.
-
-### Docs Cleanup
-
-- Deleted 6 obsolete files: 2 stale test reports (docs/temp/), 4 research docs (SEGA*\*, SEMANTIC_MODEL*\*).
-- Updated TROUBLESHOOTING.md with crash probe findings.
-- Updated CLAUDE.md session info for Phase 26.
-
----
-
 ## [2.3.1] - 2026-03-21
 
 ### Tested — Full MCP Test Sweep (75 tools, 303 gRPC calls)
@@ -125,6 +102,29 @@ All notable changes to octaneWebR.
 
 - `save_render_passes` / `save_render_passes_exr` — passesToExport proto serialization (switched to v1 overloads).
 - `find_nodes` — missing OBJ_API_ITEM_ARRAY import.
+
+---
+
+## [2.2.3] - 2026-03-21
+
+### Added — Crash Probe Testing & Guard Deployment
+
+- **Systematic crash probe** — 19 test categories executed against live Octane with 460+ primitive enum transitions. Only 1 crash found (<0.2% rate on primitive enum cycling). All other operations confirmed safe.
+- **Delete guard deployed** — `getConnectionsInvolving` check in `delete_node` now live. Prevents deletion of connected nodes.
+- **Under-render testing** — all tests re-run with active GPU render (1024x512, 100k samples). No crash-rate difference.
+- **New test coverage:** image texture hot-swap with file I/O, cycle detection (self/2-node/3-node), RT deletion mid-render, disconnect mid-evaluation, subgraph duplication, loaded .orbx + fresh node interop, 20-cycle build/teardown stress.
+- **SceneCache coherence audit** — 86 connections audited, perfect match between cache and Octane state.
+
+### Fixed
+
+- **Delete guard (code review)** — `getConnectionsInvolving` method added to SceneCache, delete_node now checks for active connections before reaching Octane.
+- **Version sync** — root and MCP `package.json` both at 2.2.3.
+
+### Docs Cleanup
+
+- Deleted 6 obsolete files: 2 stale test reports (docs/temp/), 4 research docs (SEGA*\*, SEMANTIC_MODEL*\*).
+- Updated TROUBLESHOOTING.md with crash probe findings.
+- Updated CLAUDE.md session info for Phase 26.
 
 ---
 
@@ -371,15 +371,16 @@ Production-ready release with:
 
 ## Version History
 
-| Version   | Date       | Milestone                       |
-| --------- | ---------- | ------------------------------- |
-| **2.4.0** | 2026-03-24 | Gotcha sweep, fit_camera, FRESH |
-| **2.3.0** | 2026-03-21 | MCP API expansion (Tiers 1-5)   |
-| **2.0.0** | 2026-03-19 | Doc consolidation + MCP recipes |
-| **1.0.0** | 2025-01-22 | Production-ready release        |
-| 0.9.0     | 2025-01-20 | Beta with core features         |
-| 0.5.0     | 2025-01-15 | Alpha prototype                 |
-| 0.1.0     | 2025-01-10 | Initial setup                   |
+| Version   | Date       | Milestone                        |
+| --------- | ---------- | -------------------------------- |
+| **2.4.0** | 2026-03-24 | Gotcha sweep, fit_camera, FRESH  |
+| **2.3.2** | 2026-03-24 | Alpha 5 compat doc, SCRATCH flow |
+| **2.3.0** | 2026-03-21 | MCP API expansion (Tiers 1-5)    |
+| **2.0.0** | 2026-03-19 | Doc consolidation + MCP recipes  |
+| **1.0.0** | 2025-01-22 | Production-ready release         |
+| 0.9.0     | 2025-01-20 | Beta with core features          |
+| 0.5.0     | 2025-01-15 | Alpha prototype                  |
+| 0.1.0     | 2025-01-10 | Initial setup                    |
 
 ---
 

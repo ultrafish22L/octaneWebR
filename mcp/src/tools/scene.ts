@@ -244,7 +244,7 @@ export function registerSceneTools(
 
   server.tool(
     'get_node_info',
-    'Get node details: name, type, all pins with connection status. WARNING: certain internal type IDs crash Octane — never call on handles of unknown type without checking first. Returns pin index, name, type, and connected_handle for each pin. Updates scene cache with discovered connections.',
+    'Get node details: name, type, all pins with connection status. Returns pin index, name, type, and connected_handle for each pin. Updates scene cache with discovered connections.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       connected_only: z

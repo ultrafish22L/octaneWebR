@@ -18,7 +18,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (78 tools, st
 
 **Vite plugin** (`vite-plugin-octane-grpc.ts`) handles everything server-side: gRPC proxying, WebSocket callback streaming, REST endpoints for health and file operations. No separate Express server.
 
-**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 80 active tools (17 modules) for scene building, camera, render, nodes, attributes, animation, art direction, and color management. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
+**MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 78 active tools (17 modules) for scene building, camera, render, nodes, attributes, animation, art direction, and color management. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
 
 **Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). Includes a compat layer for older Octane builds (see `ALPHA5_COMPAT.md`). Used by both the Vite plugin and MCP server via composition.
 
@@ -39,8 +39,8 @@ octaneWebR/
 ├── server/
 │   ├── proto/            Protobuf definitions
 │   └── src/grpc/         Shared gRPC client base
-├── shared/               Protocol constants shared by client + MCP
-│   └── OctaneConstants.ts  AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS
+├── shared/               Protocol constants shared by client + MCP (re-exported)
+│   └── OctaneConstants.ts  AttrType, AttributeId, PIN_TYPE_NAMES, RT_PINS (source: mcp/src/shared/)
 ├── mcp/                  MCP server (separate package)
 │   ├── src/              Tool implementations
 │   ├── src/types/        Typed interfaces (GrpcClientTypes.ts)

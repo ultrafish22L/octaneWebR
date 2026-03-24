@@ -103,7 +103,7 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 | Pin value RPCs unimplemented     | `setPinValueByIx/ByPinID/ByName` all return UNIMPLEMENTED                                                                                                                                                                                                                  |
 | `newStatistics` never fires      | Statistics callback is a stub                                                                                                                                                                                                                                              |
 | LiveDB all 4 tools broken        | `getCategories`, `getMaterials`, `getMaterialPreview`, `downloadMaterial` all fail with "3 INVALID_ARGUMENT: invalid pointer type". The gRPC compat layer doesn't handle singleton services (no objectPtr). Tools disabled in index.ts, code preserved in materials-db.ts. |
-| Quad primitive (type 18)         | No geometry rendered. Use flat Box or quad.obj                                                                                                                                                                                                                             |
+| Quad primitive (type 18)         | May render nothing on older Octane versions. Works on SDK server (2026.2). Use flat Box or NT_GEO_PLANE as alternatives.                                                                                                                                                   |
 
 ---
 
@@ -126,7 +126,7 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `log_mcp.log`    | MCP server           | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start       |
 | `log_client.log` | Browser (via Vite)   | Client-side logs posted to server. Cleared on dev server start      |
 
-### On Crash — follow MEMORY.md FULL STOP protocol
+### On Crash — FULL STOP Protocol
 
 1. STOP — do not continue current task
 2. Read ALL logs — `log_mcp.log`, `log_grpc.log`, console

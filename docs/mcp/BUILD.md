@@ -54,7 +54,7 @@ Only after all 12 steps pass: proceed to DRESS or SHOW.
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
-**On failure: FULL STOP.** Follow MEMORY.md crash protocol. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
+**On failure: FULL STOP.** Follow the crash protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
 
 ### Phase 0: Composition Planning (before any Octane calls)
 
@@ -82,13 +82,11 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Vision Critic
 
-`critique_render` uses an external vision model (Anthropic Haiku 4.5 via `ANTHOPIC_CLAUDE_KEY` env var in `.mcp.json`) for render quality assessment. **Self-critique is unreliable** — Claude rating its own renders inflates scores by 1-2 points because it's judging its own work.
+`critique_render` uses an external vision model for render quality assessment. Self-critique is unreliable — Claude rating its own renders inflates scores by 1-2 points.
 
 - **Two-image comparison** (reference + render) is most effective — harder to inflate when the diff is visible
-- **Standalone critique** (render only) is still too generous — Haiku called a mediocre scene "enchanting"
-- Vision module: `mcp/src/vision/` with `anthropic.ts`, `gemini.ts`, `index.ts` (fallback chain), `prompts.ts`
-- `maxTokens` must be ≥4000 for `analyze_reference` (1500 truncates structured JSON)
-- Truncation-resilient JSON parsing added: closes unclosed brackets/braces
+- **Standalone critique** (render only) is still too generous
+- Vision module: `mcp/src/vision/` with fallback chain and truncation-resilient JSON parsing
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
@@ -103,10 +101,10 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 | Step | Action                                                    | Notes                              |
 | ---- | --------------------------------------------------------- | ---------------------------------- |
-| 6    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
-| 7    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
-| 8    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
-| 9    | Render + save                                             | Checkpoint                         |
+| 5    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
+| 6    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
+| 7    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
+| 8    | Render + save                                             | Checkpoint                         |
 
 ### Phase 3: Assembly
 

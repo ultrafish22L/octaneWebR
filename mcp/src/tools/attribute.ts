@@ -158,7 +158,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .optional()
         .default(false)
         .describe(
-          'If true, skip ApiChangeManager.update() after setting. Caller must call update_scene manually. Use for batching multiple attribute changes to avoid crashes from overlapping evaluations.'
+          'If true, skip ApiChangeManager.update() after setting. Caller must call update_scene manually. Use for batching multiple attribute changes.'
         ),
     },
     async ({ handle, attribute_id, expected_type, value, skip_evaluate }) => {
@@ -200,7 +200,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'update_scene',
-    'Flush pending attribute changes by calling ApiChangeManager.update(). Required after set_attribute calls made with skip_evaluate:true. Batching multiple attribute changes and flushing once avoids crashes from overlapping scene evaluations (e.g. multiple primitive type changes).',
+    'Flush pending attribute changes by calling ApiChangeManager.update(). Required after set_attribute calls made with skip_evaluate:true.',
     {},
     async () => {
       try {

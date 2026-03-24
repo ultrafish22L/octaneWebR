@@ -28,7 +28,7 @@
 
 ### On Crash — FULL STOP
 
-Follow MEMORY.md crash protocol. Then:
+Follow the crash protocol below. Then:
 
 1. Note which tool/call caused it
 2. Check `log_mcp.log` — last success → first error

@@ -17,7 +17,7 @@
 8. **Detect crashes immediately**: Check `log_grpc.log` for `ECONNRESET`/`ECONNREFUSED` after risky actions. If crashed, STOP and wait for user.
 9. **Lint+build before push**: `npm run lint` + `npm run build`.
 10. **Preview resize**: Always `desktop` preset (1280x800). NOT 1920x1080 (too small when scaled).
-11. **Logs**: `log_grpc.log` (server, needs `DEBUG_FILE_LOG = true`), `log_client.log` (client).
+11. **Logs**: `log_grpc.log` (server, `GRPC_DEBUG_LOG=1` by default), `log_client.log` (client).
 
 ### If Octane Crashes
 
@@ -357,7 +357,7 @@ while (fiber) {
 | ID  | Test                      | Pass Criteria                                        |
 | --- | ------------------------- | ---------------------------------------------------- |
 | H1  | Status bar: "Connected"   | Shows when Octane is running                         |
-| H2  | Version number            | Displayed in bottom-right (e.g. "OctaneWebR v1.5.8") |
+| H2  | Version number            | Displayed in bottom-right (e.g. "OctaneWebR v2.4.0") |
 | H3  | Temporary status messages | Appear on actions and auto-dismiss after timeout     |
 
 ### Medium (H4–H6)

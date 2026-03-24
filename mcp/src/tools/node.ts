@@ -55,7 +55,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create an Octane node. Rejects known crash-causing type IDs. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (box primitive only), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). For non-box geometry (spheres, etc.), prefer NT_GEO_MESH + set_attribute(A_FILENAME=34) with sphere_hd.obj or floor.obj — NT_GEO_OBJECT primitive type changes are unstable and can crash Octane. NT_GEO_OBJECT is safe as default Box only. Use list_node_types for full catalog.',
+    'Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 24 types supported), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). Use list_node_types for full catalog.',
     {
       node_type: z
         .string()
@@ -251,7 +251,7 @@ export function registerNodeTools(
 
   server.tool(
     'delete_node',
-    'Delete a node from the scene. Disconnect pins first — deleting a recently-disconnected node can crash Octane. Clears node from scene cache.',
+    'Delete a node from the scene. Connected nodes are auto-disconnected by the SDK. Clears node from scene cache.',
     { handle: z.number().int().nonnegative().describe('Node handle to delete') },
     async ({ handle }) => {
       try {
@@ -752,12 +752,7 @@ export function registerNodeTools(
             }
           }
         } else if (type_id !== undefined) {
-          // Find by type — use NON-RECURSIVE Octane API to avoid crashes on
-          // scenes with dangerous node types (negative IDs, crash-prone types).
-          // Octane's internal recursive findNodes traverses ALL subgraphs including
-          // nodes with bad type IDs, which crashes the engine.
-          // Instead: search top-level only, then optionally recurse ourselves
-          // using the safe traversal that skips dangerous types.
+          // Find by type — SDK recurse parameter controls traversal depth.
           const listResult = await client.callMethod('ApiNodeGraph', 'findNodes', {
             objectPtr: rootRef,
             type: type_id,
@@ -787,7 +782,7 @@ export function registerNodeTools(
           }
 
           // If recurse was requested and we found nothing at top level,
-          // do a safe manual search through subgraphs (skipping dangerous types).
+          // do a manual search through subgraphs.
           if ((recurse ?? true) && results.length === 0) {
             // Get top-level items and search their subgraphs safely
             const topListResult = await client.callMethod('ApiNodeGraph', 'getItems', {
@@ -815,7 +810,7 @@ export function registerNodeTools(
                   const isGraph = extractValue(graphResult) ?? false;
                   if (!isGraph) continue;
 
-                  // Check the item's type — skip dangerous types
+                  // Check the item's type — skip unknown (type 0)
                   let itemTypeId = 0;
                   try {
                     const typeResult = await client.callMethod('ApiNode', 'type', {
