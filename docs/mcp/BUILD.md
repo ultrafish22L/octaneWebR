@@ -44,9 +44,21 @@ Only after all 12 steps pass: proceed to DRESS or SHOW.
 
 **Why port 51023 matters:** The MCP relay streams render images to the web UI over WebSocket on port 51023. If a stale MCP process holds that port, the new MCP silently skips the relay and the viewport stays dead. The octane MCP is registered in the **project-level** `.mcp.json` (`C:\otoyla\dev\.mcp.json`) — Claude auto-starts and auto-restarts it when working in this directory. Killing it is safe. Starting a second one in bash is not.
 
-**DRESS (Rehearsal):** 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for development and testing. **Default — use unless told otherwise.**
+### Build Modes (after SCRATCH completes)
 
-**SHOW (Performance):** Same DRESS build order, but no stopping. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
+| Mode      | Purpose               | AD + SEGA | On Failure             | Default For              |
+| --------- | --------------------- | --------- | ---------------------- | ------------------------ |
+| **SHOP**  | Workshop / quick test | OFF\*     | Stop, debug, fix       | Testing, experimentation |
+| **DRESS** | Rehearsal / dev build | ON        | FULL STOP, fix, verify | Scene building (default) |
+| **SHOW**  | Live demo             | ON        | Skip, keep going       | Audiences, recordings    |
+
+\*SHOP suppresses AD automatically. Say "use AD" in SHOP to override.
+
+**SHOP (Workshop):** Fast workbench mode. Skip composition planning (Phase 0) and critique loops. Build from Phase 1 directly. Use `suggest_lighting` and `suggest_material` for quick values, but no `plan_composition`, `validate_layout`, or `critique_render`. For quick tests, smoke tests, tool verification, and experimentation where composition quality doesn't matter. The goal is speed, not beauty.
+
+**DRESS (Rehearsal):** Full AD + SEGA pipeline. Phase 0 composition planning, critique loop after renders, SEGA intent tracking. 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for serious scene building. **Default — use unless told otherwise.**
+
+**SHOW (Performance):** Same as DRESS build order with full AD + SEGA, but no stopping. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
 
 ---
 
@@ -57,6 +69,8 @@ Every step produces a visible change. The human should see a render update withi
 **On failure: FULL STOP.** Follow the crash protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
 
 ### Phase 0: Composition Planning (before any Octane calls)
+
+**AD must be ON** (default in DRESS and SHOW). Skipped entirely in SHOP mode or when user says "no AD."
 
 Run BEFORE creating any nodes. Pure math — validates layout without touching Octane.
 
@@ -70,6 +84,8 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 **Hard gate:** Do NOT call `create_node` until `validate_layout` passes with 0 errors.
 
 ### Critique Loop (after every save_render)
+
+**AD must be ON** (default in DRESS and SHOW). Skipped in SHOP mode.
 
 | Step | Action                                                            | Result                                            |
 | ---- | ----------------------------------------------------------------- | ------------------------------------------------- |

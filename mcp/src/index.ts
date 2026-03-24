@@ -29,6 +29,7 @@ import { registerAnimationTools } from './tools/animation';
 import { registerColorMaterialXTools } from './tools/color-materialx';
 import { registerArtDirectionTools } from './tools/artdirection';
 import { ArtDirectionState } from './ArtDirectionState';
+import { ScenePlacementState } from './ScenePlacementState';
 import { registerCreativeTools } from './creative/index';
 import { registerSegaTools, SemanticState } from './sega/index';
 import { registerResources } from './resources';
@@ -138,8 +139,9 @@ async function main() {
   registerAnimationTools(server, client);
   registerColorMaterialXTools(server, client);
 
-  // Register Art Direction tools (composition planning, critique loop)
-  registerArtDirectionTools(server, client, artState);
+  // Register Art Direction tools (composition planning, critique loop, scene placement)
+  const placementState = new ScenePlacementState();
+  registerArtDirectionTools(server, client, artState, placementState);
 
   // Register Creative tools (lighting, materials knowledge)
   registerCreativeTools(server, client);

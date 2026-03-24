@@ -4,9 +4,10 @@ Ordered easy → hard within each section. Done items purged.
 
 ## Easy
 
-| #   | Item                  | Notes                                 |
-| --- | --------------------- | ------------------------------------- |
-| 1   | Panel title menu icon | Icon element left of each panel title |
+| #   | Item                      | Notes                                                                                                                                                                                                   |
+| --- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Panel title menu icon     | Icon element left of each panel title                                                                                                                                                                   |
+| 43  | Info bar: MCP + AD status | Thin bar in octaneWebR showing connection state (MCP connected/disconnected), current build mode (SHOP/DRESS/SHOW), and AD on/off status. Replaces guesswork about what mode the agent is operating in. |
 
 ## Medium
 

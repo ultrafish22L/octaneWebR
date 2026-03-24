@@ -29,6 +29,12 @@ import {
 } from '../ArtDirectionState';
 import { jsonResult, errorResult, validateFilePath } from './utils';
 import {
+  ScenePlacementState,
+  type PlacementRole,
+  type ScenePlacementEntry,
+  type AABB,
+} from '../ScenePlacementState';
+import {
   critiqueRender as visionCritique,
   analyzeReference as visionAnalyze,
   detectBackend,
@@ -413,8 +419,10 @@ const CorrectionSchema = z.object({
 export function registerArtDirectionTools(
   server: McpServer,
   client: OctaneMcpClient,
-  artState: ArtDirectionState
+  artState: ArtDirectionState,
+  placementState?: ScenePlacementState
 ) {
+  const placement = placementState ?? new ScenePlacementState();
   // ── 1. plan_composition ──────────────────────────────────────────
 
   server.tool(
@@ -715,5 +723,237 @@ export function registerArtDirectionTools(
     'Get current art direction state: specs, scores, iteration history, stagnation status.',
     {},
     async () => jsonResult(artState.getSummary())
+  );
+
+  // ── 7. suggest_placement ──────────────────────────────────────────
+
+  server.tool(
+    'suggest_placement',
+    'Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Advisory only — override if scene intent differs. Call register_scene_object first to populate the scene database, or it auto-reads from scene tree.',
+    {
+      mesh_path: z.string().describe('Path to OBJ file (runs analyze_mesh if no sidecar exists)'),
+      role: z
+        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+        .optional()
+        .default('prop')
+        .describe('Role in the composition'),
+      relationship: z
+        .string()
+        .optional()
+        .describe(
+          'Spatial relationship (e.g. "next to fairy", "behind flowers", "left of dragon")'
+        ),
+      min_clearance: z
+        .number()
+        .optional()
+        .default(0.5)
+        .describe('Minimum distance from other objects (default 0.5)'),
+    },
+    async ({ mesh_path, role, relationship, min_clearance }) => {
+      try {
+        const resolved = path.resolve(mesh_path);
+
+        // Try to read mesh analysis sidecar
+        const dir = path.dirname(resolved);
+        const base = path.basename(resolved, path.extname(resolved));
+        const sidecarFile = path.join(dir, `${base}.mesh_info.json`);
+
+        let meshExtents = { x: 1, y: 1, z: 1 };
+        let meshInfo: ScenePlacementEntry['meshInfo'];
+
+        if (fs.existsSync(sidecarFile)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(sidecarFile, 'utf8'));
+            meshExtents = data.extents ?? meshExtents;
+            if (data.analysis) {
+              meshInfo = {
+                category: data.analysis.category,
+                naturalHeightM: data.analysis.natural_height_m,
+                suggestedRotation: data.analysis.suggested_rotation,
+                groundOffsetY: data.analysis.ground_offset_y,
+              };
+            }
+          } catch {
+            /* corrupt sidecar, use defaults */
+          }
+        }
+
+        const suggestion = placement.suggestPlacement(
+          meshExtents,
+          role as PlacementRole,
+          min_clearance,
+          relationship
+        );
+
+        // Merge analyze_mesh rotation/scale if available
+        if (meshInfo) {
+          suggestion.rotation = meshInfo.suggestedRotation;
+          // Adjust Y for ground offset
+          suggestion.position.y = Math.max(suggestion.position.y, meshInfo.groundOffsetY);
+        }
+
+        return jsonResult({
+          ...suggestion,
+          mesh_path: resolved,
+          sidecar_found: fs.existsSync(sidecarFile),
+          scene_objects: placement.getEntries().length,
+          instruction:
+            'These are SUGGESTIONS. Apply via set_attribute on the placement transform. Override rotation/position if your scene intent differs.',
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── 8. register_scene_object ──────────────────────────────────────
+
+  server.tool(
+    'register_scene_object',
+    'Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
+    {
+      handle: z.number().int().min(0).describe('Node handle of the placed object'),
+      name: z.string().describe('Display name (e.g. "Fairy", "Crystal Sphere")'),
+      role: z
+        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+        .describe('Role in the composition'),
+      position: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .describe('World position'),
+      rotation: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .optional()
+        .default({ x: 0, y: 0, z: 0 }),
+      scale: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .optional()
+        .default({ x: 1, y: 1, z: 1 }),
+      bounds_size: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .optional()
+        .describe('Object extents (from analyze_mesh). If omitted, uses unit cube.'),
+      mesh_info_path: z
+        .string()
+        .optional()
+        .describe('Path to .mesh_info.json sidecar for mesh analysis data'),
+    },
+    async params => {
+      try {
+        const halfSize = params.bounds_size
+          ? {
+              x: params.bounds_size.x / 2,
+              y: params.bounds_size.y / 2,
+              z: params.bounds_size.z / 2,
+            }
+          : { x: 0.5, y: 0.5, z: 0.5 };
+
+        const boundsWorld: AABB = {
+          min: {
+            x: params.position.x - halfSize.x * params.scale.x,
+            y: params.position.y - halfSize.y * params.scale.y,
+            z: params.position.z - halfSize.z * params.scale.z,
+          },
+          max: {
+            x: params.position.x + halfSize.x * params.scale.x,
+            y: params.position.y + halfSize.y * params.scale.y,
+            z: params.position.z + halfSize.z * params.scale.z,
+          },
+        };
+
+        // Read mesh info from sidecar if provided
+        let meshInfo: ScenePlacementEntry['meshInfo'];
+        if (params.mesh_info_path && fs.existsSync(params.mesh_info_path)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(params.mesh_info_path, 'utf8'));
+            if (data.analysis) {
+              meshInfo = {
+                category: data.analysis.category,
+                naturalHeightM: data.analysis.natural_height_m,
+                suggestedRotation: data.analysis.suggested_rotation,
+                groundOffsetY: data.analysis.ground_offset_y,
+              };
+            }
+          } catch {
+            /* ignore corrupt sidecar */
+          }
+        }
+
+        const entry: ScenePlacementEntry = {
+          handle: params.handle,
+          name: params.name,
+          role: params.role as PlacementRole,
+          position: params.position,
+          rotation: params.rotation,
+          scale: params.scale,
+          boundsWorld,
+          meshInfo,
+        };
+
+        placement.addEntry(entry);
+
+        // If this is a ground plane, set the ground Y level
+        if (params.role === 'ground') {
+          placement.groundY = params.position.y;
+        }
+
+        // Check for issues
+        const warnings: string[] = [];
+
+        // Ground penetration check
+        if (params.role !== 'ground' && boundsWorld.min.y < placement.groundY - 0.01) {
+          const penetration = placement.groundY - boundsWorld.min.y;
+          warnings.push(
+            `Object penetrates ground plane by ${penetration.toFixed(2)} units. ` +
+              `Raise Y by ${penetration.toFixed(2)} to fix.`
+          );
+        }
+
+        // Orientation check against mesh analysis
+        if (meshInfo && meshInfo.suggestedRotation) {
+          const sr = meshInfo.suggestedRotation;
+          const ar = params.rotation;
+          const rotDiff = Math.abs(sr.x - ar.x) + Math.abs(sr.y - ar.y) + Math.abs(sr.z - ar.z);
+          if (rotDiff > 45) {
+            warnings.push(
+              `Rotation differs ${rotDiff.toFixed(0)}° from suggested canonical orientation ` +
+                `(${sr.x},${sr.y},${sr.z})° — is this intentional?`
+            );
+          }
+        }
+
+        // Collision check
+        const collision = placement.checkCollisions(boundsWorld, params.handle);
+        if (collision.collides) {
+          warnings.push(
+            `Overlaps with: ${collision.overlapping.join(', ')} ` +
+              `(penetration ${collision.penetrationDepth.toFixed(2)} units)`
+          );
+        }
+
+        return jsonResult({
+          registered: true,
+          handle: params.handle,
+          name: params.name,
+          role: params.role,
+          scene_objects: placement.getEntries().length,
+          warnings,
+          instruction:
+            warnings.length > 0
+              ? 'Warnings detected — consider adjusting position/rotation.'
+              : 'Object registered. Scene database updated.',
+        });
+      } catch (error: any) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── 9. get_scene_placement_state ──────────────────────────────────
+
+  server.tool(
+    'get_scene_placement_state',
+    'Get the current scene placement database: all registered objects, positions, bounds, roles, and warnings.',
+    {},
+    async () => jsonResult(placement.snapshot())
   );
 }

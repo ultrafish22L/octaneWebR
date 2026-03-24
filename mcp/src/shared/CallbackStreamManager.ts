@@ -218,21 +218,21 @@ export class CallbackStreamManager {
 
   private dispatch(callbackRequest: any): void {
     if (callbackRequest.newImage) {
-      // Only dispatch newImage if opt-in (Vite). MCP skips this cheaply.
-      if (this.handleNewImage) {
+      // Always emit newImage to listeners (the CallbackRelay needs it to
+      // forward frames to Vite). The handleNewImage flag only controls whether
+      // the *consumer* processes the data — listeners like the relay always fire.
+      const listeners = this.listeners.get('newImage');
+      if (listeners && listeners.size > 0) {
         const event: NewImageEvent = {
           type: 'newImage',
           raw: callbackRequest.newImage,
           timestamp: Date.now(),
         };
-        const listeners = this.listeners.get('newImage');
-        if (listeners) {
-          for (const cb of listeners) {
-            try {
-              cb(event);
-            } catch (e: any) {
-              this.log(`Error in newImage listener: ${e.message}`, 'error');
-            }
+        for (const cb of listeners) {
+          try {
+            cb(event);
+          } catch (e: any) {
+            this.log(`Error in newImage listener: ${e.message}`, 'error');
           }
         }
       }

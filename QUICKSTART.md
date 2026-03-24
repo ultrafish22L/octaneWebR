@@ -1,4 +1,4 @@
-# OctaneWebR v2.4.0 — Quick Start
+# OctaneWebR v2.4.1 — Quick Start
 
 Get the browser UI and AI scene builder running in under 5 minutes.
 

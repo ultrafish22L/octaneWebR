@@ -4,6 +4,30 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.1] - 2026-03-25
+
+### Added
+
+- **analyze_mesh v2 + Mugshot Protocol** — Visual orientation check via VLM. Renders 6 mugshot views (front/right/top x clay/textured) on isolated ground plane, sends to haiku for upright verification. Caches in `.mesh_info.json` v2 sidecar with geometry, semantic, visual_check, and final_suggestion blocks.
+- **Scene placement tools** — `suggest_placement`, `register_scene_object`, `get_scene_placement_state` for collision-free object placement with scene awareness database.
+- **Scene project structure** — `aigenerated/` folder convention with concept_art, recipe.md, assets, temp, renders per scene.
+- **AD critique rules** — Never skip AD critique, stop when exhausted, run semantic_critique alongside critique_render.
+- **fit_camera() hard rule** — Mandatory after every geometry placement.
+
+### Fixed
+
+- **CallbackStreamManager** — newImage events now always emit to relay listeners regardless of `handleNewImage` flag. Fixes viewport grey while save_render worked. Root cause: stale `.js` file shadowing `.ts` source.
+- **Mesh orientation** — Z-up models now use +90 X rotation (was -90, which gave upside-down). Ground offset math corrected for post-rotation bounds remapping.
+- **gRPC API calls in renderMugshots** — `setAttrRaw` now uses `ApiItem.setValueByAttrID` (was nonexistent `ApiNode.setNodeAttributeFloat`). `connectRaw` uses `pinIdx` (was `pinIx`). Camera uses `LiveLink.SetCamera` (was `ApiRenderEngine.setCamera`). Scene bounds uses `getSceneBounds` (was `getSceneBbox`).
+- **Mugshot camera framing** — Uses mesh extents instead of scene bounds (ground plane was dominating the frame).
+
+### Changed
+
+- **Version tracking emphasis** — CLAUDE.md now documents mandatory version checking workflow with `mcp_build` field after every code change.
+- **Build number** — MCP_BUILD incremented to 16 during development, tracks code changes.
+
+---
+
 ## [2.4.0] - 2026-03-24
 
 ### Added
