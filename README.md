@@ -34,7 +34,7 @@ npm run dev                                      # Start web UI (port 43929)
 └─────────────────────┘              └────────────────────┘
 ```
 
-Both paths use the same shared gRPC client with a unified compatibility layer for Octane's Beta 2 API.
+Both paths use the same shared gRPC client with a compatibility layer for different Octane builds (see `docs/mcp/ALPHA5_COMPAT.md`).
 
 **Stack:** React 18, TypeScript (strict), Vite, ReactFlow v12, React Query, gRPC
 
@@ -86,7 +86,7 @@ Browser: Shows every node appearing in the outliner, connections forming in
 The `.mcp.json` also connects:
 
 - **[Octane Docs MCP](https://octane-mcp.otoy.ai/sse)** — Search Octane's API docs, browse modules, find examples
-- **[OTOY Studio MCP](https://otoy.studio/)** — AI image/video/3D/music generation for scene assets
+- **[OTOY Studio MCP](https://otoy.studio/)** — MCP server for AI images/3D/video/music/vision
 
 ## Project Structure
 
@@ -100,7 +100,7 @@ octaneWebR/
 │   ├── utils/                   # Logger, formatters, helpers
 │   ├── constants/               # Node types (755+), icon mappings, protocol enums
 │   └── styles/                  # CSS themes (134 variables each)
-├── server/proto/                # Protobuf definitions (Beta 2)
+├── server/proto/                # Protobuf definitions
 ├── shared/                      # Shared constants (AttrType, AttributeId, etc.)
 ├── mcp/src/                     # MCP server (78 tools, SceneCache, ApiCache)
 │   ├── tools/                   # Tool implementations by category
@@ -147,7 +147,7 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 | [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls          |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
 | [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (rehearsal) and SHOW (performance)      |
-| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition, OTOY Studio  |
+| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition               |
 | [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | All known problems and workarounds                              |
 | [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                |
 | [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                 |

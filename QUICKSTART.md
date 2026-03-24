@@ -84,7 +84,7 @@ The `.mcp.json` registers three MCP servers:
 | --------------- | -------------------------------------------------------------- |
 | **octane**      | Scene control — nodes, materials, camera, rendering (78 tools) |
 | **octane-docs** | Search Octane's API documentation and examples                 |
-| **otoy-studio** | Generate AI images, 3D assets, video, and music                |
+| **otoy-studio** | MCP server for AI images/3D/video/music/vision                 |
 
 ## §8 Web UI Only
 

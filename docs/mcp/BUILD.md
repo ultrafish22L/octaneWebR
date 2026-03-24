@@ -82,7 +82,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Vision Critic
 
-`critique_render` uses an external vision model (Anthropic Haiku 4.5 via `ANTHROPIC_CLAUDE_KEY` env var in `.mcp.json`) for render quality assessment. **Self-critique is unreliable** — Claude rating its own renders inflates scores by 1-2 points because it's judging its own work.
+`critique_render` uses an external vision model (Anthropic Haiku 4.5 via `ANTHOPIC_CLAUDE_KEY` env var in `.mcp.json`) for render quality assessment. **Self-critique is unreliable** — Claude rating its own renders inflates scores by 1-2 points because it's judging its own work.
 
 - **Two-image comparison** (reference + render) is most effective — harder to inflate when the diff is visible
 - **Standalone critique** (render only) is still too generous — Haiku called a mediocre scene "enchanting"
@@ -245,7 +245,7 @@ Y = target_Y + D_z * tan(elevation)
 
 ## §8 3D Asset Pipeline
 
-**CRITICAL:** The only working domain is `https://otoy.studio/` (NOT `studio.otoy.com`). Navigate to `https://otoy.studio/image-to-3d` for 3D mesh generation. Never click upload buttons (pops OS file dialog) — use "USE URL" toggle + `request_upload_url` instead.
+**CRITICAL:** The only working domain is `https://otoy.studio/`. Navigate to `https://otoy.studio/image-to-3d` for 3D mesh generation. Never click upload buttons (pops OS file dialog) — use "USE URL" toggle + `request_upload_url` instead.
 
 **Generate:** `generate_image_pro` → reference image → OTOY Studio image-to-3D (Chrome UI) → GLB
 
@@ -260,7 +260,7 @@ Y = target_Y + D_z * tan(elevation)
 
 **Orient:** Set film aspect first → orbit 3 views → fix rotation → scale 2-3x → frame hero shot.
 
-OTOY Studio tools available via `mcp__otoy-studio__*`. **3D mesh generation** (Rodin/Hunyuan) requires Chrome MCP — no API exists.
+OTOY Studio (MCP server for AI images/3D/video/music/vision) tools available via `mcp__otoy-studio__*`. **3D mesh generation** (Rodin/Hunyuan) requires Chrome MCP — no API exists.
 
 ### Texture Prompt Templates
 

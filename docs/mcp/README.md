@@ -64,7 +64,7 @@ The project includes `.mcp.json` at the root, which Claude Code reads automatica
 | ------------- | ---------------------------------------------------- |
 | `octane`      | Scene control — create nodes, set attributes, render |
 | `octane-docs` | Octane Lua API documentation and examples            |
-| `otoy-studio` | AI-generated 3D assets, textures, video, music       |
+| `otoy-studio` | MCP server for AI images/3D/video/music/vision       |
 
 If you're using a different MCP client, point it to `node mcp/dist/index.js` with stdio transport.
 
@@ -244,7 +244,7 @@ The `.mcp.json` config also registers two companion servers that work alongside 
 
 Search Octane's Lua scripting API, browse modules, look up function signatures, and find code examples. Useful when Claude needs to understand Octane node types or attribute semantics.
 
-### OTOY Studio MCP
+### OTOY Studio — MCP server for AI images/3D/video/music/vision
 
 Generate AI assets for your Octane scenes:
 
