@@ -20,7 +20,7 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (78 tools, st
 
 **MCP server** (`mcp/`) is a standalone Node.js process using stdio transport. 78 active tools (15 modules) for scene building, camera, render, nodes, attributes, animation, art direction, and color management. Built with esbuild, has its own `package.json`. Uses typed interface (`mcp/src/types/GrpcClientTypes.ts`) for the gRPC client instead of `any`.
 
-**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). All callers use Beta 2 method names; the base translates to the current API version automatically. Used by both the Vite plugin and MCP server via composition.
+**Shared gRPC client** (`server/src/grpc/OctaneGrpcClientBase.ts`) provides proto loading, service resolution, method invocation, API version compatibility translation, and gRPC debug file logging (mutating calls logged to `log_grpc.log`, on by default, `GRPC_DEBUG_LOG=0` to disable). Includes a compat layer for older Octane builds (see `ALPHA5_COMPAT.md`). Used by both the Vite plugin and MCP server via composition.
 
 ## Directory Structure
 
@@ -37,8 +37,8 @@ octaneWebR/
 │   ├── styles/           CSS themes and component styles
 │   └── App.tsx           Root component
 ├── server/
-│   ├── proto/            Beta 2 protobuf definitions (2026.1)
-│   ├── proto_old/        Alpha 5 protobuf definitions (2026.1)
+│   ├── proto/            Protobuf definitions (current)
+│   ├── proto_old/        Legacy protobuf definitions (compat mode, see ALPHA5_COMPAT.md)
 │   └── src/grpc/         Shared gRPC client base
 ├── shared/               Protocol constants shared by client + MCP
 │   └── OctaneConstants.ts  AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS
@@ -49,7 +49,7 @@ octaneWebR/
 │   └── data/             API cache (octane-api-cache.json)
 ├── ORBX/assets_test/          3D meshes (.obj) and textures
 ├── temp/renders/         Render output
-├── api-version.config.js API version switch (Alpha 5 vs Beta 2)
+├── api-version.config.js API version detection + compat mode switch
 └── vite-plugin-octane-grpc.ts  Embedded proxy plugin
 ```
 
@@ -92,7 +92,7 @@ Services emit events for UI sync: `connection:changed`, `scene:loaded`, `node:se
 
 ## API Version Configuration
 
-`api-version.config.js` is the single source of truth for switching between Alpha 5 and Beta 2 proto APIs.
+`api-version.config.js` auto-detects the Octane backend version at startup and activates compat mode if needed. Default target is octaneServGrpc (2026.2, pass-through).
 
 ```
 api-version.config.js
@@ -101,12 +101,7 @@ api-version.config.js
   └──> client/src/config/apiVersionConfig.ts (client side, UI display only)
 ```
 
-**Unified compat layer (v2.1.0):** All callers use Beta 2 method names. `OctaneGrpcClientBase.callMethod()` handles API version translation before the gRPC wire call:
-
-1. `transformRequestParams()` — adjusts param structure (e.g. `pin_id` → `id`, typed values → generic `value`)
-2. `getCompatibleMethodName()` — translates method name (e.g. `setValueByAttrID` → `setByAttrID`)
-
-Both the web UI (via HTTP → Vite plugin → base) and MCP (via OctaneMcpClient → base) share this single code path. No duplicate compat logic anywhere.
+The compat layer in `OctaneGrpcClientBase.callMethod()` translates method names and param structures for older Octane builds. Both the web UI and MCP share this single code path. For compat details see `docs/mcp/ALPHA5_COMPAT.md`.
 
 ## Key Components
 

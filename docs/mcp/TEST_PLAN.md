@@ -2,12 +2,16 @@
 
 ## §1 Rules
 
+**Every test run starts with SCRATCH.** Kill all servers, stop preview, restart fresh. See `BUILD.md` §2.
+
+**Testing is always DRESS mode.** Stop on failure, debug, fix, verify, resume. See `BUILD.md` §2.
+
 **Every test follows this cycle — no deviation:**
 
 1. **Act** — one change only
 2. **Log** — read `log_mcp.log` (and `log_grpc.log` if visual)
-3. **Render** — `save_render` → read PNG if visual change
-4. **Pass/Fail** — don't rationalize. No change visible = FAIL. `{}` response = FAIL.
+3. **Render** — `save_render` → read PNG. Also `preview_screenshot` → compare preview vs render. Both must show the expected change. Differences between preview and render indicate a real problem (broken viewport streaming, stale UI, geometry not loaded).
+4. **Pass/Fail** — don't rationalize. No change visible = FAIL. `{}` response = FAIL. Preview grey/blank when render has content = FAIL (viewport streaming broken).
 5. **Next** — only after 2-4 confirm success
 
 **Between tests:** `load_project(ORBX/teapot.orbx)` for destructive tests. `save_project` after each major phase.

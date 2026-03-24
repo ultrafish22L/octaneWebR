@@ -16,9 +16,37 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 ## §2 Build Modes
 
-**DRESS (Demo):** 1 object at a time, render after each step, hero camera from the start. For presentations. **Default mode** — always use unless told otherwise.
+**SCRATCH (Clean Start):** Kill everything, restart fresh. Required before any clean test run.
 
-**SPEED (Batch):** Create all nodes → set all attributes → wire all → single render. For testing only.
+1. Kill all Octane processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
+2. Stop preview server (`preview_stop`)
+3. Reset MCP (must fully kill, not just disconnect):
+   - `taskkill //F //IM node.exe` — kill ALL node processes. The relay port check only runs at MCP startup, so a reconnect won't fix a missed relay.
+   - Wait 3 seconds for ports to release
+   - Verify port 51023 is free: `powershell Get-NetTCPConnection -LocalPort 51023` — must return empty
+   - Trigger MCP restart: call any MCP tool (e.g. `get_octane_version`). Claude auto-restarts the MCP process.
+   - Check port 51023 again — **must be listening now**
+   - **If it came back** → project-level MCP auto-restarted with relay, move on
+   - **If still free** → no project MCP configured, start one: `cd octaneWebR/mcp && node dist/index.js`
+   - **NEVER start a second MCP** if one is already running. That creates duplicate processes and breaks the relay.
+   - **Race condition warning:** If you only kill the PID on 51023 (not all node processes), the port may not release fast enough. The new MCP starts, sees 51023 still in use, skips the relay, and the viewport stays dead forever (relay check only runs once at startup).
+4. Verify port 51022 AND 51023 both free
+5. Start the target server (octaneServGrpc or octane.exe), wait for port 51022
+6. Check `log_serv.log` for startup
+7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
+8. Start dev server + preview (`preview_start`)
+9. `get_octane_version` — verify version + API detection
+10. Check `log_mcp.log` — must show `API version:` line AND `Callback streaming started` AND NO `Port 51023 in use`
+11. Check `log_grpc.log` — clean startup, no errors
+12. Preview screenshot — verify viewport is live (not grey/blank)
+
+Only after all 12 steps pass: proceed to DRESS or SHOW.
+
+**Why port 51023 matters:** The MCP relay streams render images to the web UI over WebSocket on port 51023. If a stale MCP process holds that port, the new MCP silently skips the relay and the viewport stays dead. The octane MCP is registered in the **project-level** `.mcp.json` (`C:\otoyla\dev\.mcp.json`) — Claude auto-starts and auto-restarts it when working in this directory. Killing it is safe. Starting a second one in bash is not.
+
+**DRESS (Rehearsal):** 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for development and testing. **Default — use unless told otherwise.**
+
+**SHOW (Performance):** Same DRESS build order, but no stopping. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
 
 ---
 
@@ -26,7 +54,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
-**If anything fails or crashes mid-build: FULL STOP.** Follow MEMORY.md crash protocol. Do not push forward. Do not try "one more thing." Fix → verify → then resume.
+**On failure: FULL STOP.** Follow MEMORY.md crash protocol. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
 
 ### Phase 0: Composition Planning (before any Octane calls)
 
@@ -64,14 +92,14 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                                                                                                                 | Result                                                                                                                                 |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                |
-| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                       | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.      |
-| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. |
-| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                                | **FIRST VISUAL — human sees something**                                                                                                |
-| 5    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                  |
-| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                           | Sharp render                                                                                                                           |
+| Step | Action                                                                                                                                                                 | Result                                                                                                                                                                                                                                                                       |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                                                                                                                                                      |
+| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                       | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.                                                                                                                                            |
+| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
+| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                                | **FIRST VISUAL — human sees something**                                                                                                                                                                                                                                      |
+| 5    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                                                                                                                                                        |
+| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                           | Sharp render                                                                                                                                                                                                                                                                 |
 
 ### Phase 2: Materials & Lighting
 

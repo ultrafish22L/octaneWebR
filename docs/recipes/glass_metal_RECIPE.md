@@ -109,6 +109,8 @@ _Validated 2026-03-22. Two spheres (silver + glass) on floor with daylight. All 
 ```
 3a. create_node(NT_GEO_MESH) → mesh1
     set_attribute(mesh1, A_FILENAME=34, AT_STRING=14, "path/to/sphere_hd.obj")
+    set_attribute(mesh1, A_RELOAD=124, AT_BOOL=1, true)
+    update_scene()  ← MANDATORY — mesh won't load without this
 3b. create_node(NT_MAT_UNIVERSAL) → mat1
     set_attribute(albedo_child, A_VALUE=185, AT_FLOAT3=11, {1,0,0})  ← LOUD red
 3c. create_node(NT_GEO_PLACEMENT) → place1
@@ -147,6 +149,8 @@ _Validated 2026-03-22. Two spheres (silver + glass) on floor with daylight. All 
 ```
 8a. create_node(NT_GEO_MESH) → mesh2
     set_attribute(mesh2, A_FILENAME, "sphere_hd.obj")
+    set_attribute(mesh2, A_RELOAD=124, AT_BOOL=1, true)
+    update_scene()
 8b. create_node(NT_MAT_UNIVERSAL) → mat2
     Batch skip_evaluate:true:
       transmissionType child → 2 (specular)
@@ -167,6 +171,8 @@ _Validated 2026-03-22. Two spheres (silver + glass) on floor with daylight. All 
 ```
 9a. create_node(NT_GEO_MESH) → floor_mesh
     set_attribute(floor_mesh, A_FILENAME, "floor.obj")
+    set_attribute(floor_mesh, A_RELOAD=124, AT_BOOL=1, true)
+    update_scene()
 9b. create_node(NT_MAT_UNIVERSAL) → floor_mat
     albedo → {0.7, 0.7, 0.7}, roughness → 0.8
 9c. create_node(NT_GEO_PLACEMENT) → floor_place

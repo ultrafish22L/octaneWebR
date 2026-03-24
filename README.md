@@ -146,7 +146,7 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 | [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — get everything running in 5 minutes          |
 | [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls          |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
-| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (demo) and SPEED (batch) workflows      |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (rehearsal) and SHOW (performance)      |
 | [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition, OTOY Studio  |
 | [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | All known problems and workarounds                              |
 | [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                |

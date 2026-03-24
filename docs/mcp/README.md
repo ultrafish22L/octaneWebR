@@ -397,6 +397,6 @@ Run `refresh_webapp` via MCP to force a sync. If a node is selected, re-select i
 ## Further Reading
 
 - [REFERENCE.md](./REFERENCE.md) — Pin layouts, node type IDs, attribute enums, material presets
-- [BUILD.md](./BUILD.md) — DRESS/SPEED build protocols, camera workflow, setup order
+- [BUILD.md](./BUILD.md) — Build protocols — DRESS (rehearsal) and SHOW (performance)
 - [CREATIVE.md](./CREATIVE.md) — Lighting, materials, composition, OTOY Studio pipeline
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — All known problems and workarounds

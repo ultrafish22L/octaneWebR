@@ -31,6 +31,10 @@
 - `docs/mcp/TEST_PLAN.md` §2 SMOKE (red sphere build), §3 full sweep
 - Assets: `docs/mcp/REFERENCE.md` §1 paths, `docs/mcp/BUILD.md` §8 asset pipeline
 
+**Alpha 5 compat**
+
+- `docs/mcp/ALPHA5_COMPAT.md` — quirks, mesh reload, handle numbering, compat transforms
+
 **Build scenes**
 
 - `docs/mcp/BUILD.md` §1 human-view-first, §3 DRESS phases, §6 camera math

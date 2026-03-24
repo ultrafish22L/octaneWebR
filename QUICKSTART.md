@@ -138,7 +138,7 @@ Claude can build scenes, render, and save images without octaneWebR running.
 ## Next Steps
 
 - **[docs/mcp/README.md](docs/mcp/README.md)** — Full MCP user guide with all 78 tools, tips, and pitfalls
-- **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Scene building protocols (DRESS demo mode, SPEED batch mode)
+- **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Build protocols — DRESS (rehearsal) and SHOW (performance)
 - **[docs/mcp/CREATIVE.md](docs/mcp/CREATIVE.md)** — Lighting, materials, composition guide
 - **[docs/mcp/REFERENCE.md](docs/mcp/REFERENCE.md)** — Node types, pin layouts, attribute IDs
 - **[docs/mcp/TROUBLESHOOTING.md](docs/mcp/TROUBLESHOOTING.md)** — All known issues and workarounds

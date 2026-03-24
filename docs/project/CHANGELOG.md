@@ -4,6 +4,26 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.3.0] - 2026-03-24
+
+### Added
+
+- **ALPHA5_COMPAT.md** — Dedicated doc for Alpha 5 compatibility (mesh reload quirks, handle numbering, pin differences, compat layer transforms, gRPC log gaps).
+- **SCRATCH protocol** in BUILD.md §2 — Clean start procedure: kill servers, reset MCP (port 51023 relay), restart, verify viewport streaming before any scene building.
+- **Preview comparison** in TEST_PLAN.md §1 — Test cycle now requires comparing preview viewport vs saved render at every visual step.
+
+### Changed
+
+- **Mesh loading pattern** — A_RELOAD + update_scene() now documented as mandatory in REFERENCE.md §1, BUILD.md §3, and all recipes. Without both, meshes load silently empty.
+- **DRESS/SHOW modes** — BUILD.md §2 now defines three modes: SCRATCH (clean start), DRESS (rehearsal, stop on failure), SHOW (demo, no stopping).
+- **Alpha 5 references consolidated** — All alpha5/beta2 details moved out of ARCHITECTURE.md, REFERENCE.md, BUILD.md into ALPHA5_COMPAT.md. Main docs now reference serv (2026.2) only.
+
+### Fixed
+
+- **MCP relay race condition** — SCRATCH protocol now kills all node processes (not just the PID on port 51023) to avoid relay port not releasing in time. Documented in BUILD.md §2.
+
+---
+
 ## [2.2.4] - 2026-03-22
 
 ### Fixed — Electron Production Build
