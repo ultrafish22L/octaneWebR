@@ -22,7 +22,6 @@ import {
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
 } from './utils';
-import { CRASH_TYPE_IDS } from '../shared/OctaneConstants';
 
 interface SceneTreeNode {
   handle: number;
@@ -100,25 +99,6 @@ async function traverseGraph(
         } catch (e: any) {
           mcpLogLazy('verbose', () => `[scene:tree:nodeType:${itemHandle}] ${e?.message ?? e}`);
           // Some items (pure graphs) may not support ApiNode.type()
-        }
-
-        // SAFETY: skip nodes with dangerous type IDs — negative, zero, unknown, or crash-prone.
-        // These cause Octane to crash when we recurse into them or query their pins.
-        const isDangerousType = typeId <= 0 || CRASH_TYPE_IDS.has(typeId);
-        if (isDangerousType) {
-          const typeName = cache?.getNodeTypeName(typeId) ?? `TYPE_${typeId}`;
-          mcpLog(
-            `traverseGraph: skipping dangerous node ${itemHandle} "${name}" (type=${typeId} ${typeName}) — would crash Octane`,
-            'warn'
-          );
-          // Still add to tree (for visibility) but never recurse or query pins
-          nodes.push({
-            handle: Number(itemHandle),
-            name: String(name),
-            type: typeId,
-            isGraph: Boolean(isGraph),
-          });
-          continue;
         }
 
         const node: SceneTreeNode = {

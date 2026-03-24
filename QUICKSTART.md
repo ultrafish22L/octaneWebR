@@ -1,12 +1,12 @@
-# OctaneWebR Quick Start
+# OctaneWebR v2.4.0 — Quick Start
 
 Get the browser UI and AI scene builder running in under 5 minutes.
 
-OctaneWebR gives you two ways to work with Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes for you through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 78 tools for controlling Octane.
+OctaneWebR provides two interfaces to Octane: a browser UI for visual editing, and an MCP server that lets AI (Claude) build scenes through natural language. MCP (Model Context Protocol) is a standard that lets AI assistants use external tools — in this case, 78 tools for controlling Octane.
 
-## §1 What You Need
+## §1 Prerequisites
 
-- **Octane Render Studio 2026.1+** with gRPC enabled (gRPC is how programs talk to Octane remotely)
+- **Octane Render Studio 2026.1+** with gRPC enabled
 - **Node.js 18+**
 - **Claude Desktop or Claude Code CLI** (for MCP / AI scene building)
 
@@ -29,7 +29,7 @@ cd mcp && npm install && cd ..
 cd mcp && npm run build && cd ..
 ```
 
-This compiles to `mcp/dist/index.js`. You only need to rebuild when MCP code changes.
+Compiles to `mcp/dist/index.js`. Rebuild only when MCP code changes.
 
 ## §5 Launch
 
@@ -51,13 +51,13 @@ Open **http://localhost:43929** in your browser.
 ## §6 Verify
 
 1. In Octane, load any scene (or create a Render Target)
-2. In the browser, the scene tree should populate in the left panel
+2. The browser's left panel should populate with the scene tree
 3. The render viewport should show a live image
-4. Try selecting a node — the inspector panel shows its properties
+4. Select a node — the inspector panel shows its properties
 
 ## §7 MCP Setup
 
-Open Claude Code CLI or Claude Desktop's code tab in the `octaneWebR` directory. Both read `.mcp.json` automatically and connect to the Octane MCP server. Claude Desktop's code tab is the primary development environment for this project.
+Open Claude Code CLI or Claude Desktop's code tab in the `octaneWebR` directory. Both read `.mcp.json` automatically and connect to the Octane MCP server.
 
 **Try these prompts:**
 
@@ -79,7 +79,7 @@ The `.mcp.json` registers three MCP servers:
 | --------------- | -------------------------------------------------------------- |
 | **octane**      | Scene control — nodes, materials, camera, rendering (78 tools) |
 | **octane-docs** | Search Octane's API documentation and examples                 |
-| **otoy-studio** | MCP server for AI images/3D/video/music/vision                 |
+| **otoy-studio** | AI images, 3D, video, music, vision                            |
 
 ## §8 Web UI Only
 
@@ -93,14 +93,14 @@ octaneServGrpc/build/Release/octaneServGrpc.exe &
 npm run dev
 ```
 
-Open http://localhost:43929. You get a full scene outliner, node graph editor, parameter inspector, and live render viewport.
+Open http://localhost:43929. Full scene outliner, node graph editor, parameter inspector, and live render viewport.
 
 ## §9 MCP Only
 
 If you only want AI control without the browser:
 
 ```bash
-# 1. Build the MCP server first (if you haven't already)
+# 1. Build the MCP server (if not already built)
 cd mcp && npm run build && cd ..
 
 # 2. Start octaneServGrpc
@@ -110,11 +110,11 @@ octaneServGrpc/build/Release/octaneServGrpc.exe &
 #    MCP connects via .mcp.json automatically
 ```
 
-Claude can build scenes, render, and save images without octaneWebR running.
+Claude can build scenes, render, and save images without the web UI running.
 
 ## §10 Environment Variables
 
-| Variable            | Default     | What It Does                                            |
+| Variable            | Default     | Purpose                                                 |
 | ------------------- | ----------- | ------------------------------------------------------- |
 | `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host                                        |
 | `OCTANE_PORT`       | `51022`     | Octane gRPC port                                        |
@@ -125,18 +125,18 @@ Claude can build scenes, render, and save images without octaneWebR running.
 
 ## Troubleshooting
 
-| Problem                      | Fix                                                                         |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| Browser shows "Disconnected" | Is Octane running? Is gRPC enabled on port 51022?                           |
-| Empty scene tree             | Load a scene in Octane, then press F5 in the browser                        |
-| MCP tools fail               | Did you build? `cd mcp && npm run build`                                    |
-| Blurry render                | DOF is on by default — ask Claude to disable it or set camera aperture to 0 |
-| Octane not responding        | Check for blocking dialogs in the Octane window                             |
+| Problem                      | Fix                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| Browser shows "Disconnected" | Is Octane running? Is gRPC enabled on port 51022?                                |
+| Empty scene tree             | Load a scene in Octane, then press F5 in the browser                             |
+| MCP tools fail               | Did you build? `cd mcp && npm run build`                                         |
+| Blurry render                | DOF is auto-disabled for new scenes; for loaded scenes, set camera aperture to 0 |
+| Octane not responding        | Check for blocking dialogs in the Octane window                                  |
 
 ## Next Steps
 
 - **[docs/mcp/README.md](docs/mcp/README.md)** — Full MCP user guide with all 78 tools, tips, and pitfalls
-- **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Build protocols — DRESS (rehearsal) and SHOW (performance)
+- **[docs/mcp/BUILD.md](docs/mcp/BUILD.md)** — Build protocols: SCRATCH, FRESH, DRESS, SHOW
 - **[docs/mcp/CREATIVE.md](docs/mcp/CREATIVE.md)** — Lighting, materials, composition guide
 - **[docs/mcp/REFERENCE.md](docs/mcp/REFERENCE.md)** — Node types, pin layouts, attribute IDs
 - **[docs/mcp/TROUBLESHOOTING.md](docs/mcp/TROUBLESHOOTING.md)** — All known issues and workarounds

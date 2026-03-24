@@ -125,8 +125,7 @@ COMMON MATERIAL TYPES:
    - create_node("NT_GEO_OBJECT") → mesh_handle (defaults to Box)
    - To change primitive: get_node_info(mesh) → pin 0 has enum child
    - set_attribute(enum_child_handle, 185, AT_INT=3, value=primitiveType)
-   - Primitives: 0=Box, 1=Cylinder, 2=Sphere, 3=Torus, 4=Plane, 6=Disc
-   - NOTE: Quad (5) renders no geometry — Octane API bug
+   - Primitives: 0=Box, 1=Cylinder, 2=Sphere, 3=Torus, 4=Plane, 5=Disc, etc. (24 types total)
 
 3. **Create & Connect Material**
    - create_and_connect("NT_MAT_UNIVERSAL", mesh_handle, pin_index=0)
@@ -193,7 +192,7 @@ COMMON MATERIAL TYPES:
 - Check full chain: mesh → placement → geo group → RT pin 3
 - get_node_info on each node, verify connected pins
 - Placement might have wrong transform (object at origin but camera pointing elsewhere)
-- Quad primitive (type 5) renders no geometry — Octane API bug, use Plane (4) instead
+- All 24 primitive types work — check type enum value matches expected shape
 
 ## Octane Crash (ECONNRESET / ECONNREFUSED)
 - Octane has terminated. ALL handles are now invalid.

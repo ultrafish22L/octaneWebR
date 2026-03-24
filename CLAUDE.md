@@ -1,12 +1,20 @@
-## Last Session
+## v2.4.0 — Current State
 
-### Pending
+### Completed
 
-1. Connection LED bug — green even when Octane offline
+- **Gotcha sweep** — Crash guards debunked and removed on SDK server (octaneServGrpc 2026.2). Alpha 5 gotchas documented in `docs/mcp/ALPHA5_COMPAT.md` for reference only.
+- **fit_camera tool** — Computes camera position/target from bounding box with elevation, yaw, and margin controls.
+- **FRESH / SCRATCH concepts** — FRESH clears the scene (`reset_project`). SCRATCH kills all processes and restarts (session start or after crashes). See `docs/mcp/BUILD.md` §7.
+- **DOF auto-disable** — `create_node` for RT now sets camera aperture to 0 automatically. No more blurry-by-default renders.
+- **Proto consolidation** — Beta 2 proto files cleaned up. `proto_old/` retained for Alpha 5 compat only.
+- **Build version tracking** — Root and MCP `package.json` both at 2.4.0.
+- **SetCamera fix** — gRPC `SetCamera` now persists to both LiveLink and node graph attributes.
+
+### Known Issues
+
+1. Connection LED — shows green even when Octane is offline
 2. Console error spam — 136+ ECONNREFUSED on startup
-3. Re-test LiveDB after Octane update
-4. ORBX loading — test callback streaming with large scenes
-5. SEGA Phase B calibration
+3. LiveDB — disabled (Octane gRPC "invalid pointer type" bug on all 4 tools)
 
 **ALL temp files → `temp/`** — renders, test scripts, debug output, scratch. Never pollute project root.
 
@@ -17,7 +25,7 @@
 **Run**
 
 - `cd mcp && npm run build` (esbuild, NOT tsc)
-- **Server: `octaneServGrpc/build/Release/octaneServGrpc.exe`** — start it yourself if not running. Never ask the user. Check port 51022 first, launch if nothing listening.
+- **Server: `octaneServGrpc/build/Release/octaneServGrpc.exe`** — start it yourself if not running. Check port 51022 first, launch if nothing listening.
 - Check: `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`
 - `QUICKSTART.md` §4 build, §5 launch, §7 MCP setup
 - For clean test runs: follow SCRATCH protocol in `docs/mcp/BUILD.md` §2

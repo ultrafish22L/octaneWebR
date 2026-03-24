@@ -21,7 +21,7 @@ import {
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
 } from './utils';
-import { CRASH_TYPE_IDS, PIN_TYPE_NAMES, AttributeId } from '../shared/OctaneConstants';
+import { PIN_TYPE_NAMES, AttributeId } from '../shared/OctaneConstants';
 import { enumeratePins } from './pin-utils';
 // Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
 export { PIN_TYPE_NAMES };
@@ -73,13 +73,6 @@ export function registerNodeTools(
         if (typeId === undefined) {
           return errorResult(
             `Unknown node type: ${node_type}. Use list_node_types to see available types.`
-          );
-        }
-
-        // Block crash-causing type IDs
-        if (CRASH_TYPE_IDS.has(typeId)) {
-          return errorResult(
-            `Type ID ${typeId} (${node_type}) crashes Octane — these are internal/system types that cannot be created via API.`
           );
         }
 
@@ -264,22 +257,6 @@ export function registerNodeTools(
       try {
         const gated = gateHandle('delete_node', handle, client.sceneCache);
         if (gated) return gated;
-
-        // Guard: reject deletion of nodes with active connections (crashes Octane)
-        const activeConns = client.sceneCache.getConnectionsInvolving(handle);
-        if (activeConns.length > 0) {
-          const pinList = activeConns
-            .map(c =>
-              c.source === handle
-                ? `source for ${c.target}:pin${c.pinIndex}`
-                : `target pin ${c.pinIndex} ← ${c.source}`
-            )
-            .join(', ');
-          return errorResult(
-            `Cannot delete handle ${handle} — ${activeConns.length} active connection(s): ${pinList}. ` +
-              `Disconnect pins first. Deleting connected nodes crashes Octane.`
-          );
-        }
 
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
@@ -602,11 +579,6 @@ export function registerNodeTools(
             `Unknown node type: ${node_type}. Use list_node_types to see available types.`
           );
         }
-        if (CRASH_TYPE_IDS.has(typeId)) {
-          return errorResult(
-            `Type ID ${typeId} (${node_type}) crashes Octane — internal/system type.`
-          );
-        }
 
         const rootHandle = await client.getRootNodeGraph();
         const createResult = await client.callMethod('ApiNode', 'create', {
@@ -789,7 +761,7 @@ export function registerNodeTools(
           const listResult = await client.callMethod('ApiNodeGraph', 'findNodes', {
             objectPtr: rootRef,
             type: type_id,
-            recurse: false, // NEVER let Octane recurse — it crashes on bad types
+            recurse: recurse ?? true, // SDK server handles all types gracefully
           });
           const listHandle = extractHandle(listResult);
           if (listHandle) {
@@ -856,9 +828,9 @@ export function registerNodeTools(
                     continue;
                   }
 
-                  if (itemTypeId <= 0 || CRASH_TYPE_IDS.has(itemTypeId)) continue;
+                  if (itemTypeId <= 0) continue; // type 0 = unknown, skip
 
-                  // Safe to search this subgraph (non-recursive at each level)
+                  // Search this subgraph
                   try {
                     const subRef = { handle: String(itemHandle), type: OBJ_API_NODE_GRAPH };
                     const subListResult = await client.callMethod('ApiNodeGraph', 'findNodes', {

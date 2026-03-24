@@ -177,22 +177,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           return errorResult(missingAttrError(handle, attribute_id));
         }
 
-        // A_FILENAME (34) with AT_STRING (14): validate path to prevent blocking Octane dialog
-        if (attribute_id === 34 && expected_type === AT_STRING) {
-          const filePath = String(value);
-          if (!path.isAbsolute(filePath)) {
-            return errorResult(
-              'A_FILENAME requires an absolute path. Relative paths cause Octane to pop a blocking dialog.'
-            );
-          }
-          // Skip existence check for UNC paths (network mounts)
-          if (!filePath.startsWith('\\\\') && !fs.existsSync(filePath)) {
-            return errorResult(
-              `File not found: ${filePath}. Non-existent paths cause Octane to pop a blocking dialog that hangs gRPC for 30s.`
-            );
-          }
-        }
-
         const valueParams = buildValueParams(value, expected_type);
         // Match web UI pattern: set with evaluate:false, then ApiChangeManager.update()
         await client.callMethod('ApiItem', setMethod, {

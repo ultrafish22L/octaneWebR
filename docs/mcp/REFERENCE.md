@@ -4,7 +4,7 @@ Lookup tables for MCP scene building. Don't read front-to-back — find what you
 
 **Live type system discovery**: Use MCP resources instead of memorizing values (§11).
 
-Hardcoded protocol constants (AttrType, AttributeId, CRASH_TYPE_IDS, PIN_TYPE_NAMES, RT_PINS) live in `shared/OctaneConstants.ts`.
+Hardcoded protocol constants (AttrType, AttributeId, PIN_TYPE_NAMES, RT_PINS) live in `shared/OctaneConstants.ts`.
 
 ---
 
@@ -48,12 +48,12 @@ For compat-mode quirks (mesh unloading, etc.) see `ALPHA5_COMPAT.md`.
 
 ### Other Key Attributes
 
-| Attribute   | ID  | Notes                                        |
-| ----------- | --- | -------------------------------------------- |
-| A_VALUE     | 185 | General value                                |
-| A_FILENAME  | 34  | File path                                    |
-| A_RELOAD    | 124 | Force file reload                            |
-| A_PIN_COUNT | 113 | Set on geo groups BEFORE connecting children |
+| Attribute   | ID  | Notes                                                  |
+| ----------- | --- | ------------------------------------------------------ |
+| A_VALUE     | 185 | General value                                          |
+| A_FILENAME  | 34  | File path                                              |
+| A_RELOAD    | 124 | Force file reload                                      |
+| A_PIN_COUNT | 113 | Geo group pin count (auto-expanded by `connect_nodes`) |
 
 ### Attribute Types
 
@@ -114,7 +114,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 
 | Pin   | Name      | Child Type | Notes                                                                       |
 | ----- | --------- | ---------- | --------------------------------------------------------------------------- |
-| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. Type 18 (Quad) crashes. |
+| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. All 24 types supported. |
 | 1     | material  | Diffuse    | Auto-created. Color: `get_node_info(mat)`→pin0→RGB child                    |
 | 3     | transform | Transform  | A_TRANSLATION/ROTATION/SCALE on **child handle, NOT parent**                |
 | 4/5/6 | W/H/D     | Float      | `set_attribute(child, 185, 9, value)`                                       |
@@ -141,14 +141,14 @@ geo group → RT (pin_index: 3)
 
 ### What Works vs What Fails
 
-| Target            | Works                       | Silently fails                       |
-| ----------------- | --------------------------- | ------------------------------------ |
-| RT geometry       | `pin_index: 3`              | `pin_id: 59`                         |
-| Mesh material     | `pin_index: 0`              | `pin_id: 30`                         |
-| Geo group inputs  | `pin_index: N` (0-based)    | `pin_name: "Input N"`                |
-| RT kernel         | `pin_id: 89`                | —                                    |
-| RT environment    | `pin_id: 43`                | —                                    |
-| Geo group (fresh) | Set `A_PIN_COUNT=113` first | Connect to 0-pin group = silent fail |
+| Target            | Works                             | Silently fails                       |
+| ----------------- | --------------------------------- | ------------------------------------ |
+| RT geometry       | `pin_index: 3`                    | `pin_id: 59`                         |
+| Mesh material     | `pin_index: 0`                    | `pin_id: 30`                         |
+| Geo group inputs  | `pin_index: N` (0-based)          | `pin_name: "Input N"`                |
+| RT kernel         | `pin_id: 89`                      | —                                    |
+| RT environment    | `pin_id: 43`                      | —                                    |
+| Geo group (fresh) | `connect_nodes` auto-expands pins | Finds first empty slot automatically |
 
 ### Verified Connections
 
@@ -244,9 +244,9 @@ Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 | 4   | Cylinder      | 22  | Torus          |
 | 6   | Disc          | 23  | Truncated cone |
 
-Type 18 (Quad) crashes. Full list: 1-17, 19-23 (alphabetical). Workaround: flat Box or quad.obj.
+All types 1-23 work on SDK server. Full list: 1-23 (alphabetical).
 
-**Primitive type changes are non-deterministic crash risk** — see TROUBLESHOOTING.md.
+Primitive type changes work on SDK server — all 24 types tested.
 
 ---
 
@@ -280,10 +280,9 @@ Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set t
 
 See `BUILD.md` Phase 1 for the full setup sequence. Key points:
 
-- Camera BEFORE geometry — object appears framed instantly.
-- `set_camera` is the ONLY geometry refresh trigger.
-- `start_render` does NOT evaluate the scene.
-- Use NT_GEO_MESH (not NT_GEO_OBJECT) — primitive type changes crash.
+- Use `fit_camera(elevation, yaw, margin)` AFTER geometry — auto-frames from bounds.
+- `start_render` auto-flushes `ApiChangeManager::update()`.
+- NT_GEO_OBJECT works on SDK server.
 
 ---
 
@@ -295,7 +294,7 @@ Path prefix: `ORBX/assets_test/`
 
 **Also in directory (textures/images):** `art_cyber.jpg`, `art_surreal.jpg`, `gallery_env.jpg`, `hdri_sunset_ocean.png`, `lava_env.jpg`, `space_env.jpg`
 
-Only these two .obj files exist. For other shapes use NT_GEO_OBJECT (crash risk) or NT_GEO_PLANE.
+Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PLANE.
 
 ---
 
@@ -350,7 +349,7 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 | `node-types-by-category` | `octane://node-types/{category}`   | Filter by category (MAT, TEX, GEO, LIGHT, KERN, etc.)                                                    |
 | `pin-layout`             | `octane://pin-layout/{typeName}`   | All pins for a type: index, id, name, type, defaultNodeType. **Resolves pin_index vs pin_id confusion.** |
 | `compatibility`          | `octane://compatibility/{pinType}` | What nodes can connect to a pin type (PT_TEXTURE, PT_MATERIAL, etc.)                                     |
-| `primitive-types`        | `octane://primitive-types`         | NT_GEO_OBJECT enum values (Box=1, Sphere=20, etc.) with crash warnings                                   |
+| `primitive-types`        | `octane://primitive-types`         | NT_GEO_OBJECT enum values (Box=1, Sphere=20, etc.)                                                       |
 
 ### Dynamic (live gRPC query — cached after first hit)
 

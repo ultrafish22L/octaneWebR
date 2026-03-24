@@ -6,7 +6,6 @@ import {
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
-  CRASH_TYPE_IDS,
   PIN_TYPE_NAMES,
   RT_PINS,
 } from '../shared/OctaneConstants';
@@ -39,20 +38,6 @@ describe('shared OctaneConstants', () => {
       expect(OBJ_API_NODE).toBe(17);
       expect(OBJ_API_NODE_GRAPH).toBe(20);
       expect(OBJ_API_ITEM_ARRAY).toBe(31);
-    });
-  });
-
-  describe('CRASH_TYPE_IDS', () => {
-    it('blocks known dangerous type IDs', () => {
-      expect(CRASH_TYPE_IDS.has(0)).toBe(true);
-      expect(CRASH_TYPE_IDS.has(116)).toBe(true);
-      expect(CRASH_TYPE_IDS.has(408)).toBe(true);
-      expect(CRASH_TYPE_IDS.has(40000)).toBe(true);
-    });
-
-    it('does not block normal type IDs', () => {
-      expect(CRASH_TYPE_IDS.has(130)).toBe(false); // NT_MAT_UNIVERSAL
-      expect(CRASH_TYPE_IDS.has(30)).toBe(false); // NT_GEO_MESH
     });
   });
 

@@ -39,9 +39,6 @@ Follow MEMORY.md crash protocol. Then:
 ### Known Crash Triggers
 
 - `import_materialx` — can crash Octane on certain .mtlx files (standard_surface_gold.mtlx confirmed crash).
-- `reset_project` — safe on SDK server (suppressUI prevents dialog). Use for FRESH starts.
-- `get_node_info` on crash-prone type IDs — `[0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]`.
-- `set_attribute` with `A_FILENAME` and bad path — pops Octane dialog, blocks gRPC 30s.
 
 ---
 
@@ -60,6 +57,8 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
    3. `start_render` → `fit_camera()` — check render + preview (sphere visible, properly framed)
    4. Add environment — `fit_camera()` — check render + preview (sky + lighting appear)
    5. Hero camera comes last — only after all geometry verified
+
+**Quick alternative (MINIS):** `load_project("ORBX/smoketest.orbx")` + `start_render` + `save_render` → verify render shows expected scene. Validates Octane + MCP connectivity without building from scratch.
 
 ### A. Smoke Test (run at session start)
 
@@ -219,10 +218,10 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 ## §4 Known Issues
 
-| Tool                 | Issue                                             | Severity |
-| -------------------- | ------------------------------------------------- | -------- |
-| `import_materialx`   | Crashes Octane on certain .mtlx files             | HIGH     |
-| `get_subsample_mode` | Returns stale value after set                     | LOW      |
-| `list_color_spaces`  | Fails without loaded OCIO config                  | EXPECTED |
-| `reset_project`      | Safe — suppressUI prevents dialog on SDK server   | FIXED    |
-| LiveDB tools (4)     | Octane gRPC "invalid pointer type" bug — disabled | HIGH     |
+| Tool                 | Issue                                                | Severity |
+| -------------------- | ---------------------------------------------------- | -------- |
+| `import_materialx`   | Crashes Octane on certain .mtlx files                | HIGH     |
+| `get_subsample_mode` | Returns stale value after set                        | LOW      |
+| `list_color_spaces`  | Fails without loaded OCIO config                     | EXPECTED |
+| `reset_project`      | `suppressUI` prevents blocking dialog — not an issue | N/A      |
+| LiveDB tools (4)     | Octane gRPC "invalid pointer type" bug — disabled    | HIGH     |

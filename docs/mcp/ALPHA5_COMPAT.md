@@ -105,3 +105,48 @@ Full glass metal DRESS test passed on both backends:
 
 Renders saved: `temp/renders/glass_metal_serv.png`, `temp/renders/glass_metal_alpha5.png`
 Projects saved: `temp/renders/glass_metal_serv.orbx`, `temp/renders/glass_metal_alpha5.orbx`
+
+---
+
+## §9 Guards That May Be Needed on Alpha 5
+
+The following gotchas were **debunked on the SDK server (octaneServGrpc 2026.2)** — the SDK handles them gracefully. But they were originally reported on Alpha 5 / older Octane versions and may still be real there. If Alpha 5 compat is re-enabled, these guards may need to be added to the compat layer.
+
+| #   | Gotcha                                        | Serv (2026.2) Status                                                                 | Alpha 5 Risk                             | Guard If Needed                                                                         |
+| --- | --------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| 9   | Deleting connected nodes crashes (ECONNRESET) | **Debunked** — SDK auto-disconnects, no crash                                        | HIGH — Alpha 5 may not handle gracefully | Auto-disconnect all pins before `ApiItem.destroy`, or block deletion of connected nodes |
+| 16  | Primitive type changes crash (NT_GEO_OBJECT)  | **Debunked** — all 24 prim types work, no crashes                                    | HIGH — reported as 10-50% crash rate     | Block prim type changes, return error "Use NT_GEO_MESH + .obj for non-box geometry"     |
+| 17  | Crash-prone type IDs (0, 116, 408, 40000+)    | **Debunked** — SDK returns graceful FAILED_PRECONDITION errors, guard removed v2.4.0 | HIGH — Alpha 5 may crash on nodeInfo     | Block in `create_node`, skip during scene traversal in `get_scene_tree`                 |
+| 18  | A_FILENAME bad path hangs gRPC 30s            | **Debunked** — SDK handles bad paths gracefully, guard removed v2.4.0                | HIGH — Alpha 5 pops blocking dialog      | Validate path exists before passing to Octane                                           |
+| 7   | Quad primitive (type 18) renders nothing      | **Debunked** — renders fine on SDK server                                            | UNKNOWN — may be version-specific        | Warn when setting prim type to 18                                                       |
+| 8   | reset_project pops blocking dialog            | **Debunked** — `suppressUI: true` on SDK server prevents dialog                      | HIGH — Alpha 5 may not honor suppressUI  | Auto-save to temp before reset, or use delete-all-nodes approach                        |
+| 19  | Overlapping scene evaluations crash           | **Discarded** — SDK server serializes evals                                          | MEDIUM — Alpha 5 may not serialize       | Make `skip_evaluate:true` the default, require explicit `update_scene()`                |
+| 22  | Auto-created children reject connectTo        | **Debunked** — SDK allows replacing auto-created children via connect, v2.4.0        | MEDIUM — Alpha 5 may reject              | Detect pattern, return "Create standalone node and connect to parent pin instead"       |
+
+### How to Re-enable Guards
+
+Guards are implemented in the MCP tool handlers (`mcp/src/tools/*.ts`). To add Alpha 5 guards:
+
+1. Check `client.isAlpha5` (or similar flag from auto-detection)
+2. Conditionally apply the guard only on Alpha 5
+3. On serv (2026.2), skip the guard — SDK handles it
+
+Example pattern:
+
+```typescript
+// In delete_node handler:
+if (client.isAlpha5) {
+  // Alpha 5 crashes on connected-node deletion — auto-disconnect first
+  const conns = client.sceneCache.getConnectionsInvolving(handle);
+  for (const c of conns) {
+    await client.callMethod('ApiNode', 'connectToIx', {
+      objectPtr: { handle: String(c.target), type: OBJ_API_NODE },
+      pinIdx: c.pinIndex,
+      sourceNode: { handle: 0, type: OBJ_API_NODE },
+      evaluate: true,
+      doCycleCheck: false,
+    });
+  }
+}
+// Then proceed with deletion on both backends
+```

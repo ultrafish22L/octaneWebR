@@ -13,29 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SceneCache } from '../SceneCache';
 import { jsonResult, errorResult, gateHandle, extractHandle, extractValue } from '../tools/utils';
-import { CRASH_TYPE_IDS } from '../shared/OctaneConstants';
 import { parseCritiqueResponse } from '../vision/prompts';
-
-// ────────────────────────────────────────────────────────────
-// create_node logic (extracted from node.ts handler)
-// ────────────────────────────────────────────────────────────
-
-describe('create_node: crash type blocking', () => {
-  it('blocks every known crash type ID', () => {
-    for (const id of CRASH_TYPE_IDS) {
-      // The tool checks CRASH_TYPE_IDS.has(typeId)
-      expect(CRASH_TYPE_IDS.has(id)).toBe(true);
-    }
-    expect(CRASH_TYPE_IDS.size).toBeGreaterThan(5);
-  });
-
-  it('allows safe type IDs', () => {
-    const safeIds = [130, 34, 113, 1, 4]; // NT_MAT_UNIVERSAL, NT_TEX_IMAGE, etc.
-    for (const id of safeIds) {
-      expect(CRASH_TYPE_IDS.has(id)).toBe(false);
-    }
-  });
-});
 
 describe('create_node: cache tracking', () => {
   it('addNode + trackHandle populates scene cache after creation', () => {

@@ -1,8 +1,6 @@
 # Octane MCP User Guide
 
-> **Note:** Tool descriptions below cover the original 28 tools. Current count: **78 active tools, 4 disabled**.
-
-Control Octane Render from AI agents. Build scenes, set materials, position cameras, and render — all through natural language.
+Control Octane Render from AI agents. **78 active tools, 4 disabled** (LiveDB). Build scenes, set materials, position cameras, and render — all through natural language.
 
 ## What Is This?
 
@@ -200,19 +198,19 @@ When Claude modifies a node that's currently selected in octaneWebR, you may nee
 
 ---
 
-## Tool Reference (original 28 tools — 78 active)
+## Tool Reference
 
 | Category       | Tools                                                                                                  | What They Do                                                |
 | -------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | **Project**    | `load_project`, `save_project`, `reset_project`                                                        | Open/save/clear scenes                                      |
-| **Camera**     | `get_camera`, `set_camera`                                                                             | Read/set camera position and target                         |
+| **Camera**     | `get_camera`, `set_camera`, `fit_camera`                                                               | Read/set camera, auto-frame scene (elevation/yaw/margin)    |
 | **Render**     | `start_render`, `stop_render`, `get_render_status`, `save_render`                                      | Control rendering, export images (PNG/EXR/HDR/TGA/TIFF/JPG) |
 | **Scene**      | `get_scene_tree`, `list_node_types`                                                                    | Query hierarchy and 755+ node types                         |
 | **Nodes**      | `create_node`, `delete_node`, `get_node_info`, `connect_nodes`, `disconnect_pin`, `create_and_connect` | Build the node graph                                        |
 | **Attributes** | `set_attribute`, `get_attribute`                                                                       | Read/write node properties                                  |
 | **Import**     | `import_glb`                                                                                           | GLB → OBJ + textures + material + wiring                    |
 | **Webapp**     | `refresh_webapp`                                                                                       | Sync octaneWebR UI                                          |
-| **Info**       | `get_octane_version`, `get_device_info`                                                                | System info                                                 |
+| **Info**       | `get_octane_version`, `get_device_info`                                                                | System info + build tracking (mcp_build, serv_build)        |
 | **Debug**      | `clear_log`                                                                                            | Clear MCP log                                               |
 | **Profiling**  | `profile_start`, `profile_end`, `profile_report`, `profile_reset`                                      | Performance timing                                          |
 
@@ -331,20 +329,19 @@ Some connections report success but don't actually work:
 
 - **RT geometry pin:** Always use `pin_index: 3`, never `pin_id: 59`
 - **Mesh material pin:** Always use `pin_index: 0`, never `pin_id: 30`
-- **Auto-created children:** You can't replace internal nodes (camera, env, kernel) by connecting to their pins. Create a standalone node and connect it to the parent's pin instead.
+- **Auto-created children:** You can replace internal nodes by connecting a standalone node to the parent's pin directly.
 - **Always verify:** After connecting, call `get_node_info` on the target and check that `connected_handle != 0`.
 
 ### Render Gotchas
 
-- **DOF is on by default** — aperture is 0.893. Set it to 0 immediately or everything will be blurry.
+- **DOF is auto-disabled on new RTs** (aperture set to 0). For loaded scenes, set aperture to 0 if render is blurry.
 - **Lights are 40x dimmer than expected** — emission efficiency defaults to 0.025. Set it to 1.0.
-- **`start_render` now auto-evaluates** — flushes pending scene changes before rendering. No manual `update_scene` needed.
+- **`start_render` auto-flushes** pending scene changes before rendering. No manual `update_scene` needed.
+- **`connect_nodes` and `disconnect_pin` auto-flush** `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
 
-### Crash Triggers
+### Known Crash Triggers
 
-- ~~**`reset_project`**~~ Fixed — `suppressUI` prevents the save dialog on our SDK server.
-- **Invalid file paths** in `A_FILENAME` pop an Octane dialog that blocks gRPC.
-- **Certain node type IDs** crash Octane: `0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137`. The MCP server already filters these.
+- `import_materialx` — can crash Octane on certain .mtlx files. Save scene first.
 
 ### Transform Gotchas
 
@@ -374,7 +371,7 @@ Connection gotcha — see [Silent Connection Failures](#silent-connection-failur
 
 ### Octane stops responding
 
-On SDK server, `suppressUI` prevents most dialogs. Bad file paths are validated server-side. If truly hung, kill and restart:
+On the SDK server, `suppressUI` prevents most dialogs and bad file paths are handled gracefully. If truly hung, kill and restart:
 
 ```bash
 taskkill /F /IM octane.exe        # Windows
@@ -385,7 +382,7 @@ pkill -f octane                    # Linux/macOS
 
 - All white? Check RT connections — geometry, kernel, and environment must all be wired.
 - All black? No light sources. Add an environment or emission node.
-- Blurry? DOF may be on (only affects RTs created before the auto-disable fix). Set camera aperture to 0.
+- Blurry? DOF is auto-disabled on new RTs. For old/loaded RTs, set camera aperture to 0.
 - Mesh invisible? `A_RELOAD` should be triggered automatically. If not, set `A_RELOAD=124` to true after `A_FILENAME=34`.
 
 ### octaneWebR not updating

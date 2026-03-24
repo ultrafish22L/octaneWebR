@@ -4,6 +4,27 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.0] - 2026-03-24
+
+### Added
+
+- **Gotcha sweep hardening** — Systematic audit of all MCP tool gotchas; defensive guards added where silent failures were possible.
+- **fit_camera tool** — Computes and sets camera to frame a bounding box (explicit or auto from scene bounds). Configurable elevation, yaw, and margin.
+- **DOF auto-disable** — Default aperture (0.893) now documented and auto-set to 0 in build workflows to prevent blurry renders.
+- **FRESH / MINIS concepts** — Lightweight build patterns for quick scene prototyping and minimal reproducible scenes.
+- **Build version tracking** — `get_octane_version` returns `octaneweb_version`; root and MCP `package.json` synced to 2.4.0.
+
+### Changed
+
+- **Proto consolidation** — Protobuf definitions cleaned up; legacy duplicates removed, single source of truth in `server/proto/`.
+- **7 guards debunked and removed** — Crash-probe testing disproved 7 overly cautious guards that were blocking valid operations. Guards removed, operations now permitted.
+
+### Fixed
+
+- Various silent-failure paths hardened across MCP tools based on gotcha sweep findings.
+
+---
+
 ## [2.3.0] - 2026-03-24
 
 ### Added
@@ -235,7 +256,7 @@ All notable changes to octaneWebR.
 
 ---
 
-## [Unreleased]
+## [Pre-2.0.0] — Incremental Releases
 
 ### Changed - Beta 2 Proto Cleanup + ESLint Fix (2026-02-24)
 
@@ -350,14 +371,17 @@ Production-ready release with:
 
 ## Version History
 
-| Version   | Date       | Milestone                |
-| --------- | ---------- | ------------------------ |
-| **1.0.0** | 2025-01-22 | Production-ready release |
-| 0.9.0     | 2025-01-20 | Beta with core features  |
-| 0.5.0     | 2025-01-15 | Alpha prototype          |
-| 0.1.0     | 2025-01-10 | Initial setup            |
+| Version   | Date       | Milestone                       |
+| --------- | ---------- | ------------------------------- |
+| **2.4.0** | 2026-03-24 | Gotcha sweep, fit_camera, FRESH |
+| **2.3.0** | 2026-03-21 | MCP API expansion (Tiers 1-5)   |
+| **2.0.0** | 2026-03-19 | Doc consolidation + MCP recipes |
+| **1.0.0** | 2025-01-22 | Production-ready release        |
+| 0.9.0     | 2025-01-20 | Beta with core features         |
+| 0.5.0     | 2025-01-15 | Alpha prototype                 |
+| 0.1.0     | 2025-01-10 | Initial setup                   |
 
 ---
 
 **Status**: Active Development
-**Last Updated**: 2026-03-22
+**Last Updated**: 2026-03-24

@@ -1,13 +1,13 @@
-# OctaneWebR
+# OctaneWebR v2.4.0
 
-A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API (a network protocol for remote procedure calls), providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
+A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 
 An MCP server lets AI agents (Claude) build and modify Octane scenes programmatically while the browser UI shows every change in real time.
 
 ## Quick Start
 
 ```bash
-npm install && cd mcp && npm install && cd ..   # Install everything
+npm install && cd mcp && npm install && cd ..   # Install dependencies
 cd mcp && npm run build && cd ..                 # Build MCP server
 npm run dev                                      # Start web UI (port 43929)
 ```
@@ -60,16 +60,16 @@ Both paths use the same shared gRPC client with a compatibility layer for differ
 | **Render**          | 7     | Start/stop, status, save image, AOVs, multi-pass export                       |
 | **Render Control**  | 6     | Clay mode, GPU priority, sub-sampling (get/set each)                          |
 | **Stats**           | 5     | Geometry, texture, resource stats, scene bounds, render state                 |
-| **Camera**          | 2     | Get/set position, target, up vector                                           |
+| **Camera**          | 3     | Get/set position and target, fit camera to bounding box                       |
 | **Animation**       | 5     | Read/write keyframes, animation range, clear animation                        |
 | **Art Direction**   | 6     | Composition planning, spatial validation, vision critic loop                  |
 | **Creative**        | 2     | Material and lighting recipe suggestions                                      |
 | **Color/MaterialX** | 4     | OCIO config, color spaces, MaterialX import/list                              |
 | **Project**         | 3     | Load, save, reset scenes                                                      |
-| **Import**          | 1     | GLB → OBJ + textures + material + wiring                                      |
+| **Import**          | 1     | GLB import with OBJ conversion, textures, material wiring                     |
 | **System**          | 9     | Version, device info, node types, profiling, log, webapp sync                 |
 
-**MCP + octaneWebR together** is the best experience: ask Claude to build a scene in your terminal while watching every node, connection, and render update live in the browser.
+**MCP + OctaneWebR together** is the best experience: ask Claude to build a scene in your terminal while watching every node, connection, and render update live in the browser.
 
 ```
 You: "Create a gold sphere on a dark floor with dramatic side lighting"
@@ -86,7 +86,7 @@ Browser: Shows every node appearing in the outliner, connections forming in
 The `.mcp.json` also connects:
 
 - **[Octane Docs MCP](https://octane-mcp.otoy.ai/sse)** — Search Octane's API docs, browse modules, find examples
-- **[OTOY Studio MCP](https://otoy.studio/)** — MCP server for AI images/3D/video/music/vision
+- **[OTOY Studio MCP](https://otoy.studio/)** — AI images, 3D, video, music, vision
 
 ## Project Structure
 
@@ -143,12 +143,12 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 | Doc                                                            | What's In It                                                    |
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — get everything running in 5 minutes          |
+| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — running in 5 minutes                         |
 | [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls          |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
-| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — DRESS (rehearsal) and SHOW (performance)      |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — SCRATCH, FRESH, DRESS, SHOW                   |
 | [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition               |
-| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | All known problems and workarounds                              |
+| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | Known issues and workarounds                                    |
 | [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                |
 | [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                 |
 
@@ -161,5 +161,3 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 ---
 
 OTOY &copy; 2026. Octane Render and OTOY are registered trademarks of OTOY Inc.
-
-Active Development

@@ -56,12 +56,6 @@ export const OBJ_API_NODE = 17;
 export const OBJ_API_NODE_GRAPH = 20;
 export const OBJ_API_ITEM_ARRAY = 31;
 
-// ─── Crash-prone type IDs — never use with create_node or nodeInfo ───────────
-
-export const CRASH_TYPE_IDS = new Set([
-  0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137,
-]);
-
 // ─── NodeTypeId — well-known node type IDs ───────────────────────────────────
 
 export const NodeTypeId = {

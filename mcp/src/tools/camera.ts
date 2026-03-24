@@ -160,35 +160,11 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
         const params: any = {};
         if (position) params.position = position;
         if (target) params.target = target;
+        // Up vector defaults to {0,1,0}. Degenerate up guard is in gRPC server.
+        params.up = up ?? { x: 0, y: 1, z: 0 };
 
-        // GUARD: Degenerate up vector = broken view matrix = silently wrong renders.
-        const DEFAULT_UP = { x: 0, y: 1, z: 0 };
-        let warning: string | undefined;
-        if (up) {
-          const len = Math.sqrt(up.x * up.x + up.y * up.y + up.z * up.z);
-          if (len < 1e-6) {
-            warning =
-              'WARNING: up vector {' +
-              up.x +
-              ',' +
-              up.y +
-              ',' +
-              up.z +
-              '} is zero-length — this produces a degenerate view matrix and silently broken renders. ' +
-              'Overriding to {0,1,0}.';
-            params.up = DEFAULT_UP;
-          } else {
-            params.up = up;
-          }
-        } else {
-          params.up = DEFAULT_UP;
-        }
-
-        // gRPC SetCamera now persists to both LiveLink and node graph attributes
         await client.callMethod('LiveLink', 'SetCamera', params);
-        const result: any = { success: true };
-        if (warning) result.warning = warning;
-        return jsonResult(result);
+        return jsonResult({ success: true });
       } catch (error: any) {
         return errorResult(error);
       }

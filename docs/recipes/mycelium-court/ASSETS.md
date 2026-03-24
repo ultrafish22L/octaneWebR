@@ -22,10 +22,10 @@ All assets stored in `ORBX/assets_test/`. GLBs are Z-up, require rotation {90,Y,
 
 ## HDRI Environment (Poly Haven, CC0)
 
-| File                 | Resolution | Size   | Source                                       |
-| -------------------- | ---------- | ------ | -------------------------------------------- |
-| `forest_hdri_2k.hdr` | 2048x1024  | 7.6MB  | Poly Haven "mossy_forest" — STABLE           |
-| `forest_hdri_4k.hdr` | 4096x2048  | 29.7MB | Same — CRASHED Octane once, use with caution |
+| File                 | Resolution | Size   | Source                             |
+| -------------------- | ---------- | ------ | ---------------------------------- |
+| `forest_hdri_2k.hdr` | 2048x1024  | 7.6MB  | Poly Haven "mossy_forest" — STABLE |
+| `forest_hdri_4k.hdr` | 4096x2048  | 29.7MB | Same — higher quality, more VRAM   |
 
 Download URL pattern: `https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/{res}/mossy_forest_{res}.hdr`
 

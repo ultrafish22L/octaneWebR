@@ -1,8 +1,8 @@
 # The Mycelium Court
 
-> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
+> Values below are a starting point — deviate, experiment, improve.
 
-> **Before building:** Read `CLAUDE.md` (Current Session + MCP Rules) and look up values in `docs/mcp/REFERENCE.md`. Don't improvise what's already documented.
+> **Before building:** Read `CLAUDE.md`, `docs/mcp/REFERENCE.md`, `docs/mcp/BUILD.md`.
 
 > **Reference shots:** `ref_wide_forest.jpg` (wide establishing shot), `ref_closeup_fairy.jpg` (intimate fairy angle). Study these before every iteration.
 
@@ -24,7 +24,7 @@ A fairy sits in a vast bioluminescent mushroom garden at twilight. Giant teal-bl
 
 ## Ingredients
 
-_Living values — refined each time the scene is built._
+_Living values — refined as discovered._
 
 ### 3D Assets (OTOY Studio Hunyuan-3d v3.1 Pro)
 
@@ -51,13 +51,13 @@ All GLBs are Z-up — require rotation {90, Y_vary, 0} on placement transform.
 
 ### Environment (HDRI)
 
-| Setting             | Value                                    | Notes                                                                                       |
-| ------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| HDRI file           | `forest_hdri_2k.hdr`                     | Poly Haven "mossy_forest" — CC0. Never use 4k (crashed Octane)                              |
-| Power               | 0.7                                      | Dim dusk fill. Forest canopy visible but mushroom emission is the main light source         |
-| Projection          | NT_PROJ_SPHERICAL on image texture pin 6 | MUST create standalone spherical node and connect — default UV mapping won't wrap correctly |
-| HDRI rotation       | {0, 120, 0} on projection transform      | Rotates warm backlight behind mushrooms for golden hour feel                                |
-| Importance sampling | true                                     | Default                                                                                     |
+| Setting             | Value                               | Notes                                                                               |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| HDRI file           | `forest_hdri_2k.hdr`                | Poly Haven "mossy_forest" — CC0. 2K recommended for performance.                    |
+| Power               | 0.7                                 | Dim dusk fill. Forest canopy visible but mushroom emission is the main light source |
+| Projection          | Spherical                           | Spherical projection on HDRI texture — default UV mapping won't wrap correctly      |
+| HDRI rotation       | {0, 120, 0} on projection transform | Rotates warm backlight behind mushrooms for golden hour feel                        |
+| Importance sampling | true                                | Default                                                                             |
 
 ### Hero Mushroom (center)
 
@@ -120,13 +120,13 @@ Key: flowers near camera should be SMALL (0.4-0.7) — they frame the shot but m
 
 ### Ground Plane
 
-| Setting       | Value                                          | Notes                                                                  |
-| ------------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| Type          | Flat box (default NT_GEO_OBJECT, leave as Box) | NEVER change primitive type — crashes Octane                           |
-| Scale         | {30, 0.01, 30}                                 | Paper-thin, covers entire scene                                        |
-| Position      | {0, -0.01, 0}                                  | Just below mesh bases at y=0                                           |
-| Material      | Dark diffuse                                   | Use `tex_moss_ground.jpg` with box projection                          |
-| Texture power | RGB ~{0.08, 0.06, 0.04}                        | Darkened — ground should barely register, mostly hidden by 3D elements |
+| Setting       | Value                   | Notes                                                                  |
+| ------------- | ----------------------- | ---------------------------------------------------------------------- |
+| Type          | Plane or flat box       | Paper-thin ground plane                                                |
+| Scale         | {30, 0.01, 30}          | Paper-thin, covers entire scene                                        |
+| Position      | {0, -0.01, 0}           | Just below mesh bases at y=0                                           |
+| Material      | Dark diffuse            | Use `tex_moss_ground.jpg` with box projection                          |
+| Texture power | RGB ~{0.08, 0.06, 0.04} | Darkened — ground should barely register, mostly hidden by 3D elements |
 
 ### Render
 

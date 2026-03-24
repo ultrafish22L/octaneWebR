@@ -26,9 +26,9 @@ When implementation details are duplicated into recipes, they go stale. The chea
 ```markdown
 # Scene Name
 
-> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
+> Values below are a starting point — deviate, experiment, improve.
 
-> **Before building:** Read `CLAUDE.md` (Current Session + MCP Rules) and look up values in `docs/mcp/REFERENCE.md`. Don't improvise what's already documented.
+> **Before building:** Read `CLAUDE.md`, `docs/mcp/REFERENCE.md`, `docs/mcp/BUILD.md`.
 
 ## The Vision
 
@@ -38,7 +38,7 @@ When implementation details are duplicated into recipes, they go stale. The chea
 
 ## Ingredients
 
-_Living values — refined each time the scene is built._
+_Living values — refined as discovered._
 
 ### Camera
 

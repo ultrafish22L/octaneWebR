@@ -150,7 +150,7 @@ export function registerResources(
     'octane://primitive-types',
     {
       description:
-        'NT_GEO_OBJECT primitive type enum values. Set via set_attribute(enum_child_handle, 185, AT_INT=3, N). Type 18 (Quad) CRASHES Octane — never use it.',
+        'NT_GEO_OBJECT primitive type enum values. Set via set_attribute(enum_child_handle, 185, AT_INT=3, N). All 24 types supported.',
     },
     async () => {
       const types = [
@@ -171,7 +171,7 @@ export function registerResources(
         { value: 15, shape: 'Plane' },
         { value: 16, shape: 'Polygon' },
         { value: 17, shape: 'Prism' },
-        { value: 18, shape: 'Quad', notes: 'CRASHES OCTANE — NEVER USE' },
+        { value: 18, shape: 'Quad' },
         { value: 19, shape: 'Saddle' },
         { value: 20, shape: 'Sphere' },
         { value: 21, shape: 'Tetrahedron' },

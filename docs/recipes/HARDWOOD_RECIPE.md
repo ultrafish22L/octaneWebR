@@ -1,8 +1,8 @@
 # Procedural Hardwood Material
 
-> These recipes are creative direction, not rigid scripts. The values below are a starting point — deviate, experiment, and improve. The only goal is a render that makes you say _wow_.
+> Values below are a starting point — deviate, experiment, improve.
 
-> **Before building:** Read `CLAUDE.md` (Current Session + MCP Rules) and `docs/mcp/REFERENCE.md`. Don't improvise what's already documented. Don't improvise what's already documented.
+> **Before building:** Read `CLAUDE.md`, `docs/mcp/REFERENCE.md`, `docs/mcp/BUILD.md`.
 
 ## The Vision
 
@@ -22,7 +22,7 @@ All species use Universal material with GGX BRDF. The same node structure applie
 
 ## Ingredients
 
-_Living values — refined each time the scene is built._
+_Living values — refined as discovered._
 
 ### Core Technique
 

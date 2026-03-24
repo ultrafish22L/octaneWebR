@@ -8,7 +8,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 **A human is watching.** Get an interesting render on screen as fast as possible. Every MCP call should be driving toward the first visible result. Don't build backstage — build on stage.
 
-**Priority order:** RT → `set_camera` to known good frame → first geometry + material wired to RT → `start_render` → contrasting environment. Set camera BEFORE connecting geometry so the object appears framed instantly. Everything else comes after the human has something to look at.
+**Priority order:** RT → first geometry + material wired to RT → `start_render` → `fit_camera()` → contrasting environment. Use `fit_camera` after geometry to auto-frame the scene from bounds. Everything else comes after the human has something to look at.
 
 **Check Octane is running** before every build. If gRPC is down, nothing works and the human sees nothing. Verify with `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`.
 
@@ -35,7 +35,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 6. Check `log_serv.log` for startup
 7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
 8. Start dev server + preview (`preview_start`)
-9. `get_octane_version` — verify version + API detection
+9. `get_octane_version` — verify version + API detection. Response includes `mcp_build` (MCP server build ID) and `serv_build` (Octane server build ID) for tracking which builds are in use.
 10. Check `log_mcp.log` — must show `API version:` line AND `Callback streaming started` AND NO `Port 51023 in use`
 11. Check `log_grpc.log` — clean startup, no errors
 12. Preview screenshot — verify viewport is live (not grey/blank)
@@ -92,12 +92,12 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                                                                                                                 | Result                                                                                                                                                                                                                                                                       |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                                                                                                                                                      |
-| 2    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
-| 3    | `start_render` → `fit_camera()` (auto-frames scene bounds)                                                                                                             | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds with margin + slight elevation. No manual camera math needed.                                                                                                               |
-| 4    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                                      |
+| Step | Action                                                                                                                                                                 | Result                                                                                                                                                                                                                                                                         |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                                                                                                                                                        |
+| 2    | Create first mesh (NT_GEO_MESH + .obj or NT_GEO_OBJECT) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                           | **Object exists**. NT_GEO_MESH for .obj files, NT_GEO_OBJECT for primitives (all types work). `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
+| 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                                                       | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed.           |
+| 4    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                                        |
 
 ### Phase 2: Materials & Lighting
 
@@ -159,7 +159,7 @@ Apply as NT_TEX_IMAGE on material albedo pin.
 
 ## §4 Setup Order Variants
 
-**Demos (Hero Camera First):** Set final camera BEFORE creating objects. Objects pop into the composed frame.
+**Demos (Hero Camera First):** Create objects, then use `fit_camera()` or `set_camera` to frame. Objects appear immediately.
 
 **Iteration (Wide Camera First):** Start wide (y=2-3, z=5-8), zoom to hero after objects placed.
 
@@ -175,8 +175,8 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Transform pin:** Pin 3 (NT_TRANSFORM_VALUE).
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
-- **Primitive type change is UNSAFE** — non-deterministic ECONNRESET crash. Use NT_GEO_MESH with .obj files for non-box geometry. Only `sphere_hd.obj` and `floor.obj` are available in `ORBX/assets_test/`.
-- **Silent death during connect chains** — Octane can die silently during rapid state mutations even when all calls report success. Check Octane is alive before `start_render`.
+- **Primitive type changes work** on SDK server (all 24 types tested, no crashes). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
+- **connect/disconnect auto-flush** — `connect_nodes` and `disconnect_pin` auto-flush `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
 
 Primitive values: Box=1, Sphere=20, Torus=22, Cylinder=4, Cone=3 (full list in `REFERENCE.md`).
 
@@ -197,7 +197,7 @@ Set `set_camera(target: centroid)`. Camera orbits that point. Derive distance fr
 1. Zero all mesh transforms
 2. Compute mesh centroid from OBJ bounding box
 3. Set camera target to centroid
-4. **Set up vector = (0,1,0)** — default (0,0,0) silently breaks orientation
+4. **Up vector** — gRPC server auto-normalizes or defaults to {0,1,0}
 5. Back camera way out — full mesh visible
 6. Orbit up slightly (raise Y)
 7. Fine-tune target
@@ -240,7 +240,11 @@ Y = target_Y + D_z * tan(elevation)
 1. `reset_project()` — clears scene, invalidates all handles
 2. Verify: `get_scene_tree` → count: 0
 
-**FRESH vs SCRATCH:** FRESH clears the scene only (`reset_project`). SCRATCH kills all processes and restarts everything (required after MCP restart, infra changes, or crashes). Every test starts with FRESH. SCRATCH is only needed at session start or after infrastructure changes.
+**FRESH vs SCRATCH vs MINIS:**
+
+- **FRESH** — `reset_project` clears the scene. Every test starts with FRESH.
+- **SCRATCH** — Kill all processes, restart everything. Required after MCP restart, infra changes, or crashes.
+- **MINIS** — `load_project("ORBX/smoketest.orbx")` loads a pre-built smoke test scene. Quick validation that Octane + MCP are working without building from scratch.
 
 ---
 
