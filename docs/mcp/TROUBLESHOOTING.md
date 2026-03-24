@@ -8,7 +8,7 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 | Trigger                                | Symptom                                                                                                                                                                                                                                             | Mitigation                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resetProject`                         | "Save changes?" dialog blocks gRPC                                                                                                                                                                                                                  | Delete-all-nodes instead: `get_scene_tree` → `delete_node` each (leaves first, RT last)                                                                                                                                                                                                                                                                       |
+| `resetProject`                         | ~~"Save changes?" dialog blocks gRPC~~ **FIXED** — `suppressUI: true` prevents dialog on SDK server.                                                                                                                                                | Just call `reset_project()`. It's the standard FRESH start.                                                                                                                                                                                                                                                                                                   |
 | Bad `A_FILENAME` (e.g. `:rgba` suffix) | Dialog blocks gRPC ~30s                                                                                                                                                                                                                             | Valid absolute paths only                                                                                                                                                                                                                                                                                                                                     |
 | Primitive type enum changes            | Non-deterministic ECONNRESET (~10% per build with 3 sphere changes, ~50% without mitigations). Race condition in Octane's internal geometry rebuild during `setValueByAttrID`. Cumulative across process lifetime — `reset_project` doesn't fix it. | **MITIGATED** — use `skip_evaluate:true` on all primitive enum `set_attribute` calls, set all primitives sequentially before connecting to scene graph, use fresh Octane restart per build. For 100% reliability, use NT_GEO_MESH + .obj files instead. Tested: ~50% crash rate standard, ~10-20% with skip_evaluate, ~90% success with fresh Octane restart. |
 | Deleting connected nodes               | ECONNRESET                                                                                                                                                                                                                                          | **GUARDED** — `delete_node` checks `getConnectionsInvolving()`. Disconnect all pins first.                                                                                                                                                                                                                                                                    |
@@ -56,30 +56,30 @@ These type IDs kill Octane (ECONNRESET): `0, 116, 408, 40000, 50000, 50106, 5010
 
 ### Attributes
 
-| Symptom                      | Cause                              | Fix                                                                    |
-| ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| Render blurry                | DOF on (aperture=0.893)            | RT→pin0→pin14→child: `set_attribute(child, 185, 9, 0)`                 |
-| Emission 40x dim             | Efficiency defaults 0.025          | Set pin 0 child to 1.0                                                 |
-| Sundir hour won't change     | Set on sundir, not hour child      | env→pin0(sundir)→pin4(hour)→child→`set_attribute`                      |
-| Transform reads {0,0,0}      | Set on parent, not transform child | `get_node_info(geo)`→pin3→child→`set_attribute(child, 172, 11, ...)`   |
-| Sphere light transform fails | Used `A_VALUE=185`                 | Use `A_TRANSLATION=172` on NT_TRANSFORM_VALUE child                    |
-| Film resolution won't change | Set on Film, not child             | `get_node_info(film)`→pin0→child→`set_attribute(child, 185, 4, {w,h})` |
-| Wrong aspect ratio           | Used `AT_INT=3`                    | Use `AT_INT2=4` on Image Resolution grandchild                         |
+| Symptom                      | Cause                              | Fix                                                                                            |
+| ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Render blurry                | DOF on (aperture=0.893)            | **Auto-fixed** on new RTs. For old RTs: RT→pin0→pin14→child: `set_attribute(child, 185, 9, 0)` |
+| Emission 40x dim             | Efficiency defaults 0.025          | Set pin 0 child to 1.0                                                                         |
+| Sundir hour won't change     | Set on sundir, not hour child      | env→pin0(sundir)→pin4(hour)→child→`set_attribute`                                              |
+| Transform reads {0,0,0}      | Set on parent, not transform child | `get_node_info(geo)`→pin3→child→`set_attribute(child, 172, 11, ...)`                           |
+| Sphere light transform fails | Used `A_VALUE=185`                 | Use `A_TRANSLATION=172` on NT_TRANSFORM_VALUE child                                            |
+| Film resolution won't change | Set on Film, not child             | `get_node_info(film)`→pin0→child→`set_attribute(child, 185, 4, {w,h})`                         |
+| Wrong aspect ratio           | Used `AT_INT=3`                    | Use `AT_INT2=4` on Image Resolution grandchild                                                 |
 
 ---
 
 ## §5 Render Issues
 
-| Symptom                             | Fix                                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| All white                           | Verify RT connections: pins 1, 3, 6 all need `connected_handle != 0`. Switch kernel to PT. |
-| All black                           | No light sources. Add env or emission before geometry.                                     |
-| Blurry                              | DOF — set aperture to 0.                                                                   |
-| Mesh invisible                      | Missing `A_RELOAD=124` after `A_FILENAME=34`.                                              |
-| Glass invisible                     | Clear glass in uniform light. Tint transmission `{0.85, 0.95, 1.0}`.                       |
-| Objects not appearing               | Not connected to RT pin 3 (via geo group or direct).                                       |
-| Render doesn't update after connect | `set_camera` forces geometry re-evaluation. `start_render` alone does NOT.                 |
-| Black save_render                   | Called before `start_render`. Start render first, wait for samples.                        |
+| Symptom                             | Fix                                                                                                                          |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| All white                           | Verify RT connections: pins 1, 3, 6 all need `connected_handle != 0`. Switch kernel to PT.                                   |
+| All black                           | No light sources. Add env or emission before geometry.                                                                       |
+| Blurry                              | DOF — **auto-disabled** on new RTs. For old RTs: set aperture to 0.                                                          |
+| Mesh invisible                      | Missing `A_RELOAD=124` after `A_FILENAME=34`.                                                                                |
+| Glass invisible                     | Clear glass in uniform light. Tint transmission `{0.85, 0.95, 1.0}`.                                                         |
+| Objects not appearing               | Not connected to RT pin 3 (via geo group or direct).                                                                         |
+| Render doesn't update after connect | **Auto-fixed** — `connect_nodes`, `disconnect_pin`, and `start_render` now flush `ApiChangeManager::update()` automatically. |
+| Black save_render                   | Called before `start_render`. Start render first, wait for samples.                                                          |
 
 ---
 

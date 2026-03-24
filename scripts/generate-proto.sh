@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROTO_DIR="./server/proto"
+PROTO_DIR="../octaneServGrpc/proto"
 OUT_DIR="./server/src/generated"
 
 echo "🔧 Generating protobuf bindings..."

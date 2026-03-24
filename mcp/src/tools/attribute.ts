@@ -10,6 +10,27 @@ import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
 import { AttrType } from '../shared/OctaneConstants';
 
+/** Targeted error message when hasAttr returns false */
+function missingAttrError(handle: number, attribute_id: number): string {
+  const TRANSFORM_ATTRS: Record<number, string> = {
+    172: 'A_TRANSLATION',
+    137: 'A_ROTATION',
+    139: 'A_SCALE',
+  };
+  const transformName = TRANSFORM_ATTRS[attribute_id];
+  if (transformName) {
+    return (
+      `Handle ${handle} does not have attribute ${attribute_id} (${transformName}). ` +
+      `Transform attributes must be set on the TRANSFORM CHILD, not the parent node. ` +
+      `Use get_node_info(${handle}) → find pin 3 (transform) → use its connected_handle.`
+    );
+  }
+  return (
+    `Handle ${handle} does not have attribute ${attribute_id}. ` +
+    `Use get_node_info to find the correct child handle for this attribute.`
+  );
+}
+
 const AT_BOOL = AttrType.AT_BOOL;
 const AT_INT = AttrType.AT_INT;
 const AT_INT2 = AttrType.AT_INT2;
@@ -101,10 +122,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           id: attribute_id,
         });
         if (!hasAttrResult?.result) {
-          return errorResult(
-            `Handle ${handle} does not have attribute ${attribute_id}. ` +
-              `Use get_node_info to find the correct child handle for this attribute.`
-          );
+          return errorResult(missingAttrError(handle, attribute_id));
         }
 
         const result = await client.callMethod('ApiItem', getMethod, {
@@ -156,10 +174,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           id: attribute_id,
         });
         if (!hasAttrResult?.result) {
-          return errorResult(
-            `Handle ${handle} does not have attribute ${attribute_id}. ` +
-              `Use get_node_info to find the correct child handle for this attribute.`
-          );
+          return errorResult(missingAttrError(handle, attribute_id));
         }
 
         // A_FILENAME (34) with AT_STRING (14): validate path to prevent blocking Octane dialog

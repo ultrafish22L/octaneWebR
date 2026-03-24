@@ -17,7 +17,7 @@ const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const fs = require('fs');
 
-const PROTO_PATH = path.resolve(__dirname, '../server/proto');
+const PROTO_PATH = path.resolve(__dirname, '../../octaneServGrpc/proto');
 const OUTPUT = path.resolve(__dirname, '../mcp/data/octane-api-cache.json');
 
 const args = process.argv.slice(2);

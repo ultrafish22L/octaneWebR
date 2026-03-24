@@ -13,6 +13,7 @@ import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { jsonResult, errorResult, validateFilePath } from './utils';
 import { populateSceneCache } from './scene';
+import { notifyWebapp } from './webapp';
 
 export function registerProjectTools(
   server: McpServer,
@@ -134,15 +135,21 @@ export function registerProjectTools(
 
   server.tool(
     'reset_project',
-    'Clear scene to blank. DANGER: Pops a BLOCKING DIALOG if project is unsaved — this hangs gRPC for 30+ seconds. ALWAYS call save_project first, or delete all nodes manually. Invalidates ALL handles. Can take up to 120s.',
+    'Clear scene to blank. Invalidates ALL handles. Can take up to 120s.',
     {},
     async () => {
       try {
+        // suppressUI: true prevents Octane's "Save changes?" blocking dialog.
+        // Safe on SDK-based server (octaneServGrpc) — no dialog is ever shown.
         await client.callMethod('ApiProjectManager', 'resetProject', { suppressUI: true }, 120000);
         client.clearRootGraphCache();
+
+        // Tell web UI to drop all cached handles and refresh
+        await notifyWebapp({ type: 'refreshScene' });
+
         return jsonResult({
           success: true,
-          warning: 'Scene reset to blank. All previous nodes and connections are gone.',
+          message: 'Scene cleared. All previous handles are invalid.',
         });
       } catch (error: any) {
         return errorResult(error);

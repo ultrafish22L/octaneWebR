@@ -10,6 +10,10 @@ import path from 'path';
 // Read MCP server version from package.json at startup
 const mcpPkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
 const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
+
+// Build number — increment on every code change to verify running code matches build.
+// Check with get_octane_version() → mcp_build field.
+const MCP_BUILD = 6;
 import {
   OctaneMcpClient,
   MCP_LOG_PATH,
@@ -37,7 +41,19 @@ export function registerInfoTools(
     async () => {
       try {
         const info = await client.getSessionInfo();
-        return jsonResult({ ...info, octaneweb_version: MCP_SERVER_VERSION });
+        let serv_build = 0;
+        try {
+          const sv = await client.callMethod('LiveLink', 'GetServVersion', {});
+          serv_build = (sv as any)?.build ?? 0;
+        } catch {
+          /* old serv without GetServVersion */
+        }
+        return jsonResult({
+          ...info,
+          octaneweb_version: MCP_SERVER_VERSION,
+          mcp_build: MCP_BUILD,
+          serv_build,
+        });
       } catch (error: any) {
         return errorResult(error);
       }

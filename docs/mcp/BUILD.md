@@ -95,30 +95,30 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | Step | Action                                                                                                                                                                 | Result                                                                                                                                                                                                                                                                       |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                                                                                                                                                      |
-| 2    | `set_camera(position:{0,1.5,4}, target:{0,0,0})`                                                                                                                       | Camera ready BEFORE geo — known good wide frame, slightly elevated, off-center Z. Adjust target to geo centroid if not at origin.                                                                                                                                            |
-| 3    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
-| 4    | `start_render` + `set_camera` again (triggers geo eval)                                                                                                                | **FIRST VISUAL — human sees something**                                                                                                                                                                                                                                      |
-| 5    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear                                                                                                                                                                                                                                                        |
-| 6    | Disable DOF: RT→pin0→camera→pin14→aperture→`set_attribute(child, 185, 9, 0)`                                                                                           | Sharp render                                                                                                                                                                                                                                                                 |
+| 2    | Create first mesh (NT_GEO_MESH + .obj) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                                            | **Object exists**. Use NT_GEO_MESH (not NT_GEO_OBJECT — primitive type changes crash). Only `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
+| 3    | `start_render` → `fit_camera()` (auto-frames scene bounds)                                                                                                             | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds with margin + slight elevation. No manual camera math needed.                                                                                                               |
+| 4    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                                      |
 
 ### Phase 2: Materials & Lighting
 
 | Step | Action                                                    | Notes                              |
 | ---- | --------------------------------------------------------- | ---------------------------------- |
-| 7    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
-| 8    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
-| 9    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
-| 10   | Render + save                                             | Checkpoint                         |
+| 6    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
+| 7    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
+| 8    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
+| 9    | Render + save                                             | Checkpoint                         |
 
 ### Phase 3: Assembly
 
-For each additional object: create mesh → material → placement → connect to geo group `pin_index: N` → `set_camera` → render → verify.
+For each additional object: create mesh → material → placement → connect to geo group → `fit_camera()` → render → verify.
 
-Each object = a visible change. Never batch multiple objects without rendering between them.
+**`fit_camera` after every geometry add or remove.** The camera must always frame the full scene. Each object = a visible change. Never batch multiple objects without `fit_camera` + render between them.
 
 ### Phase 4: Polish
 
-Floor, fine-tune lighting, hero camera, final `save_render`.
+Hero camera, floor, fine-tune lighting, final beauty pass `save_render`.
+
+**Hero camera comes at the end.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_composition`) for the beauty pass.
 
 ### Render Status — Don't Blind Sleep, Always Check Samples
 
@@ -233,13 +233,14 @@ Y = target_Y + D_z * tan(elevation)
 
 ---
 
-## §7 Scene Clear
+## §7 Scene Clear (FRESH)
 
-`reset_project` triggers save dialog. Instead:
+`reset_project` clears the scene safely (`suppressUI` prevents any blocking dialog). Just call it directly:
 
-1. `get_scene_tree(max_depth: 1)`
-2. `delete_node` each handle — leaves first, RT last
-3. Verify: `get_scene_tree` → count: 0
+1. `reset_project()` — clears scene, invalidates all handles
+2. Verify: `get_scene_tree` → count: 0
+
+**FRESH vs SCRATCH:** FRESH clears the scene only (`reset_project`). SCRATCH kills all processes and restarts everything (required after MCP restart, infra changes, or crashes). Every test starts with FRESH. SCRATCH is only needed at session start or after infrastructure changes.
 
 ---
 

@@ -71,7 +71,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 | 4   | film        | PT_FILM         | Auto-created, resolution on grandchild           |
 | 6   | kernel      | PT_KERNEL       | Auto-created (DL). Connect via `pin_id:89`       |
 
-**DOF off:** RT→pin0→camera→pin14→aperture child→`set_attribute(child, 185, 9, 0)`. Default 0.893.
+**DOF off:** Auto-disabled on new RTs (`create_node(NT_RENDERTARGET)` sets aperture to 0). To re-enable: RT→pin0→camera→pin14→aperture child→`set_attribute(child, 185, 9, 0.893)`.
 
 **Film resolution:** `get_node_info(film)`→pin0→child→`set_attribute(child, 185, AT_INT2=4, {1024,576})`
 

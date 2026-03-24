@@ -186,14 +186,70 @@ export function registerNodeTools(
         // Claude can use get_node_info if it needs the full pin layout later.
         const activePins = pins.filter(p => p.handle !== 0);
 
-        return jsonResult({
+        // ── Auto-fix defaults that cause silent gotchas ──────────────
+        const warnings: string[] = [];
+
+        // RT: disable DOF by default (aperture 0.893 → 0)
+        // DOF makes every render blurry unless manually disabled.
+        if (node_type === 'NT_RENDERTARGET') {
+          const cameraPin = activePins.find(p => p.name === 'camera');
+          if (cameraPin?.handle) {
+            try {
+              // Camera → pin 14 (aperture) → child handle → set A_VALUE to 0
+              const apertureConn = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                objectPtr: { handle: String(cameraPin.handle), type: OBJ_API_NODE },
+                pinIx: 14,
+                enterWrapperNode: true,
+              });
+              const apertureHandle = extractHandle(apertureConn);
+              if (apertureHandle) {
+                await client.callMethod('ApiItem', 'setValueByAttrID', {
+                  objectPtr: { handle: String(apertureHandle), type: OBJ_API_ITEM },
+                  attribute_id: AttributeId.A_VALUE,
+                  float_value: 0,
+                  evaluate: false,
+                });
+                client.sceneCache.trackHandle(apertureHandle);
+                warnings.push(
+                  'DOF disabled (aperture set to 0). Set aperture > 0 on camera pin 14 to re-enable.'
+                );
+              }
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[node:create_node:dof_fix] ${e?.message ?? e}`);
+            }
+          }
+        }
+
+        // Emission: set efficiency to 1.0 (default 0.025 = 40x dim)
+        if (node_type === 'NT_EMIS_BLACKBODY' || node_type === 'NT_EMIS_TEXTURE') {
+          const effPin = activePins.find(p => p.name === 'efficiency or texture');
+          if (effPin?.handle) {
+            try {
+              await client.callMethod('ApiItem', 'setValueByAttrID', {
+                objectPtr: { handle: String(effPin.handle), type: OBJ_API_ITEM },
+                attribute_id: AttributeId.A_VALUE,
+                float_value: 1.0,
+                evaluate: false,
+              });
+              warnings.push(
+                'Emission efficiency set to 1.0 (default was 0.025). Adjust if too bright.'
+              );
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[node:create_node:emission_fix] ${e?.message ?? e}`);
+            }
+          }
+        }
+
+        const response: Record<string, any> = {
           success: true,
           handle: newHandle,
           name: extractValue(nameResult) ?? '',
           type: node_type,
           type_id: typeId,
           pins: activePins,
-        });
+        };
+        if (warnings.length > 0) response.warnings = warnings;
+        return jsonResult(response);
       } catch (error: any) {
         return errorResult(error);
       }
@@ -260,7 +316,8 @@ export function registerNodeTools(
         .nonnegative()
         .describe('Source node handle (the node being connected)'),
     },
-    async ({ target_handle, pin_index, pin_name, source_handle }) => {
+    async ({ target_handle, pin_index: pin_index_in, pin_name, source_handle }) => {
+      let pin_index = pin_index_in; // mutable — auto-slot may override
       try {
         // Gate: reject handles never seen by any MCP tool
         const gatedTarget = gateHandle('connect_nodes(target)', target_handle, client.sceneCache);
@@ -272,55 +329,84 @@ export function registerNodeTools(
         const sourceTypeName = client.sceneCache.getTypeName(source_handle);
         const targetTypeName = client.sceneCache.getTypeName(target_handle);
 
-        // --- Auto-materialize dynamic pins on movable-input nodes (e.g. NT_GEO_GROUP) ---
-        // These nodes start with 0 pins; A_PIN_COUNT (113) must be set to create
-        // dynamic input slots before connecting.  When using pin_name like "Input 1",
-        // parse the index N and ensure at least N pins exist.
-        if (targetTypeName && cache) {
+        // --- Auto-slot for movable-input nodes (e.g. NT_GEO_GROUP) ---
+        // These nodes have dynamic pins. If caller didn't specify a pin,
+        // find the first empty slot. If all full, expand by 1.
+        // Caller should never need to think about A_PIN_COUNT.
+        const MAX_DYNAMIC_PINS = 32;
+        if (targetTypeName && cache && pin_index === undefined && pin_name === undefined) {
           const targetInfo = cache.getNodeType(targetTypeName);
           if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
-            // Determine how many pins we need
-            let neededCount = 1;
-            if (pin_name !== undefined) {
-              // Parse "Input N" → N
-              const match = pin_name.match(/(\d+)$/);
-              if (match) neededCount = parseInt(match[1], 10);
-            } else if (pin_index !== undefined) {
-              neededCount = pin_index + 1;
-            }
-            // Read current pin count
             try {
               const curResult = await client.callMethod('ApiNode', 'pinCount', {
                 objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
               });
               const curCount = Number(extractValue(curResult) ?? 0);
-              if (curCount < neededCount) {
+
+              // Find first empty pin
+              let freePin = -1;
+              for (let i = 0; i < curCount; i++) {
+                const conn = await client.callMethod('ApiNode', 'connectedNodeIx', {
+                  objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+                  pinIx: i,
+                  enterWrapperNode: false,
+                });
+                const connHandle = extractHandle(conn) ?? 0;
+                if (connHandle === 0) {
+                  freePin = i;
+                  break;
+                }
+              }
+
+              if (freePin >= 0) {
+                // Use the free slot
+                pin_index = freePin;
+              } else if (curCount < MAX_DYNAMIC_PINS) {
+                // All full — expand by 1
+                const newCount = curCount + 1;
                 await client.callMethod('ApiItem', 'setValueByAttrID', {
                   objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
                   attribute_id: AttributeId.A_PIN_COUNT,
-                  int_value: neededCount,
+                  int_value: newCount,
                   evaluate: false,
                 });
                 await client.callMethod('ApiChangeManager', 'update', {});
-                // Verify pins materialized — connectTo1 fails silently if
-                // the pin doesn't exist yet.  Poll pinCount up to 3 times.
-                for (let attempt = 0; attempt < 3; attempt++) {
-                  const verifyResult = await client.callMethod('ApiNode', 'pinCount', {
-                    objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-                  });
-                  const newCount = Number(extractValue(verifyResult) ?? 0);
-                  if (newCount >= neededCount) break;
-                  // Another update() nudge — sometimes Octane needs a second kick
-                  await client.callMethod('ApiChangeManager', 'update', {});
-                }
+                pin_index = curCount; // new slot is at the end
+              } else {
+                return errorResult(
+                  `Geo group ${target_handle} already has ${curCount} children (max ${MAX_DYNAMIC_PINS}).`
+                );
               }
             } catch (e: any) {
-              mcpLogLazy(
-                'verbose',
-                () => `[node:connect_nodes:materialize_pins] ${e?.message ?? e}`
+              mcpLogLazy('verbose', () => `[node:connect_nodes:auto_slot] ${e?.message ?? e}`);
+            }
+          }
+        }
+        // If caller specified pin_index on a dynamic node, ensure enough pins exist (capped)
+        if (targetTypeName && cache && pin_index !== undefined) {
+          const targetInfo = cache.getNodeType(targetTypeName);
+          if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
+            if (pin_index >= MAX_DYNAMIC_PINS) {
+              return errorResult(
+                `pin_index ${pin_index} exceeds max dynamic pins (${MAX_DYNAMIC_PINS}).`
               );
-              // Best-effort: if we can't materialize pins, the connect call
-              // will proceed anyway and may succeed or fail on its own.
+            }
+            try {
+              const curResult = await client.callMethod('ApiNode', 'pinCount', {
+                objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
+              });
+              const curCount = Number(extractValue(curResult) ?? 0);
+              if (curCount <= pin_index) {
+                await client.callMethod('ApiItem', 'setValueByAttrID', {
+                  objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
+                  attribute_id: AttributeId.A_PIN_COUNT,
+                  int_value: pin_index + 1,
+                  evaluate: false,
+                });
+                await client.callMethod('ApiChangeManager', 'update', {});
+              }
+            } catch (e: any) {
+              mcpLogLazy('verbose', () => `[node:connect_nodes:expand_pins] ${e?.message ?? e}`);
             }
           }
         }
@@ -404,6 +490,9 @@ export function registerNodeTools(
           return errorResult('Provide pin_name (preferred) or pin_index');
         }
 
+        // Flush scene changes so the connection takes effect immediately
+        await client.callMethod('ApiChangeManager', 'update', {});
+
         // Auto-verify: check the pin actually got connected (silent failures are common)
         const verifyPinIdx = resolvedPinIndex ?? pin_index ?? 0;
         let verified = true;
@@ -482,6 +571,8 @@ export function registerNodeTools(
           evaluate: true,
           doCycleCheck: true,
         });
+        // Flush scene changes so the disconnect takes effect immediately
+        await client.callMethod('ApiChangeManager', 'update', {});
         client.sceneCache.removeConnection(handle, pin_index);
         await notifyWebapp({ type: 'nodeChanged', handle });
         return jsonResult({ success: true, handle, pin: pin_index });
@@ -541,6 +632,8 @@ export function registerNodeTools(
           evaluate: true,
           doCycleCheck: true,
         });
+        // Flush scene changes so the connection takes effect immediately
+        await client.callMethod('ApiChangeManager', 'update', {});
 
         // --- Verify ---
         let verified = true;

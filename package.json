@@ -87,7 +87,7 @@
       "dist/client/**/*",
       "dist/electron/**/*",
       "server/dist/**/*",
-      "server/proto/**/*",
+      "../octaneServGrpc/proto/**/*",
       "mcp/src/shared/CallbackStreamManager.*",
       "mcp/data/octane-api-cache.json",
       "api-version.config.js",
@@ -95,12 +95,8 @@
     ],
     "extraResources": [
       {
-        "from": "server/proto",
+        "from": "../octaneServGrpc/proto",
         "to": "server/proto"
-      },
-      {
-        "from": "server/proto_old",
-        "to": "server/proto_old"
       },
       {
         "from": "mcp/data/octane-api-cache.json",

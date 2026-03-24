@@ -93,6 +93,16 @@ function AppContent() {
     handleMaterialDatabaseClose,
   } = usePanelLayout();
 
+  // MCP refreshScene: clear inspector to prevent stale handle queries
+  useEmitterEvent(
+    client,
+    'OnRefreshScene',
+    useCallback(() => {
+      Logger.debug('MCP refreshScene — clearing inspector');
+      setSelectedNode(null);
+    }, [])
+  );
+
   // App-level event listeners
   useEmitterEvent(
     client,
@@ -114,6 +124,9 @@ function AppContent() {
     'OnProjectManagerChanged',
     useCallback((data: unknown) => {
       Logger.debug('Project manager changed:', data);
+      // Clear selected node immediately — its handles are invalid after project change.
+      // This prevents the inspector from querying stale handles and causing gRPC errors.
+      setSelectedNode(null);
       if (isLoadingProjectRef.current) {
         Logger.debug('Suppressing auto-refresh — loadProject in progress');
         return;

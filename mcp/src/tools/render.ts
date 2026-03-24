@@ -24,7 +24,7 @@ const FORMAT_MAP: Record<string, number> = {
 export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(
     'start_render',
-    'Start rendering. Does NOT evaluate the scene — must trigger eval first (connect with evaluate:true, set_attribute, or update_scene). Ensure RT has: camera (pin 0), geometry (pin 3), kernel (pin 6). If render is all white, check connections. If blurry, disable DOF (aperture→0).',
+    'Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera (pin 0), geometry (pin 3), kernel (pin 6). If render is all white, check connections. If blurry, disable DOF (aperture→0).',
     {
       render_target_handle: z
         .number()
@@ -40,6 +40,8 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
             targetNode: { handle: String(render_target_handle), type: OBJ_API_NODE },
           });
         }
+        // Flush all pending scene changes so the render reflects current state
+        await client.callMethod('ApiChangeManager', 'update', {});
         await client.callMethod('ApiRenderEngine', 'continueRendering', {});
         return jsonResult({ success: true });
       } catch (error: any) {

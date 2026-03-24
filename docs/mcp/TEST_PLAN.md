@@ -4,15 +4,23 @@
 
 **Every test run starts with SCRATCH.** Kill all servers, stop preview, restart fresh. See `BUILD.md` §2.
 
+**MCP restart = SCRATCH.** If the MCP server process dies, gets killed, or restarts for any reason (including after `npm run build`), you MUST run the full SCRATCH protocol before resuming tests. An MCP restart invalidates all cached handles, clears the relay, and resets session state. Resuming mid-test after an MCP restart produces false results — stale handles get gated, the relay may be dead, and the preview viewport may be disconnected. No shortcuts.
+
 **Testing is always DRESS mode.** Stop on failure, debug, fix, verify, resume. See `BUILD.md` §2.
 
-**Every test follows this cycle — no deviation:**
+**The dev server and preview window MUST be running for ALL tests.** No exceptions — not for smoke tests, not for gotcha verification, not for "quick checks". The preview viewport is how you confirm Octane is alive and rendering. Without it you are testing blind.
+
+**Every test follows this cycle — no deviation.** This applies to ALL tests: full sweep, smoke tests, gotcha verification, regression checks, one-off experiments — everything. There is no "lightweight" test mode.
 
 1. **Act** — one change only
 2. **Log** — read `log_mcp.log` (and `log_grpc.log` if visual)
 3. **Render** — `save_render` → read PNG. Also `preview_screenshot` → compare preview vs render. Both must show the expected change. Differences between preview and render indicate a real problem (broken viewport streaming, stale UI, geometry not loaded).
 4. **Pass/Fail** — don't rationalize. No change visible = FAIL. `{}` response = FAIL. Preview grey/blank when render has content = FAIL (viewport streaming broken).
 5. **Next** — only after 2-4 confirm success
+
+**No test without visual confirmation.** If a test changes geometry, material, camera, or lighting — you MUST render and visually confirm. If a test only returns data (stats, attribute values) — you still check logs. "It returned success" is not a pass criterion when the change should be visible.
+
+**Testing uses 256 samples.** Set kernel maxSamples to 256 for all test renders. This is fast enough for visual verification (~1s) and avoids wasting time on 5000-sample beauty renders during testing. Only use higher samples for final beauty passes.
 
 **Between tests:** `load_project(ORBX/teapot.orbx)` for destructive tests. `save_project` after each major phase.
 
@@ -31,7 +39,7 @@ Follow MEMORY.md crash protocol. Then:
 ### Known Crash Triggers
 
 - `import_materialx` — can crash Octane on certain .mtlx files (standard_surface_gold.mtlx confirmed crash).
-- `reset_project` — pops BLOCKING dialog if project is unsaved, hangs gRPC 30+ seconds.
+- `reset_project` — safe on SDK server (suppressUI prevents dialog). Use for FRESH starts.
 - `get_node_info` on crash-prone type IDs — `[0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137]`.
 - `set_attribute` with `A_FILENAME` and bad path — pops Octane dialog, blocks gRPC 30s.
 
@@ -41,16 +49,17 @@ Follow MEMORY.md crash protocol. Then:
 
 ### SMOKE — Full MCP Scene Build (run after any infra change)
 
-Stop everything, start fresh, build a red sphere scene via MCP, check logs at every checkpoint.
+Stop everything, start fresh, build a red sphere scene via MCP, check logs at every checkpoint. **SMOKE follows the same Act→Log→Render→Pass/Fail cycle as every other test. The dev server and preview MUST be running.**
 
 1. Stop all servers and preview window
 2. Start server (octaneServGrpc or octane.exe)
-3. Start dev server + preview window
+3. **Start dev server + preview window** (required — not optional)
 4. Build red sphere scene with MCP:
-   1. Create RT, start render — check logs
-   2. Set camera to known good position (back and up) — check render
-   3. Create and connect sphere — check logs
-   4. Set sphere material to red — check render + preview + logs
+   1. Create RT — check logs
+   2. Create sphere mesh + red material → placement → RT geometry pin — check logs
+   3. `start_render` → `fit_camera()` — check render + preview (sphere visible, properly framed)
+   4. Add environment — `fit_camera()` — check render + preview (sky + lighting appear)
+   5. Hero camera comes last — only after all geometry verified
 
 ### A. Smoke Test (run at session start)
 
@@ -166,11 +175,11 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### L. Project (3 tools)
 
-| #   | Test                          | Pass Criteria                             |
-| --- | ----------------------------- | ----------------------------------------- |
-| 1   | `load_project`                | Scene loads, SceneCache auto-populates    |
-| 2   | `save_project` (to temp path) | File written                              |
-| 3   | `reset_project`               | SKIP in automated tests (blocking dialog) |
+| #   | Test                          | Pass Criteria                          |
+| --- | ----------------------------- | -------------------------------------- |
+| 1   | `load_project`                | Scene loads, SceneCache auto-populates |
+| 2   | `save_project` (to temp path) | File written                           |
+| 3   | `reset_project`               | Scene clears, count: 0, no dialog      |
 
 ### M. System (9 tools)
 
@@ -202,7 +211,7 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 | I. Art Direction   | 6                                                                                | 5 pass, 1 needs image input        |
 | J. Creative        | 2                                                                                | All pass                           |
 | K. Color/MaterialX | 4                                                                                | 3 pass, 1 crash risk               |
-| L. Project         | 3                                                                                | 2 pass, 1 skip (reset_project)     |
+| L. Project         | 3                                                                                | All pass                           |
 | M. System          | 9                                                                                | All pass                           |
 | **Total**          | **69** (67 unique tools, `is_animated` in C+H, profile\_\* as 4 tools in 1 test) | **~63 pass**                       |
 
@@ -210,10 +219,10 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 ## §4 Known Issues
 
-| Tool                 | Issue                                             | Severity  |
-| -------------------- | ------------------------------------------------- | --------- |
-| `import_materialx`   | Crashes Octane on certain .mtlx files             | HIGH      |
-| `get_subsample_mode` | Returns stale value after set                     | LOW       |
-| `list_color_spaces`  | Fails without loaded OCIO config                  | EXPECTED  |
-| `reset_project`      | Pops blocking dialog if unsaved                   | BY DESIGN |
-| LiveDB tools (4)     | Octane gRPC "invalid pointer type" bug — disabled | HIGH      |
+| Tool                 | Issue                                             | Severity |
+| -------------------- | ------------------------------------------------- | -------- |
+| `import_materialx`   | Crashes Octane on certain .mtlx files             | HIGH     |
+| `get_subsample_mode` | Returns stale value after set                     | LOW      |
+| `list_color_spaces`  | Fails without loaded OCIO config                  | EXPECTED |
+| `reset_project`      | Safe — suppressUI prevents dialog on SDK server   | FIXED    |
+| LiveDB tools (4)     | Octane gRPC "invalid pointer type" bug — disabled | HIGH     |

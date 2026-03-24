@@ -338,11 +338,11 @@ Some connections report success but don't actually work:
 
 - **DOF is on by default** — aperture is 0.893. Set it to 0 immediately or everything will be blurry.
 - **Lights are 40x dimmer than expected** — emission efficiency defaults to 0.025. Set it to 1.0.
-- **`start_render` doesn't evaluate the scene** — any `set_attribute`, `connect_nodes`, or `set_camera` call triggers evaluation. `start_render` just renders whatever was last evaluated.
+- **`start_render` now auto-evaluates** — flushes pending scene changes before rendering. No manual `update_scene` needed.
 
 ### Crash Triggers
 
-- **`reset_project`** pops a save dialog if there are unsaved changes, blocking gRPC for 30+ seconds.
+- ~~**`reset_project`**~~ Fixed — `suppressUI` prevents the save dialog on our SDK server.
 - **Invalid file paths** in `A_FILENAME` pop an Octane dialog that blocks gRPC.
 - **Certain node type IDs** crash Octane: `0, 116, 408, 40000, 50000, 50106, 50107, 50108, 50136, 50137`. The MCP server already filters these.
 
@@ -374,7 +374,7 @@ Connection gotcha — see [Silent Connection Failures](#silent-connection-failur
 
 ### Octane stops responding
 
-Likely a blocking dialog (unsaved changes, bad file path). Check the Octane window. If it's truly hung, kill and restart:
+On SDK server, `suppressUI` prevents most dialogs. Bad file paths are validated server-side. If truly hung, kill and restart:
 
 ```bash
 taskkill /F /IM octane.exe        # Windows
@@ -385,8 +385,8 @@ pkill -f octane                    # Linux/macOS
 
 - All white? Check RT connections — geometry, kernel, and environment must all be wired.
 - All black? No light sources. Add an environment or emission node.
-- Blurry? DOF is on. Set camera aperture to 0.
-- Mesh invisible? Set `A_RELOAD` to true after setting `A_FILENAME`.
+- Blurry? DOF may be on (only affects RTs created before the auto-disable fix). Set camera aperture to 0.
+- Mesh invisible? `A_RELOAD` should be triggered automatically. If not, set `A_RELOAD=124` to true after `A_FILENAME=34`.
 
 ### octaneWebR not updating
 

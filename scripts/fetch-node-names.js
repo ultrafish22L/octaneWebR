@@ -15,7 +15,7 @@ const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const fs = require('fs');
 
-const PROTO_PATH = path.resolve(__dirname, '../server/proto');
+const PROTO_PATH = path.resolve(__dirname, '../../octaneServGrpc/proto');
 const METADATA_PATH = path.resolve(__dirname, '../client/public/icons/nodes/metadata.json');
 const OUTPUT_PATH = path.resolve(__dirname, '../client/public/icons/nodes/node-display-names.json');
 

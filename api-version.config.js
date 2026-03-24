@@ -96,7 +96,8 @@ const getApiVersionName = () => {
   }
 };
 
-const getProtoDir = () => apiVersionState.USE_ALPHA5_API ? 'proto_old' : 'proto';
+// Single source of truth: octaneServGrpc/proto/. No duplicate copies.
+const getProtoDir = () => '../../octaneServGrpc/proto';
 
 module.exports = {
   /** @deprecated Read from apiVersionState instead for runtime updates */
