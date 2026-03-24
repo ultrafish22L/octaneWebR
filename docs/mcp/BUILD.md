@@ -26,6 +26,8 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
+**If anything fails or crashes mid-build: FULL STOP.** Follow MEMORY.md crash protocol. Do not push forward. Do not try "one more thing." Fix → verify → then resume.
+
 ### Phase 0: Composition Planning (before any Octane calls)
 
 Run BEFORE creating any nodes. Pure math — validates layout without touching Octane.

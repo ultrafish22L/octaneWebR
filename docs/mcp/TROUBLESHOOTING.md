@@ -134,18 +134,20 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `log_mcp.log`    | MCP server           | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start       |
 | `log_client.log` | Browser (via Vite)   | Client-side logs posted to server. Cleared on dev server start      |
 
-### On Crash (ECONNRESET/ECONNREFUSED)
+### On Crash — follow MEMORY.md FULL STOP protocol
 
-1. STOP immediately
-2. Read `log_mcp.log` — last successful call, first error
-3. Isolate the exact gRPC call
-4. Stop all servers BEFORE restarting Octane
+1. STOP — do not continue current task
+2. Read ALL logs — `log_mcp.log`, `log_grpc.log`, console
+3. Read the error message carefully — the answer is usually in the text
+4. Trace to root cause — don't chase symptoms
+5. One fix → verify logs + render → repeat until resolved
+6. Stop all servers BEFORE restarting Octane (§9)
 
 ### Key Rules
 
 - Disable MCP before code changes — auto-start spawns broken processes that crash Octane.
 - Always `evaluate: true` (default) — deferred eval means subsequent calls operate on stale state.
-- After 2 failures of same kind, STOP and try a different approach entirely.
+- Same failure twice → STOP, try fundamentally different approach.
 
 ---
 

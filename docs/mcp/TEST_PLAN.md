@@ -2,21 +2,27 @@
 
 ## §1 Rules
 
-1. **Fresh state per test.** Reload scene (`load_project`) between destructive tests. For full sweeps, start from empty Octane.
-2. **Detect crashes immediately.** After every gRPC call, check for `ECONNRESET`/`ECONNREFUSED`. If crashed, STOP — log the crash, note which tool caused it, and relaunch Octane before continuing.
-3. **Visual changes need render proof.** After any visual change, call `save_render` → read the PNG → verify. Don't trust `success: true` alone.
-4. **Save checkpoints.** Call `save_project` after each major phase. Recover with `load_project` after crashes.
-5. **Before push:** `npm test` + `npm run lint` + `cd mcp && npm run build`.
+**Every test follows this cycle — no deviation:**
 
-### If Octane Crashes
+1. **Act** — one change only
+2. **Log** — read `log_mcp.log` (and `log_grpc.log` if visual)
+3. **Render** — `save_render` → read PNG if visual change
+4. **Pass/Fail** — don't rationalize. No change visible = FAIL. `{}` response = FAIL.
+5. **Next** — only after 2-4 confirm success
 
-1. Stop immediately. Note which tool/call caused the crash.
-2. Log the crash with severity.
-3. Check `log_mcp.log` for the last successful call before the crash.
-4. Relaunch Octane: `octane.exe &`
-5. Wait 15s, verify gRPC: `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`
-6. Reload checkpoint: `load_project` with the last saved .orbx.
-7. Continue testing from where you left off.
+**Between tests:** `load_project(ORBX/teapot.orbx)` for destructive tests. `save_project` after each major phase.
+
+**Before push:** `npm test` + `npm run lint` + `cd mcp && npm run build`.
+
+### On Crash — FULL STOP
+
+Follow MEMORY.md crash protocol. Then:
+
+1. Note which tool/call caused it
+2. Check `log_mcp.log` — last success → first error
+3. Relaunch Octane, wait 15s, verify gRPC
+4. `load_project` from last checkpoint
+5. Resume from where you left off
 
 ### Known Crash Triggers
 
