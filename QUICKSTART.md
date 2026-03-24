@@ -10,14 +10,9 @@ OctaneWebR gives you two ways to work with Octane: a browser UI for visual editi
 - **Node.js 18+**
 - **Claude Desktop or Claude Code CLI** (for MCP / AI scene building)
 
-## §2 Enable gRPC in Octane
+## §2 gRPC Server
 
-Open Octane → File → Preferences → GRPC API:
-
-- **Enable GRPC Server**: checked
-- **Address**: `127.0.0.1:51022`
-
-Restart Octane after changing this setting.
+`octaneServGrpc` listens on `127.0.0.1:51022` by default. No configuration needed.
 
 ## §3 Install
 
@@ -38,13 +33,13 @@ This compiles to `mcp/dist/index.js`. You only need to rebuild when MCP code cha
 
 ## §5 Launch
 
-**Order matters.** Octane must be running before anything connects to it.
+**Order matters.** The gRPC server must be running before anything connects to it.
 
 ```bash
-# 1. Launch Octane (adjust path to your installation)
-octane.exe
+# 1. Launch octaneServGrpc
+octaneServGrpc/build/Release/octaneServGrpc.exe &
 
-# 2. Wait for gRPC to start (~10-15 seconds)
+# 2. Wait for gRPC to start (~5 seconds)
 #    Verify (PowerShell): Get-NetTCPConnection -LocalPort 51022
 
 # 3. Start the web UI
@@ -91,7 +86,9 @@ The `.mcp.json` registers three MCP servers:
 If you only want the browser interface:
 
 ```bash
-# 1. Start Octane
+# 1. Start octaneServGrpc
+octaneServGrpc/build/Release/octaneServGrpc.exe &
+
 # 2. Start the dev server
 npm run dev
 ```
@@ -106,7 +103,8 @@ If you only want AI control without the browser:
 # 1. Build the MCP server first (if you haven't already)
 cd mcp && npm run build && cd ..
 
-# 2. Start Octane
+# 2. Start octaneServGrpc
+octaneServGrpc/build/Release/octaneServGrpc.exe &
 
 # 3. Open the project in Claude Desktop's code tab or Claude Code CLI
 #    MCP connects via .mcp.json automatically

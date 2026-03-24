@@ -235,8 +235,8 @@ function enhanceCrashError(
         `Octane has terminated or lost connection. ALL node handles are now INVALID.\n` +
         `\n` +
         `Recovery steps:\n` +
-        `1. Ask the user to restart Octane\n` +
-        `2. Wait for Octane to finish launching\n` +
+        `1. Restart octaneServGrpc (octaneServGrpc/build/Release/octaneServGrpc.exe)\n` +
+        `2. Wait ~5s for gRPC to listen on port 51022\n` +
         `3. Rebuild the scene from scratch (all handles are invalidated)\n` +
         `\n` +
         `Do NOT retry the same call — the connection is dead.`

@@ -17,7 +17,7 @@
 **Run**
 
 - `cd mcp && npm run build` (esbuild, NOT tsc)
-- Server: `octaneServGrpc/build/Release/octaneServGrpc.exe` (primary) or `octane.exe` (legacy)
+- **Server: `octaneServGrpc/build/Release/octaneServGrpc.exe`** — start it yourself if not running. Never ask the user. Check port 51022 first, launch if nothing listening.
 - Check: `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`
 - `QUICKSTART.md` §4 build, §5 launch, §7 MCP setup
 - For clean test runs: follow SCRATCH protocol in `docs/mcp/BUILD.md` §2

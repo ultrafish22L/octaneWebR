@@ -7,7 +7,7 @@
 
 ## Rules
 
-1. **Before testing**: Ask user to start Octane with test scene. Wait for go-ahead. Start dev server, verify "Connected" status.
+1. **Before testing**: Start `octaneServGrpc` if not running, load test scene via `load_project`, start dev server, verify "Connected" status.
 2. **Screenshot rule**: Any visible change needs before/after screenshots. Format: `R<round>_<testID>_<desc>_<before|after>.png`
 3. **Verify gRPC calls**: Read `log_grpc.log` after every test that changes a value.
 4. **Don't rationalize failures**: If user sees no change, it FAILED. `{}` response ≠ success.
@@ -23,8 +23,8 @@
 
 1. Stop immediately. Read `log_grpc.log` for last success → first error transition.
 2. Log the crash with severity High.
-3. **Claude stops ALL servers** — `preview_stop` for dev server/preview. Do this BEFORE user restarts Octane.
-4. **Wait for user** to restart Octane and give the OK ("go", "ok", "ready").
+3. **Stop ALL servers** — `preview_stop` for dev server/preview. Do this BEFORE restarting octaneServGrpc.
+4. **Restart octaneServGrpc** — kill the old process, relaunch, wait ~5s for gRPC on port 51022.
 5. **Claude starts servers** — `preview_start` for dev server.
 6. **Claude verifies** — check Octane gRPC (`get_octane_version`), check preview is live (`preview_screenshot`), verify teapot renders.
 

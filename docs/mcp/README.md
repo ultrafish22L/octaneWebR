@@ -68,13 +68,13 @@ The project includes `.mcp.json` at the root, which Claude Code reads automatica
 
 If you're using a different MCP client, point it to `node mcp/dist/index.js` with stdio transport.
 
-### 4. Launch Octane
+### 4. Launch octaneServGrpc
 
-Octane must be running before the MCP server connects.
+The gRPC server must be running before the MCP server connects.
 
 ```bash
-# Launch Octane (adjust path to your installation)
-"C:/path/to/octane.exe" &
+# Launch octaneServGrpc
+octaneServGrpc/build/Release/octaneServGrpc.exe &
 ```
 
 Wait 10–15 seconds for the gRPC server to start. Verify it's listening:
@@ -172,7 +172,7 @@ This is where it gets good. With octaneWebR running alongside MCP, you get a liv
 
 ### The Workflow
 
-1. Start Octane
+1. Start `octaneServGrpc` (gRPC server on port 51022)
 2. Run `npm run dev` (octaneWebR on port 43929)
 3. Open http://localhost:43929 in your browser
 4. Open the project in Claude Code CLI or Claude Desktop's code tab

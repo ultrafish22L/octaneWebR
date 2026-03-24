@@ -153,16 +153,16 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 
 ## §9 Fresh Start
 
-**Servers die first, Octane dies last.** Killing Octane while servers are connected causes hangs.
+**Servers die first, octaneServGrpc dies last.** Killing the gRPC server while clients are connected causes hangs.
 
 ### Shutdown
 
 1. `preview_stop` — FIRST
-2. Kill Octane — `cmd /c "taskkill /F /IM octane.exe"`
-3. Verify: `tasklist | grep -i octane` → nothing
+2. Kill octaneServGrpc — `cmd /c "taskkill /F /IM octaneServGrpc.exe"`
+3. Verify: `tasklist | grep -i octaneServGrpc` → nothing
 
 ### Startup
 
-4. Launch Octane with `dangerouslyDisableSandbox: true`: `octane.exe &`
-5. Wait 10-15s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
+4. Launch octaneServGrpc: `octaneServGrpc/build/Release/octaneServGrpc.exe &`
+5. Wait ~5s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
 6. `preview_start` — LAST (after gRPC is listening)

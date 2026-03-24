@@ -24,7 +24,7 @@ Follow MEMORY.md crash protocol. Then:
 
 1. Note which tool/call caused it
 2. Check `log_mcp.log` — last success → first error
-3. Relaunch Octane, wait 15s, verify gRPC
+3. Relaunch octaneServGrpc, wait ~5s, verify gRPC on port 51022
 4. `load_project` from last checkpoint
 5. Resume from where you left off
 

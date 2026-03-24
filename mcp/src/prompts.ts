@@ -197,7 +197,7 @@ COMMON MATERIAL TYPES:
 
 ## Octane Crash (ECONNRESET / ECONNREFUSED)
 - Octane has terminated. ALL handles are now invalid.
-- Recovery: restart Octane, wait 10-15s for gRPC to listen, rebuild scene from scratch
+- Recovery: restart octaneServGrpc, wait ~5s for gRPC on port 51022, rebuild scene from scratch
 - Never retry the same call — the connection is dead
 - Common crash causes:
   - nodeInfo on crash type IDs [0, 116, 408, 40000, 50000, 50106-50108, 50136-50137]
