@@ -202,7 +202,7 @@ export function useCanvasRenderer({
       const now = Date.now();
       if (now - ft.lastLogTime >= 1000) {
         const avg = ft.totalMs / ft.count;
-        Logger.info(
+        Logger.debug(
           `[RAF] ${ft.count} frames/s | avg ${avg.toFixed(1)}ms | max ${ft.maxMs.toFixed(1)}ms | ${width}x${height}`
         );
         ft.count = 0;

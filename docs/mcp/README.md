@@ -283,77 +283,9 @@ Render Target (RT)
   └── pin 6: Kernel (render engine)
 ```
 
-### Connection Chain for Objects
+For full node types, pin layouts, connection patterns, and attribute IDs, see [REFERENCE.md](./REFERENCE.md).
 
-To get an object into a scene:
-
-```
-Material → Mesh (pin 0)
-Mesh → Placement (pin "geometry")
-Placement → Geometry Group (pin_index N)
-Geometry Group → Render Target (pin_index 3)
-```
-
-### Node Types You'll Use Most
-
-| Type Key              | What It Is                                  |
-| --------------------- | ------------------------------------------- |
-| `NT_RENDERTARGET`     | Scene root — everything connects here       |
-| `NT_GEO_MESH`         | Loads .obj files                            |
-| `NT_GEO_OBJECT`       | Primitive shapes (box, sphere, torus, etc.) |
-| `NT_GEO_PLACEMENT`    | Wrapper that gives meshes a transform       |
-| `NT_GEO_GROUP`        | Groups geometry for the RT                  |
-| `NT_MAT_UNIVERSAL`    | Versatile PBR material                      |
-| `NT_MAT_GLOSSY`       | Glossy/metallic material                    |
-| `NT_MAT_SPECULAR`     | Glass and transparent materials             |
-| `NT_TEX_IMAGE`        | Image texture (PNG, JPG, EXR)               |
-| `NT_ENV_DAYLIGHT`     | Physical sun and sky                        |
-| `NT_KERN_PATHTRACING` | Path tracing render kernel                  |
-| `NT_LIGHT_SPHERE`     | Sphere area light                           |
-| `NT_EMIS_BLACKBODY`   | Light emission by temperature               |
-
-### Key Attribute IDs
-
-| ID  | Name          | Type   | Notes                                  |
-| --- | ------------- | ------ | -------------------------------------- |
-| 172 | A_TRANSLATION | float3 | Position {x, y, z}                     |
-| 137 | A_ROTATION    | float3 | Rotation in **degrees** (not radians!) |
-| 139 | A_SCALE       | float3 | Scale {x, y, z}                        |
-| 185 | A_VALUE       | varies | General value attribute                |
-| 34  | A_FILENAME    | string | File path for meshes, textures         |
-| 124 | A_RELOAD      | bool   | Trigger reload after setting filename  |
-
----
-
-## Common Pitfalls
-
-These are real issues discovered through extensive testing. They'll save you hours.
-
-### Silent Connection Failures
-
-Some connections report success but don't actually work:
-
-- **RT geometry pin:** Always use `pin_index: 3`, never `pin_id: 59`
-- **Mesh material pin:** Always use `pin_index: 0`, never `pin_id: 30`
-- **Auto-created children:** You can replace internal nodes by connecting a standalone node to the parent's pin directly.
-- **Always verify:** After connecting, call `get_node_info` on the target and check that `connected_handle != 0`.
-
-### Render Gotchas
-
-- **DOF is auto-disabled on new RTs** (aperture set to 0). For loaded scenes, set aperture to 0 if render is blurry.
-- **Lights are 40x dimmer than expected** — emission efficiency defaults to 0.025. Set it to 1.0.
-- **`start_render` auto-flushes** pending scene changes before rendering. No manual `update_scene` needed.
-- **`connect_nodes` and `disconnect_pin` auto-flush** `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
-
-### Known Crash Triggers
-
-- `import_materialx` — can crash Octane on certain .mtlx files. Save scene first.
-
-### Transform Gotchas
-
-- **Set transforms on the child handle** (pin 3 of placement/object), not the parent node.
-- **Rotations are in degrees**, not radians.
-- **NT_GEO_MESH has no transform** — wrap it in an NT_GEO_PLACEMENT first.
+For all known pitfalls, silent failures, and workarounds, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 ---
 
@@ -363,37 +295,16 @@ See [QUICKSTART.md](../../QUICKSTART.md) for the full environment variables tabl
 
 ---
 
-## Troubleshooting
+## Quick Troubleshooting
 
-### MCP server won't connect
+| Problem                           | Fix                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------- |
+| MCP won't connect                 | Is Octane running on port 51022? Did you `cd mcp && npm run build`? Is `.mcp.json` present? |
+| Commands succeed, nothing happens | Silent connection failure — see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) §4               |
+| Octane hung                       | `taskkill /F /IM octane.exe` (Windows) or `pkill -f octane` (Linux/macOS)                   |
+| octaneWebR not updating           | `refresh_webapp` via MCP, or re-select node to refresh inspector                            |
 
-1. Is Octane running? Check that port 51022 is listening.
-2. Did you build the MCP server? Run `cd mcp && npm run build`.
-3. Is `.mcp.json` present in the project root?
-
-### Commands succeed but nothing happens
-
-Connection gotcha — see [Silent Connection Failures](#silent-connection-failures) above. Always verify with `get_node_info`.
-
-### Octane stops responding
-
-On the SDK server, `suppressUI` prevents most dialogs and bad file paths are handled gracefully. If truly hung, kill and restart:
-
-```bash
-taskkill /F /IM octane.exe        # Windows
-pkill -f octane                    # Linux/macOS
-```
-
-### Scene looks wrong
-
-- All white? Check RT connections — geometry, kernel, and environment must all be wired.
-- All black? No light sources. Add an environment or emission node.
-- Blurry? DOF is auto-disabled on new RTs. For old/loaded RTs, set camera aperture to 0.
-- Mesh invisible? `A_RELOAD` should be triggered automatically. If not, set `A_RELOAD=124` to true after `A_FILENAME=34`.
-
-### octaneWebR not updating
-
-Run `refresh_webapp` via MCP to force a sync. If a node is selected, re-select it to refresh the inspector.
+For full troubleshooting: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ---
 

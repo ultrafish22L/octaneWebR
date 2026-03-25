@@ -286,6 +286,14 @@ export class OctaneClient extends EventEmitter {
     return this.renderService.setSubSampleMode(mode);
   }
 
+  async getKernelMaxSamples(): Promise<number | null> {
+    return this.renderService.getKernelMaxSamples();
+  }
+
+  async setKernelMaxSamples(samples: number): Promise<void> {
+    return this.renderService.setKernelMaxSamples(samples);
+  }
+
   async getRenderPriority(): Promise<string> {
     return this.renderService.getRenderPriority();
   }

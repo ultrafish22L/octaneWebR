@@ -105,6 +105,10 @@ export function useParameterValue(
         const msg = error instanceof Error ? error.message : String(error);
         if (msg === 'Failed to fetch') {
           Logger.debug(() => `getValueByAttrID cancelled for ${node.name}`);
+        } else if (msg.includes('NOT_FOUND') || msg.includes('INTERNAL')) {
+          // Expected for stale handles during scene transitions and SDK nodes
+          // that don't support reads (Round Edges children, material layers, etc.)
+          Logger.debug(() => `getValueByAttrID skipped for ${node.name}: ${msg}`);
         } else {
           Logger.error(`getValueByAttrID error for ${node.name}: ${msg}`);
         }

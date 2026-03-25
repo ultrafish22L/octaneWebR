@@ -23,16 +23,18 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 | Mode      | Purpose               | AD + SEGA | On Failure             | Default For              |
 | --------- | --------------------- | --------- | ---------------------- | ------------------------ |
 | **SHOP**  | Workshop / quick test | OFF\*     | Stop, debug, fix       | Testing, experimentation |
-| **DRESS** | Rehearsal / dev build | ON        | FULL STOP, fix, verify | Scene building (default) |
-| **SHOW**  | Live demo             | ON        | Skip, keep going       | Audiences, recordings    |
+| **DRESS** | Rehearsal / dev build | ON\*      | FULL STOP, fix, verify | Scene building (default) |
+| **SHOW**  | Live demo             | ON\*      | Skip, keep going       | Audiences, recordings    |
 
-\*SHOP suppresses AD automatically. Say "use AD" in SHOP to override.
+\*AD is a per-run flag. Default ON for DRESS/SHOW, OFF for SHOP. Override with "no AD" or "use AD" in the run command.
 
-**SHOP (Workshop):** Fast workbench mode. Skip composition planning (Phase 0) and critique loops. Build from Phase 1 directly. Use `suggest_lighting` and `suggest_material` for quick values, but no `plan_composition`, `validate_layout`, or `critique_render`. For quick tests, smoke tests, tool verification, and experimentation where composition quality doesn't matter. The goal is speed, not beauty.
+**"no AD" flag:** Disables all art direction phases. Skips Phase 0 (composition planning), Phase 0b (artistic intent), and the critique loop (C1-C7). Build proceeds mechanically from recipe positions, materials, and lighting values. `suggest_lighting` and `suggest_material` still work (they don't require AD state). Use when testing pipeline mechanics, debugging wiring, or when speed matters more than composition quality.
 
-**DRESS (Rehearsal):** Full AD + SEGA pipeline. Phase 0 composition planning, critique loop after renders, SEGA intent tracking. 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for serious scene building. **Default — use unless told otherwise.**
+**SHOP (Workshop):** Fast workbench mode. AD OFF by default. Build from Phase 1 directly. Use `suggest_lighting` and `suggest_material` for quick values. For quick tests, smoke tests, tool verification, and experimentation where composition quality doesn't matter. The goal is speed, not beauty.
 
-**SHOW (Performance):** Same as DRESS build order with full AD + SEGA, but no stopping. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
+**DRESS (Rehearsal):** Full build pipeline. AD ON by default — Phase 0 composition planning, critique loop after renders, SEGA intent tracking. 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for serious scene building. **Default — use unless told otherwise.** Say "no AD" to run DRESS without art direction (rote recipe execution).
+
+**SHOW (Performance):** Same as DRESS build order, AD ON by default. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
 
 ---
 
@@ -42,9 +44,25 @@ Every step produces a visible change. The human should see a render update withi
 
 **On failure: FULL STOP.** Follow the crash protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
 
+### Pre-Phase: analyze_mesh (before any placement)
+
+Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls yet.
+
+| Step | Action                                            | Result                                                                                                               |
+| ---- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| M1   | `analyze_mesh(file_path)` for each OBJ/GLB        | Cached v2 sidecar (`.mesh_info.json`) with geometry bounds, semantic description, visual_check, and final_suggestion |
+| M2   | Read `final_suggestion` from each sidecar         | Rotation correction (e.g. +90° X for Z-up GLBs), scale recommendation, orientation confidence                        |
+| M3   | Apply rotation/scale from suggestion when placing | Ensures meshes are upright and correctly sized                                                                       |
+
+**Mugshot protocol:** analyze_mesh renders 6 views (front/right/top x clay/textured) on an isolated ground plane, sends to VLM for upright verification. Results are cached — subsequent calls return instantly from sidecar.
+
+**Why here:** Placing a mesh without knowing its orientation wastes an entire build iteration. analyze_mesh eliminates guesswork.
+
+---
+
 ### Phase 0: Composition Planning (before any Octane calls)
 
-**AD must be ON** (default in DRESS and SHOW). Skipped entirely in SHOP mode or when user says "no AD."
+**Requires AD.** Skipped when AD is OFF (SHOP default, or "no AD" flag). When skipped, use recipe positions directly in Phase 3.
 
 Run BEFORE creating any nodes. Pure math — validates layout without touching Octane.
 
@@ -58,6 +76,8 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 **Hard gate:** Do NOT call `create_node` until `validate_layout` passes with 0 errors.
 
 ### Phase 0b: Artistic Intent (after composition planning)
+
+**Requires AD.** Skipped when AD is OFF. `suggest_lighting`/`suggest_material` still return reasonable defaults without intent.
 
 | Step | Action                                                           | Result                  |
 | ---- | ---------------------------------------------------------------- | ----------------------- |
@@ -86,7 +106,13 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Phase 3: Assembly
 
-For each additional object: create mesh → material → placement → connect to geo group → `fit_camera()` → render → verify.
+For each additional object:
+
+1. `suggest_placement(object_name, bounds)` — get collision-free position from scene placement DB
+2. Create mesh → apply analyze_mesh rotation → material → placement at suggested position → connect to geo group
+3. `register_scene_object(name, position, bounds)` — update scene DB (warns on overlap)
+4. `fit_camera()` → render → verify
+5. `get_scene_placement_state()` — inspect DB if placement looks wrong
 
 **`fit_camera` after every geometry add or remove.** The camera must always frame the full scene. Each object = a visible change. Never batch multiple objects without `fit_camera` + render between them.
 
@@ -96,19 +122,19 @@ Hero camera, floor, fine-tune lighting, final beauty pass `save_render`.
 
 **Hero camera comes at the end.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_composition`) for the beauty pass.
 
-### Critique Loop (run after every save_render in Phases 2-4)
+### Critique Loop — Dual-Perspective (run after every save_render in Phases 2-4)
 
-**AD must be ON** (default in DRESS and SHOW). Skipped in SHOP mode.
+**Requires AD.** Skipped when AD is OFF. When skipped, save the render and move on — no scoring, no corrections. **When AD is ON, both critics run every iteration — never skip one.**
 
-| Step | Action                                                                   | Result                                            |
-| ---- | ------------------------------------------------------------------------ | ------------------------------------------------- |
-| C1   | `critique_render(render_path, spec_name)`                                | Saves render + returns structured critique prompt |
-| C1.5 | `semantic_critique(render_path)` — pixel-level intent gap                | Semantic gap analysis vs SEGA vector              |
-| C2   | Read the saved render image (Read tool)                                  | Visual analysis                                   |
-| C3   | Synthesize vision critique (C1) + semantic critique (C1.5) → JSON scores | Dual-perspective evaluation                       |
-| C4   | `apply_corrections(spec_name, scores, corrections)`                      | Records score, detects stagnation                 |
-| C5   | If score < 3.5: apply priority-1 corrections, re-render, go to C1        | Iteration                                         |
-| C6   | If stagnating (2 iterations < 0.3 improvement): redesign plan            | Plan change, not tweaking                         |
+| Step | Action                                                                 | Result                                                             |
+| ---- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| C1   | `critique_render(render_path, spec_name)`                              | Vision model scores (framing/depth/composition/lighting/placement) |
+| C2   | `semantic_critique(render_path)`                                       | Pixel-level intent gap analysis vs SEGA vector                     |
+| C3   | Read the saved render image (Read tool)                                | Visual analysis                                                    |
+| C4   | Synthesize vision critique (C1) + semantic critique (C2) → JSON scores | Dual-perspective evaluation                                        |
+| C5   | `apply_corrections(spec_name, scores, corrections)`                    | Records score, detects stagnation                                  |
+| C6   | If score < 3.5: apply priority-1 corrections, re-render, go to C1      | Iteration                                                          |
+| C7   | If stagnating (2 iterations < 0.3 improvement): redesign plan          | Plan change, not tweaking                                          |
 
 ### Vision Critic
 
@@ -142,15 +168,19 @@ loop:
 save_render(path)
 ```
 
-### GLB Texture Extraction
+---
 
-trimesh OBJ export strips baked textures. Extract baseColorTexture as PNG immediately after conversion:
+### Log Check — ALL 3 Log Files, Every Time
 
-```python
-scene.geometry[name].visual.material.baseColorTexture.save('name_diffuse.png')
-```
+After every phase, and on any error, check ALL 3 log files:
 
-Apply as NT_TEX_IMAGE on material albedo pin.
+| File             | What it catches                                                         |
+| ---------------- | ----------------------------------------------------------------------- |
+| `log_client.log` | Client JS errors, failed API calls, React errors (batched from browser) |
+| `log_grpc.log`   | Vite gRPC proxy errors, raw gRPC call failures, SDK errors              |
+| `log_mcp.log`    | MCP tool errors, gate rejections, health failures                       |
+
+All logs go to files — no console-only gaps. "0 errors" means 0 across all 3 files.
 
 ---
 

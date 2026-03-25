@@ -192,6 +192,13 @@ export class ApiService extends BaseService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       if (errorMessage === 'Failed to fetch') {
         Logger.debug(() => `${service}.${method} fetch cancelled`);
+      } else if (
+        method === 'getValueByAttrID' &&
+        (errorMessage.includes('NOT_FOUND') || errorMessage.includes('INTERNAL'))
+      ) {
+        // Expected for stale handles during scene transitions and SDK nodes
+        // that don't support reads. Don't spam console with expected errors.
+        Logger.debug(() => `${service}.${method} expected: ${errorMessage}`);
       } else {
         Logger.error(`${service}.${method} error:`, errorMessage);
       }

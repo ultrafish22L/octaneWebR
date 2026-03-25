@@ -69,38 +69,24 @@ All notable changes to octaneWebR.
 
 ---
 
-## [2.2.4] - 2026-03-22
+## [2.3.1] - 2026-03-21
 
-### Fixed — Electron Production Build
+### Tested — Full MCP Test Sweep
 
-- **log_grpc.log ENOENT crash** — Log file tried to write inside read-only asar. Now writes to `app.getPath('userData')`.
-- **Broken icons in production** — All icon filenames with spaces (e.g. `PLAY window.png`) failed to load. Added `decodeURIComponent(pathname)` in `GrpcProxyServer` static file serving.
-- **GrpcProxyServer not compiled** — Was excluded from `server/tsconfig.json` due to cross-boundary import from `mcp/src/shared/`. Added `build:grpc-server` npm script that compiles separately and copies to `server/dist/grpc/`.
-- **App icon** — Added `octane_window_icon.ico` (Octane gear logo) for taskbar, titlebar, and installer. Previously used default Electron icon.
-
-### Changed
-
-- **Octane path corrected** — All docs updated from `C:/otoyla/GRPC/dev/octaneGRPC-2026.1-Alpha5/` to `C:/otoyla/GRPC/octaneGRPC-2026.1-Alpha5/`.
-- **Build script** — `npm run build` now includes `build:grpc-server` step for GrpcProxyServer compilation.
-
-### Tested
-
-- **Human-like UI testing** — 281 unit tests pass, lint clean, Vite dev server verified with interactive browser testing (menus, panels, viewport, connection status).
-- **MCP metal+glass scene** — Built via MCP tools with RT, camera, kernel, daylight, sphere meshes (silver metal + glass), floor. Confirmed NT_GEO_OBJECT primitive type changes still crash non-deterministically.
+- **67/71 active tools pass** against live Octane. 0 crashes. 3 bugs fixed (animation data format, attribute enum type, pin value cache).
+- **LiveDB disabled** — all 4 tools hit Octane gRPC "invalid pointer type" bug. Code preserved, registration commented out.
 
 ---
 
-## [2.3.1] - 2026-03-21
+## [2.2.x] - 2026-03-21/22
 
-### Tested — Full MCP Test Sweep (75 tools, 303 gRPC calls)
+### Electron Production Build (v2.2.4)
 
-- **67/71 active tools pass** against live Octane. 0 crashes.
-- **3 bugs fixed:**
-  - `set_animation_data` — TimeArrayT.data needs `{value: float}` objects, not raw floats
-  - `get_all_attributes` — attrIdIx returns enum string, not number
-  - `get_pin_value` — discovered handles not tracked in SceneCache
-- **LiveDB disabled** — all 4 tools (`browse_material_db`, `search_materials`, `preview_material`, `download_material`) hit Octane gRPC "invalid pointer type" bug. Code preserved, registration commented out.
-- **Profiling data:** 5.5s gRPC time across 303 calls. Slowest: LiveDB preview (1.3s), getCategories (1.2s), saveImage (206ms avg).
+- Fixed log_grpc.log ENOENT crash (asar path), broken icons (URI encoding), GrpcProxyServer compilation (separate build script), app icon.
+
+### Crash Probe Testing & Guard Deployment (v2.2.3)
+
+- 19 test categories, 460+ primitive enum transitions. <0.2% crash rate. Delete guard deployed. SceneCache coherence audit: 86 connections, perfect match.
 
 ---
 
@@ -280,133 +266,11 @@ All notable changes to octaneWebR.
 
 ---
 
-## [Pre-2.0.0] — Incremental Releases
+## Pre-2.0.0
 
-### Changed - Beta 2 Proto Cleanup + ESLint Fix (2026-02-24)
-
-- Beta 2 proto files cleaned up — deleted all old/unused `.proto` files from `server/proto/`
-- ESLint config fix — added `globals.node` override for `api-version.config.js`
-- MaterialDatabaseService — corrected handle extraction for `getLiveDBCategories`/`getLiveDBMaterials`
-- Server/plugin — updated service/proto mappings for current Beta 2 layout
-
-### Added - Progressive Scene Loading (SceneServiceP) (2026-02-24)
-
-- **SceneServiceP** — clean-room progressive loader replacing V1/V2/V3
-- **SyncIndicator** — visual spinner during scene builds
-- Removed `ProgressiveSceneServiceV3.ts` and all feature flags
-
-### Added - File Node Toolbar (2026-02-21)
-
-- **FileNodeToolbar** — handles file-bearing nodes (images, geometry) with load/reload/save/clear
-- Replaced `GeometryToolbar.tsx` (merged into FileNodeToolbar)
-
-### Changed - Large Lint Cleanup (2026-02-21)
-
-- Lint fixes across ~70 files: jsx-a11y, setState-in-render, refs-during-render, unused vars, hooks deps
-- Logger usage and type safety improvements in service layer
-
-### Performance - Viewport Canvas Optimization (2025-02-03)
-
-Four-phase optimization of the render viewport:
-
-- **Phase 1**: Conditional canvas resize (50x reduction), throttled status updates (96% fewer re-renders), memoized canvas style
-- **Phase 2**: RAF-based rendering loop (`useCanvasRenderer.ts`) — frame coalescing, 60 FPS sync, proper cleanup
-- **Phase 3**: Input-side throttling — 30 FPS during drag (70% reduction), `isDragging` state tracking
-- **Phase 4**: Progressive render flush — clear stale RAF frames on camera change, eliminated camera lag (300ms→<33ms)
-
-### Bug Fix - Camera State Synchronization (2025-02-03)
-
-- Event-driven camera sync — `camera:reset` event on programmatic camera changes, viewport re-syncs local state
-- Prevents jump/snap after Reset Camera or Camera Presets
-
-### Added - Status Message System (2025-02-03)
-
-- `StatusMessageContext` — centralized status bar messages with auto-clear
-- Scene build progress, node create/delete, connection state updates
-
-### Added - React 18 Modernization (2025-02-03)
-
-- **P2C**: `React.memo` on ParameterControl, MaterialCard, VirtualTreeRow with custom comparators; `useCallback`/`useMemo` optimizations
-- **P2B**: React Query integration — `useMaterialCategories`, `useMaterialsForCategory`, `useDownloadMaterial` hooks
-- **P2A**: Skeleton loaders (tree, parameters, viewport, materials), LoadingBoundary with delayed fallback
-- **P1**: Error boundaries (`react-error-boundary`), code splitting (lazy-loaded NodeGraphEditor + MaterialDatabase), accessibility improvements
-
-### Fixed - Regressions (2025-02-01)
-
-- Color picker visibility — `useParameterValue` now handles AT_FLOAT3+PT_TEXTURE hybrid pins
-- Scene Outliner auto-expansion — fixed dual `useTreeExpansion` hook instance bug
-
-### Added - Render Target Management (2025-02-01)
-
-- Auto-select first render target on scene load
-- Right-click "Render" context menu on render target nodes
-
-### Changed - CSS Theme System (2025-02-01)
-
-- Removed `octane-` prefix from all 753 theme variable occurrences
-- Dead CSS cleanup: removed unused variables, dead selectors, duplicate definitions
-- All hardcoded colors replaced with CSS variables
-
-### Fixed - UI Issues (2025-02-01)
-
-- React Flow container sizing, browser context menu suppression, tooltip simplification
-
----
-
-## API Version Compatibility (2025-01-31)
-
-- Centralized `api-version.config.js` — single source of truth for Alpha 5/Beta 2
-- ES module conversion, TypeScript strict typing fixes
-
----
-
-## Code Quality (2025-01-30)
-
-- Logger system — centralized multi-level logging (670+ calls across codebase)
-- Command History — full undo/redo with branching (50-action history)
-- Logging conversion — 400+ `console.*` → `Logger.*`
-- Comment cleanup across 33 files — removed obvious "what" comments, kept "why" comments
-
----
-
-## [1.0.1] - 2025-01-29
-
-- OpenHands skills system (5 skill files)
-- Refactored AGENTS.md (595→315 lines)
-- Scene Outliner tabs with slanted overlap effect matching Octane SE
-- Node Graph Editor tab bar with vertical toolbar
-
----
-
-## [1.0.0] - 2025-01-22
-
-Production-ready release with:
-
-- **Node Graph Editor** — ReactFlow-based, 755+ node types, 25 categories, connections, multi-select, copy/paste, search (Ctrl+F), minimap
-- **Scene Outliner** — hierarchical tree, virtual scrolling, LiveDB/LocalDB tabs, selection sync
-- **Node Inspector** — full parameter editing (bool, int, float, vector, color, enum, string), collapsible groups, node type dropdown
-- **Render Viewport** — real-time streaming, camera orbit/pan/zoom, HDR, picker tools (material, object, focus, target, white balance)
-- **Menu System** — File, Edit, Script, View, Window, Help with platform-aware shortcuts
-- **Service Layer** — 11 modular services extending BaseService, event-driven architecture
-- **gRPC Integration** — Vite plugin proxy, WebSocket callbacks, full type safety
-- **Theme System** — 134 CSS variables, Octane SE dark theme, no inline styles
-
----
-
-## Version History
-
-| Version   | Date       | Milestone                        |
-| --------- | ---------- | -------------------------------- |
-| **2.4.0** | 2026-03-24 | Gotcha sweep, fit_camera, FRESH  |
-| **2.3.2** | 2026-03-24 | Alpha 5 compat doc, SCRATCH flow |
-| **2.3.0** | 2026-03-21 | MCP API expansion (Tiers 1-5)    |
-| **2.0.0** | 2026-03-19 | Doc consolidation + MCP recipes  |
-| **1.0.0** | 2025-01-22 | Production-ready release         |
-| 0.9.0     | 2025-01-20 | Beta with core features          |
-| 0.5.0     | 2025-01-15 | Alpha prototype                  |
-| 0.1.0     | 2025-01-10 | Initial setup                    |
+See git history for incremental releases (Jan-Feb 2025). Key milestones: v1.0.0 production release (2025-01-22), viewport canvas optimization, React 18 modernization, CSS theme system, API version compatibility layer.
 
 ---
 
 **Status**: Active Development
-**Last Updated**: 2026-03-24
+**Last Updated**: 2026-03-25

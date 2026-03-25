@@ -250,3 +250,54 @@ Global vector applies scene-wide. Per-object overrides add to global for specifi
 | Old critique scores   | Replaced by semantic gap vector       | Meaningful vectors instead of arbitrary 1-5      |
 
 Implementation complete — see `mcp/src/sega/` for code. File structure derivable from the directory.
+
+---
+
+## 11. Usage Examples
+
+### 11.1 Starting a Scene
+
+**What you say:**
+
+> "I want to build a product shot of a gold sphere. Dramatic lighting, like Caravaggio."
+
+**What happens inside:**
+
+1. NL parser identifies: genre = `product_shot`, mood = `dramatic`, preset = `caravaggio`
+2. System loads `caravaggio` preset: `{ warmth: 0.5, contrast: 0.8, key_direction: 0.4, intimacy: 0.3, atmosphere: 0.2 }`
+3. System loads `product_shot` genre defaults: `{ shot_scale: -0.2, camera_angle: 0.0, groundedness: 0.6 }`
+4. Merges them (preset wins on conflicts): active vector has ~8 dimensions set
+5. Parameter mapping resolves: key temp 3000K, fill ratio 6:1, environment power 0.1, camera elevation 5 deg, etc.
+6. System shows you the resolved intent + parameters before building anything
+
+**What you see:**
+
+```
+Intent: Caravaggio product shot
+Active dimensions: warmth=0.5, contrast=0.8, key_direction=0.4,
+                   intimacy=0.3, atmosphere=0.2, groundedness=0.6
+                   shot_scale=-0.2, camera_angle=0.0
+
+Resolved parameters:
+  Key light: 3000K, power 180, 40deg from camera axis
+  Fill: power 30 (ratio 6:1)
+  Environment: 0.1 power
+  Camera: 12 units back, 5deg elevation, 72deg FOV
+
+Proceed with build?
+```
+
+### 11.2 Adjusting During Build
+
+**What you say:**
+
+> "Warmer. And less contrast, it's too harsh."
+
+**What happens inside:**
+
+1. NL parser returns: `{ warmth: +0.15, contrast: -0.25 }` (relative deltas)
+2. System applies deltas: warmth 0.5 → 0.65, contrast 0.8 → 0.55
+3. Parameter mapping re-resolves: key temp shifts from 3000K → 2900K, fill ratio drops from 6:1 → 4:1
+4. System applies only the changed parameters to the scene (delta application, not full rebuild)
+
+Other interactions (presets, critique, per-object overrides, Berlyne warnings, undo, saving presets) follow the same pattern: user speaks naturally → NL parser extracts deltas → system resolves parameters → scene updates.

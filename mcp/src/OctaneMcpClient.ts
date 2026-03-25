@@ -392,7 +392,7 @@ export class OctaneMcpClient {
       const elapsed = Date.now() - startMs;
       this.lastSuccessMs = Date.now();
       const ok = result?.success !== false && !result?.error_message;
-      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'verbose');
+      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'debug');
       if (isVerbose)
         mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'verbose');
       return result;
@@ -413,13 +413,18 @@ export class OctaneMcpClient {
     // Skip health check for the health check call itself (avoid recursion)
     if (service === 'ApiInfo' && method === 'octaneVersion') return;
     // Skip if we had a recent successful call
-    const idleMs = this.lastSuccessMs ? Date.now() - this.lastSuccessMs : -1;
-    if (this.lastSuccessMs && idleMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS) {
+    const idleMs = this.lastSuccessMs ? Date.now() - this.lastSuccessMs : null;
+    if (
+      this.lastSuccessMs &&
+      idleMs !== null &&
+      idleMs < OctaneMcpClient.HEALTH_CHECK_INTERVAL_MS
+    ) {
       mcpLogLazy('verbose', () => `[HEALTH] skip — idle ${idleMs}ms`);
       return;
     }
 
-    mcpLog(`[HEALTH] ping — idle ${idleMs}ms, cache=${this.sceneCache.knownHandleCount}`, 'debug');
+    const idleStr = idleMs !== null ? `${idleMs}ms` : 'first call';
+    mcpLog(`[HEALTH] ping — idle ${idleStr}, cache=${this.sceneCache.knownHandleCount}`, 'debug');
     try {
       await this.base.callMethod('ApiInfo', 'octaneVersion', {}, { timeout: 5000 });
       this.lastSuccessMs = Date.now();

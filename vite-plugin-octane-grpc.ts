@@ -43,21 +43,42 @@ const RESET = '\x1b[0m';
 const MAX_BODY_SIZE = 50 * 1024 * 1024; // 50MB, matches Express server limit
 
 // Server log helpers — leveled output with colors for errors/warnings
+// Also writes to log_grpc.log so ALL server-side logs are captured in files.
+let slogStream: fs.WriteStream | null = null;
+function slogToFile(level: string, args: any[]): void {
+  if (!slogStream) {
+    try {
+      const logPath = path.resolve(__dirname, 'log_grpc.log');
+      slogStream = fs.createWriteStream(logPath, { flags: 'a' });
+    } catch {
+      return;
+    }
+  }
+  const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+  slogStream.write(`${new Date().toISOString()} [${level}] ${msg}\n`);
+}
+
 const slog = {
+  level: SERVER_LOG_LEVEL,
   error: (...args: any[]) => {
     if (SERVER_LOG_LEVEL >= ServerLogLevel.ERROR) console.error(RED, ...args, RESET);
+    slogToFile('ERR', args);
   },
   warn: (...args: any[]) => {
     if (SERVER_LOG_LEVEL >= ServerLogLevel.WARN) console.warn(YELLOW, ...args, RESET);
+    slogToFile('WRN', args);
   },
   info: (...args: any[]) => {
     if (SERVER_LOG_LEVEL >= ServerLogLevel.INFO) console.log(...args);
+    slogToFile('INF', args);
   },
   debug: (...args: any[]) => {
     if (SERVER_LOG_LEVEL >= ServerLogLevel.DEBUG) console.log(...args);
+    slogToFile('DBG', args);
   },
   debugV: (...args: any[]) => {
     if (SERVER_LOG_LEVEL >= ServerLogLevel.DEBUGV) console.log(...args);
+    slogToFile('VRB', args);
   },
 };
 
@@ -1185,7 +1206,19 @@ export function octaneGrpcPlugin(): Plugin {
               res.end(JSON.stringify(response || {}));
             } catch (error: any) {
               // ERR file logging moved to OctaneGrpcClientBase.callMethod()
-              slog.error(`API error: ${service}.${method}:`, error.message);
+              // Downgrade expected errors to debug: stale handles (NOT_FOUND) and
+              // SDK nodes that don't support reads (INTERNAL) on getValueByAttrID
+              const isExpected =
+                method === 'getValueByAttrID' &&
+                (error.code === 5 ||
+                  error.code === 13 ||
+                  error.message?.includes('NOT_FOUND') ||
+                  error.message?.includes('INTERNAL'));
+              if (isExpected) {
+                slog.debug?.(`API expected: ${service}.${method}: ${error.message}`);
+              } else {
+                slog.error(`API error: ${service}.${method}:`, error.message);
+              }
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;
               res.end(

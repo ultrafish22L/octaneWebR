@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "obj_file": "sphere_hd.obj",
+  "analyzed_at": "2026-03-25T04:54:16.324Z",
+  "geometry": {
+    "bounds_min": [-1, -1, -1],
+    "bounds_max": [1, 1, 1],
+    "extents": [2, 2, 2],
+    "vertices": 482,
+    "faces": 960,
+    "tallest_axis": "X",
+    "native_up": "X"
+  },
+  "semantic": {
+    "category": "unknown",
+    "subcategory": "sphere_hd",
+    "natural_height_m": 1,
+    "orientation_matters": true,
+    "confidence": "low"
+  },
+  "visual_check": {
+    "performed_at": "2026-03-25T04:54:16.324Z",
+    "vlm_model": "claude-haiku-4-5-20251001",
+    "mugshot_paths": [
+      "sphere_hd.mugshot_front_clay.png",
+      "sphere_hd.mugshot_front_tex.png",
+      "sphere_hd.mugshot_right_clay.png",
+      "sphere_hd.mugshot_right_tex.png",
+      "sphere_hd.mugshot_top_clay.png",
+      "sphere_hd.mugshot_top_tex.png"
+    ],
+    "vlm_response": {
+      "object_type": "Sphere or spherical object",
+      "is_upright": true,
+      "correction_rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "front_direction": "toward camera",
+      "estimated_height_m": 0.5,
+      "notes": "The object is a perfect sphere resting on a ground plane. Spheres have no inherent orientation, so the current positioning is naturally upright. The object appears to be sitting stably on the ground plane with proper contact. No rotation correction needed."
+    },
+    "confidence": "high"
+  },
+  "final_suggestion": {
+    "rotation_deg": [0, 0, 90],
+    "ground_offset_y": 1,
+    "scale_factor": 0.5,
+    "notes": "VLM-verified: upright confirmed. Tallest axis is X (lying sideways). Rotate Z+90° to stand upright."
+  }
+}

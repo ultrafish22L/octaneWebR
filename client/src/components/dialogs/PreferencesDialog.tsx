@@ -11,7 +11,7 @@ interface PreferencesDialogProps {
   onClose: () => void;
 }
 
-type PreferencesTab = 'application' | 'shortcuts' | 'devices';
+type PreferencesTab = 'application' | 'options' | 'shortcuts' | 'devices';
 
 export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
   const [activeTab, setActiveTab] = useState<PreferencesTab>('application');
@@ -66,6 +66,12 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
               Application
             </button>
             <button
+              className={`preferences-tab ${activeTab === 'options' ? 'active' : ''}`}
+              onClick={() => setActiveTab('options')}
+            >
+              Options
+            </button>
+            <button
               className={`preferences-tab ${activeTab === 'shortcuts' ? 'active' : ''}`}
               onClick={() => setActiveTab('shortcuts')}
             >
@@ -82,6 +88,7 @@ export function PreferencesDialog({ isOpen, onClose }: PreferencesDialogProps) {
           {/* Tab Content */}
           <div className="preferences-panel">
             {activeTab === 'application' && <ApplicationTab />}
+            {activeTab === 'options' && <OptionsTab />}
             {activeTab === 'shortcuts' && <ShortcutsTab />}
             {activeTab === 'devices' && <DevicesTab />}
           </div>
@@ -107,6 +114,25 @@ type ThemeName = (typeof THEMES)[number]['value'];
 
 function getStoredTheme(): ThemeName {
   return (localStorage.getItem('octaneweb-theme') as ThemeName) || 'octane';
+}
+
+// ── Viewport drag optimization preferences ──────────────────────────
+// Persisted in localStorage, read on each drag start (no React re-render needed).
+
+/** Auto-enable 4x4 subsampling during camera drag for faster interactive rendering. */
+export function getDragSubsampleEnabled(): boolean {
+  return localStorage.getItem('octaneweb-drag-subsample') !== 'false'; // default: on
+}
+export function setDragSubsampleEnabled(enabled: boolean): void {
+  localStorage.setItem('octaneweb-drag-subsample', String(enabled));
+}
+
+/** Set kernel maxsamples to 1 during camera drag for instant feedback. */
+export function getDragSamples1Enabled(): boolean {
+  return localStorage.getItem('octaneweb-drag-samples1') === 'true'; // default: off
+}
+export function setDragSamples1Enabled(enabled: boolean): void {
+  localStorage.setItem('octaneweb-drag-samples1', String(enabled));
 }
 
 function applyTheme(theme: ThemeName): void {
@@ -207,6 +233,51 @@ function ApplicationTab() {
         <p className="preference-description">
           Specify paths to OSL include directories for script compilation. Use tilde (~) for home
           directory.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OptionsTab() {
+  const [dragSubsample, setDragSubsample] = useState(getDragSubsampleEnabled);
+  const [dragSamples1, setDragSamples1] = useState(getDragSamples1Enabled);
+
+  return (
+    <div className="preferences-tab-content">
+      <h3>Options</h3>
+
+      <div className="preference-section">
+        <h4>Viewport Interaction</h4>
+        <label className="preference-checkbox">
+          <input
+            type="checkbox"
+            checked={dragSubsample}
+            onChange={e => {
+              setDragSubsample(e.target.checked);
+              setDragSubsampleEnabled(e.target.checked);
+            }}
+          />
+          <span>Auto-subsample during camera drag</span>
+        </label>
+        <p className="preference-description">
+          Enable 4x4 subsampling while orbiting/panning the viewport for faster interactive
+          rendering. Restores previous subsample mode when drag ends.
+        </p>
+        <label className="preference-checkbox">
+          <input
+            type="checkbox"
+            checked={dragSamples1}
+            onChange={e => {
+              setDragSamples1(e.target.checked);
+              setDragSamples1Enabled(e.target.checked);
+            }}
+          />
+          <span>Set kernel samples to 1 during camera drag</span>
+        </label>
+        <p className="preference-description">
+          Temporarily reduce kernel max samples to 1 while orbiting/panning for instant
+          single-sample feedback. Restores original sample count when drag ends.
         </p>
       </div>
     </div>

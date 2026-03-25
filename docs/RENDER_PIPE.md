@@ -128,123 +128,16 @@ Octane can only start a new render when the previous one finishes. With 125ms re
 
 ---
 
-## Optimization Solutions
+## Optimization — Next Steps
 
-### Solution A: Predictive Canvas Transform (Recommended — highest impact, client-only)
+| Priority | Solution                     | Impact                       | Effort            | Risk   |
+| -------- | ---------------------------- | ---------------------------- | ----------------- | ------ |
+| 1        | **Subsample during drag**    | 8fps → 60+fps                | Low (2 API calls) | Low    |
+| 2        | **Predictive CSS transform** | Perceived 60fps even at 8fps | Medium            | Low    |
+| 3        | WebGL texture upload         | Marginal (<0.3ms)            | High              | Medium |
+| 4        | OffscreenCanvas worker       | Main thread = 0ms            | High              | Medium |
 
-**Concept**: While waiting for the next Octane frame, apply a CSS transform to the canvas that approximates the expected camera movement. When the real frame arrives, snap back to true pixels.
-
-**Implementation**:
-
-1. On each `pointermove` during orbit, compute the delta (dx, dy) in screen pixels
-2. Apply `canvas.style.transform = translate(dx, dy) rotate(theta)` — instant, GPU-composited
-3. When next Octane frame arrives in RAF, reset transform to identity and paint the real pixels
-
-**Why it works**: Human perception tolerates ~100ms of approximate feedback if it's smooth. The CSS transform gives 60fps visual response while Octane renders at 8fps. The 125ms "stale" frame actually looks correct enough because orbital rotation is smooth and predictable.
-
-**Latency**: 0ms (CSS transform is GPU-composited, no main thread work)
-**Accuracy**: Approximate — slight parallax error since we're transforming a 2D projection. Acceptable for orbit; less accurate for pan (translation is exact though).
-**Complexity**: Medium — need to track cumulative transform during drag, reset on each real frame.
-
-**Risk**: Low. CSS transform on canvas is a standard pattern (used by Google Maps, Figma, etc.). Falls back gracefully — if transform math is wrong, user just sees a brief jump when real frame arrives.
-
-### Solution B: Subsample Mode During Drag (Recommended — complements A)
-
-**Concept**: Tell Octane to render at lower resolution during camera interaction, producing frames faster.
-
-**Implementation**:
-
-1. On drag start: `set_subsample_mode(2)` (4x4 subsampling — 16x fewer pixels)
-2. On drag end: `set_subsample_mode(0)` (full resolution)
-
-**Why it works**: At 4x4 subsampling, a 1024x512 render becomes 256x128 internally. Octane can produce these in ~10-15ms instead of ~125ms, giving 60+ fps during drag.
-
-**Latency**: ~10-15ms per frame (vs 125ms at full res)
-**Visual quality**: Blocky during drag (acceptable — user is moving the camera, not examining pixels)
-**Complexity**: Low — two API calls (drag start/end)
-
-**Risk**: Low. Subsample mode is a built-in Octane feature. The `set_subsample_mode` MCP tool already exists. The viewport already handles resolution changes (auto-resizes canvas on dimension change).
-
-**Caveat**: Need to flush stale full-res frames on drag start (already implemented in `flushPendingFrame`). On drag end, first few frames will be subsampled until the mode-change propagates.
-
-### Solution C: Reduce Render Resolution During Drag (Alternative to B)
-
-**Concept**: Change the render target resolution itself during drag.
-
-**Implementation**: Modify film settings on the render target to use half or quarter resolution during drag, restore on mouse up.
-
-**Why it works**: Same principle as subsample — fewer pixels = faster render.
-
-**Complexity**: Higher than B (need to modify render target attributes, handle resize events).
-
-**Risk**: Medium — changing render resolution mid-stream may cause Octane to restart the render engine, adding a one-time ~200ms stall.
-
-**Verdict**: Subsample mode (Solution B) is strictly better for this use case. It's designed for interactive preview and doesn't restart the engine.
-
-### Solution D: WebGL Texture Upload (Future — replaces putImageData)
-
-**Concept**: Replace Canvas 2D + `putImageData` with WebGL + `texImage2D` for direct GPU texture upload.
-
-**Implementation**:
-
-1. Create WebGL context instead of Canvas 2D
-2. Create a texture and a full-screen quad
-3. On each frame: `gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels)`
-4. Draw quad with texture
-
-**Why it works**: `texImage2D` can be faster than `putImageData` because:
-
-- Direct GPU upload (no intermediate staging buffer)
-- Can use `gl.PIXEL_UNPACK_BUFFER` for async upload (PBO)
-- Avoids Canvas 2D's alpha premultiplication step (even with `alpha: false`)
-
-**Latency**: ~0.1-0.5ms (vs ~0.3ms current — marginal improvement)
-**Complexity**: High — full renderer rewrite, WebGL context management, shader program
-**Risk**: Medium — WebGL context can be lost, need fallback to Canvas 2D
-
-**Verdict**: Not worth it now. `putImageData` at 0.3ms is already well within budget. Only revisit if rendering 4K+ resolution where GPU upload becomes the bottleneck.
-
-### Solution E: OffscreenCanvas in Web Worker (Future)
-
-**Concept**: Move buffer decode + pixel conversion to a Web Worker using `OffscreenCanvas`.
-
-**Implementation**:
-
-1. Transfer canvas control to worker via `canvas.transferControlToOffscreen()`
-2. Worker receives pixel data via `postMessage` with transferable `ArrayBuffer`
-3. Worker does `data.set()` + `putImageData()` on `OffscreenCanvas`
-4. Main thread completely free for input handling
-
-**Why it works**: Unblocks main thread from all pixel processing. Mouse events + CSS transforms have zero contention with rendering.
-
-**Latency**: Same total, but main thread latency = 0ms (all work in worker)
-**Complexity**: High — worker thread management, transferable buffers, fallback
-**Risk**: Medium — `OffscreenCanvas` support varies, `desynchronized` may not work in workers
-
-**Verdict**: Not needed now. Main thread rendering takes 0.3ms — already negligible. Only worth it if combined with HDR tone-mapping in worker (which takes 10-15ms and actually blocks the main thread).
-
-### Solution F: Binary WebSocket from gRPC (Already Implemented)
-
-The Vite plugin and browser client already use binary WebSocket frames, eliminating base64 encoding. The zero-copy pipeline from network → typed array view → `data.set()` means only one real pixel copy happens in the browser.
-
-**Status**: Done. No further optimization needed at this layer.
-
----
-
-## Recommended Implementation Order
-
-| Priority | Solution                        | Impact                       | Effort            | Risk   |
-| -------- | ------------------------------- | ---------------------------- | ----------------- | ------ |
-| 1        | **B: Subsample during drag**    | 8fps → 60+fps                | Low (2 API calls) | Low    |
-| 2        | **A: Predictive CSS transform** | Perceived 60fps even at 8fps | Medium            | Low    |
-| 3        | D: WebGL texture upload         | Marginal (<0.3ms)            | High              | Medium |
-| 4        | E: OffscreenCanvas worker       | Main thread = 0ms            | High              | Medium |
-
-**Solutions B + A together** would give buttery smooth viewport interaction:
-
-- Subsample mode gives real 60fps frames (low-res but fast)
-- Predictive transform fills gaps if subsample still can't keep up
-- Full-res progressive refinement kicks in the moment drag ends
+**Recommended:** Subsample mode (`set_subsample_mode(2)` on drag start, `(0)` on drag end) gives real 60fps during interaction. Predictive CSS transform complements it for perceived smoothness. Binary WebSocket relay already implemented (Solution F — done).
 
 ---
 

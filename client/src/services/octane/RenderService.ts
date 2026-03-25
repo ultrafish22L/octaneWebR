@@ -8,7 +8,7 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { BaseService } from './BaseService';
 import { ApiService, asObject, asNumber, asBool, getHandle } from './ApiService';
 import { RenderState, RenderRegion } from './types';
-import { PinId, PinTypeId } from '../../constants/OctaneProtocol';
+import { PinId, PinTypeId, AttributeId, AttrType } from '../../constants/OctaneProtocol';
 
 export class RenderService extends BaseService {
   private apiService: ApiService;
@@ -303,6 +303,75 @@ export class RenderService extends BaseService {
         'Failed to set viewport resolution lock:',
         error instanceof Error ? error.message : String(error)
       );
+    }
+  }
+
+  // ==================== Kernel Max Samples (drag optimization) ====================
+
+  /**
+   * Get the kernel node's maxsamples value.
+   * Path: RenderEngine → RenderTarget (pin 6=kernel) → child pin 0 (maxsamples) → A_VALUE
+   */
+  async getKernelMaxSamples(): Promise<number | null> {
+    try {
+      const rtHandle = await this.getRenderTargetNode();
+      if (!rtHandle) return null;
+
+      const kernelResp = await this.apiService.callApi('ApiNode', 'connectedNodeIx', rtHandle, {
+        pinIx: 6,
+        enterWrapperNode: true,
+      });
+      const kernelHandle = getHandle(kernelResp?.result);
+      if (!kernelHandle) return null;
+
+      const msResp = await this.apiService.callApi('ApiNode', 'connectedNodeIx', kernelHandle, {
+        pinIx: 0,
+        enterWrapperNode: true,
+      });
+      const msHandle = getHandle(msResp?.result);
+      if (!msHandle) return null;
+
+      const valResp = await this.apiService.callApi('ApiItem', 'getValueByAttrID', msHandle, {
+        attribute_id: AttributeId.A_VALUE,
+        expected_type: AttrType.AT_INT,
+      });
+      // Response uses int4_value (x component) — Octane returns int values as int4
+      const int4 = valResp?.int4_value as { x?: number } | undefined;
+      return asNumber(int4?.x ?? valResp?.int_value, null);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Set the kernel node's maxsamples value.
+   */
+  async setKernelMaxSamples(samples: number): Promise<void> {
+    try {
+      const rtHandle = await this.getRenderTargetNode();
+      if (!rtHandle) return;
+
+      const kernelResp = await this.apiService.callApi('ApiNode', 'connectedNodeIx', rtHandle, {
+        pinIx: 6,
+        enterWrapperNode: true,
+      });
+      const kernelHandle = getHandle(kernelResp?.result);
+      if (!kernelHandle) return;
+
+      const msResp = await this.apiService.callApi('ApiNode', 'connectedNodeIx', kernelHandle, {
+        pinIx: 0,
+        enterWrapperNode: true,
+      });
+      const msHandle = getHandle(msResp?.result);
+      if (!msHandle) return;
+
+      await this.apiService.callApi('ApiItem', 'setValueByAttrID', msHandle, {
+        attribute_id: AttributeId.A_VALUE,
+        int_value: samples,
+        evaluate: true,
+      });
+    } catch {
+      // Silent — drag optimization is best-effort
     }
   }
 

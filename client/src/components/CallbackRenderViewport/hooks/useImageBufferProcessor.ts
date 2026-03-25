@@ -50,7 +50,11 @@ export function useImageBufferProcessor({
   // Phase 3: Input-side throttling during camera drag
   // Track last accepted image time to throttle to 30 FPS during drag
   const lastAcceptedTimeRef = useRef(0);
-  const DRAG_THROTTLE_INTERVAL = 33; // ms (30 FPS = 1000ms / 30 = 33.33ms)
+  // Phase 5: Drag throttle disabled after profiling (v2.4.1)
+  // Frame render cost is <1ms — throttling drops frames that could display for free.
+  // Profiled result: 27 FPS (no throttle + subsample) vs 12 FPS (33ms throttle). See temp/orbit-perf-log.md.
+  // If future high-res renders cause CPU pressure, re-enable with adaptive threshold.
+  const DRAG_THROTTLE_INTERVAL = 0;
 
   /**
    * Convert LDR RGBA buffer to canvas

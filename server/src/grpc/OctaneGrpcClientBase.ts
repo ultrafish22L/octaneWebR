@@ -41,22 +41,22 @@ const GRPC_MUTATING_METHODS = new Set([
   'connectToIx',
   'disconnectPin',
   'setPosition',
-  'setRenderTargetNode',
   'continueRendering',
   'startRendering',
   'stopRendering', // render lifecycle
   'saveImage1',
   'saveImage2', // render save
   'SetCamera', // camera (LiveLink)
-  'update', // ApiChangeManager.update (scene eval)
-  'rootNodeGraph', // project open
+  // 'update' excluded — ApiChangeManager.update fires constantly with empty {}
+  // 'rootNodeGraph' removed — cached read, fires on every tool invocation (~36 lines/session)
 ]);
 
 // Methods shown at debug level (in addition to mutating/lifecycle methods above)
 // Excludes methods the web UI inspector calls 100s of times per scene load.
 const GRPC_DEBUG_METHODS = new Set([
-  'hasAttr', // attribute existence checks (few per tool call)
+  'setRenderTargetNode', // RT selection (demoted from mutating — fires redundantly from webapp sync)
   'getPinValue', // pin value reads
+  // 'hasAttr' removed — ~98 lines/session noise (2 per set_attribute call), no diagnostic value
 ]);
 
 function initGrpcLog(): void {

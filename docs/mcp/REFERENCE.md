@@ -368,3 +368,27 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 | Resource | URI              | Use For                                                             |
 | -------- | ---------------- | ------------------------------------------------------------------- |
 | `scene`  | `octane://scene` | Current scene snapshot: all nodes, connections, children, staleness |
+
+---
+
+## §12 GLB Pipeline
+
+### Convert GLB → OBJ + Textures
+
+```python
+import trimesh
+scene = trimesh.load('model.glb')
+scene.export('model.obj')  # OBJ + MTL
+# Extract baked texture (trimesh OBJ export strips it):
+scene.geometry[mesh_name].visual.material.baseColorTexture.save('model_diffuse.png')
+```
+
+### Load in Octane
+
+1. `NT_GEO_MESH` + `A_FILENAME` + `A_RELOAD` (see §1 File Loading Pattern)
+2. `NT_TEX_IMAGE` with diffuse PNG → connect to material `pin_index: 0` (replaces auto-created RGB child)
+3. No `A_RELOAD` needed for image textures — they load on connect
+
+### Orientation
+
+OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_mesh` for reliable orientation via VLM mugshot (see `BUILD.md` Pre-Phase).

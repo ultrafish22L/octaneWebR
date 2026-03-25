@@ -248,14 +248,10 @@ export function useMouseInteraction({
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      // Get canvas-relative coordinates
-      const rect = canvas.getBoundingClientRect();
-      const canvasX = e.clientX - rect.left;
-      const canvasY = e.clientY - rect.top;
-
-      // REGION SELECTION MODE: Update region end point
+      // REGION SELECTION MODE: Update region end point (needs canvas-relative coords)
       if (isSelectingRegionRef.current) {
-        setRegionEnd({ x: canvasX, y: canvasY });
+        const rect = canvas.getBoundingClientRect();
+        setRegionEnd({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         return;
       }
 
@@ -263,7 +259,8 @@ export function useMouseInteraction({
       if (is2DPanningRef.current) {
         const deltaX = e.clientX - lastMousePosRef.current.x;
         const deltaY = e.clientY - lastMousePosRef.current.y;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        lastMousePosRef.current.x = e.clientX;
+        lastMousePosRef.current.y = e.clientY;
 
         setCanvasTransform(prev => ({
           ...prev,
@@ -278,7 +275,8 @@ export function useMouseInteraction({
 
       const deltaX = e.clientX - lastMousePosRef.current.x;
       const deltaY = e.clientY - lastMousePosRef.current.y;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      lastMousePosRef.current.x = e.clientX;
+      lastMousePosRef.current.y = e.clientY;
 
       if (isDraggingRef.current) {
         // LEFT CLICK: Orbit camera around target

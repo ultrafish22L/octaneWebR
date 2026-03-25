@@ -120,20 +120,25 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `info`    | Mutating + lifecycle only (create/set/connect/render/camera/save)                                                                      | Tool calls with args only                         |
 | `warn`+   | Errors only                                                                                                                            | Health failures, gate rejections, crashes         |
 
-| File             | Source               | Notes                                                               |
-| ---------------- | -------------------- | ------------------------------------------------------------------- |
-| `log_grpc.log`   | OctaneGrpcClientBase | `GRPC_DEBUG_LOG=0` to disable entirely. Cleared on dev server start |
-| `log_mcp.log`    | MCP server           | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start       |
-| `log_client.log` | Browser (via Vite)   | Client-side logs posted to server. Cleared on dev server start      |
+| File             | Source                             | Notes                                                                                 |
+| ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------- |
+| `log_grpc.log`   | OctaneGrpcClientBase + Vite plugin | gRPC calls + proxy errors. `GRPC_DEBUG_LOG=0` to disable. Cleared on dev server start |
+| `log_mcp.log`    | MCP server                         | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start                         |
+| `log_client.log` | Browser Logger (via `/api/log`)    | Client-side JS errors batched to server. Cleared on dev server start                  |
 
-### On Crash — FULL STOP Protocol
+### On Crash or Error — FULL STOP Protocol
 
 1. STOP — do not continue current task
-2. Read ALL logs — `log_mcp.log`, `log_grpc.log`, console
+2. Read ALL 3 log files — every one, every time, no exceptions:
+   - **`log_client.log`** — client JS errors, failed API calls (batched from browser)
+   - **`log_grpc.log`** — Vite gRPC proxy errors, raw gRPC call failures, SDK errors
+   - **`log_mcp.log`** — MCP tool errors, gate rejections
 3. Read the error message carefully — the answer is usually in the text
 4. Trace to root cause — don't chase symptoms
-5. One fix → verify logs + render → repeat until resolved
+5. One fix → verify all 3 logs + render → repeat until resolved
 6. Stop all servers BEFORE restarting Octane (§9)
+
+**Why all 3?** Errors originate at different layers: client JS, gRPC proxy, or MCP tools. The same failure appears differently in each log — the FIX depends on which layer caused it. All logs go to files, no console-only gaps.
 
 ### Key Rules
 
@@ -188,5 +193,3 @@ Full nuclear restart. Required before any clean test run, after MCP restart, inf
 12. Preview screenshot — verify viewport is live (not grey/blank)
 
 Only after all 12 steps pass: proceed to DRESS or SHOW.
-
-**Why port 51023 matters:** The MCP relay streams render images to the web UI over WebSocket on port 51023. If a stale MCP process holds that port, the new MCP silently skips the relay and the viewport stays dead. The octane MCP is registered in the **project-level** `.mcp.json` (`C:\otoyla\dev\.mcp.json`) — Claude auto-starts and auto-restarts it when working in this directory. Killing it is safe. Starting a second one in bash is not.

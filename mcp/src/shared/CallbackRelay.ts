@@ -191,9 +191,11 @@ export class CallbackRelay {
    */
   private broadcastBinary(type: string, event: any): void {
     if (!this.wss || this.wss.clients.size === 0) {
-      if (this.broadcastCount++ % 100 === 0) {
-        this.log(`Broadcast skipped — ${this.wss?.clients.size ?? 0} clients`, 'debug');
-      }
+      // Commented out — high-frequency noise in logs (~25+ per build session)
+      // if (this.broadcastCount++ % 100 === 0) {
+      //   this.log(`Broadcast skipped — ${this.wss?.clients.size ?? 0} clients`, 'debug');
+      // }
+      this.broadcastCount++;
       return;
     }
 

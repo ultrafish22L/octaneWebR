@@ -526,10 +526,19 @@ export class SceneService extends BaseService {
         id: AttributeId.A_VALUE,
       });
       const attrResultObj = asObject(attrInfoResponse?.result);
-      if (attrResultObj && String(attrResultObj.type) !== 'AT_UNKNOWN') {
+      const attrType = attrResultObj?.type;
+      if (
+        attrResultObj &&
+        typeof attrType === 'string' &&
+        attrType in AttrType &&
+        attrType !== 'AT_UNKNOWN'
+      ) {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
         Logger.debugV(() => ` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {
+        if (attrType !== undefined && attrType !== 'AT_UNKNOWN') {
+          Logger.warn(`Unsupported attrInfo type for ${item.name}: ${attrType}`);
+        }
         const response = await this.apiService.callApi('ApiItem', 'getValueByAttrID', item.handle, {
           attribute_id: AttributeId.A_FILENAME,
           expected_type: AttrType.AT_STRING,

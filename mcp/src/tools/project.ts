@@ -9,7 +9,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import fs from 'fs';
-import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import { OctaneMcpClient, mcpLog, mcpLogReset, MCP_LOG_PATH } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { jsonResult, errorResult, validateFilePath } from './utils';
 import { notifyWebapp } from './webapp';
@@ -127,8 +127,14 @@ export function registerProjectTools(
   server.tool(
     'reset_project',
     'Clear scene to blank. Invalidates ALL handles. Can take up to 120s.',
-    {},
-    async () => {
+    {
+      clear_log: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Clear log_mcp.log for a clean debugging session (default: true)'),
+    },
+    async ({ clear_log }) => {
       try {
         // suppressUI: true prevents Octane's "Save changes?" blocking dialog.
         // Safe on SDK-based server (octaneServGrpc) — no dialog is ever shown.
@@ -138,9 +144,21 @@ export function registerProjectTools(
         // Tell web UI to drop all cached handles and refresh
         await notifyWebapp({ type: 'refreshScene' });
 
+        // Optionally clear the MCP log for a fresh debugging session
+        let log_cleared = false;
+        let old_log_lines = 0;
+        if (clear_log && fs.existsSync(MCP_LOG_PATH)) {
+          const content = fs.readFileSync(MCP_LOG_PATH, 'utf-8');
+          old_log_lines = content.split('\n').length;
+          mcpLogReset();
+          fs.writeFileSync(MCP_LOG_PATH, '');
+          log_cleared = true;
+        }
+
         return jsonResult({
           success: true,
           message: 'Scene cleared. All previous handles are invalid.',
+          ...(log_cleared && { log_cleared: true, old_log_lines }),
         });
       } catch (error: any) {
         return errorResult(error);

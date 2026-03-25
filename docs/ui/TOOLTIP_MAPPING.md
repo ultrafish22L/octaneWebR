@@ -1,5 +1,7 @@
 # OctaneWebR Tooltip Mapping
 
+> Snapshot from Round 2 audit (2026-03-20). Not actively maintained — check `reference/strings.xml` for current official strings.
+
 Cross-reference between OctaneWebR button IDs and Octane's official strings (from `reference/strings.xml`).
 
 **Format:** `button-id` | Current OctaneWebR tooltip | Octane official text | Status
