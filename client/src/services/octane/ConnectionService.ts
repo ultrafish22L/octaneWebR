@@ -186,7 +186,7 @@ export class ConnectionService extends BaseService {
               Logger.info('WebSocket: MCP nodeDeleted', message.handle);
               this.emit('OnMcpNodeDeleted', { handle: message.handle });
             } else if (message.type === 'nodeChanged') {
-              Logger.info('WebSocket: MCP nodeChanged', message.handle);
+              //              Logger.info('WebSocket: MCP nodeChanged', message.handle);
               this.emit('OnMcpNodeChanged', { handle: message.handle });
             } else {
               Logger.warn('WebSocket: Unknown message type:', message.type);

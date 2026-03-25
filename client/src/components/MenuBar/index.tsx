@@ -262,8 +262,11 @@ function MenuBar({
       await client.waitForSceneIdle();
       const response = await client.callApi('ApiProjectManager', 'loadProject', {
         projectPath: path,
+        evaluate: true,
       });
       if (response) {
+        // Flush scene evaluation — without this, meshes from orbx stay empty.
+        await client.callApi('ApiChangeManager', 'update', {});
         addRecentFile(path);
         showNotification(`Loaded: ${path}`, 'success');
         // loadProject is async in Octane (returns callbackId) — wait before
@@ -362,8 +365,11 @@ function MenuBar({
               await client.waitForSceneIdle();
               const response = await client.callApi('ApiProjectManager', 'loadProject', {
                 projectPath: data,
+                evaluate: true,
               });
               if (response) {
+                // Flush scene evaluation — without this, meshes from orbx stay empty.
+                await client.callApi('ApiChangeManager', 'update', {});
                 showNotification(`Loaded: ${data}`, 'success');
                 // loadProject is async in Octane — wait before querying scene tree
                 await new Promise(resolve => setTimeout(resolve, 1500));
