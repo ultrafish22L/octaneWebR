@@ -10,13 +10,14 @@ Octane GPU ──► octaneServGrpc (gRPC) ──► Vite Plugin (WS relay) ─�
 
 **Current performance** (1024x512, measured):
 
-- Octane render-to-callback: ~125ms (8 fps during drag)
+- Octane render-to-callback: ~125ms (full samples), ~37ms (subsample 2x2 + 1 sample)
 - Client paint (decode + set + putImageData): 0.3ms avg, 0.8ms max
 - Camera update rate: 30 Hz (33ms interval)
-- Frame acceptance during drag: 30 fps throttle (33ms)
-- E2E latency: ~150ms (render + network + RAF vsync)
+- Frame acceptance during drag: unlimited (throttle disabled v2.4.1)
+- Interactive drag FPS: ~27 FPS (with auto-subsample)
+- E2E latency: ~150ms at full quality, ~40ms during drag
 
-**Bottleneck**: Octane GPU render time dominates. Client pipeline is essentially free.
+**Bottleneck**: Octane GPU render time dominates. Client pipeline is essentially free. v2.4.1 drag optimizations (auto-subsample 2x2 + kernel samples=1) reduce render time 3x during interaction.
 
 ---
 
@@ -67,9 +68,9 @@ Pixel bytes are never copied at this stage — just a typed array view of the ne
 
 ### Stage 5: Image Buffer Processor — ~0ms (gating only)
 
-`useImageBufferProcessor.ts` validates and throttles incoming frames.
+`useImageBufferProcessor.ts` validates incoming frames.
 
-**Drag throttle**: During camera drag, accepts max 1 frame per 33ms (30 fps). Frames arriving sooner are silently dropped. This reduces GPU/CPU contention.
+**Drag throttle**: **Disabled in v2.4.1** (`DRAG_THROTTLE_INTERVAL = 0`). Profiling showed 27 FPS without throttle vs 12 FPS with 33ms throttle — the throttle was counterproductive once subsample reduced render cost below the throttle interval.
 
 **RAF scheduling**: Stores latest image in `pendingImageRef`, schedules `requestAnimationFrame` if not already scheduled. Frame coalescing: if multiple images arrive before RAF fires, only the latest renders.
 
@@ -110,44 +111,52 @@ Pixel bytes are never copied at this stage — just a typed array view of the ne
 
 ---
 
-## Why It's 8 FPS During Drag
+## Why It Was 8 FPS During Drag (pre-v2.4.1)
 
-The 30 Hz camera update sends a new camera position every 33ms. But Octane takes ~125ms to render each frame. So:
+Without subsample, Octane takes ~125ms per frame at full resolution. Camera updates at 30 Hz, but Octane can only start a new render when the previous finishes:
 
 ```
 t=0ms    camera update #1 sent
-t=33ms   camera update #2 sent (Octane still rendering #1)
-t=66ms   camera update #3 sent (Octane still rendering #1)
-t=99ms   camera update #4 sent (Octane still rendering #1)
-t=125ms  frame #1 arrives (from camera #1, already stale)
-t=132ms  camera update #5 sent
-...
+t=125ms  frame #1 arrives (stale by 3 camera updates)
+t=250ms  frame #2 arrives → 8 fps ceiling
 ```
 
-Octane can only start a new render when the previous one finishes. With 125ms render time, we get 8 fps maximum regardless of how fast camera updates are sent. The camera updates at 30 Hz just ensure Octane always has the latest position queued.
+### v2.4.1 Solution: Auto-Subsample During Drag
+
+On drag start, the viewport automatically:
+
+1. Sets subsample mode to 2x2 (quarter resolution render)
+2. Sets kernel max samples to 1 (single sample per pixel)
+3. Restores both on drag end
+
+This drops render time from ~125ms to ~37ms → **27 FPS** during interaction. Both optimizations are preference-gated (`getDragSubsampleEnabled()`, `getDragSamples1Enabled()`), on by default.
+
+The 33ms drag throttle was also disabled — with 37ms render time, the throttle was the bottleneck, not the GPU.
 
 ---
 
-## Optimization — Next Steps
+## Optimization Status
 
-| Priority | Solution                     | Impact                       | Effort            | Risk   |
-| -------- | ---------------------------- | ---------------------------- | ----------------- | ------ |
-| 1        | **Subsample during drag**    | 8fps → 60+fps                | Low (2 API calls) | Low    |
-| 2        | **Predictive CSS transform** | Perceived 60fps even at 8fps | Medium            | Low    |
-| 3        | WebGL texture upload         | Marginal (<0.3ms)            | High              | Medium |
-| 4        | OffscreenCanvas worker       | Main thread = 0ms            | High              | Medium |
-
-**Recommended:** Subsample mode (`set_subsample_mode(2)` on drag start, `(0)` on drag end) gives real 60fps during interaction. Predictive CSS transform complements it for perceived smoothness. Binary WebSocket relay already implemented (Solution F — done).
+| Priority | Solution                   | Impact             | Status                                              |
+| -------- | -------------------------- | ------------------ | --------------------------------------------------- |
+| 1        | **Subsample during drag**  | 8fps → 27fps       | **DONE** (v2.4.1) — auto 2x2 + samples=1 on drag    |
+| 2        | **Binary WebSocket relay** | Zero-copy pipeline | **DONE** (v2.4.0) — replaced JSON encoding          |
+| 3        | **Drag throttle removal**  | 12fps → 27fps      | **DONE** (v2.4.1) — throttle was the bottleneck     |
+| —        | Predictive CSS transform   | Perceived 60fps    | Not needed — 27fps is smooth enough for interaction |
+| —        | WebGL texture upload       | Marginal (<0.3ms)  | Not needed — putImageData is 0.3ms                  |
+| —        | OffscreenCanvas worker     | Main thread = 0ms  | Not needed — client pipeline already ~0.3ms         |
 
 ---
 
 ## Current Throttle/Rate Summary
 
-| What                         | Rate               | Where                                                    |
-| ---------------------------- | ------------------ | -------------------------------------------------------- |
-| Camera updates to Octane     | 30 Hz (33ms)       | `useCameraSync.ts` CAMERA_UPDATE_INTERVAL                |
-| Frame acceptance during drag | 30 fps (33ms)      | `useImageBufferProcessor.ts` DRAG_THROTTLE_INTERVAL      |
-| RAF rendering                | 60 fps max (vsync) | Browser requestAnimationFrame                            |
-| WS backpressure drop         | >10 MB buffered    | `vite-plugin-octane-grpc.ts` MAX_WS_BUFFER               |
-| Status bar updates           | 2/sec (500ms)      | `useCanvasRenderer.ts` STATUS_UPDATE_INTERVAL            |
-| Server log (mutations)       | Per-call           | `vite-plugin-octane-grpc.ts` (SetCamera/update excluded) |
+| What                         | Rate                           | Where                                                    |
+| ---------------------------- | ------------------------------ | -------------------------------------------------------- |
+| Camera updates to Octane     | 30 Hz (33ms)                   | `useCameraSync.ts` CAMERA_UPDATE_INTERVAL                |
+| Frame acceptance during drag | Unlimited (throttle disabled)  | `useImageBufferProcessor.ts` DRAG_THROTTLE_INTERVAL = 0  |
+| Auto-subsample during drag   | 2x2 on drag start, restore end | `CallbackRenderViewport/index.tsx` drag effect           |
+| Kernel samples during drag   | 1 on drag start, restore end   | `CallbackRenderViewport/index.tsx` drag effect           |
+| RAF rendering                | 60 fps max (vsync)             | Browser requestAnimationFrame                            |
+| WS backpressure drop         | >10 MB buffered                | `vite-plugin-octane-grpc.ts` MAX_WS_BUFFER               |
+| Status bar updates           | 2/sec (500ms)                  | `useCanvasRenderer.ts` STATUS_UPDATE_INTERVAL            |
+| Server log (mutations)       | Per-call                       | `vite-plugin-octane-grpc.ts` (SetCamera/update excluded) |

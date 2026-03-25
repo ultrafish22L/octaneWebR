@@ -130,6 +130,8 @@ All parameters clamp to their physical valid range after resolution. A dimension
 
 LLM prompt-based parsing — no custom NLP. The dimension registry (names + aliases) is injected into the system prompt. The LLM maps speech to delta vectors.
 
+**Two-call pattern:** When `set_artistic_intent(natural_language: "...")` is called, it returns an NL parse prompt (not a resolved vector). The AI reads the prompt, parses the intent into a delta vector, then calls `set_artistic_intent(vector: {...})` with the parsed result. This keeps the LLM in the loop for ambiguity resolution.
+
 ### 5.2 NL Parse Prompt Template
 
 ```
@@ -168,7 +170,7 @@ Return JSON: { "deltas": {...}, "mode": "absolute"|"relative", "confidence": 0-1
 
 **Artist presets**: Vermeer, Caravaggio, Hopper, Kubrick, Villeneuve, Fincher
 
-**Genre presets**: product_clean, product_luxury, landscape_epic, portrait_editorial, still_life_dutch, architectural_modern
+**Genre presets**: product_clean, product_luxury, landscape_epic, portrait_editorial, still_life_dutch, architectural_modern, macro_nature
 
 **Film presets**: blade_runner, moonlight, grand_budapest, mad_max, her
 
@@ -263,12 +265,12 @@ Implementation complete — see `mcp/src/sega/` for code. File structure derivab
 
 **What happens inside:**
 
-1. NL parser identifies: genre = `product_shot`, mood = `dramatic`, preset = `caravaggio`
-2. System loads `caravaggio` preset: `{ warmth: 0.5, contrast: 0.8, key_direction: 0.4, intimacy: 0.3, atmosphere: 0.2 }`
-3. System loads `product_shot` genre defaults: `{ shot_scale: -0.2, camera_angle: 0.0, groundedness: 0.6 }`
-4. Merges them (preset wins on conflicts): active vector has ~8 dimensions set
-5. Parameter mapping resolves: key temp 3000K, fill ratio 6:1, environment power 0.1, camera elevation 5 deg, etc.
-6. System shows you the resolved intent + parameters before building anything
+1. You call `set_artistic_intent(preset: "caravaggio")` — loads preset vector directly
+2. Preset resolves: `{ warmth: 0.5, contrast: 0.8, key_direction: 0.4, intimacy: 0.3, atmosphere: 0.2 }`
+3. Parameter mapping resolves: key temp 3000K, fill ratio 6:1, environment power 0.1, camera elevation 5 deg, etc.
+4. System shows you the resolved intent + parameters before building anything
+
+Alternatively, `set_artistic_intent(natural_language: "dramatic, like Caravaggio")` returns a parse prompt — you extract the vector, then call back with the parsed result (two-call NL pattern).
 
 **What you see:**
 

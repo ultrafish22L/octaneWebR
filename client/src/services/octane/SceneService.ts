@@ -527,12 +527,7 @@ export class SceneService extends BaseService {
       });
       const attrResultObj = asObject(attrInfoResponse?.result);
       const attrType = attrResultObj?.type;
-      if (
-        attrResultObj &&
-        typeof attrType === 'string' &&
-        attrType in AttrType &&
-        attrType !== 'AT_UNKNOWN'
-      ) {
+      if (attrResultObj && typeof attrType === 'string' && attrType !== 'AT_UNKNOWN') {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
         Logger.debugV(() => ` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {

@@ -35,6 +35,7 @@ Known issues: Connection LED false-green when offline, ECONNREFUSED spam on star
 
 ### Hard Rules
 
+- **Visual verify EVERY mutation** — `save_render` (engine truth) + `preview_screenshot` (user viewport), COMPARE both. Catches almost all bugs/setup errors. No exceptions.
 - **`fit_camera()`** after every geo placement — only way to verify all geo visible
 - **AD critique on every scene** in DRESS/SHOW — never skip. When exhausted → move on.
 - **`semantic_critique`** alongside `critique_render` for dual perspective

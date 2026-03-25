@@ -170,6 +170,16 @@ save_render(path)
 
 ---
 
+### Visual Verify — EVERY Mutation (mandatory, no exceptions)
+
+After every visual mutation (geo change, material swap, connect, render start, camera move):
+
+1. **`save_render`** → read the PNG — this is **engine ground truth**
+2. **`preview_screenshot`** → read the JPEG — this is **what the user sees**
+3. **Compare** — if preview doesn't match render (blank, stale, wrong content), **STOP and diagnose**
+
+This catches almost all bugs and setup errors: dead viewport, stale HMR, websocket disconnect, render not updating, wrong scene state. Logs alone will NOT reveal visual divergences. Both checks, every time. No exceptions.
+
 ### Log Check — ALL 3 Log Files, Every Time
 
 After every phase, and on any error, check ALL 3 log files:

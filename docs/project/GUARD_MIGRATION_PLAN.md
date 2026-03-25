@@ -69,54 +69,59 @@ Each step: move one guard → validate at serv → confirm client/MCP version is
 
 ### Phase 2: Request Validation (guards on the way in)
 
-**Step 2.1** — Validate `expected_type` in getValueByAttrID
+**Step 2.1** — ~~Validate `expected_type` in getValueByAttrID~~ SKIPPED
 
-- Reject requests with unknown/missing expected_type before forwarding to SDK
-- Return INVALID_ARGUMENT with clear message instead of cryptic SDK error
-- File: grpc_server.cpp, getValueByAttrID handler
+- Serv dispatches from SDK's own `info.mType`, not client's `expected_type` — field is advisory/unused
+- Already handles unknown attrs via `hasAttr()` → empty OK
+- Already catches SDK exceptions → empty OK
+- No change needed — dispatch-from-SDK pattern is correct
 
-**Step 2.2** — Validate attribute_id in get/set calls
+**Step 2.2** — ~~Validate attribute_id in get/set calls~~ SKIPPED
 
-- Check attribute_id is in known range before forwarding
-- Return clear error for unknown attribute IDs
+- Already handled: `hasAttr()` returns false for unknown IDs → empty OK response
+- SDK also rejects invalid IDs in its own exception handler
 
-**Step 2.3** — Validate node_type in create calls
+**Step 2.3** — Validate node_type in create calls ✅ DONE
 
-- Check node_type against known NodeType enum before forwarding
-- Currently done in MCP (ApiCache.getNodeTypeId) — move to serv
+- Added `NodeType_IsValid(rawType)` + reject NT_UNKNOWN(0) before `ApiNode::create`
+- Returns INVALID_ARGUMENT with clear message for unknown types
+- Previously: unknown type → SDK null return → vague "failed to create" error
 
 ### Phase 3: Migrate MCP Guards to Serv
 
-**Step 3.1** — Move hasAttr pre-check into serv
+**Step 3.1** — hasAttr pre-check in serv ✅ DONE
 
-- serv already has attrInfo — can check hasAttr internally
-- get/set calls that reference missing attributes → INVALID_ARGUMENT from serv
-- MCP can remove hasAttr round-trip (saves 1 gRPC call per set_attribute)
+- `getValueByAttrID` already checks `hasAttr()` internally → empty OK for missing attrs
+- Added `hasAttr()` check to `setValueByAttrID` → INVALID_ARGUMENT for missing attrs
+- MCP hasAttr round-trips now redundant (can remove later, saves 1 gRPC call per get/set)
 
-**Step 3.2** — Move pin type mismatch check into serv
+**Step 3.2** — ~~Move pin type mismatch check into serv~~ DEFERRED
 
-- connectToIx/connectTo1 should validate source output type vs target pin type
-- Return INVALID_ARGUMENT on mismatch instead of silent connection
-- MCP can remove its pin type validation code
+- Would require extra SDK calls (source->outType + node->pinTypeIx) on every connect
+- SDK already handles mismatches (silent no-op or exception, caught by GRPC_SAFE)
+- MCP advisory check provides clearer error messages to the AI agent
+- Leave in MCP as defense-in-depth — not worth the perf cost in serv
 
-**Step 3.3** — Move buildValueParams type mapping into serv
+**Step 3.3** — ~~Move buildValueParams type mapping into serv~~ SKIPPED
 
-- serv already has the AT\_\* → proto field dispatch
-- If client sends wrong field for the type, serv should reject or auto-correct
-- MCP/client can simplify their set calls
+- Serv dispatches on proto oneof case, not expected_type — mapping is a client concern
+- Client/MCP must set the correct oneof field in the proto message regardless
+- No serv change needed — proto schema enforces correctness
 
 ### Phase 4: Simplify Client
 
-**Step 4.1** — Remove redundant client-side coercion
+**Step 4.1** — Remove redundant client-side coercion ✅ DONE (partial)
 
-- With serv guaranteeing clean responses, client can trust enum strings
-- Remove defensive String() coercion, type membership checks
-- Keep asObject/asNumber helpers (good practice) but remove enum validation
+- Removed `attrType in AttrType` membership check (Step 1.3) — serv guarantees valid enums
+- Kept asObject/asNumber/asBool/asString helpers — good TypeScript type narrowing, not guards
+- Kept `AT_UNKNOWN` exclusion — semantically correct (don't load values for unknown types)
+- Error downgrade in ApiService.ts + useParameterValue.ts already done (Step 1.1 era)
 
-**Step 4.2** — Simplify oneof field detection
+**Step 4.2** — ~~Simplify oneof field detection~~ DEFERRED
 
-- serv should standardize response format (always include `value` indicator field)
-- Client can use single-path extraction instead of trying 8+ field names
+- Would require proto schema change (add value_type indicator field to getValueResponse)
+- Larger refactor — not justified by current bug count (0 errors after Phase 1-3)
+- Current 8-field oneof detection works correctly, just verbose
 
 ## Verification
 
