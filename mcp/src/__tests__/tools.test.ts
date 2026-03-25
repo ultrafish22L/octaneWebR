@@ -149,7 +149,7 @@ describe('delete_node: cache cleanup', () => {
 
   it('removeNode cleans up connections referencing deleted handle', () => {
     const cache = new SceneCache();
-    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
     cache.trackHandle(100);
     cache.trackHandle(200);
@@ -450,7 +450,7 @@ describe('delete_node: connection guard', () => {
   });
 
   it('blocks deletion when node is a source in a connection', () => {
-    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
     cache.setConnection(100, 0, 200); // camera connected to RT
 
@@ -460,7 +460,7 @@ describe('delete_node: connection guard', () => {
   });
 
   it('blocks deletion when node is a target with connections', () => {
-    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
     cache.setConnection(100, 0, 200);
 
@@ -476,7 +476,7 @@ describe('delete_node: connection guard', () => {
   });
 
   it('allows deletion after disconnect clears connections', () => {
-    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
     cache.setConnection(100, 0, 200);
 
@@ -521,7 +521,7 @@ describe('connect_nodes: edge cases', () => {
   });
 
   it('getConnectionsInvolving after overwrite reflects new state', () => {
-    cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+    cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'OldCam', 'NT_CAM_THINLENS', 10);
     cache.addNode(300, 'NewCam', 'NT_CAM_THINLENS', 10);
 

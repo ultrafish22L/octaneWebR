@@ -17,6 +17,13 @@ Recipes are **creative briefs**, not build scripts.
 
 All of that lives in `docs/mcp/REFERENCE.md` (pin layouts, values) and `docs/mcp/BUILD.md` (build workflow). Recipes say **what** to build, not **how**.
 
+## Where recipes live
+
+- **Template recipes** (reusable starting points): `docs/recipes/` — e.g., `glass_metal_RECIPE.md`, `space_cat_RECIPE.md`
+- **Scene recipes** (specific builds): `aigenerated/{scene-name}/recipe.md` — e.g., `aigenerated/mycelium-court/recipe.md`
+
+Template recipes are generic. Scene recipes are specific to one build and contain calibrated values from iteration.
+
 ## Why
 
 When implementation details are duplicated into recipes, they go stale. The cheatsheet gets updated, the recipe doesn't, and the recipe's outdated instructions override the correct ones. This has caused crashes and wasted sessions — more than once.

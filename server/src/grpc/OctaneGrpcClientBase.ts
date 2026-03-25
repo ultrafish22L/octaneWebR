@@ -55,22 +55,8 @@ const GRPC_MUTATING_METHODS = new Set([
 // Methods shown at debug level (in addition to mutating/lifecycle methods above)
 // Excludes methods the web UI inspector calls 100s of times per scene load.
 const GRPC_DEBUG_METHODS = new Set([
-  'GetCamera', // camera reads (LiveLink)
   'hasAttr', // attribute existence checks (few per tool call)
   'getPinValue', // pin value reads
-  'getRenderTargetNode', // RT queries
-  'getDeviceName',
-  'getDeviceCount',
-  'getMemoryUsage', // device info
-  'getRealTime',
-  'clayMode',
-  'renderPriority', // render engine state
-  'getSubSampleMode', // render config
-  'octaneVersion',
-  'octaneName',
-  'isDemoVersion', // API info
-  'isSubscriptionVersion',
-  'tierIdx', // license info
 ]);
 
 function initGrpcLog(): void {
@@ -597,7 +583,7 @@ export class OctaneGrpcClientBase {
     // API version compat: translate method name first (needs original params for
     // alpha5 pin type dispatch), then transform params for the wire call.
     const compatMethod = getCompatibleMethodName(methodName, params);
-    const compatParams = transformRequestParams(methodName, params, serviceName);
+    const compatParams = transformRequestParams(methodName, params);
 
     const service = this.getService(serviceName);
     const method = service[compatMethod];

@@ -249,20 +249,19 @@ export function useToolbarActions({
           const newRealTimeMode = !state.realTimeMode;
           setState(prev => ({ ...prev, realTimeMode: newRealTimeMode }));
           Logger.debug(`Real-time mode: ${newRealTimeMode ? 'ON' : 'OFF'}`);
-          // Real-time mode uses high priority for interactive experience
-          // Set render priority: high for real-time, normal for standard
-          const rtPriority = newRealTimeMode ? 2 : 1; // 0=low, 1=normal, 2=high
+          // Real-time mode is activated via ApiRenderEngine.setSharedSurfaceOutputType
+          // which bundles the realTime flag with the shared surface type.
+          // type 0 = SHARED_SURFACE_TYPE_NONE (no shared surface, standard pixel callback)
           client
-            .callApi('ApiRenderEngine', 'setRenderPriority', { priority: rtPriority })
+            .callApi('ApiRenderEngine', 'setSharedSurfaceOutputType', {
+              type: 0, // SHARED_SURFACE_TYPE_NONE (keep current surface mode)
+              realTime: newRealTimeMode,
+            })
             .then(() => {
-              const priorityName = newRealTimeMode ? 'HIGH' : 'NORMAL';
-              Logger.debug(
-                ` Real-time mode ${newRealTimeMode ? 'enabled' : 'disabled'} - priority set to ${priorityName}`
-              );
-              setState(prev => ({ ...prev, renderPriority: newRealTimeMode ? 'high' : 'normal' }));
+              Logger.debug(`Real-time mode ${newRealTimeMode ? 'enabled' : 'disabled'}`);
             })
             .catch(err => {
-              Logger.error('Failed to set real-time rendering priority:', err);
+              Logger.error('Failed to set real-time mode:', err);
               setTemporaryStatus('Failed to set real-time mode', 3000);
               setState(prev => ({ ...prev, realTimeMode: state.realTimeMode })); // Revert on error
             });

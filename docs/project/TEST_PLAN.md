@@ -315,7 +315,7 @@ while (fiber) {
 | F13 | FileBrowser → Open .orbx     | Scene loads in app                        |
 | F14 | FileBrowser → Save flow      | File written to disk (verify via re-open) |
 
-> **Note:** F6 (file type filter) removed — feature does not exist (see IMPROVEMENTS.md #5).
+> **Note:** F6 (file type filter) removed — feature does not exist (see IMPROVEMENTS.md #15).
 
 ---
 

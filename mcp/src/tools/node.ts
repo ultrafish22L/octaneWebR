@@ -55,7 +55,7 @@ export function registerNodeTools(
 ) {
   server.tool(
     'create_node',
-    'Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 24 types supported), NT_TEX_IMAGE (image texture), NT_RENDER_TARGET (RT). Use list_node_types for full catalog.',
+    'Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 23 types supported), NT_TEX_IMAGE (image texture), NT_RENDERTARGET (RT). Use list_node_types for full catalog.',
     {
       node_type: z
         .string()

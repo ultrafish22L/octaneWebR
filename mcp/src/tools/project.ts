@@ -12,7 +12,6 @@ import fs from 'fs';
 import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
 import { ApiCache } from '../ApiCache';
 import { jsonResult, errorResult, validateFilePath } from './utils';
-import { populateSceneCache } from './scene';
 import { notifyWebapp } from './webapp';
 
 export function registerProjectTools(
@@ -85,14 +84,6 @@ export function registerProjectTools(
           mcpLog('load_project: scene evaluation triggered', 'info');
         } catch (e: any) {
           mcpLog(`load_project: scene eval failed: ${e.message}`, 'warn');
-        }
-
-        // Auto-populate SceneCache (depth 1 only — safe for any scene size)
-        try {
-          await populateSceneCache(client, cache, 1);
-          mcpLog('load_project: SceneCache auto-populated', 'info');
-        } catch (e: any) {
-          mcpLog(`load_project: SceneCache auto-populate failed: ${e.message}`, 'warn');
         }
 
         return jsonResult({

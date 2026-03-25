@@ -164,7 +164,7 @@ export class CallbackStreamManager {
 
       this.stream.on('data', (callbackRequest: any) => {
         try {
-          this.log(`Stream data received: ${Object.keys(callbackRequest).join(',')}`, 'debug');
+          this.log(`Stream data received: ${Object.keys(callbackRequest).join(',')}`, 'verbose');
           this.dispatch(callbackRequest);
         } catch (error: any) {
           this.log(`Error processing callback: ${error.message}`, 'error');
@@ -187,15 +187,22 @@ export class CallbackStreamManager {
         if (isDeadline && this.running) {
           // Normal deadline expiry — reconnect immediately
           this.openStream();
-        } else if (this.running && !octaneGone) {
-          this.log(`Stream error: ${msg}`, 'error');
-          setTimeout(() => {
-            if (this.running) this.openStream();
-          }, 5000);
         } else if (octaneGone) {
           this.log('Octane connection lost', 'warn');
           this.running = false;
           this.onConnectionLost?.();
+          // // Speculative retry — commented out pending evidence that
+          // // transient disconnections actually occur in practice.
+          // this.log('Octane connection lost — retrying in 3s', 'warn');
+          // this.onConnectionLost?.();
+          // setTimeout(() => {
+          //   if (this.running) this.openStream();
+          // }, 3000);
+        } else if (this.running) {
+          this.log(`Stream error: ${msg}`, 'error');
+          setTimeout(() => {
+            if (this.running) this.openStream();
+          }, 5000);
         }
       });
 

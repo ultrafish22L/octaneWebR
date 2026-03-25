@@ -278,7 +278,7 @@ describe('SceneCache', () => {
 
   describe('getConnectionsInvolving', () => {
     it('returns connections where handle is source', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.setConnection(100, 0, 200); // camera → RT pin 0
 
@@ -288,7 +288,7 @@ describe('SceneCache', () => {
     });
 
     it('returns connections where handle is target', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.setConnection(100, 0, 200);
 
@@ -298,7 +298,7 @@ describe('SceneCache', () => {
     });
 
     it('returns empty for unconnected handles', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.addNode(300, 'Orphan', 'NT_MAT_UNIVERSAL', 130);
       cache.setConnection(100, 0, 200);
@@ -307,7 +307,7 @@ describe('SceneCache', () => {
     });
 
     it('returns empty after removeNode cleans up connections', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.setConnection(100, 0, 200);
 
@@ -318,7 +318,7 @@ describe('SceneCache', () => {
     });
 
     it('returns empty after clear()', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.setConnection(100, 0, 200);
 
@@ -328,7 +328,7 @@ describe('SceneCache', () => {
     });
 
     it('returns multiple connections when handle has several', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
       cache.addNode(300, 'Env', 'NT_ENV_DAYLIGHT', 37);
       cache.addNode(400, 'Geo', 'NT_GEO_GROUP', 27);
@@ -341,7 +341,7 @@ describe('SceneCache', () => {
     });
 
     it('handles node that is both source and target', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'Group', 'NT_GEO_GROUP', 27);
       cache.addNode(300, 'Placement', 'NT_GEO_PLACEMENT', 29);
       cache.setConnection(100, 3, 200); // group → RT pin 3
@@ -375,7 +375,7 @@ describe('SceneCache', () => {
     });
 
     it('overwriting a connection drops old source from getConnectionsInvolving', () => {
-      cache.addNode(100, 'RT', 'NT_RENDER_TARGET', 113);
+      cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
       cache.addNode(200, 'OldCam', 'NT_CAM_THINLENS', 10);
       cache.addNode(300, 'NewCam', 'NT_CAM_THINLENS', 10);
       cache.setConnection(100, 0, 200); // old camera

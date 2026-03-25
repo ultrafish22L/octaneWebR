@@ -32,42 +32,129 @@ export class CallbackRelay {
 
   start(): void {
     if (this.wss) return;
+    this.tryListen();
+  }
 
+  private tryListen(retried = false): void {
     try {
-      this.wss = new WebSocketServer({ host: '127.0.0.1', port: RELAY_PORT });
+      const wss = new WebSocketServer({ host: '127.0.0.1', port: RELAY_PORT });
 
-      this.wss.on('listening', () => {
+      wss.on('listening', () => {
+        this.wss = wss;
         this.log(`Relay listening on ws://127.0.0.1:${RELAY_PORT}`, 'info');
+        this.wireHandlers();
       });
 
-      this.wss.on('error', (err: any) => {
-        // Port in use = another MCP instance already relaying. Not fatal.
+      wss.on('error', (err: any) => {
         if (err.code === 'EADDRINUSE') {
-          this.log(`Port ${RELAY_PORT} in use — another MCP relay is active`, 'warn');
-          this.wss = null;
+          wss.close();
+          if (retried) {
+            this.log(`Port ${RELAY_PORT} still in use after eviction — giving up`, 'warn');
+            return;
+          }
+          // Probe the existing relay — if it's stale (orphaned from a dead MCP), evict it
+          this.log(`Port ${RELAY_PORT} in use — probing for stale relay...`, 'info');
+          this.probeAndEvict(() => this.tryListen(true));
           return;
         }
         this.log(`Relay error: ${err.message}`, 'error');
       });
-
-      // Wire all 4 callback types
-      const types: CallbackType[] = [
-        'projectManagerChanged',
-        'renderFailure',
-        'newStatistics',
-        'newImage',
-      ];
-
-      for (const type of types) {
-        const handler = (event: any) => {
-          this.broadcastBinary(type, event);
-        };
-        this.handlers.set(type, handler);
-        this.stream.on(type, handler);
-      }
     } catch (err: any) {
       this.log(`Failed to start relay: ${err.message}`, 'error');
-      this.wss = null;
+    }
+  }
+
+  /**
+   * Connect to the existing relay port. If the connection fails or the server
+   * doesn't respond to a ping within 2s, it's stale — kill the process holding
+   * the port and retry.
+   */
+  private probeAndEvict(onEvicted: () => void): void {
+    const probe = new WebSocket(`ws://127.0.0.1:${RELAY_PORT}`);
+    let settled = false;
+
+    const fail = (reason: string) => {
+      if (settled) return;
+      settled = true;
+      probe.close();
+      this.log(`Stale relay detected (${reason}) — evicting port ${RELAY_PORT}`, 'info');
+      this.evictPort(onEvicted);
+    };
+
+    const timer = setTimeout(() => fail('no pong within 2s'), 2000);
+
+    probe.on('open', () => {
+      // Send a ping — a live relay won't respond (no ping handler), but at least
+      // an open connection means the server is alive. Give it a moment.
+      // If we got 'open', the server IS responding — it's a live relay from another
+      // MCP instance. Don't evict.
+      clearTimeout(timer);
+      settled = true;
+      probe.close();
+      this.log(`Port ${RELAY_PORT} has a live relay — another MCP instance owns it`, 'warn');
+    });
+
+    probe.on('error', () => fail('connection refused'));
+  }
+
+  private evictPort(onDone: () => void): void {
+    // On Windows, find and kill the process holding the port
+    const { exec } = require('child_process') as typeof import('child_process');
+    exec(
+      `netstat -ano | findstr :${RELAY_PORT} | findstr LISTENING`,
+      (err: any, stdout: string) => {
+        if (err || !stdout.trim()) {
+          this.log(`No process found on port ${RELAY_PORT} — retrying`, 'info');
+          onDone();
+          return;
+        }
+        // Parse PID from netstat output (last column)
+        const lines = stdout.trim().split('\n');
+        const pids = new Set<string>();
+        for (const line of lines) {
+          const parts = line.trim().split(/\s+/);
+          const pid = parts[parts.length - 1];
+          if (pid && /^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+        }
+        if (pids.size === 0) {
+          this.log('Could not parse PID — retrying anyway', 'warn');
+          onDone();
+          return;
+        }
+        // Kill stale processes holding the port
+        let killed = 0;
+        let remaining = pids.size;
+        for (const pid of pids) {
+          exec(`taskkill /PID ${pid} /F`, (killErr: any) => {
+            if (!killErr) {
+              killed++;
+              this.log(`Killed stale process PID ${pid} on port ${RELAY_PORT}`, 'info');
+            }
+            remaining--;
+            if (remaining === 0) {
+              // Small delay to let the OS release the port
+              setTimeout(onDone, 500);
+            }
+          });
+        }
+      }
+    );
+  }
+
+  private wireHandlers(): void {
+    const types: CallbackType[] = [
+      'projectManagerChanged',
+      'renderFailure',
+      'newStatistics',
+      'newImage',
+    ];
+
+    for (const type of types) {
+      const handler = (event: any) => {
+        this.broadcastBinary(type, event);
+      };
+      this.handlers.set(type, handler);
+      this.stream.on(type, handler);
     }
   }
 

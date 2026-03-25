@@ -55,33 +55,55 @@ export function useCanvasRenderer({
   const rafIdRef = useRef<number | null>(null);
   const pendingImageRef = useRef<OctaneImageData | null>(null);
 
+  // Frame timing metrics — throttled to 1 log per second
+  const frameTimingRef = useRef({ count: 0, totalMs: 0, maxMs: 0, lastLogTime: 0 });
+
+  // Cached canvas 2D context — obtained once with optimal options.
+  // alpha:false = no alpha compositing overhead (Octane always fills opaque pixels).
+  // desynchronized:true = bypass browser compositor for ~16ms less latency (hint, may be ignored).
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const ctxCanvasRef = useRef<HTMLCanvasElement | null>(null); // track which canvas the ctx belongs to
+
+  // Cached ImageData — reused between frames to avoid GC pressure.
+  // Only reallocated when dimensions change. Saves ~500 MB/min GC at 60 FPS / 1080p.
+  const cachedImageDataRef = useRef<{ imageData: ImageData; width: number; height: number } | null>(
+    null
+  );
+
   // Throttled status updates
   const lastStatusUpdateRef = useRef(0);
   const STATUS_UPDATE_INTERVAL = 500; // ms (2 updates per second max)
 
   /**
-   * Decode buffer data (base64 string or Buffer object)
+   * Decode buffer data — handles three formats:
+   * 1. Uint8Array (binary WebSocket fast path — zero-copy, no decode needed)
+   * 2. {type: "Buffer", data: [bytes]} (Node.js Buffer serialized as JSON)
+   * 3. base64 string (legacy fallback)
    */
   const decodeBuffer = useCallback(
-    (bufferData: { type: string; data: number[] } | string): Uint8Array => {
-      // Check if it's a Node.js Buffer serialized as JSON {type: "Buffer", data: [bytes]}
+    (bufferData: Uint8Array | { type: string; data: number[] } | string): Uint8Array => {
+      // Binary WebSocket fast path: already a Uint8Array — zero decode cost
+      if (bufferData instanceof Uint8Array) {
+        return bufferData;
+      }
+      // Node.js Buffer serialized as JSON {type: "Buffer", data: [bytes]}
       if (
         typeof bufferData === 'object' &&
-        bufferData.type === 'Buffer' &&
-        Array.isArray(bufferData.data)
+        (bufferData as { type: string }).type === 'Buffer' &&
+        Array.isArray((bufferData as { data: number[] }).data)
       ) {
-        return new Uint8Array(bufferData.data);
-      } else if (typeof bufferData === 'string') {
-        // It's a base64 string
+        return new Uint8Array((bufferData as { data: number[] }).data);
+      }
+      if (typeof bufferData === 'string') {
+        // base64 string (legacy text frame fallback)
         const binaryString = atob(bufferData);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         return bytes;
-      } else {
-        throw new Error('Unknown buffer format');
       }
+      throw new Error('Unknown buffer format');
     },
     []
   );
@@ -98,6 +120,8 @@ export function useCanvasRenderer({
       return;
     }
 
+    const t0 = performance.now();
+
     try {
       const width = imageData.size.x;
       const height = imageData.size.y;
@@ -108,10 +132,23 @@ export function useCanvasRenderer({
         canvas.height = height;
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
+        // Invalidate cached context and ImageData — canvas resize resets the context
+        ctxRef.current = null;
+        cachedImageDataRef.current = null;
         Logger.debug(`[RAF] Canvas resized to ${width}x${height}`);
       }
 
-      const ctx = canvas.getContext('2d');
+      // Get or create cached 2D context with optimal options
+      if (!ctxRef.current || ctxCanvasRef.current !== canvas) {
+        ctxRef.current = canvas.getContext('2d', {
+          alpha: false,
+          desynchronized: true,
+        });
+        ctxCanvasRef.current = canvas;
+        // Invalidate cached ImageData when context changes
+        cachedImageDataRef.current = null;
+      }
+      const ctx = ctxRef.current;
       if (!ctx) {
         Logger.error('[RAF] Failed to get 2d context');
         rafIdRef.current = null;
@@ -121,8 +158,18 @@ export function useCanvasRenderer({
       // Decode buffer
       const bytes = decodeBuffer(imageData.buffer.data);
 
-      // Convert buffer to ImageData
-      const canvasImageData = ctx.createImageData(width, height);
+      // Get or create cached ImageData — reuse across frames, only reallocate on dimension change
+      const cached = cachedImageDataRef.current;
+      let canvasImageData: ImageData;
+      if (cached && cached.width === width && cached.height === height) {
+        canvasImageData = cached.imageData;
+      } else {
+        canvasImageData = ctx.createImageData(width, height);
+        cachedImageDataRef.current = { imageData: canvasImageData, width, height };
+        Logger.debug(
+          `[RAF] ImageData allocated ${width}x${height} (${((width * height * 4) / 1024).toFixed(0)}KB)`
+        );
+      }
       convertBufferToCanvas(bytes, imageData, canvasImageData);
 
       // Render to canvas
@@ -146,7 +193,23 @@ export function useCanvasRenderer({
         }
       }
 
-      Logger.debugV('[RAF] Frame rendered successfully');
+      // Frame timing — aggregate and log once per second
+      const elapsed = performance.now() - t0;
+      const ft = frameTimingRef.current;
+      ft.count++;
+      ft.totalMs += elapsed;
+      if (elapsed > ft.maxMs) ft.maxMs = elapsed;
+      const now = Date.now();
+      if (now - ft.lastLogTime >= 1000) {
+        const avg = ft.totalMs / ft.count;
+        Logger.info(
+          `[RAF] ${ft.count} frames/s | avg ${avg.toFixed(1)}ms | max ${ft.maxMs.toFixed(1)}ms | ${width}x${height}`
+        );
+        ft.count = 0;
+        ft.totalMs = 0;
+        ft.maxMs = 0;
+        ft.lastLogTime = now;
+      }
     } catch (error) {
       Logger.error('[RAF] Error rendering frame:', error);
     } finally {
@@ -172,9 +235,6 @@ export function useCanvasRenderer({
       // Schedule RAF if not already scheduled
       if (rafIdRef.current === null) {
         rafIdRef.current = requestAnimationFrame(renderFrame);
-        Logger.debugV('[RAF] Render scheduled');
-      } else {
-        Logger.debugV('[RAF] Frame coalesced (RAF already scheduled)');
       }
     },
     [renderFrame]
@@ -196,14 +256,8 @@ export function useCanvasRenderer({
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
-      Logger.debugV('[RAF] Cancelled pending RAF (camera changed)');
     }
-
-    // Clear pending image (discard stale frame)
-    if (pendingImageRef.current !== null) {
-      pendingImageRef.current = null;
-      Logger.debugV('[RAF] Flushed pending image (stale data)');
-    }
+    pendingImageRef.current = null;
   }, []);
 
   /**

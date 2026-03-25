@@ -173,11 +173,52 @@ export const CallbackRenderViewport = React.memo(
         triggerOctaneUpdate,
       });
 
+      // Renderer selection: auto-detects shared-surface (Electron+Win+addon) vs canvas2d
+      const { activeRenderer, reason: rendererReason } = useRendererSelection('auto');
+
+      // Drag state as ref — avoids React re-renders on every mousedown/mouseup.
+      // Communicated via callback from useMouseInteraction.
+      const isDraggingRef = useRef(false);
+
+      // Image buffer processor hooks (use ref for drag state — no re-renders)
+      const canvas2d = useImageBufferProcessor({
+        canvasRef,
+        onFrameRendered: () => setFrameCount(prev => prev + 1),
+        onStatusUpdate: setStatus,
+        isDraggingRef, // Ref-based drag state — zero re-renders
+      });
+
+      // Shared surface renderer (stub — delegates to canvas2d internally)
+      const sharedSurface = useSharedSurfaceRenderer({
+        canvasRef,
+        onFrameRendered: () => setFrameCount(prev => prev + 1),
+        onStatusUpdate: setStatus,
+      });
+
+      // Select active renderer (needed before flushPendingFrame ref below)
+      const { displayImage, flushPendingFrame } =
+        activeRenderer === 'shared-surface' ? sharedSurface : canvas2d;
+
+      // Stable drag state callback — updates ref + flushes stale frames on drag start.
+      // No React re-renders triggered.
+      const flushPendingFrameRef = useRef(flushPendingFrame);
+      useEffect(() => {
+        flushPendingFrameRef.current = flushPendingFrame;
+      }, [flushPendingFrame]);
+
+      const handleDragStateChange = useCallback((dragging: boolean) => {
+        isDraggingRef.current = dragging;
+        if (dragging) {
+          Logger.debugV('[VIEWPORT] Camera drag detected - flushing stale progressive renders');
+          flushPendingFrameRef.current();
+        }
+      }, []);
+
       /**
        * MOUSE CONTROLS: Camera orbit, pan, zoom, and picker tools
-       * Phase 3: Now returns isDragging state for viewport throttling
+       * Drag state communicated via callback — no React re-renders.
        */
-      const { isDragging } = useMouseInteraction({
+      useMouseInteraction({
         canvasRef,
         cameraRef,
         connected,
@@ -196,31 +237,8 @@ export const CallbackRenderViewport = React.memo(
         setCanvasTransform,
         setContextMenuPos,
         setContextMenuVisible,
+        onDragStateChange: handleDragStateChange,
       });
-
-      // Renderer selection: auto-detects shared-surface (Electron+Win+addon) vs canvas2d
-      const { activeRenderer, reason: rendererReason } = useRendererSelection('auto');
-
-      // Phase 3: Image buffer processor hook (now receives isDragging for throttling)
-      // Phase 4: Now returns flushPendingFrame to clear stale progressive renders
-      const canvas2d = useImageBufferProcessor({
-        canvasRef,
-        onFrameRendered: () => setFrameCount(prev => prev + 1),
-        onStatusUpdate: setStatus,
-        isDragging, // Phase 3: Pass drag state for input-side throttling
-      });
-
-      // Shared surface renderer (stub — delegates to canvas2d internally)
-      const sharedSurface = useSharedSurfaceRenderer({
-        canvasRef,
-        onFrameRendered: () => setFrameCount(prev => prev + 1),
-        onStatusUpdate: setStatus,
-        isDragging,
-      });
-
-      // Select active renderer
-      const { displayImage, flushPendingFrame } =
-        activeRenderer === 'shared-surface' ? sharedSurface : canvas2d;
 
       // Log renderer selection once
       useEffect(() => {
@@ -327,21 +345,7 @@ export const CallbackRenderViewport = React.memo(
         };
       }, [connected, client, displayImage, activeRenderer, sharedSurface]);
 
-      /**
-       * Phase 4: Flush stale progressive render images when camera drag starts/changes
-       *
-       * CRITICAL for smooth progressive rendering:
-       * - Octane sends 1000s of onNewImage for a single render (progressive refinement)
-       * - When camera moves, old images from previous position queue up in RAF
-       * - Flush clears these stale images so viewport shows latest position immediately
-       * - Result: No lag/choppiness during camera drag!
-       */
-      useEffect(() => {
-        if (isDragging) {
-          Logger.debugV('[VIEWPORT] Camera drag detected - flushing stale progressive renders');
-          flushPendingFrame();
-        }
-      }, [isDragging, flushPendingFrame]);
+      // Note: Phase 4 drag-flush now handled in handleDragStateChange callback (no React re-renders)
 
       /**
        * Listen for programmatic camera changes (e.g., Reset Camera button)

@@ -16,33 +16,7 @@ How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, s
 
 ## §2 Build Modes
 
-**SCRATCH (Clean Start):** Kill everything, restart fresh. Required before any clean test run.
-
-1. Kill all Octane processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
-2. Stop preview server (`preview_stop`)
-3. Reset MCP (must fully kill, not just disconnect):
-   - `taskkill //F //IM node.exe` — kill ALL node processes. The relay port check only runs at MCP startup, so a reconnect won't fix a missed relay.
-   - Wait 3 seconds for ports to release
-   - Verify port 51023 is free: `powershell Get-NetTCPConnection -LocalPort 51023` — must return empty
-   - Trigger MCP restart: call any MCP tool (e.g. `get_octane_version`). Claude auto-restarts the MCP process.
-   - Check port 51023 again — **must be listening now**
-   - **If it came back** → project-level MCP auto-restarted with relay, move on
-   - **If still free** → no project MCP configured, start one: `cd octaneWebR/mcp && node dist/index.js`
-   - **NEVER start a second MCP** if one is already running. That creates duplicate processes and breaks the relay.
-   - **Race condition warning:** If you only kill the PID on 51023 (not all node processes), the port may not release fast enough. The new MCP starts, sees 51023 still in use, skips the relay, and the viewport stays dead forever (relay check only runs once at startup).
-4. Verify port 51022 AND 51023 both free
-5. Start the target server (octaneServGrpc or octane.exe), wait for port 51022
-6. Check `log_serv.log` for startup
-7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
-8. Start dev server + preview (`preview_start`)
-9. `get_octane_version` — verify version + API detection. Response includes `mcp_build` (MCP server build ID) and `serv_build` (Octane server build ID) for tracking which builds are in use.
-10. Check `log_mcp.log` — must show `API version:` line AND `Callback streaming started` AND NO `Port 51023 in use`
-11. Check `log_grpc.log` — clean startup, no errors
-12. Preview screenshot — verify viewport is live (not grey/blank)
-
-Only after all 12 steps pass: proceed to DRESS or SHOW.
-
-**Why port 51023 matters:** The MCP relay streams render images to the web UI over WebSocket on port 51023. If a stale MCP process holds that port, the new MCP silently skips the relay and the viewport stays dead. The octane MCP is registered in the **project-level** `.mcp.json` (`C:\otoyla\dev\.mcp.json`) — Claude auto-starts and auto-restarts it when working in this directory. Killing it is safe. Starting a second one in bash is not.
+**SCRATCH (Clean Start):** Kill all processes → restart serv (port 51022) → restart MCP (port 51023) → `preview_start` → `get_octane_version`. Required before any clean test run. **Full 12-step protocol:** `TROUBLESHOOTING.md` §SCRATCH.
 
 ### Build Modes (after SCRATCH completes)
 
@@ -83,35 +57,23 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 **Hard gate:** Do NOT call `create_node` until `validate_layout` passes with 0 errors.
 
-### Critique Loop (after every save_render)
+### Phase 0b: Artistic Intent (after composition planning)
 
-**AD must be ON** (default in DRESS and SHOW). Skipped in SHOP mode.
+| Step | Action                                                           | Result                  |
+| ---- | ---------------------------------------------------------------- | ----------------------- |
+| 0e   | `set_artistic_intent(preset or vector from recipe mood)`         | SEGA vector initialized |
+| 0f   | `get_artistic_intent()` — confirm dimensions match recipe vision | Intent locked           |
 
-| Step | Action                                                            | Result                                            |
-| ---- | ----------------------------------------------------------------- | ------------------------------------------------- |
-| C1   | `critique_render(render_path, spec_name)`                         | Saves render + returns structured critique prompt |
-| C2   | Read the saved render image (Read tool)                           | Visual analysis                                   |
-| C3   | Answer the critique prompt → JSON with 5 dimension scores         | Structured evaluation                             |
-| C4   | `apply_corrections(spec_name, scores, corrections)`               | Records score, detects stagnation                 |
-| C5   | If score < 3.5: apply priority-1 corrections, re-render, go to C1 | Iteration                                         |
-| C6   | If stagnating (2 iterations < 0.3 improvement): redesign plan     | Plan change, not tweaking                         |
-
-### Vision Critic
-
-`critique_render` uses an external vision model for render quality assessment. Self-critique is unreliable — Claude rating its own renders inflates scores by 1-2 points.
-
-- **Two-image comparison** (reference + render) is most effective — harder to inflate when the diff is visible
-- **Standalone critique** (render only) is still too generous
-- Vision module: `mcp/src/vision/` with fallback chain and truncation-resilient JSON parsing
+**Why here:** SEGA intent drives `suggest_lighting` and `suggest_material` values in Phase 2. Setting it before building ensures mood-consistent choices from the start.
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                                                                                                                 | Result                                                                                                                                                                                                                                                                         |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                         | RT handle + pin handles                                                                                                                                                                                                                                                        |
-| 2    | Create first mesh (NT_GEO_MESH + .obj or NT_GEO_OBJECT) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                           | **Object exists**. NT_GEO_MESH for .obj files, NT_GEO_OBJECT for primitives (all types work). `sphere_hd.obj` and `floor.obj` available. **Must follow mesh loading pattern** — see `REFERENCE.md` §1 File Loading Pattern. Verify with `get_geometry_stats()` (triCount > 0). |
-| 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                                                       | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed.           |
-| 4    | Create environment → `connect_nodes(env, RT, pin_index:1)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                                        |
+| Step | Action                                                                                                                                                               | Result                                                                                                                                                                                                                                                               |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                       | RT handle + pin handles                                                                                                                                                                                                                                              |
+| 2    | Create first mesh (NT_GEO_MESH + .obj or NT_GEO_OBJECT) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                         | **Object exists**. Wiring details: `REFERENCE.md` §5. **Must follow mesh loading pattern** — see `REFERENCE.md` §1. Verify with `get_geometry_stats()` (triCount > 0).                                                                                               |
+| 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                                                     | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
+| 4    | Create environment → `connect_nodes(env, RT, pin_id:43)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                              |
 
 ### Phase 2: Materials & Lighting
 
@@ -133,6 +95,27 @@ For each additional object: create mesh → material → placement → connect t
 Hero camera, floor, fine-tune lighting, final beauty pass `save_render`.
 
 **Hero camera comes at the end.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_composition`) for the beauty pass.
+
+### Critique Loop (run after every save_render in Phases 2-4)
+
+**AD must be ON** (default in DRESS and SHOW). Skipped in SHOP mode.
+
+| Step | Action                                                                   | Result                                            |
+| ---- | ------------------------------------------------------------------------ | ------------------------------------------------- |
+| C1   | `critique_render(render_path, spec_name)`                                | Saves render + returns structured critique prompt |
+| C1.5 | `semantic_critique(render_path)` — pixel-level intent gap                | Semantic gap analysis vs SEGA vector              |
+| C2   | Read the saved render image (Read tool)                                  | Visual analysis                                   |
+| C3   | Synthesize vision critique (C1) + semantic critique (C1.5) → JSON scores | Dual-perspective evaluation                       |
+| C4   | `apply_corrections(spec_name, scores, corrections)`                      | Records score, detects stagnation                 |
+| C5   | If score < 3.5: apply priority-1 corrections, re-render, go to C1        | Iteration                                         |
+| C6   | If stagnating (2 iterations < 0.3 improvement): redesign plan            | Plan change, not tweaking                         |
+
+### Vision Critic
+
+`critique_render` uses an external vision model — not self-critique. Self-critique inflates scores by 1-2 points.
+
+- **Two-image comparison** (reference + render) is most effective
+- Vision module: `mcp/src/vision/` with fallback chain
 
 ### Render Status — Don't Blind Sleep, Always Check Samples
 
@@ -189,61 +172,24 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Transform pin:** Pin 3 (NT_TRANSFORM_VALUE).
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
-- **Primitive type changes work** on SDK server (all 24 types tested, no crashes). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
+- **Primitive type changes work** on SDK server (all 23 types tested (values 1-23), no crashes). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
 - **connect/disconnect auto-flush** — `connect_nodes` and `disconnect_pin` auto-flush `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
 
-Primitive values: Box=1, Sphere=20, Torus=22, Cylinder=4, Cone=3 (full list in `REFERENCE.md`).
+Primitive values: see `REFERENCE.md` §7a.
 
 ---
 
 ## §6 Camera Workflow
 
-### Pull-Back Rule
-
-Always pull camera WAY back first to see full scene. When lost: Z=50+, verify positions, then zoom in.
-
-### Target Trick
-
-Set `set_camera(target: centroid)`. Camera orbits that point. Derive distance from bounding box extents + FOV — don't guess.
-
-### Single-Mesh Framing (8 steps)
-
-1. Zero all mesh transforms
-2. Compute mesh centroid from OBJ bounding box
-3. Set camera target to centroid
-4. **Up vector** — gRPC server auto-normalizes or defaults to {0,1,0}
-5. Back camera way out — full mesh visible
-6. Orbit up slightly (raise Y)
-7. Fine-tune target
-8. Zoom in (reduce distance)
+**`fit_camera(yaw, elevation, margin)` handles 90% of camera needs.** Use it after every geometry change. For hero shots in Phase 4, use `set_camera(position, target)` or `plan_composition` for precise framing.
 
 ### 3D Asset Orientation
 
-Generated meshes have unknown orientation. **Never guess — orbit to discover:**
+Generated meshes have unknown orientation. **Never guess — use `analyze_mesh`** for reliable orientation via VLM mugshot. OTOY Studio GLBs are Z-up → rotate +90° on X. Set film aspect BEFORE framing.
 
-1. Back camera WAY out (8-10 units)
-2. Render 3 views: front (0,Y,+Z), right (+X,Y,0), top (0,+Y,+Z small)
-3. Determine: which axis is up, facing direction, base location
-4. Fix with rotation on the MODEL (`A_ROTATION=137`), never flip camera up
+### Manual Camera Math (rare — only when fit_camera insufficient)
 
-- OTOY Studio GLB exports are Z-up → rotate +90° on X
-- Set film aspect BEFORE framing — changing after invalidates composition
-
-### Camera Math (Calibrated v2)
-
-| Parameter           | Value            |
-| ------------------- | ---------------- |
-| Horizontal half-FOV | ~41° (tan=0.869) |
-| Vertical half-FOV   | ~24° (tan=0.445) |
-
-```
-D_z = (W/2 * 1.15) / tan(41) = W * 0.662    # distance for W-unit-wide subject with 15% margin
-Y = target_Y + D_z * tan(elevation)
-```
-
-**Proven tabletop frame:** Position {0, 4.2, 7.5}, target {0, 0, 0}, elevation 29°.
-
-**Rule:** Start at 1.5x computed distance, inch forward. Always verify with render.
+`D_z = W * 0.662` (subject width to distance, 15% margin). Proven tabletop: {0, 4.2, 7.5} → {0, 0, 0}, 29°. Pull-back debug: {0, 5, 20} → {0, 0, 0}. Always verify with render.
 
 ---
 

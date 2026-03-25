@@ -24,14 +24,12 @@ interface UseSharedSurfaceRendererParams {
   canvasRef: RefObject<HTMLCanvasElement>;
   onFrameRendered?: () => void;
   onStatusUpdate?: (status: string) => void;
-  isDragging?: boolean;
 }
 
 export function useSharedSurfaceRenderer({
   canvasRef,
   onFrameRendered,
   onStatusUpdate,
-  isDragging = false,
 }: UseSharedSurfaceRendererParams) {
   const surfaceStatus = useMemo<SharedSurfaceStatus>(
     () => ({
@@ -58,7 +56,6 @@ export function useSharedSurfaceRenderer({
     canvasRef,
     onFrameRendered,
     onStatusUpdate,
-    isDragging,
   });
 
   /**

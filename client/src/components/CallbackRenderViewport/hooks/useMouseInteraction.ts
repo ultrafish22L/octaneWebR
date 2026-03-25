@@ -17,7 +17,7 @@
  * Mouse controls match Octane SE behavior documented in the manual.
  */
 
-import { useEffect, useRef, useState, MutableRefObject } from 'react';
+import { useEffect, useRef, MutableRefObject } from 'react';
 import { Logger } from '../../../utils/Logger';
 import { useStatusActions } from '../../../contexts/StatusMessageContext';
 
@@ -104,6 +104,7 @@ interface UseMouseInteractionParams {
   ) => void;
   setContextMenuPos: (value: Point) => void;
   setContextMenuVisible: (value: boolean) => void;
+  onDragStateChange: (dragging: boolean) => void;
 }
 
 /**
@@ -128,12 +129,20 @@ export function useMouseInteraction({
   setCanvasTransform,
   setContextMenuPos,
   setContextMenuVisible,
+  onDragStateChange,
 }: UseMouseInteractionParams) {
   const { setTemporaryStatus } = useStatusActions();
 
-  // Phase 3: Drag state for viewport throttling
-  // Tracks if ANY camera manipulation is in progress (orbit, pan, 2D pan)
-  const [isDragging, setIsDragging] = useState(false);
+  // Drag state — communicated to parent via callback instead of React state.
+  // This eliminates re-renders on every mousedown/mouseup (Phase 2.3 optimization).
+  const onDragStateChangeRef = useRef(onDragStateChange);
+  useEffect(() => {
+    onDragStateChangeRef.current = onDragStateChange;
+  }, [onDragStateChange]);
+
+  const setIsDragging = (dragging: boolean) => {
+    onDragStateChangeRef.current(dragging);
+  };
 
   // Mouse drag state refs (internal to hook)
   const isDraggingRef = useRef(false); // Left button = orbit
@@ -183,25 +192,18 @@ export function useMouseInteraction({
       return;
     }
 
-    Logger.debug('[VIEWPORT] Setting up mouse event handlers...');
+    // Prevent browser touch gestures from interfering with pointer capture
+    canvas.style.touchAction = 'none';
 
-    const handleMouseDown = (e: MouseEvent) => {
-      Logger.debug('[VIEWPORT] handleMouseDown CALLED', {
-        button: e.button,
-        x: e.clientX,
-        y: e.clientY,
-      });
+    Logger.debug('[VIEWPORT] Setting up pointer event handlers...');
 
-      if (viewportLockedRef.current) {
-        Logger.info('[VIEWPORT] Viewport locked, ignoring mouse input');
-        return;
-      }
+    const handlePointerDown = (e: PointerEvent) => {
+      if (viewportLockedRef.current) return;
 
       // Get canvas-relative coordinates
       const rect = canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
-      Logger.debug('[VIEWPORT] Canvas coords:', { canvasX, canvasY });
 
       if (e.button === 0) {
         // Left button
@@ -210,6 +212,7 @@ export function useMouseInteraction({
           is2DPanningRef.current = true;
           setIsDragging(true); // Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+          canvas.setPointerCapture(e.pointerId); // Capture pointer — events follow even outside window
           canvas.style.cursor = 'move';
           e.preventDefault();
         }
@@ -218,6 +221,7 @@ export function useMouseInteraction({
           setIsSelectingRegion(true);
           setRegionStart({ x: canvasX, y: canvasY });
           setRegionEnd({ x: canvasX, y: canvasY });
+          canvas.setPointerCapture(e.pointerId);
           canvas.style.cursor = 'crosshair';
         } else if (pickingModeRef.current !== 'none') {
           // PICKING MODES: Store last mouse position for click detection
@@ -228,6 +232,7 @@ export function useMouseInteraction({
           isDraggingRef.current = true;
           setIsDragging(true); // Phase 3: Track drag for throttling
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+          canvas.setPointerCapture(e.pointerId); // Capture pointer — orbit continues outside canvas
           canvas.style.cursor = 'grabbing';
         }
       } else if (e.button === 2) {
@@ -236,12 +241,13 @@ export function useMouseInteraction({
         setIsDragging(true); // Phase 3: Track drag for throttling
         hasRightDraggedRef.current = false; // Reset drag tracking
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        canvas.setPointerCapture(e.pointerId); // Capture pointer — pan continues outside canvas
         canvas.style.cursor = 'move';
         e.preventDefault(); // Prevent context menu
       }
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       // Get canvas-relative coordinates
       const rect = canvas.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
@@ -305,7 +311,14 @@ export function useMouseInteraction({
       updateCameraThrottledRef.current();
     };
 
-    const handleMouseUp = async (e: MouseEvent) => {
+    const handlePointerUp = async (e: PointerEvent) => {
+      // Release pointer capture (safe to call even if not captured)
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* not captured */
+      }
+
       // Prevent browser context menu on right-click release (button 2)
       if (e.button === 2) {
         e.preventDefault();
@@ -577,41 +590,20 @@ export function useMouseInteraction({
       await updateCameraThrottledRef.current();
     };
 
-    // Lightweight drag-cancel on mouse leave — no API calls
-    const handleMouseLeave = () => {
-      if (isDraggingRef.current || isPanningRef.current) {
-        isDraggingRef.current = false;
-        isPanningRef.current = false;
-        setIsDragging(false);
-        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
-        updateCameraImmediateRef.current();
-      }
-      if (is2DPanningRef.current) {
-        is2DPanningRef.current = false;
-        setIsDragging(false);
-        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
-      }
-      if (isSelectingRegionRef.current) {
-        setIsSelectingRegion(false);
-        setRegionStart(null);
-        setRegionEnd(null);
-        canvas.style.cursor = pickingModeRef.current !== 'none' ? 'crosshair' : 'grab';
-      }
-    };
+    // Note: handleMouseLeave removed — pointer capture ensures all events route to canvas
+    // even when the pointer leaves the window. No more awkward drag-cancel behavior.
 
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseLeave);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('contextmenu', handleContextMenu);
-    Logger.debug('[VIEWPORT] All mouse event listeners attached');
+    Logger.debug('[VIEWPORT] All pointer event listeners attached');
 
     return () => {
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseLeave);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('contextmenu', handleContextMenu);
     };
@@ -644,6 +636,6 @@ export function useMouseInteraction({
     }
   }, [connected, viewportLocked, pickingMode, canvasRef]);
 
-  // Phase 3: Return drag state for viewport throttling
-  return { isDragging };
+  // No return value — drag state communicated via onDragStateChange callback (no re-renders)
+  return {};
 }

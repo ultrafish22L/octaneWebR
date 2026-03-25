@@ -62,16 +62,16 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ## §5 Render Issues
 
-| Symptom                             | Fix                                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| All white                           | Verify RT connections: pins 1, 3, 6 all need `connected_handle != 0`. Switch kernel to PT.              |
-| All black                           | No light sources. Add env or emission before geometry.                                                  |
-| Blurry                              | DOF — **auto-disabled** on new RTs. For old RTs: set aperture to 0.                                     |
-| Mesh invisible                      | Missing `A_RELOAD=124` after `A_FILENAME=34`.                                                           |
-| Glass invisible                     | Clear glass in uniform light. Tint transmission `{0.85, 0.95, 1.0}`.                                    |
-| Objects not appearing               | Not connected to RT pin 3 (via geo group or direct).                                                    |
-| Render doesn't update after connect | `connect_nodes`, `disconnect_pin`, and `start_render` flush `ApiChangeManager::update()` automatically. |
-| Black save_render                   | Called before `start_render`. Start render first, wait for samples.                                     |
+| Symptom                             | Fix                                                                                                                                                             |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| All white                           | Verify RT pin 3 (geometry) has `connected_handle != 0`. Pins 0 (camera) and 6 (kernel) are auto-created. Pin 1 missing = black, not white. Switch kernel to PT. |
+| All black                           | No light sources. Add env or emission before geometry.                                                                                                          |
+| Blurry                              | DOF — **auto-disabled** on new RTs. For old RTs: set aperture to 0.                                                                                             |
+| Mesh invisible                      | Missing `A_RELOAD=124` after `A_FILENAME=34`.                                                                                                                   |
+| Glass invisible                     | Clear glass in uniform light. Tint transmission `{0.85, 0.95, 1.0}`.                                                                                            |
+| Objects not appearing               | Not connected to RT pin 3 (via geo group or direct).                                                                                                            |
+| Render doesn't update after connect | `connect_nodes`, `disconnect_pin`, and `start_render` flush `ApiChangeManager::update()` automatically.                                                         |
+| Black save_render                   | Called before `start_render`. Start render first, wait for samples.                                                                                             |
 
 ---
 
@@ -158,3 +158,35 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 4. Launch octaneServGrpc: `octaneServGrpc/build/Release/octaneServGrpc.exe &`
 5. Wait ~5s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
 6. `preview_start` — LAST (after gRPC is listening)
+
+---
+
+## §SCRATCH: Clean Start Protocol
+
+Full nuclear restart. Required before any clean test run, after MCP restart, infra changes, or crashes.
+
+1. Kill all Octane processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
+2. Stop preview server (`preview_stop`)
+3. Reset MCP (must fully kill, not just disconnect):
+   - `taskkill //F //IM node.exe` — kill ALL node processes. The relay port check only runs at MCP startup, so a reconnect won't fix a missed relay.
+   - Wait 3 seconds for ports to release
+   - Verify port 51023 is free: `powershell Get-NetTCPConnection -LocalPort 51023` — must return empty
+   - Trigger MCP restart: call any MCP tool (e.g. `get_octane_version`). Claude auto-restarts the MCP process.
+   - Check port 51023 again — **must be listening now**
+   - **If it came back** → project-level MCP auto-restarted with relay, move on
+   - **If still free** → no project MCP configured, start one: `cd octaneWebR/mcp && node dist/index.js`
+   - **NEVER start a second MCP** if one is already running. That creates duplicate processes and breaks the relay.
+   - **Race condition warning:** If you only kill the PID on 51023 (not all node processes), the port may not release fast enough. The new MCP starts, sees 51023 still in use, skips the relay, and the viewport stays dead forever (relay check only runs once at startup).
+4. Verify port 51022 AND 51023 both free
+5. Start the target server (octaneServGrpc or octane.exe), wait for port 51022
+6. Check `log_serv.log` for startup
+7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
+8. Start dev server + preview (`preview_start`)
+9. `get_octane_version` — verify version + API detection. Response includes `mcp_build` and `serv_build` for tracking builds.
+10. Check `log_mcp.log` — must show `API version:` line AND `Callback streaming started` AND NO `Port 51023 in use`
+11. Check `log_grpc.log` — clean startup, no errors
+12. Preview screenshot — verify viewport is live (not grey/blank)
+
+Only after all 12 steps pass: proceed to DRESS or SHOW.
+
+**Why port 51023 matters:** The MCP relay streams render images to the web UI over WebSocket on port 51023. If a stale MCP process holds that port, the new MCP silently skips the relay and the viewport stays dead. The octane MCP is registered in the **project-level** `.mcp.json` (`C:\otoyla\dev\.mcp.json`) — Claude auto-starts and auto-restarts it when working in this directory. Killing it is safe. Starting a second one in bash is not.

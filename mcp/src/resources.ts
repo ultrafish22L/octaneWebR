@@ -3,7 +3,7 @@
  *
  * Resources signal to agents that these are safe, idempotent, side-effect-free reads.
  * Three tiers:
- *   - Static: from ApiCache (724 node types, pin layouts, compatibility)
+ *   - Static: from ApiCache (724 cached node types; 755+ in full Octane API including hidden types)
  *   - Dynamic: from ApiInfo gRPC queries (cached after first hit)
  *   - Scene: from SceneCache (current scene state)
  */
@@ -91,7 +91,7 @@ export function registerResources(
     new ResourceTemplate('octane://pin-layout/{typeName}', { list: undefined }),
     {
       description:
-        'All pins for a node type: index, id, name, type, defaultNodeType. Resolves pin_index vs pin_id vs pin_name confusion. Example: octane://pin-layout/NT_RENDER_TARGET',
+        'All pins for a node type: index, id, name, type, defaultNodeType. Resolves pin_index vs pin_id vs pin_name confusion. Example: octane://pin-layout/NT_RENDERTARGET',
     },
     async (uri, variables) => {
       const typeName = String(variables.typeName);
@@ -150,7 +150,7 @@ export function registerResources(
     'octane://primitive-types',
     {
       description:
-        'NT_GEO_OBJECT primitive type enum values. Set via set_attribute(enum_child_handle, 185, AT_INT=3, N). All 24 types supported.',
+        'NT_GEO_OBJECT primitive type enum values. Set via set_attribute(enum_child_handle, 185, AT_INT=3, N). All 23 types supported (values 1-23).',
     },
     async () => {
       const types = [

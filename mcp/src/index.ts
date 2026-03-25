@@ -162,15 +162,45 @@ async function main() {
   console.error('Octane MCP server running on stdio');
 
   // Graceful shutdown — close gRPC channels, log stream, and MCP transport
+  let shuttingDown = false;
   const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     console.error(`${signal} received, shutting down...`);
-    await server.close();
+    try {
+      await server.close();
+    } catch {
+      /* best-effort */
+    }
     client.close();
     mcpLogReset();
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+  // ── Orphan detection ──────────────────────────────────────────────
+  // Claude Code communicates via stdin/stdout. When a conversation ends
+  // (context limit, user closes session, crash), Claude Code closes the
+  // pipe — stdin emits 'end'. The MCP SDK does NOT handle this, so the
+  // node process becomes an orphan zombie. Detect stdin EOF and exit.
+  process.stdin.on('end', () => shutdown('stdin EOF'));
+
+  // Belt-and-suspenders: if the parent process (Claude Code) dies, stdin
+  // may not emit 'end' on all platforms. Poll the parent PID periodically.
+  const parentPid = process.ppid;
+  if (parentPid && parentPid > 1) {
+    const parentCheck = setInterval(() => {
+      try {
+        // process.kill(pid, 0) throws if the process doesn't exist
+        process.kill(parentPid, 0);
+      } catch {
+        clearInterval(parentCheck);
+        shutdown('parent exited');
+      }
+    }, 5_000);
+    parentCheck.unref(); // don't prevent natural exit
+  }
 }
 
 main().catch(err => {

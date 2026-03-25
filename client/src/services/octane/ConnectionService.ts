@@ -86,6 +86,7 @@ export class ConnectionService extends BaseService {
         }
 
         const ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer'; // Receive binary frames as ArrayBuffer (not Blob)
         this.ws = ws;
 
         ws.onopen = () => {
@@ -122,6 +123,47 @@ export class ConnectionService extends BaseService {
 
         ws.onmessage = (event: MessageEvent) => {
           try {
+            // Binary frame fast path: [4B headerLen LE] [JSON header] [raw pixel bytes]
+            // Eliminates base64 decode + JSON.parse overhead for image data.
+            if (event.data instanceof ArrayBuffer) {
+              const buf = new DataView(event.data);
+              if (event.data.byteLength < 4) return;
+              const headerLen = buf.getUint32(0, true); // little-endian
+              if (event.data.byteLength < 4 + headerLen) return;
+
+              const headerBytes = new Uint8Array(event.data, 4, headerLen);
+              const header = JSON.parse(new TextDecoder().decode(headerBytes));
+
+              if (header.type === 'newImage') {
+                // Extract raw pixel bytes directly — zero-copy slice from the ArrayBuffer
+                const pixelBytes =
+                  event.data.byteLength > 4 + headerLen
+                    ? new Uint8Array(event.data, 4 + headerLen)
+                    : null;
+
+                if (pixelBytes && header.width && header.height) {
+                  // Emit pre-decoded binary frame — no base64, no JSON parse for pixels
+                  this.emit('OnNewImage', {
+                    render_images: {
+                      data: [
+                        {
+                          buffer: { data: pixelBytes, size: pixelBytes.length },
+                          size: { x: header.width, y: header.height },
+                          type: header.format,
+                          pitch: header.pitch,
+                          tonemappedSamplesPerPixel: header.tonemappedSamplesPerPixel ?? 0,
+                          renderTime: header.renderTime ?? 0,
+                          sharedSurface: header.sharedSurface,
+                        },
+                      ],
+                    },
+                  });
+                }
+              }
+              return;
+            }
+
+            // Text frame path: JSON messages (statistics, control messages, fallback)
             const message = JSON.parse(event.data as string);
 
             if (message.type === 'newImage') {

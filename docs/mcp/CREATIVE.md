@@ -2,6 +2,8 @@
 
 How to make scenes look good. For values and pin layouts, see `REFERENCE.md`. For build workflow, see `BUILD.md`.
 
+**`suggest_lighting` and `suggest_material` tools compute mood-correct values automatically.** Use them as the starting point, then use the manual values below to understand and fine-tune.
+
 ---
 
 ## §1 Lighting
@@ -71,10 +73,9 @@ Volumetric medium FIRST: NT_MED_SCATTERING on env + NT_KERN_PATHTRACING. Simple 
 
 ### Before Creating Nodes
 
-1. Know the exact camera position
-2. Know every object's position in 3D space
-3. Know Z-depth relationships
-4. For demos: hero camera FIRST
+1. Know every object's position in 3D space (from `plan_composition` or recipe)
+2. Know Z-depth relationships
+3. Camera: `fit_camera` handles framing during build. Hero camera comes in Phase 4 polish.
 
 ### Scene Complexity Rules
 

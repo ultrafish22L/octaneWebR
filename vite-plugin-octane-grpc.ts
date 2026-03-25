@@ -361,7 +361,6 @@ class OctaneGrpcClient {
             if (buf.length < 4 + headerLen) return;
             const msg = JSON.parse(buf.slice(4, 4 + headerLen).toString('utf8'));
             const pixelPayload = buf.length > 4 + headerLen ? buf.slice(4 + headerLen) : null;
-
             if (msg.type === 'newImage') {
               if (pixelPayload && msg.renderImage) {
                 // Alpha 5: pixel data in binary payload
@@ -724,8 +723,33 @@ export function octaneGrpcPlugin(): Plugin {
 
         const callbackHandler = (data: any) => {
           try {
-            if (ws.readyState === WebSocket.OPEN) {
-              if (ws.bufferedAmount > MAX_WS_BUFFER) return; // backpressure: drop frame
+            if (ws.readyState !== WebSocket.OPEN) return;
+            if (ws.bufferedAmount > MAX_WS_BUFFER) return; // backpressure: drop frame
+
+            // Binary frame fast path: extract pixel buffer and send as binary WebSocket frame.
+            // Wire format: [4B headerLen LE] [JSON header] [raw pixel bytes]
+            // Eliminates base64 encoding overhead (~33% bandwidth) and JSON.parse cost on client.
+            const firstImage = data?.render_images?.data?.[0];
+            const pixelData = firstImage?.buffer?.data;
+            if (pixelData && (Buffer.isBuffer(pixelData) || pixelData instanceof Uint8Array)) {
+              const header = JSON.stringify({
+                type: 'newImage',
+                width: firstImage.size?.x,
+                height: firstImage.size?.y,
+                format: firstImage.type,
+                pitch: firstImage.pitch,
+                tonemappedSamplesPerPixel: firstImage.tonemappedSamplesPerPixel,
+                renderTime: firstImage.renderTime,
+                pixelSize: pixelData.length,
+                sharedSurface: firstImage.sharedSurface,
+              });
+              const headerBuf = Buffer.from(header, 'utf8');
+              const lenBuf = Buffer.alloc(4);
+              lenBuf.writeUInt32LE(headerBuf.length, 0);
+              const pixelBuf = Buffer.isBuffer(pixelData) ? pixelData : Buffer.from(pixelData);
+              ws.send(Buffer.concat([lenBuf, headerBuf, pixelBuf]));
+            } else {
+              // Fallback: JSON text frame (e.g. notification-only callbacks without inline pixels)
               ws.send(JSON.stringify({ type: 'newImage', data }));
             }
           } catch (error) {
@@ -1122,12 +1146,11 @@ export function octaneGrpcPlugin(): Plugin {
               const isHighFreq = method === 'getValueByAttrID';
               // DEBUG: log mutations (set*, create*, destroy, update, connect, disconnect, etc.)
               const isMutation =
-                method.startsWith('set') ||
+                (method.startsWith('set') && method !== 'SetCamera') ||
                 method.startsWith('create') ||
                 method.startsWith('delete') ||
                 method.startsWith('copy') ||
                 method === 'destroy' ||
-                method === 'update' ||
                 method === 'connect' ||
                 method === 'disconnect' ||
                 method === 'group' ||

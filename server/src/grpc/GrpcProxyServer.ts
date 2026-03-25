@@ -498,8 +498,34 @@ export async function startGrpcProxyServer(
     const MAX_WS_BUFFER = 10 * 1024 * 1024;
 
     const callbackHandler = (data: any) => {
-      if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount <= MAX_WS_BUFFER) {
-        ws.send(JSON.stringify({ type: 'newImage', data }));
+      if (ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > MAX_WS_BUFFER) return;
+      try {
+        // Binary frame fast path: send raw pixel bytes to eliminate base64/JSON overhead.
+        // Wire format: [4B headerLen LE] [JSON header] [raw pixel bytes]
+        const firstImage = data?.render_images?.data?.[0];
+        const pixelData = firstImage?.buffer?.data;
+        if (pixelData && (Buffer.isBuffer(pixelData) || pixelData instanceof Uint8Array)) {
+          const header = JSON.stringify({
+            type: 'newImage',
+            width: firstImage.size?.x,
+            height: firstImage.size?.y,
+            format: firstImage.type,
+            pitch: firstImage.pitch,
+            tonemappedSamplesPerPixel: firstImage.tonemappedSamplesPerPixel,
+            renderTime: firstImage.renderTime,
+            pixelSize: pixelData.length,
+            sharedSurface: firstImage.sharedSurface,
+          });
+          const headerBuf = Buffer.from(header, 'utf8');
+          const lenBuf = Buffer.alloc(4);
+          lenBuf.writeUInt32LE(headerBuf.length, 0);
+          const pixelBuf = Buffer.isBuffer(pixelData) ? pixelData : Buffer.from(pixelData);
+          ws.send(Buffer.concat([lenBuf, headerBuf, pixelBuf]));
+        } else {
+          ws.send(JSON.stringify({ type: 'newImage', data }));
+        }
+      } catch (error) {
+        log.error('Error sending WebSocket newImage:', error);
       }
     };
     const statisticsHandler = (data: any) => {

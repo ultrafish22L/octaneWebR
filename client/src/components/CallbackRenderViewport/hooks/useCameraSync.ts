@@ -43,7 +43,7 @@ interface UseCameraSyncParams {
   triggerOctaneUpdate: () => Promise<void>;
 }
 
-const CAMERA_UPDATE_INTERVAL = 100; // ms (10 Hz rate limit)
+const CAMERA_UPDATE_INTERVAL = 33; // ms (30 Hz rate limit — 3x more responsive orbit/pan)
 
 /**
  * Hook for synchronizing camera state with Octane renderer

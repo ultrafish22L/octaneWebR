@@ -10,10 +10,11 @@ Hardcoded protocol constants (AttrType, AttributeId, PIN_TYPE_NAMES, RT_PINS) li
 
 ## §1 Paths
 
-| Path                | Purpose             |
-| ------------------- | ------------------- |
-| `temp/renders/`     | Render output       |
-| `ORBX/assets_test/` | Meshes and textures |
+| Path                           | Purpose                          |
+| ------------------------------ | -------------------------------- |
+| `aigenerated/{scene}/renders/` | Render output (real scenes)      |
+| `temp/renders/`                | Render output (smoke tests only) |
+| `ORBX/assets_test/`            | Built-in meshes and textures     |
 
 Always use absolute paths for `A_FILENAME`. Relative paths depend on Octane's working dir.
 
@@ -90,8 +91,10 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 | Materials    | `NT_MAT_UNIVERSAL`       | 130 | PBR (recommended default) |
 |              | `NT_MAT_DIFFUSE`         | 17  | Matte                     |
 |              | `NT_MAT_GLOSSY`          | 16  | Glossy/reflective         |
+|              | `NT_MAT_TOON`            | 121 | Toon/cel shading          |
 |              | `NT_MAT_SPECULAR`        | 18  | Glass/transparent         |
 | Textures     | `NT_TEX_RGB`             | 33  | Solid color               |
+|              | `NT_TEX_FLOAT`           | 31  | Float value               |
 |              | `NT_TEX_IMAGE`           | 34  | Image file                |
 |              | `NT_TEX_CHECKS`          | 45  | Checkerboard              |
 |              | `NT_TEX_NOISE`           | 87  | Noise                     |
@@ -112,12 +115,12 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 
 ## NT_GEO_OBJECT Pin Layout
 
-| Pin   | Name      | Child Type | Notes                                                                       |
-| ----- | --------- | ---------- | --------------------------------------------------------------------------- |
-| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. All 24 types supported. |
-| 1     | material  | Diffuse    | Auto-created. Color: `get_node_info(mat)`→pin0→RGB child                    |
-| 3     | transform | Transform  | A_TRANSLATION/ROTATION/SCALE on **child handle, NOT parent**                |
-| 4/5/6 | W/H/D     | Float      | `set_attribute(child, 185, 9, value)`                                       |
+| Pin   | Name      | Child Type | Notes                                                                                     |
+| ----- | --------- | ---------- | ----------------------------------------------------------------------------------------- |
+| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. All 23 types supported (values 1-23). |
+| 1     | material  | Diffuse    | Auto-created. Color: `get_node_info(mat)`→pin0→RGB child                                  |
+| 3     | transform | Transform  | A_TRANSLATION/ROTATION/SCALE on **child handle, NOT parent**                              |
+| 4/5/6 | W/H/D     | Float      | `set_attribute(child, 185, 9, value)`                                                     |
 
 ## NT_GEO_PLACEMENT Pin Layout
 
@@ -133,7 +136,7 @@ AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRIN
 ### Wiring Chain
 
 ```
-material → mesh (pin_index: 0)
+material → NT_GEO_MESH (pin_index: 0) or NT_GEO_OBJECT (pin_index: 1)
 mesh → placement (pin_name: "geometry")
 placement → geo group (pin_index: N, 0-based)
 geo group → RT (pin_index: 3)
@@ -147,7 +150,7 @@ geo group → RT (pin_index: 3)
 | Mesh material     | `pin_index: 0`                    | `pin_id: 30`                         |
 | Geo group inputs  | `pin_index: N` (0-based)          | `pin_name: "Input N"`                |
 | RT kernel         | `pin_id: 89`                      | —                                    |
-| RT environment    | `pin_id: 43`                      | —                                    |
+| RT environment    | `pin_id: 43` OR `pin_index: 1`    | — (both work, prefer `pin_id: 43`)   |
 | Geo group (fresh) | `connect_nodes` auto-expands pins | Finds first empty slot automatically |
 
 ### Verified Connections
@@ -246,7 +249,7 @@ Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 All types 1-23 work on SDK server. Full list: 1-23 (alphabetical).
 
-Primitive type changes work on SDK server — all 24 types tested.
+Primitive type changes work on SDK server — all 23 types tested (values 1-23).
 
 ---
 
@@ -281,6 +284,7 @@ Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set t
 See `BUILD.md` Phase 1 for the full setup sequence. Key points:
 
 - Use `fit_camera(elevation, yaw, margin)` AFTER geometry — auto-frames from bounds.
+- `get_art_direction_state` — inspect SEGA vector + critique history mid-build.
 - `start_render` auto-flushes `ApiChangeManager::update()`.
 - NT_GEO_OBJECT works on SDK server.
 
