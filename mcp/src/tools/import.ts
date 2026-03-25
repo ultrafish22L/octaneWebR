@@ -16,6 +16,7 @@ import fs from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
+import { computeFitCamera } from './camera';
 import { ApiCache } from '../ApiCache';
 import {
   jsonResult,
@@ -307,16 +308,16 @@ interface MugshotView {
 }
 
 /**
- * Mugshot views. FIRST shot is always 0 pitch, 0 yaw — gives VLM a
- * baseline with no side skew. Additional angles only if VLM needs them.
+ * Mugshot views — 4 clay views at NEUTRAL angles (pitch=0, yaw=0 base).
+ * NO rotation applied to the mesh — VLM sees the raw geometry.
+ * Elevation=0 (eye level) for front/side so VLM judges orientation like a human standing in front of it.
+ * One elevated view for top-down context.
  */
 const MUGSHOT_VIEWS: MugshotView[] = [
-  { name: 'front_clay', yaw: 0, elevation: 0, clay: true }, // BASELINE — always first
-  { name: 'front_tex', yaw: 0, elevation: 0, clay: false },
+  { name: 'front_clay', yaw: 0, elevation: 0, clay: true },
+  { name: 'three_quarter_clay', yaw: 45, elevation: 0, clay: true },
   { name: 'right_clay', yaw: 90, elevation: 0, clay: true },
-  { name: 'right_tex', yaw: 90, elevation: 0, clay: false },
-  { name: 'top_clay', yaw: 0, elevation: 80, clay: true },
-  { name: 'top_tex', yaw: 0, elevation: 80, clay: false },
+  { name: 'top_clay', yaw: 45, elevation: 60, clay: true },
 ];
 
 /** Helper: create a node and return its handle. */
@@ -403,7 +404,9 @@ async function renderMugshots(
   groundOffsetY: number,
   outputDir: string,
   baseName: string,
-  meshExtents?: { x: number; y: number; z: number }
+  meshExtents?: { x: number; y: number; z: number },
+  rawBoundsMin?: { x: number; y: number; z: number },
+  rawBoundsMax?: { x: number; y: number; z: number }
 ): Promise<string[]> {
   mcpLog(`mugshot: building isolated scene for ${baseName}`, 'info');
   const savedPaths: string[] = [];
@@ -433,17 +436,8 @@ async function renderMugshots(
     await setAttrRaw(client, envPowerHandle, AttributeId.A_VALUE, 9, 0.8);
   }
 
-  // Increase geo group pin count to 2 (ground + mesh)
-  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, 2);
-
-  // Create ground plane (primitive type 15 = Plane)
-  const groundObj = await createNodeRaw(client, MUGSHOT_TYPES.GEO_OBJECT);
-  const groundEnum = await getConnectedChild(client, groundObj, 0); // primitive enum
-  const groundXform = await getConnectedChild(client, groundObj, 3); // transform
-  if (groundEnum) await setAttrRaw(client, groundEnum, AttributeId.A_VALUE, 3, 15); // Plane
-  if (groundXform)
-    await setAttrRaw(client, groundXform, AttributeId.A_SCALE, 11, { x: 5, y: 1, z: 5 });
-  await connectRaw(client, geoGroup, groundObj, 0);
+  // Geo group needs 1 pin for the mesh (no ground plane — it occludes side views)
+  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, 1);
 
   // Create mesh + placement for the asset
   const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
@@ -455,19 +449,21 @@ async function renderMugshots(
   // Connect mesh to placement geometry pin (pin 1)
   await connectRaw(client, placement, mesh, 1);
 
-  // Set transform on placement — apply rotation guess + ground offset
+  // Set transform on placement — NO rotation applied (raw mesh for VLM to judge)
+  // Compute ground offset from RAW bounds so mesh sits ON the ground plane (not clipping through it)
+  const rawGroundOffset = rawBoundsMin ? -rawBoundsMin.y : groundOffsetY;
   const placementXform = await getConnectedChild(client, placement, 0); // transform pin
   if (placementXform) {
-    await setAttrRaw(client, placementXform, AttributeId.A_ROTATION, 11, rotationGuess);
+    await setAttrRaw(client, placementXform, AttributeId.A_ROTATION, 11, { x: 0, y: 0, z: 0 });
     await setAttrRaw(client, placementXform, AttributeId.A_TRANSLATION, 11, {
       x: 0,
-      y: groundOffsetY,
+      y: rawGroundOffset,
       z: 0,
     });
   }
 
-  // Connect placement to geo group
-  await connectRaw(client, geoGroup, placement, 1);
+  // Connect placement to geo group (pin 0 — only object, no ground plane)
+  await connectRaw(client, geoGroup, placement, 0);
 
   // Flush scene
   await client.callMethod('ApiChangeManager', 'update', {});
@@ -486,24 +482,18 @@ async function renderMugshots(
   // Ensure output directory exists
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Camera framing: use mesh extents if provided, otherwise query scene bounds.
-  let meshHeight: number;
-  let cx = 0,
-    cy: number,
-    cz = 0;
-  if (meshExtents) {
-    meshHeight = Math.max(meshExtents.x, meshExtents.y, meshExtents.z);
-    cy = groundOffsetY + meshHeight / 2;
-  } else {
-    // Fallback: query scene bounds, but clamp to reasonable size (ground plane can be huge)
-    const boundsResult = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
-    const bMin = boundsResult?.bboxMin ?? { x: -1, y: 0, z: -1 };
-    const bMax = boundsResult?.bboxMax ?? { x: 1, y: 2, z: 1 };
-    // Use Y extent as mesh height (ground plane doesn't extend in Y)
-    meshHeight = Math.max(0.5, bMax.y - bMin.y);
-    cy = (bMin.y + bMax.y) / 2;
-  }
-  const dist = meshHeight * 2.5; // ~2.5x mesh height gives good framing with margin
+  // Use the ACTUAL raw bounds of the mesh (no rotation applied), offset by rawGroundOffset.
+  // The mesh is rendered raw and lifted so its lowest Y sits on the ground plane.
+  const meshBboxMin = rawBoundsMin
+    ? { x: rawBoundsMin.x, y: rawBoundsMin.y + rawGroundOffset, z: rawBoundsMin.z }
+    : meshExtents
+      ? { x: -meshExtents.x / 2, y: 0, z: -meshExtents.z / 2 }
+      : { x: -0.5, y: 0, z: -0.5 };
+  const meshBboxMax = rawBoundsMax
+    ? { x: rawBoundsMax.x, y: rawBoundsMax.y + rawGroundOffset, z: rawBoundsMax.z }
+    : meshExtents
+      ? { x: meshExtents.x / 2, y: meshExtents.y, z: meshExtents.z / 2 }
+      : { x: 0.5, y: 1, z: 0.5 };
 
   // Render each view
   for (const view of MUGSHOT_VIEWS) {
@@ -512,15 +502,15 @@ async function renderMugshots(
     // Set clay mode
     await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 1 : 0 });
 
-    const elevRad = (view.elevation * Math.PI) / 180;
-    const yawRad = (view.yaw * Math.PI) / 180;
-    const camX = cx + dist * Math.cos(elevRad) * Math.sin(yawRad);
-    const camY = cy + dist * Math.sin(elevRad);
-    const camZ = cz + dist * Math.cos(elevRad) * Math.cos(yawRad);
+    // Use computeFitCamera — same proven math as the fit_camera MCP tool
+    const fit = computeFitCamera(meshBboxMin, meshBboxMax, 0.15, view.elevation, view.yaw);
+    const camX = fit.position.x;
+    const camY = fit.position.y;
+    const camZ = fit.position.z;
 
     await client.callMethod('LiveLink', 'SetCamera', {
-      position: { x: camX, y: camY, z: camZ },
-      target: { x: cx, y: cy, z: cz },
+      position: fit.position,
+      target: fit.target,
       up: { x: 0, y: 1, z: 0 },
     });
 
@@ -565,27 +555,32 @@ async function renderMugshots(
 }
 
 /** VLM orientation analysis prompt. */
-const ORIENTATION_VLM_PROMPT = `These are 6 views of a 3D mesh placed on a ground plane (the flat surface visible in the images).
-Views in order: front-clay, front-textured, right-clay, right-textured, top-clay, top-textured.
-Clay views show pure geometry (grey material). Textured views show the original material/color.
+const ORIENTATION_VLM_PROMPT = `These are 4 clay views of a 3D mesh with NO rotation applied (raw mesh data).
+The mesh is rendered in empty space (no ground plane). Views in order:
+1. front (yaw=0, slight elevation)
+2. three-quarter (yaw=45, slight elevation) — most informative view
+3. right side (yaw=90, slight elevation)
+4. top-down (high elevation)
 
-Analyze the object and respond in JSON format ONLY (no markdown, no explanation):
+The mesh has NO rotation applied. You must determine if it needs rotation to be upright.
+
+Respond in JSON format ONLY (no markdown, no explanation):
 {
   "object_type": "description of what this object is",
   "is_upright": true/false,
-  "correction_rotation_deg": {"x": 0, "y": 0, "z": 0},
-  "front_direction": "toward camera / away / left / right in view 1",
+  "correction_rotation": {"x": 0, "y": 0, "z": 0},
+  "front_direction": "which direction the front/face points in view 1: toward camera, away, left, or right",
   "estimated_height_m": 0.0,
-  "notes": "any orientation issues observed"
+  "notes": "brief description of what you see and any issues"
 }
 
 Rules:
-- "is_upright" means the object is standing/positioned as it would naturally be in the real world
-- If NOT upright, provide the CORRECTION rotation (degrees) needed to fix it
-- For characters/creatures: feet should be on ground, head up
-- For plants/mushrooms: roots/base on ground, cap/top up
-- For props: natural resting position on ground
-- "estimated_height_m" is the real-world height of this object in meters`;
+- "is_upright" = the object is standing naturally as it would in the real world
+- If the object is lying on its side or upside down, set is_upright=false and provide the CORRECTION rotation in degrees
+- Common fix: if object is lying flat (Z-up mesh), correction is {"x": 90, "y": 0, "z": 0}
+- For creatures: feet on ground, head up. For plants: roots down, top up.
+- Focus on the three-quarter view (image 2) — it shows the most 3D information
+- "estimated_height_m" is the real-world height when properly oriented`;
 
 /**
  * Send mugshot images to VLM for orientation analysis.
@@ -594,7 +589,8 @@ Rules:
 async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
   object_type: string;
   is_upright: boolean;
-  correction_rotation_deg: { x: number; y: number; z: number };
+  correction_rotation_deg?: { x: number; y: number; z: number };
+  correction_rotation?: { x: number; y: number; z: number };
   front_direction: string;
   estimated_height_m: number;
   notes: string;
@@ -1023,13 +1019,17 @@ export function registerImportTools(
             orientation.groundOffsetY,
             outputDir,
             baseName,
-            extents
+            extents,
+            { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] },
+            { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] }
           );
 
           // Send to VLM for analysis
           const vlmResult = await analyzeMugshotsWithVLM(mugshotPaths);
 
           if (vlmResult) {
+            const corr = vlmResult.correction_rotation_deg ??
+              vlmResult.correction_rotation ?? { x: 0, y: 0, z: 0 };
             visualCheck = {
               performed_at: new Date().toISOString(),
               vlm_model: vlmResult.vlm_model,
@@ -1037,28 +1037,29 @@ export function registerImportTools(
               vlm_response: {
                 object_type: vlmResult.object_type,
                 is_upright: vlmResult.is_upright,
-                correction_rotation: vlmResult.correction_rotation_deg,
+                correction_rotation: corr,
                 front_direction: vlmResult.front_direction,
                 estimated_height_m: vlmResult.estimated_height_m,
                 notes: vlmResult.notes,
               },
-              confidence: vlmResult.is_upright ? 'high' : 'high', // VLM is authoritative
+              confidence: 'high', // VLM is authoritative
             };
 
             if (!vlmResult.is_upright) {
-              // Apply VLM correction on top of the geometric guess
-              const corr = vlmResult.correction_rotation_deg;
+              // VLM correction IS the final rotation (mugshot was rendered with no rotation)
               finalRotation = {
-                x: orientation.suggestedRotation.x + (corr.x || 0),
-                y: orientation.suggestedRotation.y + (corr.y || 0),
-                z: orientation.suggestedRotation.z + (corr.z || 0),
+                x: corr.x || 0,
+                y: corr.y || 0,
+                z: corr.z || 0,
               };
               mcpLog(
-                `analyze_mesh: VLM says NOT upright, correcting by (${corr.x}, ${corr.y}, ${corr.z})`,
+                `analyze_mesh: VLM says NOT upright, final rotation = (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})`,
                 'info'
               );
             } else {
-              mcpLog(`analyze_mesh: VLM confirms upright ✓`, 'info');
+              // VLM says upright with no rotation applied — no correction needed
+              finalRotation = { x: 0, y: 0, z: 0 };
+              mcpLog(`analyze_mesh: VLM confirms upright (no rotation) ✓`, 'info');
             }
 
             // Use VLM height estimate if available and category didn't have a strong one
@@ -1103,7 +1104,7 @@ export function registerImportTools(
             ground_offset_y: finalGroundOffset,
             scale_factor: scaleFactor,
             notes: visualCheck
-              ? `VLM-verified: ${visualCheck.vlm_response.is_upright ? 'upright confirmed' : 'correction applied'}. ${orientation.notes}`
+              ? `VLM-verified: ${visualCheck.vlm_response.is_upright ? 'upright confirmed — no rotation needed' : `correction applied — rotate (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})°`}. ${categoryInfo.category}.`
               : `Geometric+semantic only (VLM unavailable). ${orientation.notes}`,
           },
         };

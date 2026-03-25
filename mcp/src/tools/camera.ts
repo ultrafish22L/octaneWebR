@@ -45,7 +45,7 @@ const add = (a: V3, b: V3): V3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z })
  * Sources: standard "frame AABB in frustum" approach per
  * https://www.gamedev.net/forums/topic/638114-how-to-fit-a-box-in-the-camera39s-view-frustum/
  */
-function computeFitCamera(
+export function computeFitCamera(
   bboxMin: V3,
   bboxMax: V3,
   margin: number,
