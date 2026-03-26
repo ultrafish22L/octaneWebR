@@ -308,16 +308,24 @@ interface MugshotView {
 }
 
 /**
- * Mugshot views — 4 clay views at NEUTRAL angles (pitch=0, yaw=0 base).
- * NO rotation applied to the mesh — VLM sees the raw geometry.
- * Elevation=0 (eye level) for front/side so VLM judges orientation like a human standing in front of it.
- * One elevated view for top-down context.
+ * Mugshot views — 8 clay views for full 360° spatial coverage.
+ * Geometric guess rotation IS applied so VLM sees the mesh (hopefully) upright.
+ * Ring 1: 4 cardinal eye-level views (full horizontal silhouette).
+ * Ring 2: 2 elevated diagonals from opposing corners (3D depth).
+ * Ring 3: true overhead + below-angle (vertical extremes, catches inversions).
  */
 const MUGSHOT_VIEWS: MugshotView[] = [
-  { name: 'front_clay', yaw: 0, elevation: 0, clay: true },
-  { name: 'three_quarter_clay', yaw: 45, elevation: 0, clay: true },
-  { name: 'right_clay', yaw: 90, elevation: 0, clay: true },
-  { name: 'top_clay', yaw: 45, elevation: 60, clay: true },
+  // Ring 1 — Eye-level cardinals (full 360° horizontal)
+  { name: 'front', yaw: 0, elevation: 0, clay: true },
+  { name: 'right', yaw: 90, elevation: 0, clay: true },
+  { name: 'back', yaw: 180, elevation: 0, clay: true },
+  { name: 'left', yaw: 270, elevation: 0, clay: true },
+  // Ring 2 — Elevated diagonals (opposing corners)
+  { name: 'front_high', yaw: 45, elevation: 35, clay: true },
+  { name: 'back_high', yaw: 225, elevation: 35, clay: true },
+  // Ring 3 — Vertical extremes
+  { name: 'top', yaw: 0, elevation: 85, clay: true },
+  { name: 'below_front', yaw: 0, elevation: -25, clay: true },
 ];
 
 /** Helper: create a node and return its handle. */
@@ -449,15 +457,15 @@ async function renderMugshots(
   // Connect mesh to placement geometry pin (pin 1)
   await connectRaw(client, placement, mesh, 1);
 
-  // Set transform on placement — NO rotation applied (raw mesh for VLM to judge)
-  // Compute ground offset from RAW bounds so mesh sits ON the ground plane (not clipping through it)
-  const rawGroundOffset = rawBoundsMin ? -rawBoundsMin.y : groundOffsetY;
+  // Apply geometric guess rotation so VLM sees the mesh (hopefully) upright.
+  // This makes mugshots human-readable: base at bottom, figure standing.
+  // VLM confirms or provides additional correction.
   const placementXform = await getConnectedChild(client, placement, 0); // transform pin
   if (placementXform) {
-    await setAttrRaw(client, placementXform, AttributeId.A_ROTATION, 11, { x: 0, y: 0, z: 0 });
+    await setAttrRaw(client, placementXform, AttributeId.A_ROTATION, 11, rotationGuess);
     await setAttrRaw(client, placementXform, AttributeId.A_TRANSLATION, 11, {
       x: 0,
-      y: rawGroundOffset,
+      y: groundOffsetY,
       z: 0,
     });
   }
@@ -465,7 +473,7 @@ async function renderMugshots(
   // Connect placement to geo group (pin 0 — only object, no ground plane)
   await connectRaw(client, geoGroup, placement, 0);
 
-  // Flush scene
+  // Flush scene so Octane computes post-rotation bounds
   await client.callMethod('ApiChangeManager', 'update', {});
 
   // Select this RT for rendering
@@ -476,24 +484,37 @@ async function renderMugshots(
   // Set low max samples for fast mugshot renders
   const maxSamplesHandle = await getConnectedChild(client, kern, 0); // maxsamples pin
   if (maxSamplesHandle) {
-    await setAttrRaw(client, maxSamplesHandle, AttributeId.A_VALUE, 3, 150);
+    await setAttrRaw(client, maxSamplesHandle, AttributeId.A_VALUE, 3, 100);
   }
 
   // Ensure output directory exists
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // Use the ACTUAL raw bounds of the mesh (no rotation applied), offset by rawGroundOffset.
-  // The mesh is rendered raw and lifted so its lowest Y sits on the ground plane.
-  const meshBboxMin = rawBoundsMin
-    ? { x: rawBoundsMin.x, y: rawBoundsMin.y + rawGroundOffset, z: rawBoundsMin.z }
-    : meshExtents
-      ? { x: -meshExtents.x / 2, y: 0, z: -meshExtents.z / 2 }
-      : { x: -0.5, y: 0, z: -0.5 };
-  const meshBboxMax = rawBoundsMax
-    ? { x: rawBoundsMax.x, y: rawBoundsMax.y + rawGroundOffset, z: rawBoundsMax.z }
-    : meshExtents
-      ? { x: meshExtents.x / 2, y: meshExtents.y, z: meshExtents.z / 2 }
-      : { x: 0.5, y: 1, z: 0.5 };
+  // Get ACTUAL scene bounds from Octane (post-rotation, post-translation).
+  // This is the ground truth for camera framing — no manual bbox math needed.
+  let meshBboxMin = { x: -0.5, y: 0, z: -0.5 };
+  let meshBboxMax = { x: 0.5, y: 1, z: 0.5 };
+  try {
+    const sceneBounds = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
+    if (sceneBounds?.bboxMin && sceneBounds?.bboxMax) {
+      meshBboxMin = {
+        x: sceneBounds.bboxMin.x,
+        y: sceneBounds.bboxMin.y,
+        z: sceneBounds.bboxMin.z,
+      };
+      meshBboxMax = {
+        x: sceneBounds.bboxMax.x,
+        y: sceneBounds.bboxMax.y,
+        z: sceneBounds.bboxMax.z,
+      };
+      mcpLog(
+        `mugshot: scene bounds = (${meshBboxMin.x.toFixed(3)}, ${meshBboxMin.y.toFixed(3)}, ${meshBboxMin.z.toFixed(3)}) → (${meshBboxMax.x.toFixed(3)}, ${meshBboxMax.y.toFixed(3)}, ${meshBboxMax.z.toFixed(3)})`,
+        'info'
+      );
+    }
+  } catch (e: any) {
+    mcpLog(`mugshot: getSceneBounds failed (${e.message}), using fallback bbox`, 'warn');
+  }
 
   // Render each view
   for (const view of MUGSHOT_VIEWS) {
@@ -554,41 +575,118 @@ async function renderMugshots(
   return savedPaths;
 }
 
-/** VLM orientation analysis prompt. */
-const ORIENTATION_VLM_PROMPT = `These are 4 clay views of a 3D mesh with NO rotation applied (raw mesh data).
-The mesh is rendered in empty space (no ground plane). Views in order:
-1. front (yaw=0, slight elevation)
-2. three-quarter (yaw=45, slight elevation) — most informative view
-3. right side (yaw=90, slight elevation)
-4. top-down (high elevation)
+/** Build VLM orientation prompt with mesh metadata for informed analysis. */
+function buildOrientationPrompt(metadata?: {
+  filename?: string;
+  category?: string;
+  subcategory?: string;
+  extents?: { x: number; y: number; z: number };
+  tallestAxis?: string;
+  geometricGuess?: { x: number; y: number; z: number };
+  sceneContext?: string;
+}): string {
+  let metaBlock = '';
+  if (metadata) {
+    const lines: string[] = ['Mesh metadata (use ONLY for identification, NOT for orientation):'];
+    if (metadata.filename) lines.push(`- Filename: "${metadata.filename}"`);
+    if (metadata.category)
+      lines.push(
+        `- Category: ${metadata.category}${metadata.subcategory ? ` (${metadata.subcategory})` : ''}`
+      );
+    if (metadata.extents)
+      lines.push(
+        `- Bounding box extents: ${metadata.extents.x.toFixed(3)} × ${metadata.extents.y.toFixed(3)} × ${metadata.extents.z.toFixed(3)}`
+      );
+    if (metadata.tallestAxis) lines.push(`- Tallest axis: ${metadata.tallestAxis}`);
+    if (metadata.geometricGuess)
+      lines.push(
+        `- Geometric guess rotation applied: (${metadata.geometricGuess.x}, ${metadata.geometricGuess.y}, ${metadata.geometricGuess.z})°`
+      );
+    if (metadata.sceneContext) lines.push(`- Scene context: ${metadata.sceneContext}`);
+    lines.push('');
+    lines.push(
+      'CRITICAL: The metadata tells you WHAT this object is. But you MUST determine orientation'
+    );
+    lines.push('(upright, front direction) ONLY from the actual pixel content of the images.');
+    lines.push(
+      'Do NOT assume the FRONT view (image 1) shows the face/front of the object — it may show the back.'
+    );
+    lines.push(
+      'Do NOT hallucinate features. If you cannot see eye sockets, teeth, or a face in a view, say so.'
+    );
+    metaBlock = '\n' + lines.join('\n') + '\n';
+  }
 
-The mesh has NO rotation applied. You must determine if it needs rotation to be upright.
+  return `You are analyzing 8 clay renders of a 3D mesh for orientation correctness.
+A geometric guess rotation has been applied. The mesh is in empty space (no ground plane).
+${metaBlock}
+Views (in image order):
+1. FRONT (yaw=0°, eye level) — looking at the front face
+2. RIGHT (yaw=90°, eye level) — looking at the right side
+3. BACK (yaw=180°, eye level) — looking at the rear
+4. LEFT (yaw=270°, eye level) — looking at the left side
+5. FRONT-HIGH (yaw=45°, 35° above) — elevated three-quarter from front-right
+6. BACK-HIGH (yaw=225°, 35° above) — elevated three-quarter from back-left
+7. TOP (near-overhead, 85° above) — plan view looking straight down
+8. BELOW-FRONT (yaw=0°, 25° below eye level) — looking slightly upward at the base
+
+Cross-reference strategy:
+- Compare FRONT (1) vs BACK (3) to verify front/back orientation
+- Compare RIGHT (2) vs LEFT (4) to check symmetry and side identity
+- Compare FRONT-HIGH (5) vs BACK-HIGH (6) for 3D structure confirmation
+- TOP (7) reveals plan-view shape (important for flat or wide objects)
+- BELOW-FRONT (8) shows the base/underside — key for detecting inverted objects
+
+If the object is something where orientation does not meaningfully matter (sphere, abstract rock, amorphous blob), set orientation_matters to false.
+
+For thin/flat objects (coins, plates, leaves): side views showing a thin edge/line is EXPECTED and correct — do not flag this as a problem.
 
 Respond in JSON format ONLY (no markdown, no explanation):
 {
   "object_type": "description of what this object is",
   "is_upright": true/false,
+  "orientation_matters": true/false,
+  "confidence": "high" | "medium" | "low",
   "correction_rotation": {"x": 0, "y": 0, "z": 0},
-  "front_direction": "which direction the front/face points in view 1: toward camera, away, left, or right",
+  "front_direction": "toward_camera | away | left | right",
   "estimated_height_m": 0.0,
-  "notes": "brief description of what you see and any issues"
+  "notes": "what you see across all views, cross-reference observations"
 }
 
 Rules:
 - "is_upright" = the object is standing naturally as it would in the real world
-- If the object is lying on its side or upside down, set is_upright=false and provide the CORRECTION rotation in degrees
-- Common fix: if object is lying flat (Z-up mesh), correction is {"x": 90, "y": 0, "z": 0}
-- For creatures: feet on ground, head up. For plants: roots down, top up.
-- Focus on the three-quarter view (image 2) — it shows the most 3D information
+- "orientation_matters" = false for symmetric/amorphous objects where any rotation is acceptable
+- "confidence" = how certain you are about the identification and orientation judgment
+- correction_rotation is the ADDITIONAL rotation needed on top of what was already applied
+- If upright AND facing front, set correction_rotation to {0,0,0}
+- If NOT upright, provide the X/Z rotation correction needed
+- "front_direction" is CRITICAL and must be based on PIXEL EVIDENCE, not assumptions:
+  - First identify which view shows the object's natural front (face, eyes, opening, decorative side)
+  - Then report where that front points relative to FRONT camera (view 1):
+  - "toward_camera" = the face/front is visible in view 1 (FRONT)
+  - "away" = the face/front is visible in view 3 (BACK) — meaning it points away from FRONT camera
+  - "left" = the face/front is visible in view 4 (LEFT)
+  - "right" = the face/front is visible in view 2 (RIGHT)
+  - In your notes, state WHICH VIEW number shows the face/front and WHAT features you see there
+- For creatures/skulls: eye sockets, nostrils, jaw opening, teeth define the face
+- A smooth rounded surface is likely the BACK of a skull, not the face
+- Cross-reference opposing views before concluding — describe what you see in BOTH
+- Use metadata to help identify the object type, but determine orientation from pixels only
 - "estimated_height_m" is the real-world height when properly oriented`;
+}
 
 /**
  * Send mugshot images to VLM for orientation analysis.
  * Returns structured orientation data or null if VLM unavailable.
  */
-async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
+async function analyzeMugshotsWithVLM(
+  mugshotPaths: string[],
+  metadata?: Parameters<typeof buildOrientationPrompt>[0]
+): Promise<{
   object_type: string;
   is_upright: boolean;
+  orientation_matters: boolean;
+  confidence: 'high' | 'medium' | 'low';
   correction_rotation_deg?: { x: number; y: number; z: number };
   correction_rotation?: { x: number; y: number; z: number };
   front_direction: string;
@@ -596,6 +694,7 @@ async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
   notes: string;
   vlm_model?: string;
 } | null> {
+  const prompt = buildOrientationPrompt(metadata);
   // Reuse analyzeReference which already handles multi-image VLM calls
   // We need to use callVision directly for multi-image support
   const { detectBackend } = await import('../vision/index');
@@ -619,7 +718,7 @@ async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
     const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
     const key = getAnthropicKey();
     if (key) {
-      const result = await callAnthropicVision(ORIENTATION_VLM_PROMPT, images, {
+      const result = await callAnthropicVision(prompt, images, {
         apiKey: key,
         model: process.env.VISION_MODEL || 'claude-haiku-4-5-20251001',
         maxTokens: 1000,
@@ -630,7 +729,13 @@ async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        mcpLog(`mugshot VLM: ${parsed.object_type}, upright=${parsed.is_upright}`, 'info');
+        // Default new v3 fields if VLM didn't include them
+        parsed.orientation_matters = parsed.orientation_matters ?? true;
+        parsed.confidence = parsed.confidence ?? 'medium';
+        mcpLog(
+          `mugshot VLM: ${parsed.object_type}, upright=${parsed.is_upright}, orientation_matters=${parsed.orientation_matters}, confidence=${parsed.confidence}`,
+          'info'
+        );
         return { ...parsed, vlm_model: result.model };
       }
     }
@@ -643,10 +748,12 @@ async function analyzeMugshotsWithVLM(mugshotPaths: string[]): Promise<{
     const { callGeminiVision, getGeminiKey } = await import('../vision/gemini');
     const key = getGeminiKey();
     if (key) {
-      const result = await callGeminiVision(ORIENTATION_VLM_PROMPT, images, { apiKey: key });
+      const result = await callGeminiVision(prompt, images, { apiKey: key });
       const jsonMatch = result.text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        parsed.orientation_matters = parsed.orientation_matters ?? true;
+        parsed.confidence = parsed.confidence ?? 'medium';
         return { ...parsed, vlm_model: result.model };
       }
     }
@@ -951,10 +1058,10 @@ export function registerImportTools(
         if (!force_reanalyze && fs.existsSync(sidecar)) {
           try {
             const cached = JSON.parse(fs.readFileSync(sidecar, 'utf8'));
-            // v2 sidecar with visual_check is fully cached
-            if (cached.version >= 2 && cached.visual_check?.performed_at) {
+            // v3 sidecar (8-view mugshots) is fully cached
+            if (cached.version >= 3 && cached.visual_check?.performed_at) {
               mcpLog(
-                `analyze_mesh: returning v2 cached sidecar for ${path.basename(resolved)}`,
+                `analyze_mesh: returning v3 cached sidecar for ${path.basename(resolved)}`,
                 'info'
               );
               return jsonResult({
@@ -962,11 +1069,26 @@ export function registerImportTools(
                 cached: true,
                 sidecar_path: sidecar,
                 instruction:
-                  'Cached analysis returned (v2 with visual check). Use final_suggestion for transform. Override if scene intent differs.',
+                  'Cached analysis returned (v3 with 8-view visual check). Use final_suggestion for transform. Override if scene intent differs.',
               });
             }
-            // v1 sidecar — run visual check only (skip geometry/semantic)
-            mcpLog(`analyze_mesh: v1 sidecar found, upgrading to v2 with visual check`, 'info');
+            // v2 sidecar (4-view) — still valid, return with upgrade hint
+            if (cached.version === 2 && cached.visual_check?.performed_at) {
+              mcpLog(
+                `analyze_mesh: returning v2 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
+                'info'
+              );
+              return jsonResult({
+                ...cached,
+                cached: true,
+                upgrade_available: true,
+                sidecar_path: sidecar,
+                instruction:
+                  'Cached v2 analysis (4-view mugshots). Still valid. Use force_reanalyze=true to upgrade to v3 (8-view) for better orientation coverage.',
+              });
+            }
+            // v1 sidecar — run full analysis
+            mcpLog(`analyze_mesh: v1 sidecar found, upgrading to v3 with visual check`, 'info');
           } catch {
             mcpLog(`analyze_mesh: corrupt sidecar, re-analyzing`, 'warn');
           }
@@ -1010,7 +1132,7 @@ export function registerImportTools(
         let finalConfidence = orientation.confidence;
 
         try {
-          // Render 6 mugshot views
+          // Render 8 mugshot views (full 360° coverage)
           mugshotPaths = await renderMugshots(
             client,
             cache,
@@ -1024,8 +1146,16 @@ export function registerImportTools(
             { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] }
           );
 
-          // Send to VLM for analysis
-          const vlmResult = await analyzeMugshotsWithVLM(mugshotPaths);
+          // Send to VLM for analysis — include metadata for informed identification
+          const vlmResult = await analyzeMugshotsWithVLM(mugshotPaths, {
+            filename: path.basename(resolved),
+            category: categoryInfo.category,
+            subcategory: assetFile,
+            extents,
+            tallestAxis: orientation.uprightAxis,
+            geometricGuess: orientation.suggestedRotation,
+            sceneContext: scene_context,
+          });
 
           if (vlmResult) {
             const corr = vlmResult.correction_rotation_deg ??
@@ -1033,33 +1163,57 @@ export function registerImportTools(
             visualCheck = {
               performed_at: new Date().toISOString(),
               vlm_model: vlmResult.vlm_model,
+              mugshot_views: MUGSHOT_VIEWS.length,
               mugshot_paths: mugshotPaths.map(p => path.basename(p)),
               vlm_response: {
                 object_type: vlmResult.object_type,
                 is_upright: vlmResult.is_upright,
+                orientation_matters: vlmResult.orientation_matters,
+                confidence: vlmResult.confidence,
                 correction_rotation: corr,
                 front_direction: vlmResult.front_direction,
                 estimated_height_m: vlmResult.estimated_height_m,
                 notes: vlmResult.notes,
               },
-              confidence: 'high', // VLM is authoritative
+              confidence: vlmResult.confidence, // VLM self-assessed confidence
             };
 
+            // Step 1: Apply upright correction
             if (!vlmResult.is_upright) {
-              // VLM correction IS the final rotation (mugshot was rendered with no rotation)
+              // Mugshot was rendered WITH geometric guess applied.
+              // VLM correction is ADDITIONAL rotation on top of the guess.
               finalRotation = {
-                x: corr.x || 0,
-                y: corr.y || 0,
-                z: corr.z || 0,
+                x: orientation.suggestedRotation.x + (corr.x || 0),
+                y: orientation.suggestedRotation.y + (corr.y || 0),
+                z: orientation.suggestedRotation.z + (corr.z || 0),
               };
               mcpLog(
-                `analyze_mesh: VLM says NOT upright, final rotation = (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})`,
+                `analyze_mesh: VLM says NOT upright, guess=(${orientation.suggestedRotation.x},${orientation.suggestedRotation.y},${orientation.suggestedRotation.z}) + correction=(${corr.x || 0},${corr.y || 0},${corr.z || 0}) → final=(${finalRotation.x},${finalRotation.y},${finalRotation.z})`,
                 'info'
               );
             } else {
-              // VLM says upright with no rotation applied — no correction needed
-              finalRotation = { x: 0, y: 0, z: 0 };
-              mcpLog(`analyze_mesh: VLM confirms upright (no rotation) ✓`, 'info');
+              // VLM confirms the geometric guess made it upright — guess is correct
+              finalRotation = orientation.suggestedRotation;
+              mcpLog(
+                `analyze_mesh: VLM confirms upright with guess rotation (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})° ✓`,
+                'info'
+              );
+            }
+
+            // Step 2: Apply front-facing correction based on front_direction
+            // The object should face yaw=0° (toward FRONT camera). If VLM says the face
+            // points elsewhere, rotate Y to bring it to front.
+            const fd = (vlmResult.front_direction || '').toLowerCase().replace(/[^a-z_]/g, '');
+            let facingYaw = 0;
+            if (fd === 'away') facingYaw = 180;
+            else if (fd === 'left') facingYaw = 90;
+            else if (fd === 'right') facingYaw = -90;
+            if (facingYaw !== 0 && vlmResult.orientation_matters !== false) {
+              finalRotation = { ...finalRotation, y: finalRotation.y + facingYaw };
+              mcpLog(
+                `analyze_mesh: VLM says front faces "${vlmResult.front_direction}", applying Y+${facingYaw}° → final Y=${finalRotation.y}°`,
+                'info'
+              );
             }
 
             // Use VLM height estimate if available and category didn't have a strong one
@@ -1067,7 +1221,7 @@ export function registerImportTools(
               // Could update desiredHeight here, but keep it advisory
             }
 
-            finalConfidence = 'high'; // VLM-verified
+            finalConfidence = vlmResult.confidence; // VLM self-assessed
           } else {
             mcpLog(`analyze_mesh: VLM unavailable, using geometric+semantic only`, 'warn');
             finalConfidence = orientation.confidence;
@@ -1077,9 +1231,9 @@ export function registerImportTools(
           // Fall back to geometric+semantic only
         }
 
-        // Build v2 sidecar
+        // Build v3 sidecar (8-view mugshots, orientation_matters, VLM confidence)
         const result: any = {
-          version: 2,
+          version: 3,
           obj_file: path.basename(resolved),
           analyzed_at: new Date().toISOString(),
           geometry: {
@@ -1095,7 +1249,8 @@ export function registerImportTools(
             category: categoryInfo.category,
             subcategory: assetFile,
             natural_height_m: categoryInfo.naturalHeightM,
-            orientation_matters: categoryInfo.expectUpright,
+            orientation_matters:
+              visualCheck?.vlm_response?.orientation_matters ?? categoryInfo.expectUpright,
             confidence: categoryInfo.confidence,
           },
           visual_check: visualCheck,
@@ -1149,7 +1304,7 @@ export function registerImportTools(
         // Write v2 sidecar cache
         try {
           fs.writeFileSync(sidecar, JSON.stringify(result, null, 2), 'utf8');
-          mcpLog(`analyze_mesh: wrote v2 sidecar ${sidecar}`, 'info');
+          mcpLog(`analyze_mesh: wrote v3 sidecar ${sidecar}`, 'info');
         } catch (e: any) {
           mcpLog(`analyze_mesh: failed to write sidecar: ${e.message}`, 'warn');
         }
