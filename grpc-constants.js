@@ -80,6 +80,8 @@ const SERVICE_TO_PROTO_MAP = {
   ApiLinearTimeTransform: 'apianimationtimetransform.proto',
   // Render view
   ApiRenderView: 'apirenderview.proto',
+  // dxSS shared surface frame service (standalone Electron viewport)
+  SharedSurfaceFrameService: 'sharedsurfaceframe.proto',
 };
 
 /**

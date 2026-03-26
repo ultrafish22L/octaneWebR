@@ -125,8 +125,14 @@ class GrpcClient {
   private static readonly STATS_POLL_INTERVAL = 250;
   private static readonly MCP_RELAY_URL = 'ws://127.0.0.1:51023';
 
-  constructor(protoBasePath: string) {
+  // dxSS shared surface state
+  private dxAddon: any = null;
+  private ssEnabled = false;
+  private dxDeviceInitialized = false;
+
+  constructor(protoBasePath: string, dxAddon?: any) {
     this.base = new OctaneGrpcClientBase(undefined, undefined, protoBasePath);
+    this.dxAddon = dxAddon || null;
     log.info(`Connected to Octane at ${this.base.address}`);
 
     this.sharedStream = new CallbackStreamManager((name: string) => this.base.getService(name), {
@@ -200,6 +206,9 @@ class GrpcClient {
 
       this.isCallbackRegistered = true;
       log.info('Callbacks registered');
+
+      // Enable dxSS shared surface mode if native addon is available
+      await this.enableSharedSurface();
     } catch (error: any) {
       log.error(`Failed to register callbacks: ${error.message}`);
     } finally {
@@ -322,27 +331,141 @@ class GrpcClient {
 
   private isGrabbingFrame = false;
 
+  /**
+   * Enable dxSS shared surface mode after callbacks are registered.
+   * Called once from registerOctaneCallbacks if the native addon is loaded.
+   */
+  async enableSharedSurface(): Promise<void> {
+    if (!this.dxAddon || this.ssEnabled) return;
+    try {
+      // Register our PID so the server can DuplicateHandle into us
+      await this.callMethod('SharedSurfaceFrameService', 'registerViewportClient', {
+        pid: process.pid,
+      });
+      log.info(`[dxSS] Registered viewport client PID ${process.pid}`);
+      this.ssEnabled = true;
+    } catch (e: any) {
+      log.warn('[dxSS] Failed to enable shared surface mode:', e.message);
+      // Non-fatal — falls back to pixel path
+    }
+  }
+
   /** Fetch pixel data on demand after a newImage notification. Gated to prevent flooding. */
   private grabAndNotifyImage(): void {
     if (this.isGrabbingFrame) return;
     this.isGrabbingFrame = true;
-    this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
-      .then((result: any) => {
-        if (result?.result && result.renderImages?.data?.length > 0) {
-          this.notifyCallbacks({
-            callback_source: 'grpc',
-            callback_id: this.callbackId,
-            user_data: 0,
-            render_images: result.renderImages,
-          });
-        }
-      })
-      .catch(() => {
-        /* non-fatal */
-      })
-      .finally(() => {
-        this.isGrabbingFrame = false;
+
+    // dxSS fast path: grab shared frame handle, read texture via native addon
+    if (this.ssEnabled && this.dxAddon) {
+      this.grabSharedFrame()
+        .catch(() => {
+          // SS grab failed — try pixel fallback for this frame
+          return this.grabPixelFrame();
+        })
+        .finally(() => {
+          this.isGrabbingFrame = false;
+        });
+      return;
+    }
+
+    // Standard pixel path
+    this.grabPixelFrame().finally(() => {
+      this.isGrabbingFrame = false;
+    });
+  }
+
+  /**
+   * dxSS fast path: grab shared surface handle, open texture, DMA to staging, map to CPU.
+   * Eliminates protobuf ser/deser of 8.3MB pixel data.
+   */
+  private async grabSharedFrame(): Promise<void> {
+    const t0 = Date.now();
+    const result = await this.callMethod('SharedSurfaceFrameService', 'grabSharedFrame', {});
+
+    if (!result?.result || !result.frame?.handle) {
+      // SS not available this frame (e.g., Octane fell back to CPU buffer)
+      return this.grabPixelFrame();
+    }
+
+    const f = result.frame;
+    const handleVal = Number(f.handle);
+
+    try {
+      // Initialize D3D11 device on first frame (matched to Octane's adapter)
+      if (!this.dxDeviceInitialized) {
+        this.dxAddon.initDevice(Number(f.adapterLuid));
+        this.dxDeviceInitialized = true;
+        log.info(`[dxSS] D3D11 device initialized on adapter LUID ${f.adapterLuid}`);
+      }
+
+      // Open shared texture → GPU DMA to staging → Map to CPU buffer
+      const t1 = Date.now();
+      const pixels = this.dxAddon.mapSurface(handleVal);
+      const t2 = Date.now();
+
+      // Send through existing WS binary frame format (transparent to browser)
+      this.notifyCallbacks({
+        callback_source: 'dxss',
+        callback_id: this.callbackId,
+        user_data: 0,
+        render_images: {
+          data: [
+            {
+              buffer: { data: pixels, size: pixels.byteLength || pixels.length },
+              size: { x: Number(f.width), y: Number(f.height) },
+              type: Number(f.imageType),
+              pitch: Number(f.pitch),
+              tonemappedSamplesPerPixel: Number(f.samplesPerPixel) || 0,
+              renderTime: Number(f.renderTime) || 0,
+            },
+          ],
+        },
       });
+
+      // Close the duplicated NT handle on our side
+      this.dxAddon.closeSurface(handleVal);
+
+      // Release the cloned surface on the server (fire-and-forget)
+      this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', {
+        frameId: f.frameId,
+      }).catch(() => {
+        /* non-fatal */
+      });
+
+      const t3 = Date.now();
+      // Periodic timing log (every ~60 frames)
+      if (Number(f.frameId) % 60 === 1) {
+        log.info(
+          `[dxSS] frame ${f.width}x${f.height}: rpc=${t1 - t0}ms map=${t2 - t1}ms send=${t3 - t2}ms total=${t3 - t0}ms`
+        );
+      }
+    } catch (err: any) {
+      log.error('[dxSS] mapSurface failed:', err.message);
+      // Close handle even on error to prevent leaks
+      try {
+        this.dxAddon.closeSurface(handleVal);
+      } catch {
+        /* ignore */
+      }
+      // Release server-side clone
+      this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', {
+        frameId: f.frameId,
+      }).catch(() => {});
+      throw err; // propagate so caller falls back to pixel path
+    }
+  }
+
+  /** Standard pixel path: grab pixels via protobuf. */
+  private async grabPixelFrame(): Promise<void> {
+    const result = await this.callMethod('ApiRenderEngine', 'grabRenderResult', {});
+    if (result?.result && result.renderImages?.data?.length > 0) {
+      this.notifyCallbacks({
+        callback_source: 'grpc',
+        callback_id: this.callbackId,
+        user_data: 0,
+        render_images: result.renderImages,
+      });
+    }
   }
 
   private pollRenderStatistics(): void {
@@ -434,6 +557,8 @@ export interface GrpcProxyServerOptions {
   staticDir?: string;
   /** File root restrictions for /api/files/list */
   fileRoots?: string[];
+  /** DX shared surface native addon (loaded by Electron main process) */
+  dxAddon?: any;
 }
 
 export interface GrpcProxyServerInstance {
@@ -478,7 +603,7 @@ export async function startGrpcProxyServer(
 
   // Initialize gRPC client
   initGrpcLog();
-  const grpcClient = new GrpcClient(protoBasePath);
+  const grpcClient = new GrpcClient(protoBasePath, options.dxAddon);
   await grpcClient.initialize();
 
   try {
@@ -515,6 +640,7 @@ export async function startGrpcProxyServer(
             renderTime: firstImage.renderTime,
             pixelSize: pixelData.length,
             sharedSurface: firstImage.sharedSurface,
+            source: data.callback_source || 'grpc',
           });
           const headerBuf = Buffer.from(header, 'utf8');
           const lenBuf = Buffer.alloc(4);

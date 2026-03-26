@@ -8,7 +8,7 @@
  *             serves built static files, and handles all API routes.
  */
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 
 const isDev = !app.isPackaged;
@@ -16,8 +16,40 @@ const isDev = !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 let proxyServer: { close: () => Promise<void> } | null = null;
 
+// dxSS native addon — loaded once, shared with GrpcProxyServer
+let dxAddon: any = null;
+let dxAddonAvailable = false;
+
+function loadDxAddon(): void {
+  try {
+    const appRoot = app.getAppPath();
+    const addonPath = isDev
+      ? path.join(appRoot, 'native/build/Release/dx_shared_surface.node')
+      : path.join(process.resourcesPath, 'native/dx_shared_surface.node');
+    dxAddon = require(addonPath);
+    if (dxAddon && dxAddon.isAvailable()) {
+      dxAddonAvailable = true;
+      console.log('[Electron] DX shared surface addon loaded and available');
+    } else {
+      dxAddon = null;
+      console.log('[Electron] DX shared surface addon loaded but D3D11 not available');
+    }
+  } catch (e: any) {
+    dxAddon = null;
+    console.log('[Electron] DX shared surface addon not found:', e.message);
+  }
+}
+
+// Sync IPC for preload script to query addon status
+ipcMain.on('get-dx-addon-status', event => {
+  event.returnValue = dxAddonAvailable;
+});
+
 async function createWindow(): Promise<void> {
   let serverPort = 43929; // Vite dev server port
+
+  // Load DX addon before starting server
+  loadDxAddon();
 
   if (!isDev) {
     // Start standalone gRPC proxy server for production
@@ -43,6 +75,7 @@ async function createWindow(): Promise<void> {
       protoBasePath: protoServerPath,
       apiCachePath,
       staticDir,
+      dxAddon,
     });
 
     proxyServer = instance;

@@ -93,16 +93,19 @@ export interface DXSharedSurfaceAddon {
   /** Check if DX11 is available on this system */
   isAvailable(): boolean;
 
+  /** Create a D3D11 device on the adapter matching the given LUID */
+  initDevice(adapterLuid: number): void;
+
   /** Open a DXGI shared handle and return surface descriptor */
   openSharedSurface(handle: number): SharedSurfaceDescriptor;
 
-  /** Map the texture to a CPU-readable ArrayBuffer */
-  mapSurface(handle: number): ArrayBuffer;
+  /** Open shared texture, DMA to staging, map to CPU buffer. Hot path — called every frame. */
+  mapSurface(handle: number): Buffer;
 
-  /** Unmap a previously mapped texture */
+  /** Unmap a previously mapped texture (no-op in copy mode) */
   unmapSurface(handle: number): void;
 
-  /** Close the shared handle and release resources */
+  /** Close a duplicated NT handle to prevent leaks */
   closeSurface(handle: number): void;
 }
 

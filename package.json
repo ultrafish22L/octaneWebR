@@ -105,6 +105,10 @@
       {
         "from": "build/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "native/build/Release/dx_shared_surface.node",
+        "to": "native/dx_shared_surface.node"
       }
     ],
     "win": {

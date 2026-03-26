@@ -26,6 +26,7 @@ import { useCameraSync } from './hooks/useCameraSync';
 import { useMouseInteraction } from './hooks/useMouseInteraction';
 import { useViewportActions } from './hooks/useViewportActions';
 import { Logger } from '../../utils/Logger';
+import { setFrameSource } from '../../hooks/useFrameSource';
 import { getDragSubsampleEnabled, getDragSamples1Enabled } from '../dialogs/PreferencesDialog';
 import type { SharedSurfaceMessage } from './renderers/types';
 
@@ -49,6 +50,8 @@ interface CallbackData {
   };
   /** Present when Octane provides a DXGI shared surface (Electron fast path) */
   shared_surface?: SharedSurfaceMessage;
+  /** Frame source: 'dxss' for shared surface, 'grpc' for standard pixel path */
+  source?: 'dxss' | 'grpc';
   timestamp?: number;
   callback_id?: string;
 }
@@ -375,10 +378,14 @@ export const CallbackRenderViewport = React.memo(
 
         if (!connected) {
           Logger.info('[VIEWPORT] Not connected, skipping callback listener setup');
+          setFrameSource(null);
           return;
         }
 
         const handleNewImage = (data: CallbackData) => {
+          // Track frame delivery source for SS status indicator
+          setFrameSource(data.source || 'grpc');
+
           // Shared surface fast path (Electron + Windows + native addon)
           if (data.shared_surface && activeRenderer === 'shared-surface') {
             sharedSurface.displaySharedSurface(data.shared_surface);

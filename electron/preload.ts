@@ -6,7 +6,10 @@
  * and adjust behavior (e.g., server URL, DX shared surface availability).
  */
 
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
+
+// Query addon status from main process (sync IPC — runs before window loads)
+const addonAvailable: boolean = ipcRenderer.sendSync('get-dx-addon-status') === true;
 
 contextBridge.exposeInMainWorld('electronAPI', {
   /** True when running inside Electron */
@@ -15,8 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Platform identifier */
   platform: process.platform,
 
-  /** Whether the native DX shared surface addon is available */
-  hasNativeAddon: false, // Stub — will be true once native addon is built and loaded
+  /** Whether the native DX shared surface addon is loaded and D3D11 is available */
+  hasNativeAddon: addonAvailable,
 
   /** Node.js version available in Electron */
   nodeVersion: process.versions.node,

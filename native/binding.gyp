@@ -13,7 +13,13 @@
       "conditions": [
         ["OS=='win'", {
           "libraries": ["-ld3d11", "-ldxgi"],
-          "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"]
+          "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"],
+          "msvs_settings": {
+            "VCCLCompilerTool": {
+              "AdditionalOptions": ["/std:c++17"],
+              "ExceptionHandling": 1
+            }
+          }
         }]
       ]
     }

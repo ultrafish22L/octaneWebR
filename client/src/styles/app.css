@@ -62,6 +62,41 @@ body {
   color: var(--text-secondary);
 }
 
+/* Shared Surface Indicator */
+
+.ss-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 8px;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-base);
+  cursor: default;
+}
+
+.ss-led {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--border-radius-circle);
+}
+
+.ss-led-active {
+  background: var(--accent-blue);
+  box-shadow: 0 0 6px var(--accent-blue);
+}
+
+.ss-led-inactive {
+  background: var(--text-tertiary);
+  opacity: var(--opacity-moderate);
+}
+
+.ss-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.5px;
+}
+
 /* Sync Indicator */
 
 .sync-indicator {

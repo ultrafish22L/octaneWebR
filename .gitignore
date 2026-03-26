@@ -48,3 +48,5 @@ assets/
 renders/
 ORBX/*.ocs
 ORBX/assets/
+aigenerated/
+native/build/

@@ -144,6 +144,7 @@ export class ConnectionService extends BaseService {
                 if (pixelBytes && header.width && header.height) {
                   // Emit pre-decoded binary frame — no base64, no JSON parse for pixels
                   this.emit('OnNewImage', {
+                    source: header.source,
                     render_images: {
                       data: [
                         {

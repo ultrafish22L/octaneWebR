@@ -337,7 +337,8 @@ export class RenderService extends BaseService {
       });
       // Response uses int4_value (x component) — Octane returns int values as int4
       const int4 = valResp?.int4_value as { x?: number } | undefined;
-      return asNumber(int4?.x ?? valResp?.int_value, null);
+      const raw = int4?.x ?? valResp?.int_value;
+      return typeof raw === 'number' ? raw : null;
     } catch {
       return null;
     }

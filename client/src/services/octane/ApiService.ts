@@ -194,10 +194,13 @@ export class ApiService extends BaseService {
         Logger.debug(() => `${service}.${method} fetch cancelled`);
       } else if (
         method === 'getValueByAttrID' &&
-        (errorMessage.includes('NOT_FOUND') || errorMessage.includes('INTERNAL'))
+        (errorMessage.includes('NOT_FOUND') ||
+          errorMessage.includes('INTERNAL') ||
+          errorMessage.includes('INVALID_ARGUMENT'))
       ) {
-        // Expected for stale handles during scene transitions and SDK nodes
-        // that don't support reads. Don't spam console with expected errors.
+        // Expected for stale handles during scene transitions, SDK nodes
+        // that don't support reads, and exotic attribute types (AT_BIT_MASK,
+        // AT_OBJECT, etc.) that the API can't serialize.
         Logger.debug(() => `${service}.${method} expected: ${errorMessage}`);
       } else {
         Logger.error(`${service}.${method} error:`, errorMessage);

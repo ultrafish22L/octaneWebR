@@ -64,6 +64,10 @@ export function useParameterValue(
         const expectedType =
           transformAttrType ?? AttrType[node.attrInfo.type as keyof typeof AttrType];
 
+        // Bail out for attribute types not in the AttrType map (e.g. AT_BIT_MASK=32758,
+        // AT_OBJECT=565). The server can't serialize these and will log errors.
+        if (expectedType === undefined) return;
+
         // Queue the API call to prevent connection pool exhaustion
         // With large parameter trees (hundreds of parameters), all useEffects fire simultaneously
         // This queues them with max 4 concurrent requests to stay within browser limits

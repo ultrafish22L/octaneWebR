@@ -527,7 +527,15 @@ export class SceneService extends BaseService {
       });
       const attrResultObj = asObject(attrInfoResponse?.result);
       const attrType = attrResultObj?.type;
-      if (attrResultObj && typeof attrType === 'string' && attrType !== 'AT_UNKNOWN') {
+      // Only set attrInfo for types that getValueByAttrID can actually serialize.
+      // Exotic types (AT_BIT_MASK=32758, AT_OBJECT=565, etc.) pass the string
+      // check but crash the API — guard by verifying the type exists in AttrType.
+      if (
+        attrResultObj &&
+        typeof attrType === 'string' &&
+        attrType !== 'AT_UNKNOWN' &&
+        (attrType as string) in AttrType
+      ) {
         item.attrInfo = attrResultObj as import('./types').AttrInfo;
         Logger.debugV(() => ` ${item.name} ${JSON.stringify(attrResultObj)}`);
       } else {

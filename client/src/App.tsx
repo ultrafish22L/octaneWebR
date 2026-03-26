@@ -33,6 +33,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
 import { MenuBarMemoized as MenuBar } from './components/MenuBar';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { SharedSurfaceIndicator } from './components/ConnectionStatus/SharedSurfaceIndicator';
 import { SyncIndicator } from './components/SyncIndicator';
 import {
   CallbackRenderViewport,
@@ -257,6 +258,7 @@ function AppContent() {
         {/* Sync Indicator & Connection Status */}
         <div className="header-indicators">
           <SyncIndicator syncing={isSyncing} />
+          <SharedSurfaceIndicator />
           <ConnectionStatus />
         </div>
       </header>
