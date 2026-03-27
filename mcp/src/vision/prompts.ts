@@ -58,7 +58,10 @@ For EACH score below 4, provide a SPECIFIC correction:
 Respond as JSON only:
 {"scores":{"framing":N,"depth":N,"composition":N,"lighting":N,"placement":N},"overall":N,"passed":BOOL,"corrections":[{"target":"...","objectId":"...","description":"...","priority":N}],"observations":"2-3 sentences of what you actually see"}
 
-overall = average of 5 scores. passed = overall >= ${PASS_THRESHOLD} AND no score < ${MIN_DIMENSION_SCORE}.`;
+SCORING RULES (follow exactly):
+overall = weighted average: (framing×2 + placement×1.5 + composition×1.5 + depth×1 + lighting×1) / 7
+passed = overall >= ${PASS_THRESHOLD} AND framing >= 3 AND no score < ${MIN_DIMENSION_SCORE}
+CRITICAL: If framing < 3, cap overall at 2.5 regardless of other scores. A beautifully lit scene with wrong framing is WORTHLESS — fix camera first.`;
 }
 
 /**

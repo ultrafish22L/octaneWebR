@@ -129,13 +129,13 @@ async function main() {
   // Register all tool groups
   registerInfoTools(server, client, cache);
   registerProjectTools(server, client, cache);
-  registerCameraTools(server, client, placementState);
+  registerCameraTools(server, client, placementState, artState);
   registerRenderTools(server, client);
   registerSceneTools(server, client, cache);
   registerNodeTools(server, client, cache);
   registerAttributeTools(server, client);
   registerWebappTools(server);
-  registerImportTools(server, client, cache);
+  registerImportTools(server, client, cache, artState);
   registerRenderControlTools(server, client);
   registerStatsTools(server, client);
   // registerMaterialDbTools(server, client); // disabled — Octane API bug
@@ -146,10 +146,10 @@ async function main() {
   registerArtDirectionTools(server, client, artState, placementState);
 
   // Register Creative tools (lighting, materials knowledge)
-  registerCreativeTools(server, client);
+  registerCreativeTools(server, client, artState);
 
   // Register SEGA tools (semantic artistic guidance — intent vectors, presets, parameter mapping)
-  registerSegaTools(server, segaState);
+  registerSegaTools(server, segaState, artState);
 
   // Register MCP Resources (read-only type system + scene state)
   registerResources(server, client, cache);

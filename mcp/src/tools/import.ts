@@ -776,10 +776,13 @@ async function analyzeMugshotsWithVLM(
   return null;
 }
 
+import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
+
 export function registerImportTools(
   server: McpServer,
   client: OctaneMcpClient,
-  cache: ApiCache | null
+  cache: ApiCache | null,
+  artState?: ArtDirectionState
 ) {
   server.tool(
     'import_glb',
@@ -1030,11 +1033,14 @@ export function registerImportTools(
           orientation_hint:
             'OTOY Studio GLBs are Z-up. Set placement transform rotation to {90,0,0} to stand upright in Octane (Y-up). Orbit 3 views (front/right/top) to discover facing direction before framing.',
           next_steps: [
+            `FIRST: call analyze_mesh on ${conv.objPath} — generates mugshots for VLM orientation analysis`,
             `Connect placement (${placementHandle}) to geo group via pin_index N`,
             `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {90, Y_rotation, 0})`,
             `Set transform position: set_attribute(${transformHandle}, ${AttributeId.A_TRANSLATION}, 11, {x, y, z})`,
             `Set transform scale: set_attribute(${transformHandle}, ${AttributeId.A_SCALE}, 11, {s, s, s})`,
           ],
+          instruction:
+            'Asset imported. NEXT: call analyze_mesh on the OBJ path to generate mugshots and get VLM-verified orientation before placing in scene.',
         });
       } catch (error: any) {
         mcpLog(`import_glb FAILED: ${error.message}`, 'error');
@@ -1086,12 +1092,16 @@ export function registerImportTools(
                 `analyze_mesh: returning v3 cached sidecar for ${path.basename(resolved)}`,
                 'info'
               );
+              const cachedNote = cached.visual_check?.confidence
+                ? `Cached VLM (${cached.visual_check.confidence} confidence)`
+                : 'Cached (no VLM data)';
               return jsonResult({
                 ...cached,
                 cached: true,
                 sidecar_path: sidecar,
                 instruction:
                   'Cached analysis returned (v3 with 8-view visual check). Use final_suggestion for transform. Override if scene intent differs.',
+                ...(artState ? adWorkflow(artState, 'analyze_mesh', cachedNote) : {}),
               });
             }
             // v2 sidecar (4-view) — still valid, return with upgrade hint
@@ -1100,6 +1110,9 @@ export function registerImportTools(
                 `analyze_mesh: returning v2 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
                 'info'
               );
+              const v2Note = cached.visual_check?.confidence
+                ? `Cached v2 VLM (${cached.visual_check.confidence} confidence, upgrade available)`
+                : 'Cached v2 (no VLM data)';
               return jsonResult({
                 ...cached,
                 cached: true,
@@ -1107,6 +1120,7 @@ export function registerImportTools(
                 sidecar_path: sidecar,
                 instruction:
                   'Cached v2 analysis (4-view mugshots). Still valid. Use force_reanalyze=true to upgrade to v3 (8-view) for better orientation coverage.',
+                ...(artState ? adWorkflow(artState, 'analyze_mesh', v2Note) : {}),
               });
             }
             // v1 sidecar — run full analysis
@@ -1187,6 +1201,7 @@ export function registerImportTools(
               vlm_model: vlmResult.vlm_model,
               mugshot_views: MUGSHOT_VIEWS.length,
               mugshot_paths: mugshotPaths.map(p => path.basename(p)),
+              mugshot_dir: path.dirname(mugshotPaths[0] || resolved),
               vlm_response: {
                 object_type: vlmResult.object_type,
                 is_upright: vlmResult.is_upright,
@@ -1331,12 +1346,17 @@ export function registerImportTools(
           mcpLog(`analyze_mesh: failed to write sidecar: ${e.message}`, 'warn');
         }
 
+        const meshNote = visualCheck
+          ? `VLM verified (${finalConfidence} confidence, ${visualCheck.vlm_model})`
+          : 'Geometric+semantic only (no VLM)';
+
         return jsonResult({
           ...legacyResult,
           cached: false,
           sidecar_path: sidecar,
           instruction:
             'Use placement_suggestion to set transform on the mesh placement. These are SUGGESTIONS — override if your scene intent differs (flying objects, tilted angles, etc.).',
+          ...(artState ? adWorkflow(artState, 'analyze_mesh', meshNote) : {}),
         });
       } catch (error: any) {
         mcpLog(`analyze_mesh FAILED: ${error.message}`, 'error');

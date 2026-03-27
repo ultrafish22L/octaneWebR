@@ -2,6 +2,19 @@
 
 How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, see `TROUBLESHOOTING.md`.
 
+## Who This Doc Is For
+
+This document describes the **step-by-step build workflow** — the exact sequence of tool calls and verification gates an AI agent follows to construct an Octane scene. If you want to understand **what the system does conceptually**, read [Art Direction System](../ADSYSTEM.md) first.
+
+If you're directing the AI builder (telling Claude what to create), here's what your scene goes through:
+
+1. **Plan** — Analyze reference images, compute spatial layout, set artistic mood. No rendering yet — pure math and intent.
+2. **Frame** — Build the first object, start the render, frame the camera. Get something on screen fast.
+3. **Dress** — Materials, lighting, environment. Apply SEGA-driven values for mood consistency.
+4. **Critique** — Vision model scores the render. Fix the weakest dimension. Re-render. Loop until good.
+
+Each phase has hard gates — you don't move forward until the current phase passes. This prevents the common failure mode of polishing materials on a badly framed scene.
+
 ---
 
 ## §1 Core Principle: Human View First

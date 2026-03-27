@@ -12,15 +12,20 @@ import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from '../tools/utils';
 import { suggestLighting } from './lighting';
 import { suggestMaterial, listMaterialTypes } from './materials';
+import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
 
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
 
-export function registerCreativeTools(server: McpServer, _client: OctaneMcpClient) {
+export function registerCreativeTools(
+  server: McpServer,
+  _client: OctaneMcpClient,
+  artState?: ArtDirectionState
+) {
   // ── suggest_lighting ────────────────────────────────────────────
 
   server.tool(
     'suggest_lighting',
-    'Get a computed lighting recipe from mood + scene bounds. Returns light positions, colors, power, key:fill:rim ratios. Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
+    '[Phase 2] Camera must be positioned first (fit_camera). Get a computed lighting recipe from mood + scene bounds. Lighting recipe depends on camera-subject geometry. Returns light positions, colors, power, key:fill:rim ratios. Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
     {
       mood: z
         .string()
@@ -42,6 +47,7 @@ export function registerCreativeTools(server: McpServer, _client: OctaneMcpClien
           recipe,
           instruction:
             'Create emissive box primitives at each light position with the specified temperature and power. Set emission efficiency to 1.0 (Octane default is 0.025). Connect to geo group.',
+          ...(artState ? adWorkflow(artState, 'suggest_lighting') : {}),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -53,7 +59,7 @@ export function registerCreativeTools(server: McpServer, _client: OctaneMcpClien
 
   server.tool(
     'suggest_material',
-    'Get material attribute values for a surface type. Returns roughness, metallic, specular, IOR, albedo for NT_MAT_UNIVERSAL. 30+ types available.',
+    '[Phase 2] Apply after geometry is placed and framed. Get PBR attribute values for a surface type (roughness, metallic, specular, IOR, albedo) for NT_MAT_UNIVERSAL. 30+ types. IMPORTANT: If the mesh was loaded from OBJ with an .mtl file, it already has textures — do NOT override albedo. Only apply roughness/metallic/specular/IOR to the existing material. The albedo values here are FALLBACKS for untextured meshes only.',
     {
       surface_type: z
         .string()
@@ -82,7 +88,10 @@ export function registerCreativeTools(server: McpServer, _client: OctaneMcpClien
       return jsonResult({
         recipe,
         instruction:
-          'Create NT_MAT_UNIVERSAL and set attributes: albedo RGB on pin 2, roughness on pin 8, metallic on pin 4, specular on pin 6. For emission, connect NT_EMIS_BLACKBODY to pin 44.',
+          'If mesh has .mtl textures: do NOT override albedo — apply ONLY roughness (pin 8), metallic (pin 4), specular (pin 6), IOR to the existing material. ' +
+          'If untextured: create NT_MAT_UNIVERSAL with albedo RGB (pin 2), roughness (pin 8), metallic (pin 4), specular (pin 6). ' +
+          'Emission: connect NT_EMIS_BLACKBODY to pin 44.',
+        ...(artState ? adWorkflow(artState, 'suggest_material') : {}),
       });
     }
   );

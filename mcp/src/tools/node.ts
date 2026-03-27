@@ -242,6 +242,16 @@ export function registerNodeTools(
           pins: activePins,
         };
         if (warnings.length > 0) response.warnings = warnings;
+
+        // Fix 2: Type-specific verification instructions
+        if (node_type === 'NT_GEO_MESH') {
+          response.instruction =
+            `Handle ${newHandle} created (NT_GEO_MESH). NEXT: set_attribute(A_FILENAME=34) + set_attribute(A_RELOAD=124, true) + update_scene(). ` +
+            `Then MUST call get_geometry_stats() and confirm triCount increased. Do NOT proceed if triCount is unchanged.`;
+        } else if (node_type === 'NT_GEO_OBJECT') {
+          response.instruction = `Handle ${newHandle} created (NT_GEO_OBJECT). After connecting to RT: call fit_camera() + save_render to VERIFY this object is visible before adding the next object.`;
+        }
+
         return jsonResult(response);
       } catch (error: any) {
         return errorResult(error);
@@ -517,6 +527,17 @@ export function registerNodeTools(
         };
         if (pin_name !== undefined) result.pin_name = pin_name;
         if (verifyWarning) result.verify_warning = verifyWarning;
+
+        // Fix 3: When geometry connected to RT, remind to verify visually
+        if (
+          verified &&
+          sourceType === 'PT_GEOMETRY' &&
+          (verifyPinIdx === 3 || targetPinType === 'PT_GEOMETRY')
+        ) {
+          result.instruction =
+            'Geometry connected to RT. NEXT: call fit_camera() + save_render to VERIFY this object is visible. ' +
+            'Do NOT add more geometry without verifying this one first.';
+        }
 
         if (!verified) {
           return {

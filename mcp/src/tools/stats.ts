@@ -8,6 +8,9 @@ import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from './utils';
 
 export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
+  // Fix 4: Track previous triCount for drop detection
+  let prevTriCount = -1;
+
   server.tool(
     'get_geometry_stats',
     'Get scene geometry statistics: triangle count, instance count, voxel count, hair segment count, Gaussian splat count, etc. Useful for understanding scene complexity.',
@@ -15,7 +18,24 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getGeometryStatistics', {});
-        return jsonResult(result);
+
+        // Fix 4: Detect triCount drops — likely means geometry disconnected or mesh failed to load
+        const stats = (result as any)?.stats ?? result;
+        const currentTriCount = Number(stats?.triCount ?? 0);
+        const response: Record<string, any> = { stats };
+
+        // Only warn on meaningful drops (not after reset_project which goes to 0)
+        if (prevTriCount > 12 && currentTriCount < prevTriCount) {
+          response.warning =
+            `\u26a0 triCount DROPPED from ${prevTriCount} to ${currentTriCount}. ` +
+            `Geometry was lost. STOP. Follow crash protocol: ` +
+            `1) read log_mcp.log for errors, ` +
+            `2) call get_scene_tree to check connections, ` +
+            `3) trace the actual cause. Do NOT guess from docs.`;
+        }
+        prevTriCount = currentTriCount;
+
+        return jsonResult(response);
       } catch (error: unknown) {
         return errorResult(error);
       }

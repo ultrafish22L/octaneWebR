@@ -56,12 +56,19 @@ export type {
   SceneSemanticState,
 } from './types';
 
-export function registerSegaTools(server: McpServer, segaState: SemanticState) {
+import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
+
+export function registerSegaTools(
+  server: McpServer,
+  segaState: SemanticState,
+  artState?: ArtDirectionState
+) {
   // ── set_artistic_intent ───────────────────────────────────────────
 
   server.tool(
     'set_artistic_intent',
-    'Set scene artistic intent via preset name, raw semantic vector, or natural language description. ' +
+    '[Phase 2] Set AFTER camera framing is confirmed (fit_camera done, framing verified). ' +
+      'Set scene artistic intent via preset name, raw semantic vector, or natural language description. ' +
       'Returns the current semantic vector, resolved parameter recipes (lighting, material, camera), ' +
       'and Berlyne warnings. Presets: dramatic, ethereal, natural, studio, noir, golden_hour, moonlit, ' +
       'vermeer, caravaggio, hopper, kubrick, villeneuve, fincher, blade_runner, moonlight_film, ' +
@@ -202,6 +209,7 @@ export function registerSegaTools(server: McpServer, segaState: SemanticState) {
             'Apply lighting values via suggest_lighting or directly create emissive boxes. ' +
             'Apply material values to NT_MAT_UNIVERSAL attributes. ' +
             'Apply camera values via set_camera.',
+          ...(artState ? adWorkflow(artState, 'set_artistic_intent') : {}),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -247,8 +255,8 @@ export function registerSegaTools(server: McpServer, segaState: SemanticState) {
 
   server.tool(
     'adjust_artistic_intent',
-    'Fine-tune a single semantic dimension. Supports absolute (set to value) or ' +
-      'relative (delta from current). Per-object override if object_id provided. ' +
+    '[Phase 2] Fine-tune a single semantic dimension. Only use after framing is confirmed (Phase 1 complete). ' +
+      'Supports absolute (set to value) or relative (delta from current). Per-object override if object_id provided. ' +
       'Returns updated vector + resolved parameters + warnings.',
     {
       dimension: z
@@ -349,10 +357,10 @@ export function registerSegaTools(server: McpServer, segaState: SemanticState) {
 
   server.tool(
     'semantic_critique',
-    'Measure how well a render matches the target artistic intent. ' +
+    '[Phase 3] Evaluates mood/style gaps — only useful AFTER framing is correct. ' +
+      'Measures how well a render matches the target artistic intent. ' +
       'Analyzes pixel data (contrast, warmth, saturation, atmosphere) and computes ' +
       'a semantic gap vector showing exactly what dimensions need adjustment. ' +
-      'Optionally accepts VLM-estimated measurements for perceptual dimensions. ' +
       'Returns gap vector, convergence status, and correction suggestions.',
     {
       render_path: z.string().describe('Absolute path to the rendered image (PNG)'),

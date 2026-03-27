@@ -38,6 +38,18 @@ Both paths use the same shared gRPC client with a compatibility layer for differ
 
 **Stack:** React 18, TypeScript (strict), Vite, ReactFlow v12, React Query, gRPC
 
+## What OctaneWebR Can Do
+
+| Capability                    | What It Is                                                                                                        | Learn More                                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Browser UI**                | Scene outliner, node graph editor, parameter inspector, live render viewport, picker tools, themes                | [Below](#browser-ui)                                           |
+| **AI Scene Builder (MCP)**    | 78 tools let Claude build Octane scenes from natural language — nodes, materials, cameras, renders                | [MCP Guide](docs/mcp/README.md)                                |
+| **Art Direction System**      | Composition planning, spatial validation, mesh analysis, collision-free placement, vision critique                | [AD System](docs/ADSYSTEM.md)                                  |
+| **SEGA Artistic Guidance**    | 15-dimension mood/style vector with 25 presets (dramatic, noir, Vermeer, Kubrick...) and natural language control | [AD System](docs/ADSYSTEM.md#sega--semantic-artistic-guidance) |
+| **Asset Generation Pipeline** | AI image → 3D mesh → OBJ conversion → mesh analysis → Octane import → placement → render                          | [AD System](docs/ADSYSTEM.md#asset-generation-pipeline)        |
+| **Creative Knowledge**        | Lighting recipes for 7 moods, material presets for 30+ surfaces, composition rules                                | [Creative Guide](docs/mcp/CREATIVE.md)                         |
+| **Companion MCP Servers**     | Octane Docs API search + OTOY Studio (AI images, 3D, video, music, vision)                                        | [Below](#companion-mcp-servers)                                |
+
 ## Features
 
 ### Browser UI
@@ -110,8 +122,9 @@ octaneWebR/
 ├── .mcp.json                    # MCP server configuration
 ├── temp/                        # Renders, test output, scratch (not committed)
 └── docs/
+    ├── ADSYSTEM.md              # Art Direction system explainer (start here for AD/SEGA)
     ├── mcp/                     # MCP docs: user guide, reference, build protocols, creative
-    ├── project/                 # Architecture, changelog, improvements, test plan
+    ├── project/                 # Architecture, changelog, SEGA design spec
     ├── ui/                      # UI implementation notes
     └── recipes/                 # Scene recipes (creative briefs)
 ```
@@ -141,16 +154,17 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 ## Documentation
 
-| Doc                                                            | What's In It                                                    |
-| -------------------------------------------------------------- | --------------------------------------------------------------- |
-| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — running in 5 minutes                         |
-| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls          |
-| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets |
-| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — SCRATCH, FRESH, DRESS, SHOW                   |
-| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition               |
-| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | Known issues and workarounds                                    |
-| [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                |
-| [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                 |
+| Doc                                                            | What's In It                                                                   |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — running in 5 minutes                                        |
+| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls                         |
+| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets                |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                  |
+| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition                              |
+| [docs/ADSYSTEM.md](./docs/ADSYSTEM.md)                         | Art Direction system — composition, SEGA mood, vision critique, asset pipeline |
+| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | Known issues and workarounds                                                   |
+| [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                               |
+| [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                                |
 
 ### External Resources
 

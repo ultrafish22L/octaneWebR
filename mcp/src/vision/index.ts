@@ -13,8 +13,32 @@ import { mcpLog, mcpLogLazy } from '../OctaneMcpClient';
 import { callAnthropicVision, getAnthropicKey } from './anthropic';
 import { callGeminiVision, getGeminiKey } from './gemini';
 import { parseCritiqueResponse } from './prompts';
+import { PASS_THRESHOLD, MIN_DIMENSION_SCORE } from '../ArtDirectionState';
 
 export type VisionBackend = 'anthropic' | 'gemini' | 'self';
+
+/**
+ * Recompute overall score and passed flag server-side.
+ * Enforces framing-gated weighted scoring regardless of VLM output.
+ * Weights: framing×2, placement×1.5, composition×1.5, depth×1, lighting×1 (÷7)
+ */
+function enforceFramingGate(scores: VisionCritiqueResult['scores']): {
+  overall: number;
+  passed: boolean;
+} {
+  const weighted =
+    (scores.framing * 2 +
+      scores.placement * 1.5 +
+      scores.composition * 1.5 +
+      scores.depth * 1 +
+      scores.lighting * 1) /
+    7;
+  // Cap overall at 2.5 if framing is below 3
+  const overall = scores.framing < 3 ? Math.min(weighted, 2.5) : weighted;
+  const allAboveMin = Object.values(scores).every(s => s >= MIN_DIMENSION_SCORE);
+  const passed = overall >= PASS_THRESHOLD && scores.framing >= 3 && allAboveMin;
+  return { overall: Math.round(overall * 10) / 10, passed };
+}
 
 export interface VisionCritiqueResult {
   backend: VisionBackend;
@@ -164,11 +188,14 @@ export async function critiqueRender(
     };
   }
 
+  // Server-side enforcement: recompute overall/passed with framing-gate
+  const enforced = enforceFramingGate(parsed.scores);
+
   return {
     backend,
     scores: parsed.scores,
-    overall: parsed.overall,
-    passed: parsed.passed,
+    overall: enforced.overall,
+    passed: enforced.passed,
     corrections: parsed.corrections || [],
     raw: parsed.raw,
     model,

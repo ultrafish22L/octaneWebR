@@ -36,6 +36,12 @@ export interface ScenePlacementEntry {
     naturalHeightM: number;
     suggestedRotation: Vec3;
     groundOffsetY: number;
+    /** VLM-derived fields (present when Tier 3 visual analysis succeeded) */
+    confidence?: string; // 'low' | 'medium' | 'high'
+    frontDirection?: string; // 'front' | 'back' | 'left' | 'right'
+    orientationMatters?: boolean; // false for symmetric objects like spheres
+    analysisMethod?: string; // 'geometric+semantic' | 'geometric+semantic+vlm'
+    mugshotDir?: string; // directory containing mugshot PNGs
   };
 }
 
@@ -71,9 +77,24 @@ export class ScenePlacementState {
     this._groundY = 0;
   }
 
-  /** Add or update a placed object. */
+  /** Add or update a placed object. Updates groundY when ground objects are added. */
   addEntry(entry: ScenePlacementEntry): void {
     this.entries.set(entry.handle, entry);
+    // Update groundY from all ground objects' top surfaces
+    if (entry.role === 'ground') {
+      this._updateGroundY();
+    }
+  }
+
+  /** Recompute _groundY from the max top-surface of all ground-role objects. */
+  private _updateGroundY(): void {
+    let maxY = 0;
+    for (const entry of this.entries.values()) {
+      if (entry.role === 'ground' && entry.boundsWorld.max.y > maxY) {
+        maxY = entry.boundsWorld.max.y;
+      }
+    }
+    this._groundY = maxY;
   }
 
   /** Remove a placed object. */

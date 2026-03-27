@@ -26,7 +26,12 @@ import {
   Vec3,
   ObjectPlacement,
   CameraSpec,
+  type AdStep,
+  adWorkflow,
 } from '../ArtDirectionState';
+
+// Re-export for use by other tool files (camera.ts, creative, sega)
+export { adWorkflow } from '../ArtDirectionState';
 import { jsonResult, errorResult, validateFilePath } from './utils';
 import {
   ScenePlacementState,
@@ -545,7 +550,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'plan_composition',
-    'Create a validated scene composition plan with computed camera math. Does NOT create Octane nodes — pure planning. Returns plan + validation for review before building.',
+    '[Phase 0] Create a validated scene composition plan with computed camera math. Does NOT create Octane nodes — pure planning. Use positions/scales from analyze_mesh placement_suggestion. Call fit_camera AFTER to apply camera. Returns plan + validation for review before building.',
     {
       name: z.string().describe('Unique name for this composition'),
       description: z.string().describe('Creative brief'),
@@ -591,12 +596,27 @@ export function registerArtDirectionTools(
         const validation = validateComposition(spec);
         artState.setSpec(params.name, spec);
 
+        // Build checklist: tells Claude exactly how many create_node calls to make
+        const meshObjects = objects.filter(o => o.role !== 'light' && o.role !== 'environment');
+        const buildChecklist = {
+          objects_to_create: meshObjects.length,
+          create_calls_needed: meshObjects.map(o => {
+            const isMesh = spec.referenceImagePath
+              ? 'NT_GEO_MESH or NT_GEO_OBJECT'
+              : 'NT_GEO_OBJECT';
+            return `${o.id} (${isMesh}, role: ${o.role})`;
+          }),
+          instruction: `You need exactly ${meshObjects.length} create_node calls — one per object. Track each returned handle. Do NOT proceed until all ${meshObjects.length} are created, connected, and verified with fit_camera + save_render after EACH one.`,
+        };
+
         return jsonResult({
           spec,
           validation,
+          build_checklist: buildChecklist,
           instruction: validation.passed
-            ? 'Layout validated. Proceed to build the scene using these positions.'
+            ? 'Layout validated. Proceed to build the scene using these positions. Follow build_checklist exactly.'
             : 'Layout has errors. Fix issues and call plan_composition again.',
+          ...adWorkflow(artState, 'plan_composition'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -608,7 +628,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'validate_layout',
-    'Run geometric validation on a planned composition. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
+    '[Phase 0] Run geometric validation on a planned composition BEFORE building scene nodes. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
     { spec_name: z.string() },
     async ({ spec_name }) => {
       const spec = artState.getSpec(spec_name);
@@ -616,7 +636,10 @@ export function registerArtDirectionTools(
         return errorResult(
           `No spec "${spec_name}". Available: ${artState.listSpecs().join(', ') || 'none'}`
         );
-      return jsonResult(validateComposition(spec));
+      return jsonResult({
+        ...validateComposition(spec),
+        ...adWorkflow(artState, 'validate_layout'),
+      });
     }
   );
 
@@ -641,14 +664,15 @@ export function registerArtDirectionTools(
       if (visionResult && visionResult.backend !== 'self') {
         return jsonResult({
           image_path: resolved,
-          analysis: visionResult.data, // structured JSON if parseable, null otherwise
-          raw_analysis: visionResult.data ? undefined : visionResult.raw, // raw text if JSON parse failed
+          analysis: visionResult.data,
+          raw_analysis: visionResult.data ? undefined : visionResult.raw,
           backend: visionResult.backend,
           model: visionResult.model,
           scale_hint: params.scale_hint,
           instruction: visionResult.data
             ? 'Vision analysis complete. Feed the analysis data into plan_composition, scaling relative positions by scale_hint.'
             : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_composition.',
+          ...adWorkflow(artState, 'analyze_reference'),
         });
       }
 
@@ -659,6 +683,7 @@ export function registerArtDirectionTools(
         scale_hint: params.scale_hint,
         instruction:
           'No vision API available. Read the image, answer the analysis_prompt, then feed results to plan_composition.',
+        ...adWorkflow(artState, 'analyze_reference'),
       });
     }
   );
@@ -667,7 +692,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'critique_render',
-    'Save current render and generate critique prompt. If a vision API key is available, calls an external VLM to score the render (returns scores directly). Otherwise returns a prompt for self-critique. MANDATORY after every DRESS render.',
+    '[Phase 3] Save current render and score it. MANDATORY after every render. Framing score must be ≥3 before lighting/mood scores matter — if framing <3, fix camera FIRST (call fit_camera). Uses external VLM if available, otherwise returns self-critique prompt.',
     {
       render_path: z.string().describe('Absolute path to save render'),
       spec_name: z.string(),
@@ -749,8 +774,13 @@ export function registerArtDirectionTools(
             stagnating: artState.isStagnating(params.spec_name),
             exhausted: artState.isExhausted(params.spec_name),
             instruction: visionResult.passed
-              ? 'External vision critique PASSED. Proceed to next phase.'
-              : `External vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
+              ? 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
+              : visionResult.scores.framing < 3
+                ? 'FRAMING FAILURE. Call fit_camera to reframe before any other changes. Do not touch lighting or materials until framing ≥ 3.'
+                : artState.isActive
+                  ? `NOT PASSED (${visionResult.overall.toFixed(1)}/5). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
+                  : `Vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
+            ...adWorkflow(artState, 'critique_render'),
           });
         }
 
@@ -763,7 +793,8 @@ export function registerArtDirectionTools(
           warnings,
           vision_backend: 'self',
           instruction:
-            'No vision API available. Read the render image, answer critique_prompt, then call apply_corrections with scores.',
+            'No vision API available. Read the render image, answer critique_prompt, then call apply_corrections with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
+          ...adWorkflow(artState, 'critique_render'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -775,7 +806,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'apply_corrections',
-    'Record critique scores. Tracks history, detects stagnation, gates further iteration.',
+    '[Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
     {
       spec_name: z.string(),
       iteration: z.number().int(),
@@ -795,16 +826,24 @@ export function registerArtDirectionTools(
       const spec = artState.getSpec(params.spec_name);
       if (!spec) return errorResult(`No spec "${params.spec_name}".`);
 
-      const record: CritiqueRecord = {
-        iteration: params.iteration,
-        overallScore: params.overall_score,
-        passed: params.passed,
-        scores: params.scores,
-        corrections: params.corrections,
-        renderPath: params.render_path || '',
-        timestamp: Date.now(),
-      };
-      artState.addCritique(params.spec_name, record);
+      // Only record if critique_render (VLM path) didn't already record this iteration.
+      // VLM critique calls artState.addCritique() internally — recording again here
+      // causes false stagnation detection after just 1 real iteration.
+      const existingHistory = artState.getHistory(params.spec_name);
+      const alreadyRecorded = existingHistory.some(h => h.iteration === params.iteration);
+
+      if (!alreadyRecorded) {
+        const record: CritiqueRecord = {
+          iteration: params.iteration,
+          overallScore: params.overall_score,
+          passed: params.passed,
+          scores: params.scores,
+          corrections: params.corrections,
+          renderPath: params.render_path || '',
+          timestamp: Date.now(),
+        };
+        artState.addCritique(params.spec_name, record);
+      }
 
       const history = artState.getHistory(params.spec_name);
       const scoreHistory = history.map(h => ({
@@ -824,18 +863,39 @@ export function registerArtDirectionTools(
 
       if (params.passed) {
         result.instruction = 'Critique passed! Proceed to next phase or save final render.';
+      } else if (params.scores.framing < 3) {
+        result.instruction =
+          'FRAMING FAILURE (score ' +
+          params.scores.framing +
+          '). Go back to Phase 1: call fit_camera and verify framing before continuing. Do not adjust lighting or materials until framing ≥ 3.';
+        result.priority_corrections = params.corrections
+          .filter(c => c.target === 'camera_position' || c.target === 'camera_target')
+          .map(c => c.description);
+      } else if (params.scores.placement < 3) {
+        result.instruction =
+          'PLACEMENT FAILURE (score ' +
+          params.scores.placement +
+          '). Fix object positions before adjusting lighting/mood.';
+        result.priority_corrections = params.corrections
+          .filter(c => c.priority === 1)
+          .map(c => c.description);
       } else if (artState.isExhausted(params.spec_name)) {
         result.instruction = 'STOP. Redesign composition from scratch — not converging.';
       } else if (artState.isStagnating(params.spec_name)) {
         result.instruction = 'Stagnating. Make a LARGE change or redesign — no more small tweaks.';
       } else {
         const worst = Object.entries(params.scores).reduce((a, b) => (a[1] < b[1] ? a : b));
-        result.instruction = `Focus on "${worst[0]}" (score ${worst[1]}). Apply priority-1 corrections, re-render, critique again.`;
+        result.instruction = artState.isActive
+          ? `NOT PASSED. Focus on "${worst[0]}" (score ${worst[1]}). NEXT: apply the priority-1 corrections below, then re-render (save_render), then call critique_render again. Do NOT stop iterating.`
+          : `Focus on "${worst[0]}" (score ${worst[1]}). Apply priority-1 corrections, re-render, critique again.`;
         result.priority_corrections = params.corrections
           .filter(c => c.priority === 1)
           .map(c => c.description);
       }
-      return jsonResult(result);
+      return jsonResult({
+        ...result,
+        ...adWorkflow(artState, 'apply_corrections'),
+      });
     }
   );
 
@@ -843,16 +903,72 @@ export function registerArtDirectionTools(
 
   server.tool(
     'get_art_direction_state',
-    'Get current art direction state: specs, scores, iteration history, stagnation status.',
-    {},
-    async () => jsonResult(artState.getSummary())
+    'Get current art direction state: specs, scores, iteration history, stagnation status. Pass set_mode to toggle AD workflow on/off.',
+    {
+      set_mode: z
+        .enum(['active', 'inactive'])
+        .optional()
+        .describe('If provided, toggles AD enforcement mode before returning state'),
+    },
+    async ({ set_mode }) => {
+      if (set_mode) {
+        artState.setMode(set_mode);
+        if (set_mode === 'active') {
+          artState.resetWorkflow();
+        }
+      }
+      const summary = artState.getSummary();
+      return jsonResult({
+        ...summary,
+        ...(set_mode === 'active'
+          ? {
+              instruction:
+                'AD workflow ACTIVE. Workflow checklist started. Every tool response will include your progress and next step. Follow the checklist.',
+            }
+          : set_mode === 'inactive'
+            ? {
+                instruction:
+                  'AD workflow INACTIVE. All tools work freely with no phase enforcement.',
+              }
+            : {}),
+      });
+    }
+  );
+
+  // ── 6b. set_art_direction_mode ──────────────────────────────────
+
+  server.tool(
+    'set_art_direction_mode',
+    'Toggle AD workflow enforcement on/off. When ACTIVE: tool responses include phase gates, next-step chaining, and workflow audit. When INACTIVE: all tools work freely with no phase enforcement. Individual tools are always callable regardless of mode.',
+    {
+      mode: z.enum(['active', 'inactive']).describe('AD enforcement mode'),
+    },
+    async ({ mode }) => {
+      artState.setMode(mode);
+      if (mode === 'active') {
+        artState.resetWorkflow();
+      }
+      return jsonResult({
+        ad_mode: mode,
+        ...(mode === 'active'
+          ? {
+              workflow: artState.getWorkflowStatus(),
+              instruction:
+                'AD workflow ACTIVE. Workflow checklist started. Every tool response will include your progress and next step. Follow the checklist.',
+            }
+          : {
+              instruction:
+                'AD workflow INACTIVE. All tools available freely — no phase enforcement.',
+            }),
+      });
+    }
   );
 
   // ── 7. suggest_placement ──────────────────────────────────────────
 
   server.tool(
     'suggest_placement',
-    'Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Advisory only — override if scene intent differs. Call register_scene_object first to populate the scene database, or it auto-reads from scene tree.',
+    '[Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
     {
       mesh_path: z.string().describe('Path to OBJ file (runs analyze_mesh if no sidecar exists)'),
       role: z
@@ -894,6 +1010,13 @@ export function registerArtDirectionTools(
                 naturalHeightM: data.analysis.natural_height_m,
                 suggestedRotation: data.analysis.suggested_rotation,
                 groundOffsetY: data.analysis.ground_offset_y,
+                confidence: data.visual_check?.confidence ?? data.analysis.confidence,
+                frontDirection: data.visual_check?.vlm_response?.front_direction,
+                orientationMatters:
+                  data.visual_check?.vlm_response?.orientation_matters ??
+                  data.semantic?.orientation_matters,
+                analysisMethod: data.analysis.method,
+                mugshotDir: path.dirname(resolved),
               };
             }
           } catch {
@@ -913,6 +1036,20 @@ export function registerArtDirectionTools(
           suggestion.rotation = meshInfo.suggestedRotation;
           // Adjust Y for ground offset
           suggestion.position.y = Math.max(suggestion.position.y, meshInfo.groundOffsetY);
+
+          // Warn on low confidence orientation
+          if (meshInfo.confidence === 'low') {
+            suggestion.warnings.push(
+              `Low confidence orientation for "${meshInfo.category}" — verify visually after placement. Consider re-running analyze_mesh with force_reanalyze=true.`
+            );
+          }
+
+          // Note if orientation doesn't matter (symmetric object)
+          if (meshInfo.orientationMatters === false) {
+            suggestion.warnings.push(
+              `Orientation doesn't matter for this mesh (symmetric/uniform) — rotation is cosmetic.`
+            );
+          }
         }
 
         // Check if suggested position is inside the current camera frustum
@@ -945,6 +1082,7 @@ export function registerArtDirectionTools(
           frustum_warning: frustumWarning,
           instruction:
             'These are SUGGESTIONS. Apply via set_attribute on the placement transform. Override rotation/position if your scene intent differs.',
+          ...adWorkflow(artState, 'suggest_placement'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -1103,6 +1241,13 @@ export function registerArtDirectionTools(
                 naturalHeightM: data.analysis.natural_height_m,
                 suggestedRotation: data.analysis.suggested_rotation,
                 groundOffsetY: data.analysis.ground_offset_y,
+                confidence: data.visual_check?.confidence ?? data.analysis.confidence,
+                frontDirection: data.visual_check?.vlm_response?.front_direction,
+                orientationMatters:
+                  data.visual_check?.vlm_response?.orientation_matters ??
+                  data.semantic?.orientation_matters,
+                analysisMethod: data.analysis.method,
+                mugshotDir: path.dirname(path.resolve(params.mesh_info_path)),
               };
             }
           } catch {
@@ -1173,6 +1318,7 @@ export function registerArtDirectionTools(
             warnings.length > 0
               ? 'Warnings detected — consider adjusting position/rotation.'
               : 'Object registered. Scene database updated.',
+          ...adWorkflow(artState, 'register_scene_object'),
         });
       } catch (error: any) {
         return errorResult(error);

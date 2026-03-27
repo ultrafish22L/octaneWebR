@@ -8,6 +8,7 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 
 | Task                | Read                                                  |
 | ------------------- | ----------------------------------------------------- |
+| AD concepts         | `docs/ADSYSTEM.md`                                    |
 | Scene building      | `docs/mcp/BUILD.md` + `docs/mcp/REFERENCE.md`         |
 | Aesthetics/lighting | `docs/mcp/CREATIVE.md`                                |
 | SEGA/mood           | `docs/project/SEGA_SYSTEM_DESIGN.md`                  |
@@ -25,24 +26,30 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 2. `preview_start("octaneWebR")` — **immediately after serv, before anything else**
 3. `get_octane_version()` — verify mcp_build + serv_build
 
-## Scene Building
+## Scene Building Phases
 
-1. **Concept art first** — `generate_image` → source of truth
-2. **recipe.md** — from `analyze_reference(concept_art)`. Objects, positions, scales, lighting.
-3. **`set_artistic_intent`** — from recipe mood. Presets: `dramatic`, `ethereal`, `natural`, `studio`, `noir`, `golden_hour`, `moonlit`, `vermeer`, `caravaggio`, `kubrick`, `villeneuve`, or natural language.
-4. **analyze_mesh** on each OBJ (pre-pass, orientation + bounds via VLM mugshot)
-5. Build RT → first mesh + loud material `{1,0,0}` → `start_render` → `fit_camera()` → environment. **Read `BUILD.md` Phase 1 for wiring details.**
-6. Place objects using `suggest_placement` + recipe. **`fit_camera()` after EVERY placement.**
-7. `register_scene_object` after each placement
-8. Render → `save_render` → critique loop: `critique_render` + `semantic_critique` → `apply_corrections` (never skip in DRESS/SHOW, stop when exhausted)
-9. Save .orbx at milestones
+**Phase 0 — Plan** (no Octane calls)
+
+1. `generate_image` → concept art (source of truth)
+2. `analyze_reference(concept_art)` → recipe.md (objects, positions, scales, lighting)
+3. `analyze_mesh` on each OBJ (pre-pass, orientation + bounds via VLM mugshot)
+4. `plan_composition` → validated layout → then `validate_layout` to confirm geometry
+5. `suggest_placement` for each object → collision-free positions
+
+**Phase 1 — Frame** (geometry + camera ONLY) 6. Build RT → first mesh + loud material `{1,0,0}` → `start_render`. **Read `BUILD.md` Phase 1 for wiring details.** 7. `fit_camera()` → `save_render` + `preview_screenshot` → verify framing visually 8. Place remaining objects → `fit_camera()` after EACH → `register_scene_object` for each 9. **GATE: render + verify ALL objects visible and properly framed. Do NOT proceed to Phase 2 until framing is correct.**
+
+**Phase 2 — Dress** (materials, lighting, mood — ONLY after Phase 1 gate passes) 10. `set_artistic_intent` (preset or NL from recipe mood) 11. `suggest_lighting` → build lights (depends on camera-subject geometry from Phase 1) 12. `suggest_material` → apply PBR properties. **TEXTURE RULE: if mesh has .mtl textures, do NOT override albedo — only apply roughness/metallic/specular/IOR.** 13. Environment setup (HDRI or sky)
+
+**Phase 3 — Critique** (ITERATE — do not run once and stop) 14. `critique_render` + `semantic_critique` — framing score must be ≥3 or critique returns FRAMING FAILURE 15. If framing < 3 → go back to Phase 1 (fix camera, not lighting) 16. `apply_corrections` → fix worst dimension → re-render → `critique_render` again 17. If `semantic_critique` shows gaps → `adjust_artistic_intent` to close them → re-render 18. **LOOP 16-17 until passed=true or exhausted=true. Do NOT stop after one critique.** 19. Save .orbx at milestones.
 
 ### Hard Rules
 
 - **Visual verify EVERY mutation** — `save_render` (engine truth) + `preview_screenshot` (user viewport), COMPARE both. No exceptions.
 - **`fit_camera()`** after every geo placement — only way to verify all geo visible
-- **AD critique on every scene** in DRESS/SHOW — never skip. When exhausted → move on.
-- **`semantic_critique`** alongside `critique_render` for dual perspective
+- **Framing before aesthetics** — never adjust lighting/mood until camera framing is confirmed
+- **Preserve mesh textures** — if OBJ has .mtl + .png textures, do NOT replace albedo with flat colors. `suggest_material` albedo is for untextured meshes only.
+- **Critique loop ITERATES** — run critique_render → apply_corrections → fix → re-render → critique_render again. Do NOT stop after one critique. Loop until passed=true or exhausted=true.
+- **`semantic_critique`** alongside `critique_render` — if gaps found, call `adjust_artistic_intent` to close them
 - **Never build without preview running**
 - **Renders go in scene folder** — `aigenerated/{scene}/renders/`, NOT `temp/renders/`
 

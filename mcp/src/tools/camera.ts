@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from './utils';
 import { ScenePlacementState } from '../ScenePlacementState';
+import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
 
 const Vec3Schema = z
   .object({
@@ -133,7 +134,8 @@ export function computeFitCamera(
 export function registerCameraTools(
   server: McpServer,
   client: OctaneMcpClient,
-  placementState?: ScenePlacementState
+  placementState?: ScenePlacementState,
+  artState?: ArtDirectionState
 ) {
   server.tool(
     'get_camera',
@@ -180,7 +182,7 @@ export function registerCameraTools(
 
   server.tool(
     'fit_camera',
-    'Compute and set camera to frame a bounding box. Pass explicit bounds or omit to use scene bounds from get_scene_bounds. Returns the computed camera position, target, and distance. Slightly elevated view with margin.',
+    '[Phase 1] MANDATORY after every geo placement. Compute and set camera to frame a bounding box. Must pass before any lighting/mood work (Phase 2). Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
     {
       bbox_min: Vec3Schema.optional().describe(
         'Min corner of bounding box. Omit to auto-query scene bounds.'
@@ -329,6 +331,7 @@ export function registerCameraTools(
           yaw,
           framing_mode,
           framing_source: framingSource,
+          ...(artState ? adWorkflow(artState, 'fit_camera') : {}),
         });
       } catch (error: any) {
         return errorResult(error);
