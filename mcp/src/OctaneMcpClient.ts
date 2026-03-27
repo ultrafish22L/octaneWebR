@@ -318,7 +318,14 @@ export class OctaneMcpClient {
         {
           log: (msg: string, level?: string) => mcpLog(`[CALLBACK] ${msg}`, level || 'debug'),
           onConnectionLost: () => {
-            mcpLog('[CALLBACK] Octane connection lost via callback stream', 'warn');
+            mcpLog('[CALLBACK] Octane connection lost — resetting gRPC channels', 'warn');
+            this.resetGrpcChannels();
+          },
+          // MCP only logs on reconnect — no callback re-registration needed because
+          // MCP uses save_render on demand, not the callback-driven viewport path.
+          // Contrast with Vite plugin, which re-registers setOnNewImageCallback here.
+          onReconnected: () => {
+            mcpLog('[CALLBACK] Octane reconnected — stream restored', 'info');
           },
           // Enable newImage dispatch — relay needs it to forward viewport frames to Vite
           handleNewImage: true,

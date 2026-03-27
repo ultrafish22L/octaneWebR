@@ -244,6 +244,36 @@ export class ScenePlacementState {
     }
   }
 
+  /** Combined AABB of frameable objects (hero + secondary + accent + prop), excluding ground & light. */
+  getFramingBounds(): AABB | null {
+    const frameable = [...this.entries.values()].filter(
+      e => e.role !== 'ground' && e.role !== 'light'
+    );
+    if (frameable.length === 0) return null;
+    let min = { ...frameable[0].boundsWorld.min };
+    let max = { ...frameable[0].boundsWorld.max };
+    for (let i = 1; i < frameable.length; i++) {
+      const b = frameable[i].boundsWorld;
+      min = {
+        x: Math.min(min.x, b.min.x),
+        y: Math.min(min.y, b.min.y),
+        z: Math.min(min.z, b.min.z),
+      };
+      max = {
+        x: Math.max(max.x, b.max.x),
+        y: Math.max(max.y, b.max.y),
+        z: Math.max(max.z, b.max.z),
+      };
+    }
+    return { min, max };
+  }
+
+  /** AABB of the hero object only. Returns null if no hero registered. */
+  getHeroBounds(): AABB | null {
+    const hero = this.getHero();
+    return hero ? hero.boundsWorld : null;
+  }
+
   /** Snapshot for debugging. */
   snapshot(): any {
     return {

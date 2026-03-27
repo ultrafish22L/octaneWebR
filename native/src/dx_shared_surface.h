@@ -52,6 +52,7 @@ Napi::Object  OpenSharedSurface(const Napi::CallbackInfo& info);
 Napi::Value   MapSurface(const Napi::CallbackInfo& info);
 void          UnmapSurface(const Napi::CallbackInfo& info);
 void          CloseSurface(const Napi::CallbackInfo& info);
+void          DestroyDevice(const Napi::CallbackInfo& info);
 Napi::Object  Init(Napi::Env env, Napi::Object exports);
 
 } // namespace DXSharedSurface

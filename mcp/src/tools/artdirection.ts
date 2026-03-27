@@ -296,6 +296,91 @@ export function validateComposition(spec: CompositionSpec): ValidationResult {
     }
   }
 
+  // 6. Hero screen-space coverage check
+  if (focalObj) {
+    const screenCenter = projectToScreen(focalObj.position, spec.camera);
+    if (screenCenter.u >= 0 && screenCenter.v >= 0) {
+      // Estimate hero extent from scale or default 1 unit
+      const halfExtent = focalObj.scale
+        ? Math.max(focalObj.scale.x, focalObj.scale.y, focalObj.scale.z) / 2
+        : 0.5;
+      const topLeft = projectToScreen(
+        {
+          x: focalObj.position.x - halfExtent,
+          y: focalObj.position.y + halfExtent,
+          z: focalObj.position.z,
+        },
+        spec.camera
+      );
+      const bottomRight = projectToScreen(
+        {
+          x: focalObj.position.x + halfExtent,
+          y: focalObj.position.y - halfExtent,
+          z: focalObj.position.z,
+        },
+        spec.camera
+      );
+      if (topLeft.u >= 0 && bottomRight.u >= 0) {
+        const heroWidth = Math.abs(bottomRight.u - topLeft.u);
+        const heroHeight = Math.abs(bottomRight.v - topLeft.v);
+        const heroArea = heroWidth * heroHeight;
+        if (heroArea < 0.05) {
+          issues.push({
+            severity: 'error',
+            object: spec.focalPoint,
+            message: `Hero "${spec.focalPoint}" covers only ${(heroArea * 100).toFixed(1)}% of frame — too small`,
+            fix: 'Move camera closer or increase object scale',
+          });
+        } else if (heroArea < 0.1) {
+          issues.push({
+            severity: 'warning',
+            object: spec.focalPoint,
+            message: `Hero "${spec.focalPoint}" covers ${(heroArea * 100).toFixed(1)}% of frame — consider tighter framing`,
+            fix: 'Move camera closer to fill more of the frame',
+          });
+        } else if (heroArea > 0.85) {
+          issues.push({
+            severity: 'warning',
+            object: spec.focalPoint,
+            message: `Hero "${spec.focalPoint}" covers ${(heroArea * 100).toFixed(1)}% of frame — may be clipped`,
+            fix: 'Move camera back or reduce object scale',
+          });
+        }
+      }
+    }
+  }
+
+  // 7. Floor/empty space check — hero pushed to bottom of frame
+  if (focalObj) {
+    // Project hero's bottom edge (position is base) and top edge to screen
+    const heroBottomY = focalObj.position.y;
+    const heroTopY = focalObj.position.y + (focalObj.scale?.y ?? 1);
+    const heroBottom = projectToScreen(
+      { x: focalObj.position.x, y: heroBottomY, z: focalObj.position.z },
+      spec.camera
+    );
+    const heroTop = projectToScreen(
+      { x: focalObj.position.x, y: heroTopY, z: focalObj.position.z },
+      spec.camera
+    );
+    if (heroBottom.u >= 0 && heroBottom.v > 0.85) {
+      issues.push({
+        severity: 'warning',
+        object: spec.focalPoint,
+        message: `Hero "${spec.focalPoint}" pushed to bottom of frame (v=${heroBottom.v.toFixed(2)}) — too much floor/sky visible`,
+        fix: 'Lower camera elevation or adjust camera target to hero center',
+      });
+    }
+    if (heroTop.u >= 0 && heroTop.v < 0.05) {
+      issues.push({
+        severity: 'warning',
+        object: spec.focalPoint,
+        message: `Hero "${spec.focalPoint}" clipped at top of frame (v=${heroTop.v.toFixed(2)})`,
+        fix: 'Move camera back or lower target to include full hero',
+      });
+    }
+  }
+
   const errorCount = issues.filter(i => i.severity === 'error').length;
   const warnCount = issues.filter(i => i.severity === 'warning').length;
   return {
@@ -307,13 +392,32 @@ export function validateComposition(spec: CompositionSpec): ValidationResult {
 
 // ── Scene extent / camera helpers ────────────────────────────────────
 
-function computeSceneExtents(objects: ObjectPlacement[]): { min: Vec3; max: Vec3 } {
-  if (objects.length === 0) return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
-  let min = { ...objects[0].position };
-  let max = { ...objects[0].position };
-  for (const obj of objects) {
-    min = vec3Min(min, obj.position);
-    max = vec3Max(max, obj.position);
+function computeSceneExtents(
+  objects: ObjectPlacement[],
+  excludeRoles: string[] = ['ground', 'light', 'environment']
+): { min: Vec3; max: Vec3 } {
+  const filtered = objects.filter(o => !excludeRoles.includes(o.role));
+  // Fallback to all objects if everything was excluded
+  const effective = filtered.length > 0 ? filtered : objects;
+  if (effective.length === 0) return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
+
+  // Use object bounds (position ± half scale), not just position points
+  let min = { x: Infinity, y: Infinity, z: Infinity };
+  let max = { x: -Infinity, y: -Infinity, z: -Infinity };
+  for (const obj of effective) {
+    const halfX = (obj.scale?.x ?? 1) / 2;
+    const halfY = (obj.scale?.y ?? 1) / 2;
+    const halfZ = (obj.scale?.z ?? 1) / 2;
+    min = vec3Min(min, {
+      x: obj.position.x - halfX,
+      y: obj.position.y - halfY,
+      z: obj.position.z - halfZ,
+    });
+    max = vec3Max(max, {
+      x: obj.position.x + halfX,
+      y: obj.position.y + halfY,
+      z: obj.position.z + halfZ,
+    });
   }
   return { min, max };
 }
@@ -322,17 +426,31 @@ function computeSuggestedCamera(
   objects: ObjectPlacement[],
   fovDeg: number
 ): { position: Vec3; target: Vec3 } {
+  // Use filtered extents (excludes ground/light/environment) — now includes scale
   const ext = computeSceneExtents(objects);
-  const center: Vec3 = {
-    x: (ext.min.x + ext.max.x) / 2,
-    y: (ext.min.y + ext.max.y) / 2,
-    z: (ext.min.z + ext.max.z) / 2,
-  };
-  const sceneWidth = Math.max(ext.max.x - ext.min.x, ext.max.y - ext.min.y, 1);
-  const distance = (sceneWidth / 2 / Math.tan(degToRad(fovDeg / 2))) * 1.3;
+
+  // Target the hero's visual center (position + half height), not its base
+  const hero = objects.find(o => o.role === 'hero');
+  const heroHalfHeight = hero ? (hero.scale?.y ?? 1) / 2 : 0;
+  const target: Vec3 = hero
+    ? { x: hero.position.x, y: hero.position.y + heroHalfHeight, z: hero.position.z }
+    : {
+        x: (ext.min.x + ext.max.x) / 2,
+        y: (ext.min.y + ext.max.y) / 2,
+        z: (ext.min.z + ext.max.z) / 2,
+      };
+
+  // Scene size now accurate (includes object bounds)
+  const sceneHeight = ext.max.y - ext.min.y;
+  const sceneWidth = Math.max(ext.max.x - ext.min.x, sceneHeight, 1);
+  const distance = (sceneWidth / 2 / Math.tan(degToRad(fovDeg / 2))) * 1.15;
+
+  // Slight elevation above target center for natural 3/4 view
+  const elevationY = target.y + sceneHeight * 0.15;
+
   return {
-    position: { x: center.x, y: center.y + sceneWidth * 0.3, z: center.z + distance },
-    target: center,
+    position: { x: target.x, y: elevationY, z: target.z + distance },
+    target,
   };
 }
 
@@ -792,11 +910,34 @@ export function registerArtDirectionTools(
           suggestion.position.y = Math.max(suggestion.position.y, meshInfo.groundOffsetY);
         }
 
+        // Check if suggested position is inside the current camera frustum
+        let frustumWarning: string | undefined;
+        try {
+          const cam = (await client.callMethod('LiveLink', 'GetCamera', {})) as any;
+          if (cam?.position && cam?.target) {
+            const camPos = cam.position as Vec3;
+            const camTarget = cam.target as Vec3;
+            const forward = vec3Normalize(vec3Sub(camTarget, camPos));
+            const toObj = vec3Normalize(vec3Sub(suggestion.position, camPos));
+            const angleCos = vec3Dot(forward, toObj);
+            const angle = Math.acos(Math.min(1, Math.max(-1, angleCos)));
+            // Default FOV ~82° → half = 41° = 0.716 rad. Use 1.1x tolerance.
+            const halfFov = degToRad(41) * 1.1;
+            if (angle > halfFov) {
+              frustumWarning = `Suggested position is outside the current camera view (${((angle * 180) / Math.PI).toFixed(0)}° from center). Consider adjusting camera after placement.`;
+              suggestion.warnings.push(frustumWarning);
+            }
+          }
+        } catch {
+          /* camera query failed — skip frustum check */
+        }
+
         return jsonResult({
           ...suggestion,
           mesh_path: resolved,
           sidecar_found: fs.existsSync(sidecarFile),
           scene_objects: placement.getEntries().length,
+          frustum_warning: frustumWarning,
           instruction:
             'These are SUGGESTIONS. Apply via set_attribute on the placement transform. Override rotation/position if your scene intent differs.',
         });
@@ -831,7 +972,21 @@ export function registerArtDirectionTools(
       bounds_size: z
         .object({ x: z.number(), y: z.number(), z: z.number() })
         .optional()
-        .describe('Object extents (from analyze_mesh). If omitted, uses unit cube.'),
+        .describe(
+          'Object extents (from analyze_mesh). Assumes mesh centered at origin. If omitted, uses unit cube. For non-centered meshes, use bounds_min/bounds_max instead.'
+        ),
+      bounds_min: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .optional()
+        .describe(
+          'Mesh-local min bounds (from analyze_mesh bboxMin). Use with bounds_max for non-centered meshes.'
+        ),
+      bounds_max: z
+        .object({ x: z.number(), y: z.number(), z: z.number() })
+        .optional()
+        .describe(
+          'Mesh-local max bounds (from analyze_mesh bboxMax). Use with bounds_min for non-centered meshes.'
+        ),
       mesh_info_path: z
         .string()
         .optional()
@@ -839,24 +994,96 @@ export function registerArtDirectionTools(
     },
     async params => {
       try {
-        const halfSize = params.bounds_size
-          ? {
-              x: params.bounds_size.x / 2,
-              y: params.bounds_size.y / 2,
-              z: params.bounds_size.z / 2,
-            }
-          : { x: 0.5, y: 0.5, z: 0.5 };
+        // Compute world-space AABB from mesh bounds + rotation + scale + position.
+        // Transform order: Scale → Rotate → Translate (Octane convention).
+        // For rotated objects, we compute the AABB of the rotated+scaled bounding box.
 
+        // Step 1: Get mesh-local min/max (before any transform)
+        let localMin: Vec3, localMax: Vec3;
+        if (params.bounds_min && params.bounds_max) {
+          // Explicit mesh bounds (handles non-centered origins correctly)
+          localMin = params.bounds_min;
+          localMax = params.bounds_max;
+        } else if (params.bounds_size) {
+          // Centered bounds (assumes mesh origin = center)
+          localMin = {
+            x: -params.bounds_size.x / 2,
+            y: -params.bounds_size.y / 2,
+            z: -params.bounds_size.z / 2,
+          };
+          localMax = {
+            x: params.bounds_size.x / 2,
+            y: params.bounds_size.y / 2,
+            z: params.bounds_size.z / 2,
+          };
+        } else {
+          localMin = { x: -0.5, y: -0.5, z: -0.5 };
+          localMax = { x: 0.5, y: 0.5, z: 0.5 };
+        }
+
+        // Step 2: Apply scale
+        const sMin = {
+          x: localMin.x * params.scale.x,
+          y: localMin.y * params.scale.y,
+          z: localMin.z * params.scale.z,
+        };
+        const sMax = {
+          x: localMax.x * params.scale.x,
+          y: localMax.y * params.scale.y,
+          z: localMax.z * params.scale.z,
+        };
+
+        // Step 3: Build rotation matrix from Euler XYZ (degrees)
+        const rx = (params.rotation.x * Math.PI) / 180;
+        const ry = (params.rotation.y * Math.PI) / 180;
+        const rz = (params.rotation.z * Math.PI) / 180;
+        const cx = Math.cos(rx),
+          sx = Math.sin(rx);
+        const cy = Math.cos(ry),
+          sy = Math.sin(ry);
+        const cz = Math.cos(rz),
+          sz = Math.sin(rz);
+        // R = Rz * Ry * Rx (standard Euler XYZ)
+        const R = [
+          [cy * cz, sx * sy * cz - cx * sz, cx * sy * cz + sx * sz],
+          [cy * sz, sx * sy * sz + cx * cz, cx * sy * sz - sx * cz],
+          [-sy, sx * cy, cx * cy],
+        ];
+
+        // Step 4: Compute AABB of rotated box using abs-matrix method.
+        // For each axis, the new half-extent = sum of |R[row][col]| * half_extent[col]
+        const corners = [
+          { x: sMin.x, y: sMin.y, z: sMin.z },
+          { x: sMax.x, y: sMin.y, z: sMin.z },
+          { x: sMin.x, y: sMax.y, z: sMin.z },
+          { x: sMax.x, y: sMax.y, z: sMin.z },
+          { x: sMin.x, y: sMin.y, z: sMax.z },
+          { x: sMax.x, y: sMin.y, z: sMax.z },
+          { x: sMin.x, y: sMax.y, z: sMax.z },
+          { x: sMax.x, y: sMax.y, z: sMax.z },
+        ];
+
+        let rMin = { x: Infinity, y: Infinity, z: Infinity };
+        let rMax = { x: -Infinity, y: -Infinity, z: -Infinity };
+        for (const c of corners) {
+          const rx2 = R[0][0] * c.x + R[0][1] * c.y + R[0][2] * c.z;
+          const ry2 = R[1][0] * c.x + R[1][1] * c.y + R[1][2] * c.z;
+          const rz2 = R[2][0] * c.x + R[2][1] * c.y + R[2][2] * c.z;
+          rMin = { x: Math.min(rMin.x, rx2), y: Math.min(rMin.y, ry2), z: Math.min(rMin.z, rz2) };
+          rMax = { x: Math.max(rMax.x, rx2), y: Math.max(rMax.y, ry2), z: Math.max(rMax.z, rz2) };
+        }
+
+        // Step 5: Translate to world position
         const boundsWorld: AABB = {
           min: {
-            x: params.position.x - halfSize.x * params.scale.x,
-            y: params.position.y - halfSize.y * params.scale.y,
-            z: params.position.z - halfSize.z * params.scale.z,
+            x: params.position.x + rMin.x,
+            y: params.position.y + rMin.y,
+            z: params.position.z + rMin.z,
           },
           max: {
-            x: params.position.x + halfSize.x * params.scale.x,
-            y: params.position.y + halfSize.y * params.scale.y,
-            z: params.position.z + halfSize.z * params.scale.z,
+            x: params.position.x + rMax.x,
+            y: params.position.y + rMax.y,
+            z: params.position.z + rMax.z,
           },
         };
 

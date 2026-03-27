@@ -21,6 +21,7 @@ const RELAY_PORT = 51023;
 export class CallbackRelay {
   private wss: WebSocketServer | null = null;
   private handlers = new Map<CallbackType, (event: any) => void>();
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private log: (msg: string, level?: string) => void;
 
   constructor(
@@ -49,12 +50,11 @@ export class CallbackRelay {
         if (err.code === 'EADDRINUSE') {
           wss.close();
           if (retried) {
-            this.log(`Port ${RELAY_PORT} still in use after eviction — giving up`, 'warn');
+            this.log(`Port ${RELAY_PORT} in use — another MCP instance may be running`, 'warn');
             return;
           }
-          // Probe the existing relay — if it's stale (orphaned from a dead MCP), evict it
-          this.log(`Port ${RELAY_PORT} in use — probing for stale relay...`, 'info');
-          this.probeAndEvict(() => this.tryListen(true));
+          this.log(`Port ${RELAY_PORT} in use — retrying in 2s`, 'info');
+          setTimeout(() => this.tryListen(true), 2000);
           return;
         }
         this.log(`Relay error: ${err.message}`, 'error');
@@ -62,83 +62,6 @@ export class CallbackRelay {
     } catch (err: any) {
       this.log(`Failed to start relay: ${err.message}`, 'error');
     }
-  }
-
-  /**
-   * Connect to the existing relay port. If the connection fails or the server
-   * doesn't respond to a ping within 2s, it's stale — kill the process holding
-   * the port and retry.
-   */
-  private probeAndEvict(onEvicted: () => void): void {
-    const probe = new WebSocket(`ws://127.0.0.1:${RELAY_PORT}`);
-    let settled = false;
-
-    const fail = (reason: string) => {
-      if (settled) return;
-      settled = true;
-      probe.close();
-      this.log(`Stale relay detected (${reason}) — evicting port ${RELAY_PORT}`, 'info');
-      this.evictPort(onEvicted);
-    };
-
-    const timer = setTimeout(() => fail('no pong within 2s'), 2000);
-
-    probe.on('open', () => {
-      // Send a ping — a live relay won't respond (no ping handler), but at least
-      // an open connection means the server is alive. Give it a moment.
-      // If we got 'open', the server IS responding — it's a live relay from another
-      // MCP instance. Don't evict.
-      clearTimeout(timer);
-      settled = true;
-      probe.close();
-      this.log(`Port ${RELAY_PORT} has a live relay — another MCP instance owns it`, 'warn');
-    });
-
-    probe.on('error', () => fail('connection refused'));
-  }
-
-  private evictPort(onDone: () => void): void {
-    // On Windows, find and kill the process holding the port
-    const { exec } = require('child_process') as typeof import('child_process');
-    exec(
-      `netstat -ano | findstr :${RELAY_PORT} | findstr LISTENING`,
-      (err: any, stdout: string) => {
-        if (err || !stdout.trim()) {
-          this.log(`No process found on port ${RELAY_PORT} — retrying`, 'info');
-          onDone();
-          return;
-        }
-        // Parse PID from netstat output (last column)
-        const lines = stdout.trim().split('\n');
-        const pids = new Set<string>();
-        for (const line of lines) {
-          const parts = line.trim().split(/\s+/);
-          const pid = parts[parts.length - 1];
-          if (pid && /^\d+$/.test(pid) && pid !== '0') pids.add(pid);
-        }
-        if (pids.size === 0) {
-          this.log('Could not parse PID — retrying anyway', 'warn');
-          onDone();
-          return;
-        }
-        // Kill stale processes holding the port
-        let killed = 0;
-        let remaining = pids.size;
-        for (const pid of pids) {
-          exec(`taskkill /PID ${pid} /F`, (killErr: any) => {
-            if (!killErr) {
-              killed++;
-              this.log(`Killed stale process PID ${pid} on port ${RELAY_PORT}`, 'info');
-            }
-            remaining--;
-            if (remaining === 0) {
-              // Small delay to let the OS release the port
-              setTimeout(onDone, 500);
-            }
-          });
-        }
-      }
-    );
   }
 
   private wireHandlers(): void {
@@ -156,9 +79,23 @@ export class CallbackRelay {
       this.handlers.set(type, handler);
       this.stream.on(type, handler);
     }
+
+    // Heartbeat every 2s — lets Vite detect stale relays quickly
+    this.heartbeatInterval = setInterval(() => {
+      this.broadcastBinary('heartbeat', {
+        streamActive: this.stream.isActive,
+        reconnecting: this.stream.isReconnecting,
+      });
+    }, 2000);
   }
 
   stop(): void {
+    // Stop heartbeat
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+
     // Unregister stream listeners
     for (const [type, handler] of this.handlers) {
       this.stream.off(type, handler);

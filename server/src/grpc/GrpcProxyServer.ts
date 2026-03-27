@@ -122,6 +122,8 @@ class GrpcClient {
   private lastStatsPollTime = 0;
   private mcpRelayWs: import('ws').WebSocket | null = null;
   private usingRelay = false;
+  private relayWatchdog: ReturnType<typeof setTimeout> | null = null;
+  private relayGotMessage = false;
   private static readonly STATS_POLL_INTERVAL = 250;
   private static readonly MCP_RELAY_URL = 'ws://127.0.0.1:51023';
 
@@ -129,6 +131,14 @@ class GrpcClient {
   private dxAddon: any = null;
   private ssEnabled = false;
   private dxDeviceInitialized = false;
+  /** In-flight shared surface handles: handleVal → { frameId, timestamp } */
+  private ssInflight = new Map<number, { frameId: string; timestamp: number }>();
+  /** Cleanup timer for stale shared surface handles */
+  private ssCleanupTimer: ReturnType<typeof setInterval> | null = null;
+  /** Handles older than this (ms) are considered stale and force-released */
+  private static readonly SS_STALE_TIMEOUT = 10_000;
+  /** How often to sweep for stale handles (ms) */
+  private static readonly SS_CLEANUP_INTERVAL = 5_000;
 
   constructor(protoBasePath: string, dxAddon?: any) {
     this.base = new OctaneGrpcClientBase(undefined, undefined, protoBasePath);
@@ -250,13 +260,59 @@ class GrpcClient {
         this.usingRelay = true;
         this.mcpRelayWs = ws;
         this.sharedStream.stop();
+
+        // Watchdog: if no messages arrive within 5s, relay is stale — fall back
+        this.relayWatchdog = setTimeout(() => {
+          if (this.usingRelay && !this.relayGotMessage) {
+            log.warn('MCP relay connected but silent for 5s — falling back to own stream');
+            this.disconnectMcpRelay();
+            this.fallbackToOwnStream('MCP relay silent');
+          }
+        }, 5000);
       });
 
       ws.on('message', (raw: Buffer | string) => {
+        this.relayGotMessage = true;
         try {
-          const msg = JSON.parse(String(raw));
+          // Relay sends binary frames: [4B headerLen LE][JSON header][optional pixel payload]
+          const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+          if (buf.length < 4) return;
+
+          const headerLen = buf.readUInt32LE(0);
+          if (headerLen <= 0 || headerLen > buf.length - 4) return;
+
+          const headerStr = buf.toString('utf8', 4, 4 + headerLen);
+          const msg = JSON.parse(headerStr);
+
           if (msg.type === 'newImage') {
-            this.grabAndNotifyImage();
+            // Check if the relay already included pixel data in this frame
+            const pixelOffset = 4 + headerLen;
+            const hasPixels = buf.length > pixelOffset && msg.renderImage;
+            if (hasPixels) {
+              // Relay sent full frame with pixels — forward directly to browser WS clients
+              const ri = msg.renderImage;
+              const pixelBuf = buf.subarray(pixelOffset);
+              this.notifyCallbacks({
+                callback_source: ri.callback_source || 'relay',
+                callback_id: ri.callback_id || this.callbackId,
+                user_data: ri.user_data || 0,
+                render_images: {
+                  data: [
+                    {
+                      buffer: { data: pixelBuf, size: pixelBuf.length },
+                      size: { x: ri.width, y: ri.height },
+                      type: ri.format,
+                      pitch: ri.pitch,
+                      tonemappedSamplesPerPixel: ri.tonemappedSamplesPerPixel || 0,
+                      renderTime: ri.renderTime || 0,
+                    },
+                  ],
+                },
+              });
+            } else {
+              // No pixel data in relay frame — grab pixels ourselves
+              this.grabAndNotifyImage();
+            }
             this.pollRenderStatistics();
           } else if (msg.type === 'newStatistics') {
             this.pollRenderStatistics();
@@ -308,6 +364,11 @@ class GrpcClient {
 
   private disconnectMcpRelay(): void {
     this.usingRelay = false;
+    this.relayGotMessage = false;
+    if (this.relayWatchdog) {
+      clearTimeout(this.relayWatchdog);
+      this.relayWatchdog = null;
+    }
     if (this.mcpRelayWs) {
       try {
         this.mcpRelayWs.close();
@@ -343,7 +404,16 @@ class GrpcClient {
         pid: process.pid,
       });
       log.info(`[dxSS] Registered viewport client PID ${process.pid}`);
+
+      // Enable shared surface output on the server (must be explicit — not enabled at startup)
+      await this.callMethod('ApiRenderEngine', 'setSharedSurfaceOutputType', {
+        type: 1, // SHARED_SURFACE_TYPE_D3D11
+        realtime: true,
+      });
+      log.info('[dxSS] Enabled D3D11 shared surface output on server');
+
       this.ssEnabled = true;
+      this.startSsCleanupTimer();
     } catch (e: any) {
       log.warn('[dxSS] Failed to enable shared surface mode:', e.message);
       // Non-fatal — falls back to pixel path
@@ -389,6 +459,10 @@ class GrpcClient {
 
     const f = result.frame;
     const handleVal = Number(f.handle);
+    const frameId = String(f.frameId);
+
+    // Track in-flight handle for stale cleanup
+    this.ssInflight.set(handleVal, { frameId, timestamp: t0 });
 
     try {
       // Initialize D3D11 device on first frame (matched to Octane's adapter)
@@ -422,15 +496,8 @@ class GrpcClient {
         },
       });
 
-      // Close the duplicated NT handle on our side
-      this.dxAddon.closeSurface(handleVal);
-
-      // Release the cloned surface on the server (fire-and-forget)
-      this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', {
-        frameId: f.frameId,
-      }).catch(() => {
-        /* non-fatal */
-      });
+      // Release both sides and remove from tracking
+      this.releaseSsHandle(handleVal, frameId);
 
       const t3 = Date.now();
       // Periodic timing log (every ~60 frames)
@@ -441,24 +508,79 @@ class GrpcClient {
       }
     } catch (err: any) {
       log.error('[dxSS] mapSurface failed:', err.message);
-      // Close handle even on error to prevent leaks
-      try {
-        this.dxAddon.closeSurface(handleVal);
-      } catch {
-        /* ignore */
-      }
-      // Release server-side clone
-      this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', {
-        frameId: f.frameId,
-      }).catch(() => {});
+      // Release both sides and remove from tracking
+      this.releaseSsHandle(handleVal, frameId);
       throw err; // propagate so caller falls back to pixel path
     }
+  }
+
+  /** Close a client-side NT handle and release the server-side clone. */
+  private releaseSsHandle(handleVal: number, frameId: string): void {
+    this.ssInflight.delete(handleVal);
+    try {
+      this.dxAddon.closeSurface(handleVal);
+    } catch {
+      /* ignore — handle may already be closed */
+    }
+    this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', {
+      frameId,
+    }).catch(() => {
+      /* non-fatal */
+    });
+  }
+
+  /** Start periodic sweep for stale in-flight shared surface handles. */
+  private startSsCleanupTimer(): void {
+    if (this.ssCleanupTimer) return;
+    this.ssCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      for (const [handleVal, entry] of this.ssInflight) {
+        if (now - entry.timestamp > GrpcClient.SS_STALE_TIMEOUT) {
+          log.warn(
+            `[dxSS] Stale handle ${handleVal} (frame ${entry.frameId}, ${now - entry.timestamp}ms old) — force releasing`
+          );
+          this.releaseSsHandle(handleVal, entry.frameId);
+        }
+      }
+    }, GrpcClient.SS_CLEANUP_INTERVAL);
+  }
+
+  /** Stop the cleanup timer and release all in-flight handles. */
+  private stopSsCleanup(): void {
+    if (this.ssCleanupTimer) {
+      clearInterval(this.ssCleanupTimer);
+      this.ssCleanupTimer = null;
+    }
+    // Drain any in-flight handles
+    for (const [handleVal, entry] of this.ssInflight) {
+      log.info(`[dxSS] Shutdown: releasing in-flight handle ${handleVal} (frame ${entry.frameId})`);
+      this.releaseSsHandle(handleVal, entry.frameId);
+    }
+  }
+
+  /** Tear down D3D11 device and staging texture via native addon. */
+  private destroySsDevice(): void {
+    if (this.dxDeviceInitialized && this.dxAddon?.destroyDevice) {
+      try {
+        this.dxAddon.destroyDevice();
+        log.info('[dxSS] D3D11 device destroyed');
+      } catch (e: any) {
+        log.warn('[dxSS] destroyDevice failed:', e.message);
+      }
+    }
+    this.dxDeviceInitialized = false;
+    this.ssEnabled = false;
   }
 
   /** Standard pixel path: grab pixels via protobuf. */
   private async grabPixelFrame(): Promise<void> {
     const result = await this.callMethod('ApiRenderEngine', 'grabRenderResult', {});
     if (result?.result && result.renderImages?.data?.length > 0) {
+      const img = result.renderImages.data[0];
+      if (!img?.buffer?.data || img.buffer.data.length === 0) {
+        log.warn('[grabPixelFrame] Image has no pixel data — shared surface mode may be active');
+        return;
+      }
       this.notifyCallbacks({
         callback_source: 'grpc',
         callback_id: this.callbackId,
@@ -536,6 +658,8 @@ class GrpcClient {
   }
 
   close(): void {
+    this.stopSsCleanup();
+    this.destroySsDevice();
     this.disconnectMcpRelay();
     this.sharedStream.stop();
     this.isCallbackRegistered = false;

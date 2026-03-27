@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from './utils';
+import { ScenePlacementState } from '../ScenePlacementState';
 
 const Vec3Schema = z
   .object({
@@ -15,10 +16,10 @@ const Vec3Schema = z
   })
   .describe('3D vector {x, y, z}');
 
-/** Horizontal half-FOV in radians.
- * Octane default: 36mm sensor, 50mm focal → FOV = 2*atan(36/(2*50)) = 39.6°
- * Half-FOV = 19.8° */
-const H_HALF_FOV_RAD = Math.atan(36 / (2 * 50)); // ~0.346 rad, tan ≈ 0.36
+/** Default horizontal FOV in degrees.
+ * Octane thin lens default: 36mm sensor / 50mm focal = 2*atan(36/(2*50)) ≈ 39.6°.
+ * computeFitCamera accepts hFovDeg override for non-default cameras. */
+const DEFAULT_H_FOV_DEG = 39.6;
 
 type V3 = { x: number; y: number; z: number };
 const dot = (a: V3, b: V3) => a.x * b.x + a.y * b.y + a.z * b.z;
@@ -50,7 +51,8 @@ export function computeFitCamera(
   bboxMax: V3,
   margin: number,
   pitchDeg: number,
-  yawDeg: number
+  yawDeg: number,
+  hFovDeg: number = DEFAULT_H_FOV_DEG
 ) {
   // Centroid = camera target
   const center: V3 = {
@@ -82,8 +84,9 @@ export function computeFitCamera(
   const right = norm(cross(forward, worldUp));
   const up = cross(right, forward); // already unit length
 
-  // FOV half-angles
-  const tanH = Math.tan(H_HALF_FOV_RAD);
+  // FOV half-angles (from parameter, default 82° horizontal)
+  const hHalfFovRad = ((hFovDeg / 2) * Math.PI) / 180;
+  const tanH = Math.tan(hHalfFovRad);
   const tanV = Math.tan(Math.atan(tanH * 0.5)); // 2:1 aspect → vertical half-FOV
 
   // Generate all 8 bbox corners, project into camera space,
@@ -127,7 +130,11 @@ export function computeFitCamera(
   };
 }
 
-export function registerCameraTools(server: McpServer, client: OctaneMcpClient) {
+export function registerCameraTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  placementState?: ScenePlacementState
+) {
   server.tool(
     'get_camera',
     'Get the current camera position, target, and up vector in world coordinates',
@@ -196,23 +203,88 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
         .optional()
         .default(0)
         .describe('Camera yaw/orbit in degrees (default 0 = front view, 45 = 3/4 view)'),
+      framing_mode: z
+        .enum(['scene', 'hero', 'subjects'])
+        .optional()
+        .default('subjects')
+        .describe(
+          'What to frame: "subjects" = hero+secondary+accent+prop (excludes ground/light, default), "hero" = hero object only, "scene" = all objects (legacy)'
+        ),
     },
-    async ({ bbox_min, bbox_max, margin, elevation, yaw }) => {
+    async ({ bbox_min, bbox_max, margin, elevation, yaw, framing_mode }) => {
       try {
         let bMin = bbox_min;
         let bMax = bbox_max;
+        let framingSource = 'explicit';
+        let heroCenter: V3 | null = null;
 
-        // Auto-query scene bounds if not provided
+        // Auto-query bounds if not provided
         if (!bMin || !bMax) {
-          const boundsResult = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
-          const br = boundsResult as any;
-          if (br?.result === false) {
-            return errorResult('Scene is empty — no geometry to frame.');
+          let resolved = false;
+
+          // Try role-filtered bounds from placement state
+          if (
+            placementState &&
+            placementState.getEntries().length > 0 &&
+            framing_mode !== 'scene'
+          ) {
+            if (framing_mode === 'hero') {
+              const heroBounds = placementState.getHeroBounds();
+              if (heroBounds) {
+                bMin = heroBounds.min;
+                bMax = heroBounds.max;
+                heroCenter = {
+                  x: (heroBounds.min.x + heroBounds.max.x) / 2,
+                  y: (heroBounds.min.y + heroBounds.max.y) / 2,
+                  z: (heroBounds.min.z + heroBounds.max.z) / 2,
+                };
+                framingSource = 'hero_bounds';
+                resolved = true;
+              }
+              // Fallback: try subjects if no hero
+              if (!resolved) {
+                const framingBounds = placementState.getFramingBounds();
+                if (framingBounds) {
+                  bMin = framingBounds.min;
+                  bMax = framingBounds.max;
+                  framingSource = 'subject_bounds (no hero)';
+                  resolved = true;
+                }
+              }
+            } else {
+              // framing_mode === 'subjects'
+              const framingBounds = placementState.getFramingBounds();
+              if (framingBounds) {
+                bMin = framingBounds.min;
+                bMax = framingBounds.max;
+                framingSource = 'subject_bounds';
+                resolved = true;
+              }
+              // Set hero center for camera targeting
+              const heroBounds = placementState.getHeroBounds();
+              if (heroBounds) {
+                heroCenter = {
+                  x: (heroBounds.min.x + heroBounds.max.x) / 2,
+                  y: (heroBounds.min.y + heroBounds.max.y) / 2,
+                  z: (heroBounds.min.z + heroBounds.max.z) / 2,
+                };
+              }
+            }
           }
-          bMin = br?.bboxMin ?? br?.bbox_min;
-          bMax = br?.bboxMax ?? br?.bbox_max;
-          if (!bMin || !bMax) {
-            return errorResult('Could not read scene bounds. Pass bbox_min/bbox_max explicitly.');
+
+          // Fallback to full scene bounds
+          if (!resolved) {
+            const boundsResult = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
+            const br = boundsResult as any;
+            if (br?.result === false) {
+              return errorResult('Scene is empty — no geometry to frame.');
+            }
+            bMin = br?.bboxMin ?? br?.bbox_min;
+            bMax = br?.bboxMax ?? br?.bbox_max;
+            framingSource = 'scene_bounds';
+            if (!bMin || !bMax) {
+              return errorResult('Could not read scene bounds. Pass bbox_min/bbox_max explicitly.');
+            }
           }
         }
 
@@ -227,26 +299,36 @@ export function registerCameraTools(server: McpServer, client: OctaneMcpClient) 
           );
         }
 
-        const fit = computeFitCamera(bMin, bMax, margin, elevation, yaw);
+        // Tighten margin for hero-only framing
+        const effectiveMargin = framing_mode === 'hero' ? Math.min(margin, 0.15) : margin;
+
+        const fit = computeFitCamera(bMin, bMax, effectiveMargin, elevation, yaw);
+
+        // Override target to hero center when available (camera looks AT hero, not bbox center)
+        const target = heroCenter ?? fit.target;
+        // Recompute position to maintain same distance but aim at hero
+        const position = heroCenter ? add(heroCenter, sub(fit.position, fit.target)) : fit.position;
 
         // gRPC SetCamera now persists to both LiveLink and node graph attributes
         await client.callMethod('LiveLink', 'SetCamera', {
-          position: fit.position,
-          target: fit.target,
+          position,
+          target,
           up: { x: 0, y: 1, z: 0 },
         });
 
         return jsonResult({
           success: true,
-          position: fit.position,
-          target: fit.target,
+          position,
+          target,
           distance: fit.distance,
           bbox_min: bMin,
           bbox_max: bMax,
           extents: fit.extents,
-          margin,
+          margin: effectiveMargin,
           elevation,
           yaw,
+          framing_mode,
+          framing_source: framingSource,
         });
       } catch (error: any) {
         return errorResult(error);

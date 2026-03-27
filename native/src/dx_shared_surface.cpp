@@ -397,6 +397,24 @@ void CloseSurface(const Napi::CallbackInfo& info) {
 }
 
 /**
+ * destroyDevice() → void
+ * Release the D3D11 device, context, and cached staging texture.
+ * Called on shutdown to free GPU resources deterministically.
+ */
+void DestroyDevice(const Napi::CallbackInfo&) {
+#ifdef _WIN32
+    g_device.staging.Reset();
+    g_device.ctx.Reset();
+    g_device.device.Reset();
+    g_device.stagingW = 0;
+    g_device.stagingH = 0;
+    g_device.stagingFmt = DXGI_FORMAT_UNKNOWN;
+    g_device.initialized = false;
+    s_availableCache = -1;
+#endif
+}
+
+/**
  * Module initialization — register all exported functions.
  */
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
@@ -412,6 +430,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
                 Napi::Function::New(env, UnmapSurface));
     exports.Set("closeSurface",
                 Napi::Function::New(env, CloseSurface));
+    exports.Set("destroyDevice",
+                Napi::Function::New(env, DestroyDevice));
 
     return exports;
 }

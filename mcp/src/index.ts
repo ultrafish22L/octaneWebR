@@ -118,15 +118,18 @@ async function main() {
   const artState = new ArtDirectionState();
   // SemanticState (SEGA) — cleared alongside ArtDirectionState
   const segaState = new SemanticState();
+  // ScenePlacementState — shared between camera and art direction tools
+  const placementState = new ScenePlacementState();
   client.onClear(() => {
     artState.clear();
     segaState.clear();
+    placementState.clear();
   });
 
   // Register all tool groups
   registerInfoTools(server, client, cache);
   registerProjectTools(server, client, cache);
-  registerCameraTools(server, client);
+  registerCameraTools(server, client, placementState);
   registerRenderTools(server, client);
   registerSceneTools(server, client, cache);
   registerNodeTools(server, client, cache);
@@ -140,7 +143,6 @@ async function main() {
   registerColorMaterialXTools(server, client);
 
   // Register Art Direction tools (composition planning, critique loop, scene placement)
-  const placementState = new ScenePlacementState();
   registerArtDirectionTools(server, client, artState, placementState);
 
   // Register Creative tools (lighting, materials knowledge)

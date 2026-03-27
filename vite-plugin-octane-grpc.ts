@@ -190,7 +190,10 @@ class OctaneGrpcClient {
   private isCallbackRegistered: boolean = false;
   private mcpRelayWs: any = null;
   private usingRelay = false;
+  private relayProbeTimer: ReturnType<typeof setTimeout> | null = null;
+  private grabFrameTimestamp = 0;
   private static readonly MCP_RELAY_URL = 'ws://127.0.0.1:51023';
+  private static readonly GRAB_TIMEOUT_MS = 5000;
 
   constructor() {
     // Proto base path: the 'server/' directory relative to this file (project root)
@@ -220,9 +223,15 @@ class OctaneGrpcClient {
         if (lvl <= slog.level) slog.info(`[CallbackStream] ${msg}`);
       },
       onConnectionLost: () => {
-        slog.warn('Octane connection lost via callback stream — closing gRPC channels');
+        slog.warn('Octane connection lost via callback stream — resetting gRPC channels');
         this.isCallbackRegistered = false;
         this.base.close();
+      },
+      onReconnected: () => {
+        slog.info('Octane reconnected — re-registering callbacks');
+        this.registerGrpcCallbacks().catch((e: any) => {
+          slog.error(`Callback re-registration failed: ${e.message}`);
+        });
       },
     });
 
@@ -296,14 +305,12 @@ class OctaneGrpcClient {
 
   private isRegistering = false;
 
-  async registerOctaneCallbacks(): Promise<void> {
-    if (this.isCallbackRegistered || this.isRegistering) return;
-    this.isRegistering = true;
-
+  /** Register image + stats callback RPCs with Octane. Reusable for reconnection. */
+  private async registerGrpcCallbacks(): Promise<void> {
     try {
-      this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
-      slog.info(`Registering callbacks with ID: ${this.callbackId}`);
-
+      if (!this.callbackId) {
+        this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
+      }
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
         callback: { callbackSource: 'grpc', callbackId: this.callbackId },
         userData: 0,
@@ -319,8 +326,20 @@ class OctaneGrpcClient {
       } catch (statsError: any) {
         slog.warn('Statistics callback registration failed (non-fatal):', statsError.message);
       }
-
       this.isCallbackRegistered = true;
+    } catch (error: any) {
+      slog.error(`Failed to register gRPC callbacks: ${error.message}`);
+    }
+  }
+
+  async registerOctaneCallbacks(): Promise<void> {
+    if (this.isCallbackRegistered || this.isRegistering) return;
+    this.isRegistering = true;
+
+    try {
+      slog.info(`Registering callbacks with ID: ${this.callbackId || '(new)'}`);
+      await this.registerGrpcCallbacks();
+
       // Try MCP relay first (single shared stream), fall back to own gRPC stream
       this.connectToMcpRelay();
       slog.info('Callback registration complete');
@@ -338,6 +357,7 @@ class OctaneGrpcClient {
     this.isCallbackRegistered = false;
 
     try {
+      this.stopRelayProbe();
       this.disconnectMcpRelay();
       this.sharedStream.stop();
 
@@ -359,21 +379,51 @@ class OctaneGrpcClient {
    * If MCP isn't there, fall back to our own gRPC stream.
    */
   private connectToMcpRelay(): void {
+    if (this.usingRelay || this.mcpRelayWs) return; // already connected or connecting
     // Use dynamic import() — Vite plugin runs in ESM context where require() fails
     import('ws')
       .then(({ WebSocket: WsClient }) => {
         slog.debug(`Attempting MCP relay connection to ${OctaneGrpcClient.MCP_RELAY_URL}`);
         const ws = new WsClient(OctaneGrpcClient.MCP_RELAY_URL, { handshakeTimeout: 2000 });
         let settled = false; // prevent double fallback from error+close
+        let relayConfirmed = false;
+        let watchdog: ReturnType<typeof setTimeout> | null = null;
+
+        const clearWatchdog = () => {
+          if (watchdog) {
+            clearTimeout(watchdog);
+            watchdog = null;
+          }
+        };
 
         ws.on('open', () => {
           settled = true;
-          slog.info('Connected to MCP callback relay — using shared stream');
-          this.usingRelay = true;
+          slog.info('Connected to MCP callback relay — waiting for first message');
           this.mcpRelayWs = ws;
+
+          // Don't stop own stream yet — wait until relay proves it's alive.
+          // Watchdog: if relay sends no messages within 3s, it's stale.
+          watchdog = setTimeout(() => {
+            if (!relayConfirmed) {
+              slog.warn('MCP relay connected but silent for 3s — falling back to own stream');
+              this.disconnectMcpRelay();
+              this.fallbackToOwnStream('MCP relay silent');
+            }
+          }, 3000);
         });
 
+        const confirmRelay = () => {
+          if (relayConfirmed || this.mcpRelayWs !== ws) return;
+          relayConfirmed = true;
+          clearWatchdog();
+          slog.info('MCP relay confirmed alive — switching from own stream');
+          this.usingRelay = true;
+          this.sharedStream.stop();
+          this.stopRelayProbe();
+        };
+
         ws.on('message', (raw: Buffer | string) => {
+          confirmRelay();
           try {
             // Binary wire format: [4B headerLen LE] [JSON header] [optional pixel payload]
             const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
@@ -382,9 +432,15 @@ class OctaneGrpcClient {
             if (buf.length < 4 + headerLen) return;
             const msg = JSON.parse(buf.slice(4, 4 + headerLen).toString('utf8'));
             const pixelPayload = buf.length > 4 + headerLen ? buf.slice(4 + headerLen) : null;
+
+            if (msg.type === 'heartbeat') {
+              // Heartbeat proves relay is alive — nothing else to do
+              return;
+            }
+
             if (msg.type === 'newImage') {
               if (pixelPayload && msg.renderImage) {
-                // Alpha 5: pixel data in binary payload
+                // Pixel data in binary payload
                 const ri = msg.renderImage;
                 this.notifyCallbacks({
                   callback_source: ri.callback_source || 'grpc',
@@ -393,8 +449,6 @@ class OctaneGrpcClient {
                   render_images: {
                     data: [
                       {
-                        // Match Alpha 5 ApiRenderImage structure:
-                        // buffer.data = pixel bytes, size = {x: width, y: height}
                         buffer: { data: pixelPayload, size: pixelPayload.length },
                         size: { x: ri.width, y: ri.height },
                         type: ri.format,
@@ -404,26 +458,9 @@ class OctaneGrpcClient {
                     ],
                   },
                 });
-              } else if (!this.isGrabbingFrame) {
-                // 2026.2: no pixels in callback — fetch via grabRenderResult
-                this.isGrabbingFrame = true;
-                this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
-                  .then((result: any) => {
-                    if (result?.result && result.renderImages?.data?.length > 0) {
-                      this.notifyCallbacks({
-                        callback_source: 'grpc',
-                        callback_id: this.callbackId,
-                        user_data: 0,
-                        render_images: result.renderImages,
-                      });
-                    }
-                  })
-                  .catch(() => {
-                    /* non-fatal */
-                  })
-                  .finally(() => {
-                    this.isGrabbingFrame = false;
-                  });
+              } else {
+                // No pixels in callback — fetch via grabRenderResult (with gate timeout)
+                this.grabFrameIfReady();
               }
               this.pollRenderStatistics();
             } else if (msg.type === 'newStatistics') {
@@ -451,6 +488,7 @@ class OctaneGrpcClient {
         });
 
         ws.on('error', (err: any) => {
+          clearWatchdog();
           if (!settled) {
             settled = true;
             slog.debug(`MCP relay error: ${err?.message || 'unknown'}`);
@@ -459,6 +497,7 @@ class OctaneGrpcClient {
         });
 
         ws.on('close', () => {
+          clearWatchdog();
           if (this.usingRelay) {
             this.usingRelay = false;
             this.mcpRelayWs = null;
@@ -475,6 +514,38 @@ class OctaneGrpcClient {
       });
   }
 
+  /** Grab a frame if the gate is open, with 5s stuck-gate timeout. */
+  private grabFrameIfReady(): void {
+    // Reset stuck gate
+    if (
+      this.isGrabbingFrame &&
+      Date.now() - this.grabFrameTimestamp > OctaneGrpcClient.GRAB_TIMEOUT_MS
+    ) {
+      slog.warn('grabRenderResult gate stuck for 5s — resetting');
+      this.isGrabbingFrame = false;
+    }
+    if (this.isGrabbingFrame) return;
+    this.isGrabbingFrame = true;
+    this.grabFrameTimestamp = Date.now();
+    this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
+      .then((result: any) => {
+        if (result?.result && result.renderImages?.data?.length > 0) {
+          this.notifyCallbacks({
+            callback_source: 'grpc',
+            callback_id: this.callbackId,
+            user_data: 0,
+            render_images: result.renderImages,
+          });
+        }
+      })
+      .catch(() => {
+        /* non-fatal */
+      })
+      .finally(() => {
+        this.isGrabbingFrame = false;
+      });
+  }
+
   private disconnectMcpRelay(): void {
     this.usingRelay = false;
     if (this.mcpRelayWs) {
@@ -487,6 +558,25 @@ class OctaneGrpcClient {
     }
   }
 
+  /** Probe for MCP relay with exponential backoff (10s → 20s → 40s → 60s cap). */
+  private relayProbeAttempt = 0;
+  private probeForRelay(delay = 10_000): void {
+    if (this.relayProbeTimer) return; // probe already scheduled
+    this.relayProbeTimer = setTimeout(() => {
+      this.relayProbeTimer = null;
+      if (this.usingRelay || !this.isCallbackRegistered) return;
+      this.connectToMcpRelay();
+    }, delay);
+  }
+
+  private stopRelayProbe(): void {
+    if (this.relayProbeTimer) {
+      clearTimeout(this.relayProbeTimer);
+      this.relayProbeTimer = null;
+    }
+    this.relayProbeAttempt = 0;
+  }
+
   private fallbackToOwnStream(reason: string): void {
     if (this.usingRelay) return; // still on relay, no fallback needed
     this.mcpRelayWs = null;
@@ -494,8 +584,23 @@ class OctaneGrpcClient {
       slog.debug(`${reason} — but callbacks not registered, skipping fallback`);
       return;
     }
-    slog.info(`${reason} — falling back to own gRPC callback stream`);
-    this.sharedStream.start();
+    // Only log first fallback at info level; subsequent probe failures are debug noise
+    if (this.relayProbeAttempt === 0) {
+      slog.info(`${reason} — falling back to own gRPC callback stream`);
+    } else {
+      slog.debug(`${reason} — still on own stream (probe #${this.relayProbeAttempt})`);
+    }
+    if (!this.sharedStream.isActive) {
+      this.sharedStream.start();
+    }
+    // Probe for relay: first retry quick (2s — MCP may still be starting),
+    // then exponential backoff (10s, 20s, 40s, 60s cap)
+    this.relayProbeAttempt++;
+    const delay =
+      this.relayProbeAttempt === 1
+        ? 2_000
+        : Math.min(10_000 * Math.pow(2, this.relayProbeAttempt - 2), 60_000);
+    this.probeForRelay(delay);
   }
 
   /**
@@ -529,27 +634,7 @@ class OctaneGrpcClient {
       this.notifyCallbacks(payload);
     } else {
       // Our server path: callback is notification-only, fetch pixels on demand.
-      // Gate calls so we don't flood the server — skip if already grabbing.
-      if (!this.isGrabbingFrame) {
-        this.isGrabbingFrame = true;
-        this.callMethod('ApiRenderEngine', 'grabRenderResult', {})
-          .then((result: any) => {
-            if (result?.result && result.renderImages?.data?.length > 0) {
-              this.notifyCallbacks({
-                callback_source: 'grpc',
-                callback_id: this.callbackId,
-                user_data: 0,
-                render_images: result.renderImages,
-              });
-            }
-          })
-          .catch(() => {
-            // Non-fatal — render may not be ready yet
-          })
-          .finally(() => {
-            this.isGrabbingFrame = false;
-          });
-      }
+      this.grabFrameIfReady();
     }
     // Poll render statistics on each image callback
     this.pollRenderStatistics();
