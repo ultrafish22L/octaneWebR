@@ -127,9 +127,19 @@ export class ConnectionService extends BaseService {
             // Eliminates base64 decode + JSON.parse overhead for image data.
             if (event.data instanceof ArrayBuffer) {
               const buf = new DataView(event.data);
-              if (event.data.byteLength < 4) return;
+              if (event.data.byteLength < 4) {
+                Logger.warn(
+                  `WebSocket: binary frame too small (${event.data.byteLength}B < 4B header)`
+                );
+                return;
+              }
               const headerLen = buf.getUint32(0, true); // little-endian
-              if (event.data.byteLength < 4 + headerLen) return;
+              if (event.data.byteLength < 4 + headerLen) {
+                Logger.warn(
+                  `WebSocket: truncated frame — headerLen=${headerLen} but only ${event.data.byteLength - 4}B available`
+                );
+                return;
+              }
 
               const headerBytes = new Uint8Array(event.data, 4, headerLen);
               const header = JSON.parse(new TextDecoder().decode(headerBytes));

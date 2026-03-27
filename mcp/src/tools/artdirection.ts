@@ -687,14 +687,19 @@ export function registerArtDirectionTools(
 
       try {
         const resolved = path.resolve(params.render_path);
-        await client.callMethod('ApiRenderEngine', 'saveImage1', {
-          fullPath: resolved,
-          imageSaveFormat: 0,
-          renderPassId: 0,
-          colorSpace: 1,
-          premultipliedAlphaType: 0,
-          asynchronous: false,
-        });
+        await client.callMethod(
+          'ApiRenderEngine',
+          'saveImage1',
+          {
+            fullPath: resolved,
+            imageSaveFormat: 0,
+            renderPassId: 0,
+            colorSpace: 1,
+            premultipliedAlphaType: 0,
+            asynchronous: false,
+          },
+          120_000
+        );
 
         const iteration = artState.getIterationCount(params.spec_name) + 1;
         const warnings: string[] = [];

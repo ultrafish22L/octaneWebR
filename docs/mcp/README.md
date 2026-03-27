@@ -268,30 +268,13 @@ Generate AI assets for your Octane scenes:
 
 ---
 
-## Scene Building Concepts
+## Scene Building
 
-### The Node Graph
+For node graph structure, pin layouts, and attribute IDs: [REFERENCE.md](./REFERENCE.md).
+For build workflow and phases: [BUILD.md](./BUILD.md).
+For pitfalls and workarounds: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
-Octane scenes are directed graphs. Everything is a node connected by pins:
-
-```
-Render Target (RT)
-  ├── pin 0: Camera
-  ├── pin 1: Environment (sky/lighting)
-  ├── pin 3: Geometry (your objects)  ← use pin_index, not pin_id!
-  ├── pin 4: Film (resolution)
-  └── pin 6: Kernel (render engine)
-```
-
-For full node types, pin layouts, connection patterns, and attribute IDs, see [REFERENCE.md](./REFERENCE.md).
-
-For all known pitfalls, silent failures, and workarounds, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
-
----
-
-## Environment Variables
-
-See [QUICKSTART.md](../../QUICKSTART.md) for the full environment variables table. Key ones: `OCTANE_HOST` (default `127.0.0.1`), `OCTANE_PORT` (default `51022`), `GRPC_DEBUG_LOG` (set `0` to disable logging).
+Environment variables: `OCTANE_HOST` (default `127.0.0.1`), `OCTANE_PORT` (default `51022`).
 
 ---
 

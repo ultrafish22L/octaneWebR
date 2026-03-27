@@ -390,12 +390,19 @@ async function setAttrRaw(
   } else if (attrType === 14) valueParams = { string_value: String(value) };
   else throw new Error(`Unsupported attr type ${attrType}`);
 
-  await client.callMethod('ApiItem', 'setValueByAttrID', {
-    objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
-    attribute_id: attrId,
-    ...valueParams,
-    evaluate: false,
-  });
+  // A_FILENAME (34) triggers SDK file load — use extended timeout
+  const timeout = attrId === AttributeId.A_FILENAME ? 120_000 : undefined;
+  await client.callMethod(
+    'ApiItem',
+    'setValueByAttrID',
+    {
+      objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+      attribute_id: attrId,
+      ...valueParams,
+      evaluate: false,
+    },
+    timeout
+  );
 }
 
 /**
@@ -554,16 +561,21 @@ async function renderMugshots(
 
     // Save render
     const outPath = path.join(outputDir, `${baseName}.mugshot_${view.name}.png`);
-    await client.callMethod('ApiRenderEngine', 'saveImage1', {
-      renderPassId: 0,
-      fullPath: outPath,
-      imageSaveFormat: 0, // PNG
-      colorSpace: 1,
-      premultipliedAlphaType: 0,
-      exrCompressionType: 4,
-      exrCompressionLevel: 4.5,
-      asynchronous: false,
-    });
+    await client.callMethod(
+      'ApiRenderEngine',
+      'saveImage1',
+      {
+        renderPassId: 0,
+        fullPath: outPath,
+        imageSaveFormat: 0, // PNG
+        colorSpace: 1,
+        premultipliedAlphaType: 0,
+        exrCompressionType: 4,
+        exrCompressionLevel: 4.5,
+        asynchronous: false,
+      },
+      120_000
+    );
     savedPaths.push(outPath);
     mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
   }
@@ -834,13 +846,18 @@ export function registerImportTools(
         const meshHandle = extractHandle(meshResult) ?? 0;
         if (!meshHandle) throw new Error('Failed to create NT_GEO_MESH node');
 
-        // Set OBJ filename
-        await client.callMethod('ApiItem', 'setValueByAttrID', {
-          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
-          attribute_id: AttributeId.A_FILENAME,
-          string_value: conv.objPath.replace(/\//g, '\\'),
-          evaluate: false,
-        });
+        // Set OBJ filename — extended timeout for large mesh loads
+        await client.callMethod(
+          'ApiItem',
+          'setValueByAttrID',
+          {
+            objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_FILENAME,
+            string_value: conv.objPath.replace(/\//g, '\\'),
+            evaluate: false,
+          },
+          120_000
+        );
 
         // Reload mesh
         await client.callMethod('ApiItem', 'setValueByAttrID', {
@@ -923,13 +940,18 @@ export function registerImportTools(
             client.sceneCache.addNode(texHandle, 'Texture', 'NT_TEX_IMAGE', 34);
             notifyWebapp({ type: 'nodeAdded', handle: texHandle });
 
-            // Set texture filename
-            await client.callMethod('ApiItem', 'setValueByAttrID', {
-              objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
-              attribute_id: AttributeId.A_FILENAME,
-              string_value: conv.texturePaths[0].replace(/\//g, '\\'),
-              evaluate: false,
-            });
+            // Set texture filename — extended timeout for large textures
+            await client.callMethod(
+              'ApiItem',
+              'setValueByAttrID',
+              {
+                objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
+                attribute_id: AttributeId.A_FILENAME,
+                string_value: conv.texturePaths[0].replace(/\//g, '\\'),
+                evaluate: false,
+              },
+              120_000
+            );
 
             // Connect texture → material albedo (pin 2 on NT_MAT_UNIVERSAL)
             await client.callMethod('ApiNode', 'connectToIx', {

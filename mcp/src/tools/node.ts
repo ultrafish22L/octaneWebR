@@ -320,9 +320,10 @@ export function registerNodeTools(
               });
               const curCount = Number(extractValue(curResult) ?? 0);
 
-              // Find first empty pin
+              // Find first empty pin — scan from end (last pin most likely empty
+              // for append-only geo groups, turning N calls into typically 1-2)
               let freePin = -1;
-              for (let i = 0; i < curCount; i++) {
+              for (let i = curCount - 1; i >= 0; i--) {
                 const conn = await client.callMethod('ApiNode', 'connectedNodeIx', {
                   objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
                   pinIx: i,
@@ -331,7 +332,8 @@ export function registerNodeTools(
                 const connHandle = extractHandle(conn) ?? 0;
                 if (connHandle === 0) {
                   freePin = i;
-                  break;
+                } else {
+                  break; // Hit occupied pin — all before it are likely full
                 }
               }
 

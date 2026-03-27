@@ -8,7 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
-import { AttrType } from '../shared/OctaneConstants';
+import { AttrType, AttributeId } from '../shared/OctaneConstants';
 
 /** Targeted error message when hasAttr returns false */
 function missingAttrError(handle: number, attribute_id: number): string {
@@ -178,13 +178,22 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         }
 
         const valueParams = buildValueParams(value, expected_type);
+        // A_FILENAME triggers SDK file load (mesh/texture import) — can take 30s+ for large files.
+        // Use 120s timeout to prevent hung tool calls while still catching real failures.
+        const isFileLoad = attribute_id === AttributeId.A_FILENAME;
+        const timeout = isFileLoad ? 120_000 : undefined;
         // Match web UI pattern: set with evaluate:false, then ApiChangeManager.update()
-        await client.callMethod('ApiItem', setMethod, {
-          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
-          attribute_id,
-          ...valueParams,
-          evaluate: false,
-        });
+        await client.callMethod(
+          'ApiItem',
+          setMethod,
+          {
+            objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+            attribute_id,
+            ...valueParams,
+            evaluate: false,
+          },
+          timeout
+        );
 
         // Flush scene evaluation unless caller explicitly skips (for batching)
         if (!skip_evaluate) {

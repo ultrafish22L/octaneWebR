@@ -251,7 +251,7 @@ Global vector applies scene-wide. Per-object overrides add to global for specifi
 | Existing spatial math | Stays as-is, separate concern         | SEGA = intent, spatial = correctness             |
 | Old critique scores   | Replaced by semantic gap vector       | Meaningful vectors instead of arbitrary 1-5      |
 
-Implementation complete — see `mcp/src/sega/` for code. File structure derivable from the directory.
+Core system implemented — see `mcp/src/sega/` for code (15 dimensions, presets, NL parser, critique loop). Self-refinement calibration (Phase A/B/C) is designed in `docs/archive/SEGA_SELF_REFINEMENT.md` but not yet built.
 
 ---
 
