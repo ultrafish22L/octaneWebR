@@ -71,7 +71,10 @@ export async function enumeratePins(
       });
       typeName = resolvePinType(extractValue(typeResult));
     } catch (e: any) {
-      mcpLog(`enumeratePins: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`, 'warn');
+      mcpLogLazy(
+        'verbose',
+        () => `enumeratePins: pinTypeIx failed for handle ${handle} pin ${i}: ${e.message}`
+      );
     }
 
     // Pin name
@@ -82,7 +85,10 @@ export async function enumeratePins(
       });
       pinName = String(extractValue(nameResult) ?? '');
     } catch (e: any) {
-      mcpLog(`enumeratePins: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`, 'warn');
+      mcpLogLazy(
+        'verbose',
+        () => `enumeratePins: pinNameIx failed for handle ${handle} pin ${i}: ${e.message}`
+      );
     }
 
     // Connected node (graph connection)

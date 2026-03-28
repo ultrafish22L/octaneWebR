@@ -554,8 +554,8 @@ async function renderMugshots(
         const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
         const s = stats?.statistics ?? stats;
         if (s?.beautySamplesPerPixel >= 100 || s?.state === 'RSTATE_FINISHED') break;
-      } catch {
-        /* ignore polling errors */
+      } catch (e: any) {
+        mcpLog(`mugshot render poll error: ${e?.message ?? e}`, 'verbose');
       }
     }
 
@@ -707,8 +707,6 @@ async function analyzeMugshotsWithVLM(
   vlm_model?: string;
 } | null> {
   const prompt = buildOrientationPrompt(metadata);
-  // Reuse analyzeReference which already handles multi-image VLM calls
-  // We need to use callVision directly for multi-image support
   const { detectBackend } = await import('../vision/index');
   const backend = detectBackend();
 
@@ -717,60 +715,24 @@ async function analyzeMugshotsWithVLM(
     return null;
   }
 
-  // Load all images
-  const images = mugshotPaths.map(p => {
-    const buffer = fs.readFileSync(path.resolve(p));
-    const ext = path.extname(p).toLowerCase();
-    const mediaType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
-    return { base64: buffer.toString('base64'), mediaType };
-  });
-
-  // Try Anthropic first
+  // Use otoy-studio analyse_image — analyse the first mugshot (front view is most informative)
   try {
-    const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
-    const key = getAnthropicKey();
-    if (key) {
-      const result = await callAnthropicVision(prompt, images, {
-        apiKey: key,
-        model: process.env.VISION_MODEL || 'claude-haiku-4-5-20251001',
-        maxTokens: 1000,
-      });
+    const { analyseImageFromFile } = await import('../vision/otoy-studio');
+    const result = await analyseImageFromFile(path.resolve(mugshotPaths[0]), 'ask', prompt);
 
-      // Parse JSON response
-      const text = result.text;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        // Default new v3 fields if VLM didn't include them
-        parsed.orientation_matters = parsed.orientation_matters ?? true;
-        parsed.confidence = parsed.confidence ?? 'medium';
-        mcpLog(
-          `mugshot VLM: ${parsed.object_type}, upright=${parsed.is_upright}, orientation_matters=${parsed.orientation_matters}, confidence=${parsed.confidence}`,
-          'info'
-        );
-        return { ...parsed, vlm_model: result.model };
-      }
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      parsed.orientation_matters = parsed.orientation_matters ?? true;
+      parsed.confidence = parsed.confidence ?? 'medium';
+      mcpLog(
+        `mugshot VLM: ${parsed.object_type}, upright=${parsed.is_upright}, orientation_matters=${parsed.orientation_matters}, confidence=${parsed.confidence}`,
+        'info'
+      );
+      return { ...parsed, vlm_model: result.model };
     }
   } catch (e: any) {
-    mcpLog(`mugshot VLM: Anthropic failed: ${e.message}`, 'warn');
-  }
-
-  // Try Gemini fallback
-  try {
-    const { callGeminiVision, getGeminiKey } = await import('../vision/gemini');
-    const key = getGeminiKey();
-    if (key) {
-      const result = await callGeminiVision(prompt, images, { apiKey: key });
-      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        parsed.orientation_matters = parsed.orientation_matters ?? true;
-        parsed.confidence = parsed.confidence ?? 'medium';
-        return { ...parsed, vlm_model: result.model };
-      }
-    }
-  } catch (e: any) {
-    mcpLog(`mugshot VLM: Gemini failed: ${e.message}`, 'warn');
+    mcpLog(`mugshot VLM: otoy-studio failed: ${e.message}`, 'warn');
   }
 
   return null;

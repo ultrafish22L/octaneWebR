@@ -175,7 +175,7 @@ export function parseCritiqueResponse(response: string): {
       return { ...data, raw: response };
     }
   } catch (e: any) {
-    mcpLogLazy('verbose', () => `[vision:parseCritique:directJSON] ${e?.message ?? e}`);
+    mcpLogLazy('debug', () => `[vision:parseCritique:directJSON] ${e?.message ?? e}`);
     // Try extracting JSON from markdown code blocks
     const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -185,7 +185,7 @@ export function parseCritiqueResponse(response: string): {
           return { ...data, raw: response };
         }
       } catch (e2: any) {
-        mcpLogLazy('verbose', () => `[vision:parseCritique:codeBlock] ${e2?.message ?? e2}`);
+        mcpLogLazy('debug', () => `[vision:parseCritique:codeBlock] ${e2?.message ?? e2}`);
         /* continue */
       }
     }
@@ -198,7 +198,7 @@ export function parseCritiqueResponse(response: string): {
           return { ...data, raw: response };
         }
       } catch (e3: any) {
-        mcpLogLazy('verbose', () => `[vision:parseCritique:braceMatch] ${e3?.message ?? e3}`);
+        mcpLogLazy('debug', () => `[vision:parseCritique:braceMatch] ${e3?.message ?? e3}`);
         /* give up */
       }
     }

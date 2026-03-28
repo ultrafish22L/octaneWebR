@@ -1,21 +1,22 @@
 /**
- * VisionCritic — orchestrates external vision API calls for render critique.
+ * VisionCritic — orchestrates vision calls for render critique via OTOY Studio.
  *
- * Fallback chain:
- *   1. Anthropic (ANTHOPIC_CLAUDE_KEY) — confirmed working, primary
- *   2. Gemini (GEMINI_API_KEY) — fallback when quota resets
- *   3. Self-critique fallback — returns prompt for Claude to answer (v1 behavior)
+ * Single backend: otoy-studio analyse_image (moondream3 / florence-2 / llava-next).
+ * Falls back to 'self' (prompt-only) when no OTOY Studio token is available.
  */
 
-import fs from 'fs';
 import path from 'path';
-import { mcpLog, mcpLogLazy } from '../OctaneMcpClient';
-import { callAnthropicVision, getAnthropicKey } from './anthropic';
-import { callGeminiVision, getGeminiKey } from './gemini';
+import { mcpLog } from '../OctaneMcpClient';
+import {
+  extractOtoyStudioToken,
+  analyseImageFromFile,
+  callAnalyseImage,
+  uploadImage,
+} from './otoy-studio';
 import { parseCritiqueResponse } from './prompts';
 import { PASS_THRESHOLD, MIN_DIMENSION_SCORE } from '../ArtDirectionState';
 
-export type VisionBackend = 'anthropic' | 'gemini' | 'self';
+export type VisionBackend = 'otoy-studio' | 'self';
 
 /**
  * Recompute overall score and passed flag server-side.
@@ -71,87 +72,65 @@ export interface VisionAnalysisResult {
 }
 
 /**
- * Load an image file as base64 with mime type detection.
- */
-function loadImageBase64(filePath: string): { base64: string; mediaType: string } {
-  const resolved = path.resolve(filePath);
-  if (!fs.existsSync(resolved)) {
-    throw new Error(`Image not found: ${resolved}`);
-  }
-  const buffer = fs.readFileSync(resolved);
-  const ext = path.extname(resolved).toLowerCase();
-  const mediaType =
-    ext === '.jpg' || ext === '.jpeg'
-      ? 'image/jpeg'
-      : ext === '.png'
-        ? 'image/png'
-        : ext === '.webp'
-          ? 'image/webp'
-          : 'image/png';
-  return { base64: buffer.toString('base64'), mediaType };
-}
-
-/**
- * Determine the best available vision backend.
+ * Determine if the otoy-studio vision backend is available.
  */
 export function detectBackend(): VisionBackend {
-  if (getAnthropicKey()) return 'anthropic';
-  if (getGeminiKey()) return 'gemini';
-  return 'self';
+  return extractOtoyStudioToken() ? 'otoy-studio' : 'self';
 }
 
 /**
- * Call a vision model with images and a prompt. Tries backends in fallback order.
+ * Call analyse_image with a prompt on one or two image files.
+ * For two images (render + reference), captions the reference and embeds
+ * the description in the render's ask prompt.
  */
 async function callVision(
   prompt: string,
-  imagePaths: string[],
-  preferredBackend?: VisionBackend,
-  maxTokens?: number
+  imagePaths: string[]
 ): Promise<{ text: string; backend: VisionBackend; model?: string }> {
-  const images = imagePaths.map(loadImageBase64);
-
-  // Try preferred backend first, then fallback chain
-  const backends: VisionBackend[] = preferredBackend
-    ? [preferredBackend, 'anthropic', 'gemini']
-    : ['anthropic', 'gemini'];
-  const tried = new Set<VisionBackend>();
-
-  for (const backend of backends) {
-    if (tried.has(backend)) continue;
-    tried.add(backend);
-
-    try {
-      if (backend === 'anthropic') {
-        const key = getAnthropicKey();
-        if (!key) continue;
-        const result = await callAnthropicVision(prompt, images, {
-          apiKey: key,
-          model: process.env.VISION_MODEL || 'claude-haiku-4-5-20251001',
-          maxTokens: maxTokens || 4000,
-        });
-        return { text: result.text, backend: 'anthropic', model: result.model };
-      }
-
-      if (backend === 'gemini') {
-        const key = getGeminiKey();
-        if (!key) continue;
-        const result = await callGeminiVision(prompt, images, { apiKey: key });
-        return { text: result.text, backend: 'gemini', model: result.model };
-      }
-    } catch (error: any) {
-      mcpLog(`VISION: ${backend} failed: ${error.message}`, 'warn');
-      // Continue to next backend
-    }
+  const token = extractOtoyStudioToken();
+  if (!token) {
+    return { text: '', backend: 'self' };
   }
 
-  // All backends failed — return empty for self-critique fallback
-  return { text: '', backend: 'self' };
+  try {
+    if (imagePaths.length === 2) {
+      // Two images: render (0) + reference (1).
+      // Caption the reference, then ask about the render with that context.
+      const [renderPath, refPath] = imagePaths;
+
+      // Upload both in parallel
+      const [renderUpload, refUpload] = await Promise.all([
+        uploadImage(renderPath, token),
+        uploadImage(refPath, token),
+      ]);
+
+      const refUrl = refUpload.downloadUrlFull || refUpload.downloadUrl;
+      const renderUrl = renderUpload.downloadUrlFull || renderUpload.downloadUrl;
+
+      // Caption the reference
+      const refCaption = await callAnalyseImage(refUrl, 'caption', 'detailed', { token });
+
+      // Ask about the render with reference context
+      const augmentedPrompt =
+        `REFERENCE IMAGE DESCRIPTION:\n${refCaption.text}\n\n` +
+        `Now evaluate the RENDER image against that reference.\n\n${prompt}`;
+
+      const result = await callAnalyseImage(renderUrl, 'ask', augmentedPrompt, { token });
+      return { text: result.text, backend: 'otoy-studio', model: result.model };
+    }
+
+    // Single image
+    const result = await analyseImageFromFile(imagePaths[0], 'ask', prompt, { token });
+    return { text: result.text, backend: 'otoy-studio', model: result.model };
+  } catch (error: any) {
+    mcpLog(`VISION: otoy-studio failed: ${error.message}`, 'warn');
+    return { text: '', backend: 'self' };
+  }
 }
 
 /**
- * Critique a render using an external vision model.
- * Returns structured scores or null if all backends fail (caller should fall back to self-critique).
+ * Critique a render using analyse_image.
+ * Returns structured scores or null if backend unavailable (caller falls back to self-critique).
  */
 export async function critiqueRender(
   renderPath: string,
@@ -172,7 +151,7 @@ export async function critiqueRender(
   const parsed = parseCritiqueResponse(text);
   if (!parsed) {
     mcpLog(
-      `VISION: failed to parse ${backend} response as JSON: ${text.substring(0, 200)}`,
+      `VISION: failed to parse otoy-studio response as JSON: ${text.substring(0, 200)}`,
       'warn'
     );
     // Return raw text so caller can still use it
@@ -205,8 +184,8 @@ export async function critiqueRender(
 }
 
 /**
- * Analyze a reference image using an external vision model.
- * Returns structured scene data or null if all backends fail.
+ * Analyze a reference image using analyse_image.
+ * Returns structured scene data or null if backend unavailable.
  */
 export async function analyzeReference(
   imagePath: string,
@@ -234,18 +213,14 @@ export async function analyzeReference(
     if (data) break;
     try {
       data = JSON.parse(candidate);
-    } catch (e: any) {
-      mcpLogLazy('verbose', () => `[vision:analyzeRef:jsonParse] ${e?.message ?? e}`);
+    } catch {
       // Try repairing truncated JSON by closing open brackets/braces
       let repaired = candidate.trim();
-      // Remove trailing comma
       repaired = repaired.replace(/,\s*$/, '');
-      // Count unclosed brackets
       const opens = (repaired.match(/\[/g) || []).length;
       const closes = (repaired.match(/\]/g) || []).length;
       const openBraces = (repaired.match(/\{/g) || []).length;
       const closeBraces = (repaired.match(/\}/g) || []).length;
-      // Close unclosed structures
       for (let i = 0; i < opens - closes; i++) repaired += ']';
       for (let i = 0; i < openBraces - closeBraces; i++) repaired += '}';
       try {
@@ -254,8 +229,7 @@ export async function analyzeReference(
           `VISION: repaired truncated JSON (added ${opens - closes} ] and ${openBraces - closeBraces} })`,
           'info'
         );
-      } catch (e2: any) {
-        mcpLogLazy('verbose', () => `[vision:analyzeRef:jsonRepair] ${e2?.message ?? e2}`);
+      } catch {
         /* truly unparseable */
       }
     }

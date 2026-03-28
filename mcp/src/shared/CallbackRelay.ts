@@ -50,7 +50,10 @@ export class CallbackRelay {
         if (err.code === 'EADDRINUSE') {
           wss.close();
           if (retried) {
-            this.log(`Port ${RELAY_PORT} in use — another MCP instance may be running`, 'warn');
+            this.log(
+              `Port ${RELAY_PORT} still in use after retry — callback relay DISABLED. Kill other MCP instances or restart.`,
+              'error'
+            );
             return;
           }
           this.log(`Port ${RELAY_PORT} in use — retrying in 2s`, 'info');

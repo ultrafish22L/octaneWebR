@@ -13,7 +13,7 @@ const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
 
 // Build number — increment on every code change to verify running code matches build.
 // Check with get_octane_version() → mcp_build field.
-const MCP_BUILD = 43;
+const MCP_BUILD = 44;
 import {
   OctaneMcpClient,
   MCP_LOG_PATH,
@@ -42,9 +42,17 @@ export function registerInfoTools(
       try {
         const info = await client.getSessionInfo();
         let serv_build = 0;
+        let serv_diagnostics: Record<string, number> | undefined;
         try {
           const sv = await client.callMethod('LiveLink', 'GetServVersion', {});
           serv_build = (sv as any)?.build ?? 0;
+          const handleCount = Number((sv as any)?.handle_count ?? (sv as any)?.handleCount ?? 0);
+          const staleEvictions = Number(
+            (sv as any)?.stale_evictions ?? (sv as any)?.staleEvictions ?? 0
+          );
+          if (handleCount || staleEvictions) {
+            serv_diagnostics = { handle_count: handleCount, stale_evictions: staleEvictions };
+          }
         } catch {
           /* old serv without GetServVersion */
         }
@@ -53,6 +61,7 @@ export function registerInfoTools(
           octaneweb_version: MCP_SERVER_VERSION,
           mcp_build: MCP_BUILD,
           serv_build,
+          ...(serv_diagnostics ? { serv_diagnostics } : {}),
         });
       } catch (error: any) {
         return errorResult(error);

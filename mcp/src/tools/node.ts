@@ -208,7 +208,7 @@ export function registerNodeTools(
                 );
               }
             } catch (e: any) {
-              mcpLogLazy('verbose', () => `[node:create_node:dof_fix] ${e?.message ?? e}`);
+              mcpLogLazy('debug', () => `[node:create_node:dof_fix] ${e?.message ?? e}`);
             }
           }
         }
@@ -228,7 +228,7 @@ export function registerNodeTools(
                 'Emission efficiency set to 1.0 (default was 0.025). Adjust if too bright.'
               );
             } catch (e: any) {
-              mcpLogLazy('verbose', () => `[node:create_node:emission_fix] ${e?.message ?? e}`);
+              mcpLogLazy('debug', () => `[node:create_node:emission_fix] ${e?.message ?? e}`);
             }
           }
         }
@@ -367,7 +367,7 @@ export function registerNodeTools(
                 );
               }
             } catch (e: any) {
-              mcpLogLazy('verbose', () => `[node:connect_nodes:auto_slot] ${e?.message ?? e}`);
+              mcpLogLazy('debug', () => `[node:connect_nodes:auto_slot] ${e?.message ?? e}`);
             }
           }
         }
@@ -395,7 +395,7 @@ export function registerNodeTools(
                 await client.callMethod('ApiChangeManager', 'update', {});
               }
             } catch (e: any) {
-              mcpLogLazy('verbose', () => `[node:connect_nodes:expand_pins] ${e?.message ?? e}`);
+              mcpLogLazy('debug', () => `[node:connect_nodes:expand_pins] ${e?.message ?? e}`);
             }
           }
         }
@@ -503,7 +503,7 @@ export function registerNodeTools(
               `(expected ${source_handle}). Check pin type compatibility with get_node_info.`;
           }
         } catch (e: any) {
-          mcpLogLazy('verbose', () => `[node:connect_nodes:verify] ${e?.message ?? e}`);
+          mcpLogLazy('debug', () => `[node:connect_nodes:verify] ${e?.message ?? e}`);
           // If verify call itself fails, don't block — just warn
           verifyWarning =
             'Connection verification skipped (verify call failed). Check with get_node_info.';
@@ -648,7 +648,7 @@ export function registerNodeTools(
             verifyWarning = `Connection verification FAILED: pin ${pin_index} shows handle=${connectedHandle} (expected ${newHandle}).`;
           }
         } catch (e: any) {
-          mcpLogLazy('verbose', () => `[node:create_and_connect:verify] ${e?.message ?? e}`);
+          mcpLogLazy('debug', () => `[node:create_and_connect:verify] ${e?.message ?? e}`);
           verifyWarning = 'Connection verification skipped (verify call failed).';
         }
 

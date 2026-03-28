@@ -42,7 +42,6 @@ import {
 import {
   critiqueRender as visionCritique,
   analyzeReference as visionAnalyze,
-  detectBackend,
 } from '../vision/index';
 import {
   buildCritiquePrompt as buildVisionCritiquePrompt,
@@ -647,7 +646,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'analyze_reference',
-    'Extract composition data from a reference image. If a vision API key is available, analyzes the image server-side and returns structured data. Otherwise returns a prompt for self-analysis.',
+    'Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
     {
       image_path: z.string().describe('Absolute path to reference image'),
       scene_description: z.string(),

@@ -399,7 +399,7 @@ export class OctaneMcpClient {
       const elapsed = Date.now() - startMs;
       this.lastSuccessMs = Date.now();
       const ok = result?.success !== false && !result?.error_message;
-      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'debug');
+      mcpLog(`${service}.${method} ${ok ? 'OK' : 'FAIL'} ${elapsed}ms`, 'verbose');
       if (isVerbose)
         mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'verbose');
       return result;

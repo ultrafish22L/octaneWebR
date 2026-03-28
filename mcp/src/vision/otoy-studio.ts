@@ -1,16 +1,9 @@
 /**
- * OTOY Studio vision client — upload images + call vision models via the OTOY Studio MCP proxy.
+ * OTOY Studio vision client — upload images + call analyse_image via the
+ * OTOY Studio MCP worker. This is the sole vision backend for art direction.
  *
- * Architecture: The OTOY Studio MCP worker proxies to fal.ai. We use the
- * worker's upload endpoint for images, then call chat_completion with the
- * image URL embedded in the prompt. Since chat_completion is text-only,
- * this serves as a "describe what's at this URL" approach.
- *
- * When OTOY Studio adds native vision support to chat_completion (image_url param),
- * this module can switch to that with zero architecture changes.
- *
- * For now, the primary value is the upload pipeline — the actual vision analysis
- * can be done by direct API calls (Anthropic/OpenAI) or Claude self-critique.
+ * Flow: upload image to R2 → call analyse_image(url, task, prompt) → text response.
+ * The worker proxies to fal.ai vision models (moondream3, florence-2, llava-next).
  */
 
 import fs from 'fs';
@@ -129,4 +122,116 @@ async function parseUploadResponse(
     uploadUrlFull: uploadUrl,
     downloadUrlFull: downloadUrl,
   };
+}
+
+export interface AnalyseImageResult {
+  text: string;
+  model?: string;
+}
+
+/**
+ * Call analyse_image on the OTOY Studio worker via Streamable HTTP (JSON-RPC).
+ */
+export async function callAnalyseImage(
+  imageUrl: string,
+  task: string,
+  prompt?: string,
+  options?: { token?: string; model?: string }
+): Promise<AnalyseImageResult> {
+  const token = options?.token || extractOtoyStudioToken();
+  if (!token) throw new Error('No OTOY Studio token available');
+
+  const args: Record<string, string> = { image_url: imageUrl, task };
+  if (prompt) args.prompt = prompt;
+  if (options?.model) args.model = options.model;
+
+  mcpLog(
+    `VISION/otoy-studio: analyse_image task=${task} url=${imageUrl.substring(0, 80)}…`,
+    'info'
+  );
+  const startMs = Date.now();
+
+  const resp = await fetch(`${WORKER_BASE}/mcp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: { name: 'analyse_image', arguments: args },
+      id: '1',
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`OTOY Studio analyse_image ${resp.status}: ${errText.substring(0, 300)}`);
+  }
+
+  const contentType = resp.headers.get('content-type') || '';
+  let text = '';
+
+  if (contentType.includes('text/event-stream')) {
+    // SSE response — parse event stream for the result
+    const body = await resp.text();
+    for (const line of body.split('\n')) {
+      if (line.startsWith('data:')) {
+        try {
+          const evt = JSON.parse(line.slice(5).trim());
+          if (evt.result?.content) {
+            text = evt.result.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text)
+              .join('\n');
+          }
+        } catch {
+          /* skip non-JSON lines */
+        }
+      }
+    }
+  } else {
+    // JSON-RPC response
+    const data = await resp.json();
+    if (data.error) {
+      throw new Error(
+        `analyse_image RPC error: ${data.error.message || JSON.stringify(data.error)}`
+      );
+    }
+    const content = data.result?.content;
+    if (Array.isArray(content)) {
+      text = content
+        .filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text)
+        .join('\n');
+    }
+  }
+
+  const elapsed = Date.now() - startMs;
+  mcpLog(
+    `VISION/otoy-studio: analyse_image responded in ${elapsed}ms (${text.length} chars)`,
+    'info'
+  );
+
+  return { text, model: options?.model || 'moondream3' };
+}
+
+/**
+ * Upload a local file to R2 then call analyse_image.
+ * Convenience wrapper for the common upload → analyse flow.
+ */
+export async function analyseImageFromFile(
+  filePath: string,
+  task: string,
+  prompt?: string,
+  options?: { token?: string; model?: string }
+): Promise<AnalyseImageResult> {
+  const token = options?.token || extractOtoyStudioToken();
+  if (!token) throw new Error('No OTOY Studio token available');
+
+  const uploaded = await uploadImage(filePath, token);
+  const imageUrl = uploaded.downloadUrlFull || uploaded.downloadUrl;
+  return callAnalyseImage(imageUrl, task, prompt, { ...options, token });
 }
