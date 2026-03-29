@@ -844,8 +844,8 @@ async function renderMugshots(
   if (filmHandle) {
     const resHandle = await getConnectedChild(client, filmHandle, 0); // pin 0 = resolution
     if (resHandle) {
-      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 768, y: 768, z: 0 });
-      mcpLog(`mugshot: film resolution set to 768×768 (square)`, 'info');
+      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 1024, y: 1024, z: 0 });
+      mcpLog(`mugshot: film resolution set to 1024×1024 (square)`, 'info');
     }
   }
 
@@ -1016,7 +1016,15 @@ async function renderMugshots(
     await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 2 : 0 });
 
     // Use computeFitCamera — same proven math as the fit_camera MCP tool
-    const fit = computeFitCamera(meshBboxMin, meshBboxMax, 0.15, view.elevation, view.yaw);
+    const fit = computeFitCamera(
+      meshBboxMin,
+      meshBboxMax,
+      0.05,
+      view.elevation,
+      view.yaw,
+      undefined,
+      1
+    );
     const camX = fit.position.x;
     const camY = fit.position.y;
     const camZ = fit.position.z;
@@ -1079,7 +1087,7 @@ interface ViewSpec {
   elevation: number;
   ground: boolean;
   clay?: boolean; // default true — set false for textured hero shots
-  margin?: number; // camera fit margin, default 0.15
+  margin?: number; // camera fit margin, default 0.05
 }
 
 /**
@@ -1121,7 +1129,7 @@ async function renderViews(
   if (filmHandle) {
     const resHandle = await getConnectedChild(client, filmHandle, 0);
     if (resHandle) {
-      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 768, y: 768, z: 0 });
+      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 1024, y: 1024, z: 0 });
     }
   }
 
@@ -1287,7 +1295,15 @@ async function renderViews(
     });
 
     // Camera
-    const fit = computeFitCamera(bboxMin, bboxMax, view.margin ?? 0.15, view.elevation, view.yaw);
+    const fit = computeFitCamera(
+      bboxMin,
+      bboxMax,
+      view.margin ?? 0.05,
+      view.elevation,
+      view.yaw,
+      undefined,
+      1
+    );
     await client.callMethod('LiveLink', 'SetCamera', {
       position: fit.position,
       target: fit.target,

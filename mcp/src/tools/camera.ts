@@ -53,7 +53,8 @@ export function computeFitCamera(
   margin: number,
   pitchDeg: number,
   yawDeg: number,
-  hFovDeg: number = DEFAULT_H_FOV_DEG
+  hFovDeg: number = DEFAULT_H_FOV_DEG,
+  aspectRatio: number = 2 // width/height — 2 = landscape (2:1), 1 = square
 ) {
   // Centroid = camera target
   const center: V3 = {
@@ -88,7 +89,7 @@ export function computeFitCamera(
   // FOV half-angles (from parameter, default 82° horizontal)
   const hHalfFovRad = ((hFovDeg / 2) * Math.PI) / 180;
   const tanH = Math.tan(hHalfFovRad);
-  const tanV = Math.tan(Math.atan(tanH * 0.5)); // 2:1 aspect → vertical half-FOV
+  const tanV = Math.tan(Math.atan(tanH / aspectRatio)); // aspect-aware vertical half-FOV
 
   // Generate all 8 bbox corners, project into camera space,
   // compute minimum distance so each corner fits in the frustum.
