@@ -54,7 +54,7 @@ export function computeFitCamera(
   pitchDeg: number,
   yawDeg: number,
   hFovDeg: number = DEFAULT_H_FOV_DEG,
-  aspectRatio: number = 2 // width/height — 2 = landscape (2:1), 1 = square
+  aspectRatio: number = 2 // width/height — callers should query actual film resolution
 ) {
   // Centroid = camera target
   const center: V3 = {
@@ -86,7 +86,7 @@ export function computeFitCamera(
   const right = norm(cross(forward, worldUp));
   const up = cross(right, forward); // already unit length
 
-  // FOV half-angles (from parameter, default 82° horizontal)
+  // FOV half-angles (default ~39.6° horizontal from Octane thin lens 36mm/50mm)
   const hHalfFovRad = ((hFovDeg / 2) * Math.PI) / 180;
   const tanH = Math.tan(hHalfFovRad);
   const tanV = Math.tan(Math.atan(tanH / aspectRatio)); // aspect-aware vertical half-FOV
@@ -318,7 +318,25 @@ export function registerCameraTools(
         // Tighten margin for hero-only framing
         const effectiveMargin = framing_mode === 'hero' ? Math.min(margin, 0.15) : margin;
 
-        const fit = computeFitCamera(bMin, bMax, effectiveMargin, elevation, yaw);
+        // Query actual film resolution for correct aspect ratio
+        let aspectRatio = 2; // fallback if query fails
+        try {
+          const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
+          const s = stats?.statistics ?? stats;
+          if (s?.setSize?.x && s?.setSize?.y) {
+            aspectRatio = s.setSize.x / s.setSize.y;
+          }
+        } catch {}
+
+        const fit = computeFitCamera(
+          bMin,
+          bMax,
+          effectiveMargin,
+          elevation,
+          yaw,
+          undefined,
+          aspectRatio
+        );
 
         // Override target to hero center when available (camera looks AT hero, not bbox center)
         const target = heroCenter ?? fit.target;

@@ -1,6 +1,17 @@
-## v2.4.3
+## v2.4.4
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
+
+### v2.4.4 changes (MCP_BUILD 63)
+
+- Deleted dead `renderMugshots` (~270 lines) — all rendering via `renderViews`
+- Extracted constants: `MUGSHOT_FILM_RESOLUTION`, `MUGSHOT_SAMPLES`, `MUGSHOT_ENV_POWER`, `DEFAULT_MUGSHOT_MARGIN`, `PANCAKE_HEIGHT_THRESHOLD`
+- Extracted helpers: `isPancakeMesh()`, `writePlaneOBJ()`
+- `fit_camera` queries actual film resolution for aspect ratio (no more hardcoded 2:1)
+- Hero shot now renders on known-source fast path (was missing)
+- Default mugshot margin 0.05 → 0.1
+- `try/finally` safety for clay mode restoration + node cleanup in `renderViews`
+- Error logging in all catch blocks (no silent swallows)
 
 ---
 

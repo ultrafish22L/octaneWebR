@@ -290,6 +290,31 @@ function analyzeOrientation(
 
 // ── Mugshot Rendering + VLM Orientation Analysis ─────────────────
 
+/** Mugshot rendering constants. */
+const MUGSHOT_FILM_RESOLUTION = 1024; // square film — 1024×1024
+const MUGSHOT_SAMPLES = 256; // path tracing samples for crisp renders
+const MUGSHOT_ENV_POWER = 0.8; // daylight env power — neutral, avoids blowout
+const DEFAULT_MUGSHOT_MARGIN = 0.1; // camera fit margin (10% padding)
+const PANCAKE_HEIGHT_THRESHOLD = 0.1; // height/footprint ratio below which mesh is "flat"
+
+/** Detect flat/pancake meshes that shouldn't have ground planes. */
+function isPancakeMesh(extents?: { x: number; y: number; z: number }): boolean {
+  if (!extents) return false;
+  return extents.y / Math.max(extents.x, extents.z, 0.001) < PANCAKE_HEIGHT_THRESHOLD;
+}
+
+/** Write a simple quad ground plane OBJ file. Returns the file path. */
+function writePlaneOBJ(outputDir: string, baseName: string, footprint: number): string {
+  const objPath = path.join(outputDir, `${baseName}_ground_plane.obj`);
+  const h = footprint / 2;
+  fs.writeFileSync(
+    objPath,
+    `# ground\nv ${-h} 0 ${-h}\nv ${h} 0 ${-h}\nv ${h} 0 ${h}\nv ${-h} 0 ${h}\nvn 0 1 0\nf 1//1 2//1 3//1 4//1\n`,
+    'utf8'
+  );
+  return objPath;
+}
+
 /** Well-known node type IDs for mugshot scene construction. */
 const MUGSHOT_TYPES = {
   RT: 56, // NT_RENDERTARGET
@@ -731,11 +756,8 @@ function burnLabel(
 // ── Mugshot scoreboard for configuration mode ────────────────────────
 
 const SCOREBOARD_PATH = path.resolve(__dirname, '../../data/mugshot_scoreboard.json');
-// otoy-studio models: florence-2-large doesn't support 'ask' task. moondream2 is legacy.
-// Anthropic models use direct Claude API (not otoy-studio). Sonnet best for spatial reasoning.
-const OTOY_VLM_MODELS: string[] = []; // disabled: moondream-next/llava-next timeout, moondream3 inaccurate
-const ANTHROPIC_VLM_MODELS = ['claude-sonnet']; // disabled: claude-haiku inconsistent
-const AVAILABLE_VLM_MODELS = [...OTOY_VLM_MODELS, ...ANTHROPIC_VLM_MODELS];
+// Anthropic models use direct Claude API. Sonnet best for spatial reasoning.
+const AVAILABLE_VLM_MODELS = ['claude-sonnet'];
 
 /** Map config model names to Anthropic API model IDs */
 const ANTHROPIC_MODEL_IDS: Record<string, string> = {
@@ -805,280 +827,7 @@ function getPreferredModel(): string {
   return sb.preferred_model || AVAILABLE_VLM_MODELS[0] || 'claude-sonnet';
 }
 
-/**
- * Render mugshot views of a single mesh in an isolated scene.
- * Includes a ground plane with shadows for orientation cues.
- *
- * Returns paths to the saved PNGs.
- */
-async function renderMugshots(
-  client: OctaneMcpClient,
-  cache: ApiCache | null,
-  objPath: string,
-  rotationGuess: { x: number; y: number; z: number },
-  groundOffsetY: number,
-  outputDir: string,
-  baseName: string,
-  meshExtents?: { x: number; y: number; z: number },
-  rawBoundsMin?: { x: number; y: number; z: number },
-  rawBoundsMax?: { x: number; y: number; z: number }
-): Promise<string[]> {
-  mcpLog(`mugshot: building isolated scene for ${baseName}`, 'info');
-  const savedPaths: string[] = [];
-
-  // Create mugshot scene infrastructure
-  const rt = await createNodeRaw(client, MUGSHOT_TYPES.RT);
-  const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
-  const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_PT);
-  const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
-  const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
-
-  // Wire RT: camera(0), environment(1), geometry(3), kernel(6)
-  await connectRaw(client, rt, cam, 0);
-  await connectRaw(client, rt, env, 1);
-  await connectRaw(client, rt, geoGroup, 3);
-  await connectRaw(client, rt, kern, 6);
-
-  // Set square film resolution (512×512) for mugshot renders
-  const filmHandle = await getConnectedChild(client, rt, 4); // pin 4 = filmSettings
-  if (filmHandle) {
-    const resHandle = await getConnectedChild(client, filmHandle, 0); // pin 0 = resolution
-    if (resHandle) {
-      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 1024, y: 1024, z: 0 });
-      mcpLog(`mugshot: film resolution set to 1024×1024 (square)`, 'info');
-    }
-  }
-
-  // Disable DOF on camera — pin 14 (aperture)
-  const aperturePinHandle = await getConnectedChild(client, cam, 14);
-  if (aperturePinHandle) {
-    await setAttrRaw(client, aperturePinHandle, AttributeId.A_VALUE, 9, 0);
-  }
-
-  // Set env power low for clean mugshot lighting — pin 2 (power)
-  const envPowerHandle = await getConnectedChild(client, env, 2);
-  if (envPowerHandle) {
-    await setAttrRaw(client, envPowerHandle, AttributeId.A_VALUE, 9, 0.8);
-  }
-
-  // Geo group needs 2 pins: mesh + ground plane (toggled per view)
-  const isPancake =
-    meshExtents && meshExtents.y / Math.max(meshExtents.x, meshExtents.z, 0.001) < 0.1;
-  const hasAnyGroundViews = !isPancake && MUGSHOT_VIEWS.some(v => v.ground);
-  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, hasAnyGroundViews ? 2 : 1);
-
-  // Create mesh + placement for the asset
-  const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
-  const placement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
-
-  // Load OBJ file
-  await setAttrRaw(client, mesh, AttributeId.A_FILENAME, 14, objPath);
-
-  // Connect mesh to placement geometry pin (pin 1)
-  await connectRaw(client, placement, mesh, 1);
-
-  // Apply geometric guess rotation so VLM sees the mesh (hopefully) upright.
-  // This makes mugshots human-readable: base at bottom, figure standing.
-  // VLM confirms or provides additional correction.
-  const placementXform = await getConnectedChild(client, placement, 0); // transform pin
-  if (placementXform) {
-    await setAttrRaw(client, placementXform, AttributeId.A_ROTATION, 11, rotationGuess);
-    await setAttrRaw(client, placementXform, AttributeId.A_TRANSLATION, 11, {
-      x: 0,
-      y: groundOffsetY,
-      z: 0,
-    });
-  }
-
-  // Connect placement to geo group pin 0
-  await connectRaw(client, geoGroup, placement, 0);
-
-  // Ground plane for shadow/gravity cues (skip for pancake meshes)
-  let groundPlacementHandle = 0; // tracked for per-view toggle
-  if (hasAnyGroundViews) {
-    const groundMesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
-    const groundPlacement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
-    const groundMaterial = await createNodeRaw(client, 33); // NT_MAT_DIFFUSE
-
-    // Use built-in plane (OBJ not needed — set mesh type to plane via attribute)
-    // Actually we need a simple plane OBJ. Create one inline.
-    const footprint = meshExtents ? Math.max(meshExtents.x, meshExtents.z, 0.5) * 3 : 3;
-    const planeObjPath = path.join(outputDir, `${baseName}_ground_plane.obj`);
-    const half = footprint / 2;
-    fs.writeFileSync(
-      planeObjPath,
-      [
-        '# mugshot ground plane',
-        `v ${-half} 0 ${-half}`,
-        `v ${half} 0 ${-half}`,
-        `v ${half} 0 ${half}`,
-        `v ${-half} 0 ${half}`,
-        'vn 0 1 0',
-        'f 1//1 2//1 3//1 4//1',
-      ].join('\n'),
-      'utf8'
-    );
-
-    await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, planeObjPath);
-    await connectRaw(client, groundPlacement, groundMesh, 1);
-
-    // 50% grey diffuse material
-    const diffColorHandle = await getConnectedChild(client, groundMaterial, 0);
-    if (diffColorHandle) {
-      await setAttrRaw(client, diffColorHandle, AttributeId.A_VALUE, 11, {
-        x: 0.5,
-        y: 0.5,
-        z: 0.5,
-      });
-    }
-    await connectRaw(client, groundPlacement, groundMaterial, 0); // material pin
-
-    // Ground plane sits at Y=0 (mesh base)
-    const groundXform = await getConnectedChild(client, groundPlacement, 0);
-    if (groundXform) {
-      await setAttrRaw(client, groundXform, AttributeId.A_TRANSLATION, 11, { x: 0, y: 0, z: 0 });
-    }
-
-    await connectRaw(client, geoGroup, groundPlacement, 1);
-    groundPlacementHandle = groundPlacement;
-    mcpLog(`mugshot: ground plane added (${footprint.toFixed(1)} units, 50% grey)`, 'info');
-  }
-
-  // Flush scene so Octane computes post-rotation bounds
-  await client.callMethod('ApiChangeManager', 'update', {});
-
-  // Select this RT for rendering
-  await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
-    targetNode: { handle: String(rt), type: OBJ_API_NODE },
-  });
-
-  // Set low max samples for fast mugshot renders
-  const maxSamplesHandle = await getConnectedChild(client, kern, 0); // maxsamples pin
-  if (maxSamplesHandle) {
-    await setAttrRaw(client, maxSamplesHandle, AttributeId.A_VALUE, 3, 100);
-  }
-
-  // Ensure output directory exists
-  fs.mkdirSync(outputDir, { recursive: true });
-
-  // Get ACTUAL scene bounds from Octane (post-rotation, post-translation).
-  // This is the ground truth for camera framing — no manual bbox math needed.
-  let meshBboxMin = { x: -0.5, y: 0, z: -0.5 };
-  let meshBboxMax = { x: 0.5, y: 1, z: 0.5 };
-  try {
-    const sceneBounds = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
-    if (sceneBounds?.bboxMin && sceneBounds?.bboxMax) {
-      meshBboxMin = {
-        x: sceneBounds.bboxMin.x,
-        y: sceneBounds.bboxMin.y,
-        z: sceneBounds.bboxMin.z,
-      };
-      meshBboxMax = {
-        x: sceneBounds.bboxMax.x,
-        y: sceneBounds.bboxMax.y,
-        z: sceneBounds.bboxMax.z,
-      };
-      mcpLog(
-        `mugshot: scene bounds = (${meshBboxMin.x.toFixed(3)}, ${meshBboxMin.y.toFixed(3)}, ${meshBboxMin.z.toFixed(3)}) → (${meshBboxMax.x.toFixed(3)}, ${meshBboxMax.y.toFixed(3)}, ${meshBboxMax.z.toFixed(3)})`,
-        'info'
-      );
-    }
-  } catch (e: any) {
-    mcpLog(`mugshot: getSceneBounds failed (${e.message}), using fallback bbox`, 'warn');
-  }
-
-  // Track ground plane state for toggling
-  let groundVisible = true;
-
-  // Render each view
-  for (const view of MUGSHOT_VIEWS) {
-    mcpLog(`mugshot: rendering ${view.name} (ground=${view.ground})`, 'info');
-
-    // Toggle ground plane visibility per view
-    if (groundPlacementHandle && view.ground !== groundVisible) {
-      if (view.ground) {
-        await connectRaw(client, geoGroup, groundPlacementHandle, 1);
-      } else {
-        // Disconnect ground plane from geo group pin 1
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(geoGroup), type: OBJ_API_NODE },
-          pinIdx: 1,
-          sourceNode: { handle: '0', type: OBJ_API_NODE },
-          evaluate: true,
-          doCycleCheck: false,
-        });
-      }
-      groundVisible = view.ground;
-      await client.callMethod('ApiChangeManager', 'update', {});
-    }
-
-    // Set clay mode
-    await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 2 : 0 });
-
-    // Use computeFitCamera — same proven math as the fit_camera MCP tool
-    const fit = computeFitCamera(
-      meshBboxMin,
-      meshBboxMax,
-      0.05,
-      view.elevation,
-      view.yaw,
-      undefined,
-      1
-    );
-    const camX = fit.position.x;
-    const camY = fit.position.y;
-    const camZ = fit.position.z;
-
-    await client.callMethod('LiveLink', 'SetCamera', {
-      position: fit.position,
-      target: fit.target,
-      up: { x: 0, y: 1, z: 0 },
-    });
-
-    // Start render and wait for completion
-    await client.callMethod('ApiChangeManager', 'update', {});
-    await client.callMethod('ApiRenderEngine', 'continueRendering', {});
-
-    // Poll for render completion (max 30s)
-    const startTime = Date.now();
-    while (Date.now() - startTime < 30000) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try {
-        const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
-        const s = stats?.statistics ?? stats;
-        if (s?.beautySamplesPerPixel >= 250 || s?.state === 'RSTATE_FINISHED') break;
-      } catch (e: any) {
-        mcpLog(`mugshot render poll error: ${e?.message ?? e}`, 'verbose');
-      }
-    }
-
-    // Save render
-    const outPath = path.join(outputDir, `${baseName}.mugshot_${view.name}.png`);
-    await client.callMethod(
-      'ApiRenderEngine',
-      'saveImage1',
-      {
-        renderPassId: 0,
-        fullPath: outPath,
-        imageSaveFormat: 0, // PNG
-        colorSpace: 1,
-        premultipliedAlphaType: 0,
-        exrCompressionType: 4,
-        exrCompressionLevel: 4.5,
-        asynchronous: false,
-      },
-      120_000
-    );
-    savedPaths.push(outPath);
-    mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
-  }
-
-  // Restore clay mode to normal
-  await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: 0 });
-
-  mcpLog(`mugshot: rendered ${savedPaths.length} views for ${baseName}`, 'info');
-  return savedPaths;
-}
+// renderMugshots — DELETED in v2.4.4. All rendering goes through renderViews().
 
 /** View spec for lean mugshot rendering. */
 interface ViewSpec {
@@ -1086,13 +835,14 @@ interface ViewSpec {
   yaw: number;
   elevation: number;
   ground: boolean;
-  clay?: boolean; // default true — set false for textured hero shots
-  margin?: number; // camera fit margin, default 0.05
+  clay?: boolean; // default true (mode 2 = color clay). Set false for full materials.
+  margin?: number; // camera fit margin, default DEFAULT_MUGSHOT_MARGIN
 }
 
 /**
- * Render a small number of views of a mesh in an isolated scene.
- * Lean replacement for renderMugshots — renders only the views you ask for.
+ * Render views of a mesh in an isolated scene.
+ * Creates a temporary render target, camera, kernel, env, and geo group,
+ * renders each ViewSpec, then cleans up all created nodes.
  * Returns paths to saved PNGs.
  */
 async function renderViews(
@@ -1124,12 +874,16 @@ async function renderViews(
   await connectRaw(client, rt, geoGroup, 3);
   await connectRaw(client, rt, kern, 6);
 
-  // 768×768 film
+  // Square film resolution
   const filmHandle = await getConnectedChild(client, rt, 4);
   if (filmHandle) {
     const resHandle = await getConnectedChild(client, filmHandle, 0);
     if (resHandle) {
-      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 1024, y: 1024, z: 0 });
+      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, {
+        x: MUGSHOT_FILM_RESOLUTION,
+        y: MUGSHOT_FILM_RESOLUTION,
+        z: 0,
+      });
     }
   }
 
@@ -1147,12 +901,11 @@ async function renderViews(
 
   // Env power
   const envPower = await getConnectedChild(client, env, 2);
-  if (envPower) await setAttrRaw(client, envPower, AttributeId.A_VALUE, 9, 0.8);
+  if (envPower) await setAttrRaw(client, envPower, AttributeId.A_VALUE, 9, MUGSHOT_ENV_POWER);
 
   // Ground plane needed?
-  const isPancake =
-    meshExtents && meshExtents.y / Math.max(meshExtents.x, meshExtents.z, 0.001) < 0.1;
-  const hasGround = !isPancake && views.some(v => v.ground);
+  const pancake = isPancakeMesh(meshExtents);
+  const hasGround = !pancake && views.some(v => v.ground);
   await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, hasGround ? 2 : 1);
 
   // Load mesh + placement
@@ -1177,21 +930,14 @@ async function renderViews(
   let groundPlacement = 0;
   let groundMesh = 0;
   let groundMat = 0;
-  let groundPlaneObj = '';
+  let groundPlaneObjPath = '';
   if (hasGround) {
     groundMesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
     const gp = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
     groundMat = await createNodeRaw(client, 33); // NT_MAT_DIFFUSE
     const footprint = meshExtents ? Math.max(meshExtents.x, meshExtents.z, 0.5) * 3 : 3;
-    groundPlaneObj = path.join(outputDir, `${baseName}_ground_plane.obj`);
-    const planeObj = groundPlaneObj;
-    const h = footprint / 2;
-    fs.writeFileSync(
-      planeObj,
-      `# ground\nv ${-h} 0 ${-h}\nv ${h} 0 ${-h}\nv ${h} 0 ${h}\nv ${-h} 0 ${h}\nvn 0 1 0\nf 1//1 2//1 3//1 4//1\n`,
-      'utf8'
-    );
-    await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, planeObj);
+    groundPlaneObjPath = writePlaneOBJ(outputDir, baseName, footprint);
+    await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, groundPlaneObjPath);
     await connectRaw(client, gp, groundMesh, 1);
     const diffColor = await getConnectedChild(client, groundMat, 0);
     if (diffColor)
@@ -1207,9 +953,9 @@ async function renderViews(
     targetNode: { handle: String(rt), type: OBJ_API_NODE },
   });
 
-  // Samples — 256 for crisp mugshots
+  // Max samples for mugshot renders
   const maxSamples = await getConnectedChild(client, kern, 0);
-  if (maxSamples) await setAttrRaw(client, maxSamples, AttributeId.A_VALUE, 3, 256);
+  if (maxSamples) await setAttrRaw(client, maxSamples, AttributeId.A_VALUE, 3, MUGSHOT_SAMPLES);
 
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -1271,108 +1017,119 @@ async function renderViews(
 
   let groundVisible = true;
 
-  for (const view of views) {
-    // Toggle ground
-    if (groundPlacement && view.ground !== groundVisible) {
-      if (view.ground) {
-        await connectRaw(client, geoGroup, groundPlacement, 1);
-      } else {
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(geoGroup), type: OBJ_API_NODE },
-          pinIdx: 1,
-          sourceNode: { handle: '0', type: OBJ_API_NODE },
-          evaluate: true,
-          doCycleCheck: false,
-        });
+  try {
+    for (const view of views) {
+      // Toggle ground
+      if (groundPlacement && view.ground !== groundVisible) {
+        if (view.ground) {
+          await connectRaw(client, geoGroup, groundPlacement, 1);
+        } else {
+          await client.callMethod('ApiNode', 'connectToIx', {
+            objectPtr: { handle: String(geoGroup), type: OBJ_API_NODE },
+            pinIdx: 1,
+            sourceNode: { handle: '0', type: OBJ_API_NODE },
+            evaluate: true,
+            doCycleCheck: false,
+          });
+        }
+        groundVisible = view.ground;
+        await client.callMethod('ApiChangeManager', 'update', {});
       }
-      groundVisible = view.ground;
-      await client.callMethod('ApiChangeManager', 'update', {});
-    }
 
-    // Clay mode: default on for diagnostic views, off for textured hero shots
-    await client.callMethod('ApiRenderEngine', 'setClayMode', {
-      mode: view.clay === false ? 0 : 2,
-    });
-
-    // Camera
-    const fit = computeFitCamera(
-      bboxMin,
-      bboxMax,
-      view.margin ?? 0.05,
-      view.elevation,
-      view.yaw,
-      undefined,
-      1
-    );
-    await client.callMethod('LiveLink', 'SetCamera', {
-      position: fit.position,
-      target: fit.target,
-      up: { x: 0, y: 1, z: 0 },
-    });
-
-    // Render
-    await client.callMethod('ApiChangeManager', 'update', {});
-    await client.callMethod('ApiRenderEngine', 'continueRendering', {});
-    const t0 = Date.now();
-    while (Date.now() - t0 < 30000) {
-      await new Promise(r => setTimeout(r, 500));
-      try {
-        const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
-        const s = stats?.statistics ?? stats;
-        if (s?.beautySamplesPerPixel >= 250 || s?.state === 'RSTATE_FINISHED') break;
-      } catch {}
-    }
-
-    // Save
-    const outPath = path.join(outputDir, `${baseName}.${view.name}.png`);
-    await client.callMethod(
-      'ApiRenderEngine',
-      'saveImage1',
-      {
-        renderPassId: 0,
-        fullPath: outPath,
-        imageSaveFormat: 0,
-        colorSpace: 1,
-        premultipliedAlphaType: 0,
-        exrCompressionType: 4,
-        exrCompressionLevel: 4.5,
-        asynchronous: false,
-      },
-      120_000
-    );
-    savedPaths.push(outPath);
-    mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
-  }
-
-  await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: 0 });
-
-  // Cleanup: delete all created nodes so mugshots don't pollute the scene
-  const toDelete = [
-    groundMat,
-    groundMesh,
-    groundPlacement,
-    placement,
-    mesh,
-    env,
-    geoGroup,
-    kern,
-    cam,
-    rt,
-  ].filter(h => h > 0);
-  for (const handle of toDelete) {
-    try {
-      await client.callMethod('ApiItem', 'destroy', {
-        objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+      // Clay mode: default on (mode 2 = color clay), off only when clay===false
+      await client.callMethod('ApiRenderEngine', 'setClayMode', {
+        mode: view.clay === false ? 0 : 2,
       });
-    } catch {}
+
+      // Camera — 1:1 aspect ratio for square mugshot film
+      const fit = computeFitCamera(
+        bboxMin,
+        bboxMax,
+        view.margin ?? DEFAULT_MUGSHOT_MARGIN,
+        view.elevation,
+        view.yaw,
+        undefined,
+        1
+      );
+      await client.callMethod('LiveLink', 'SetCamera', {
+        position: fit.position,
+        target: fit.target,
+        up: { x: 0, y: 1, z: 0 },
+      });
+
+      // Render
+      await client.callMethod('ApiChangeManager', 'update', {});
+      await client.callMethod('ApiRenderEngine', 'continueRendering', {});
+      const t0 = Date.now();
+      while (Date.now() - t0 < 30000) {
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
+          const s = stats?.statistics ?? stats;
+          if (s?.beautySamplesPerPixel >= 250 || s?.state === 'RSTATE_FINISHED') break;
+        } catch (e: any) {
+          mcpLog(`mugshot: render poll error: ${e?.message ?? e}`, 'verbose');
+        }
+      }
+
+      // Save
+      const outPath = path.join(outputDir, `${baseName}.${view.name}.png`);
+      await client.callMethod(
+        'ApiRenderEngine',
+        'saveImage1',
+        {
+          renderPassId: 0,
+          fullPath: outPath,
+          imageSaveFormat: 0,
+          colorSpace: 1,
+          premultipliedAlphaType: 0,
+          exrCompressionType: 4,
+          exrCompressionLevel: 4.5,
+          asynchronous: false,
+        },
+        120_000
+      );
+      savedPaths.push(outPath);
+      mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
+    }
+  } finally {
+    // Always restore clay mode even if render loop throws
+    await client
+      .callMethod('ApiRenderEngine', 'setClayMode', { mode: 0 })
+      .catch((e: any) => mcpLog(`mugshot: failed to restore clay mode: ${e?.message}`, 'warn'));
+
+    // Cleanup: delete all created nodes so mugshots don't pollute the scene
+    const toDelete = [
+      groundMat,
+      groundMesh,
+      groundPlacement,
+      placement,
+      mesh,
+      env,
+      geoGroup,
+      kern,
+      cam,
+      rt,
+    ].filter(h => h > 0);
+    for (const handle of toDelete) {
+      try {
+        await client.callMethod('ApiItem', 'destroy', {
+          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+        });
+      } catch (e: any) {
+        mcpLog(`mugshot: failed to destroy node ${handle}: ${e?.message}`, 'warn');
+      }
+    }
+    // Clean up temp ground plane OBJ
+    if (groundPlaneObjPath) {
+      try {
+        fs.unlinkSync(groundPlaneObjPath);
+      } catch (e: any) {
+        mcpLog(`mugshot: failed to delete ground plane OBJ: ${e?.message}`, 'verbose');
+      }
+      mcpLog(`mugshot: cleaned up ${toDelete.length} nodes`, 'info');
+    }
   }
-  // Clean up temp ground plane OBJ
-  if (groundPlaneObj) {
-    try {
-      fs.unlinkSync(groundPlaneObj);
-    } catch {}
-  }
-  mcpLog(`mugshot: cleaned up ${toDelete.length} nodes`, 'info');
 
   return savedPaths;
 }
@@ -2319,7 +2076,9 @@ export function registerImportTools(
             }
             if (staleFiles.length > 0)
               mcpLog(`analyze_mesh: cleaned ${staleFiles.length} stale render PNGs`, 'info');
-          } catch {}
+          } catch (e: any) {
+            mcpLog(`analyze_mesh: stale file cleanup failed: ${e?.message}`, 'warn');
+          }
         }
 
         let visualCheck: any = null;
@@ -2367,7 +2126,7 @@ export function registerImportTools(
               known_rotation: knownSource.rotation,
             };
 
-            // Always render diagnostic mugshots — never skip
+            // Always render diagnostic mugshots + hero — never skip
             const mugshotViewSpecs: ViewSpec[] = MUGSHOT_VIEWS.map(v => ({
               name: `mugshot_${v.name}`,
               yaw: v.yaw,
@@ -2388,6 +2147,25 @@ export function registerImportTools(
               rawMin,
               rawMax
             );
+
+            // Hero shot (color clay thumbnail)
+            const heroViews: ViewSpec[] = [{ name: 'hero', yaw: 4, elevation: 7, ground: true }];
+            const heroPaths = await renderViews(
+              client,
+              cache,
+              resolved,
+              finalRotation,
+              finalGroundOffset,
+              outputDir,
+              baseName,
+              heroViews,
+              extents,
+              rawMin,
+              rawMax
+            );
+            heroPath = heroPaths[0] || '';
+            visualCheck.hero_shot = path.basename(heroPath);
+            mcpLog(`analyze_mesh: hero shot → ${heroPath}`, 'info');
           } else {
             // === PASS 1: Diagnosis — render 2-3 raw views, ask VLM what it sees ===
             const rawRotation = { x: 0, y: 0, z: 0 };
@@ -2570,9 +2348,7 @@ export function registerImportTools(
           finalConfidence = verified ? 'high' : diag?.confidence || 'medium';
 
           // === HERO SHOT — always rendered (thumbnail/reference image) ===
-          const heroViews: ViewSpec[] = [
-            { name: 'hero', yaw: 4, elevation: 7, ground: true, margin: 0.05 },
-          ];
+          const heroViews: ViewSpec[] = [{ name: 'hero', yaw: 4, elevation: 7, ground: true }];
           const heroPaths = await renderViews(
             client,
             cache,
