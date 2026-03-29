@@ -67,28 +67,31 @@ Every step produces a visible change. The human should see a render update withi
 
 ### Pre-Phase: analyze_mesh (BLOCKING — before ANY placement)
 
-> **⛔ HARD GATE: Do NOT call `import_geo` on any mesh until `analyze_mesh` has run on it.** MCP will warn if you skip this. Placing a mesh without mugshot analysis wastes entire iterations on wrong orientation.
+> **⛔ HARD GATE: Do NOT call `import_geo` on any mesh until `analyze_mesh` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
 
-Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls yet.
+Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls in the scene yet.
 
-| Step | Action                                            | Result                                                                                                               |
-| ---- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| M1   | `analyze_mesh(file_path)` for each OBJ/GLB        | Cached v2 sidecar (`.mesh_info.json`) with geometry bounds, semantic description, visual_check, and final_suggestion |
-| M2   | Read `final_suggestion` from each sidecar         | Rotation correction (e.g. +90° X for Z-up GLBs), scale recommendation, orientation confidence                        |
-| M3   | Apply rotation/scale from suggestion when placing | Ensures meshes are upright and correctly sized                                                                       |
+**Lean 2-pass VLM protocol (default):**
 
-**Mugshot protocol:** analyze_mesh renders 6 views (front/right/top × clay/textured) on an isolated ground plane, sends to VLM for upright verification. Results are cached — subsequent calls return instantly from sidecar.
+| Pass              | Views                                                  | Mode                              | Purpose                                                                      |
+| ----------------- | ------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------- |
+| Pass 1 — Diagnose | 3 (front, side, top)                                   | Color clay (mode 2), raw rotation | VLM identifies upright axis + facing direction → maps to rotation correction |
+| Pass 2 — Verify   | 2 (front, side) with correction applied, loop up to 4× | Color clay (mode 2)               | VLM confirms correction or requests adjustment                               |
+| Hero              | 1 (yaw 22°, elevation 25°)                             | Textured (clay off), tight margin | Reference thumbnail for human review                                         |
 
-**What mugshots tell you:**
+- **Known source fast path:** When `source_endpoint` matches `ENDPOINT_AXIS_MAP` (e.g. "huynan" → X+90°), Pass 1 is skipped — deterministic correction applied directly, then Pass 2 verifies.
+- **Configuration mode:** `analyze_mesh(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Use `score_mugshot_models` to rank accuracy.
+- **Sidecar:** `.mesh_info.json` v5 — geometry, semantic, source, visual_check (pass1 + pass2 arrays), final_suggestion.
+- **Autonomous:** Proceeds without human input. Flags `verified: false` only if Pass 2 fails after 4 attempts.
 
-- **Clay views** (3 angles) — geometry silhouette, which axis is "up", where the mesh faces
-- **Textured views** (3 angles) — material orientation confirms front/back, confirms scale
+**Related tools:**
 
-**Why here:** Placing a mesh without knowing its orientation wastes an entire build iteration. analyze_mesh eliminates guesswork. Only the samurai mesh has consistently correct orientation — because it's the only one that was always properly analyzed.
+- `attach_mesh` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
+- `score_mugshot_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
 
 ```
-❌ import_geo("gargoyle.obj") → guess rotation from recipe → "looks weird" → waste 3 iterations fixing
-✅ analyze_mesh("gargoyle.obj") → read mesh_info.json → import_geo → apply mesh_info rotation → correct on first try
+❌ import_geo("gargoyle.obj") → guess rotation → wrong → waste iterations
+✅ analyze_mesh("gargoyle.obj") → read sidecar → attach_mesh or import_geo with correction → correct first try
 ```
 
 ---

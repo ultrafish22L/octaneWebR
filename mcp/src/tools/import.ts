@@ -2284,6 +2284,28 @@ export function registerImportTools(
         const rawMin = { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] };
         const rawMax = { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] };
 
+        // Clean stale render PNGs before re-render (prevents confusion with old files)
+        if (force_reanalyze) {
+          try {
+            const staleFiles = fs
+              .readdirSync(outputDir)
+              .filter(
+                (f: string) =>
+                  f.startsWith(baseName) &&
+                  (f.includes('.mugshot_') ||
+                    f.includes('.check_') ||
+                    f.includes('.hero.') ||
+                    f.includes('.diag_')) &&
+                  f.endsWith('.png')
+              );
+            for (const f of staleFiles) {
+              fs.unlinkSync(path.join(outputDir, f));
+            }
+            if (staleFiles.length > 0)
+              mcpLog(`analyze_mesh: cleaned ${staleFiles.length} stale render PNGs`, 'info');
+          } catch {}
+        }
+
         let visualCheck: any = null;
         let finalRotation = orientation.suggestedRotation;
         let finalGroundOffset = orientation.groundOffsetY;
@@ -2328,6 +2350,28 @@ export function registerImportTools(
               axis_convention: knownSource.convention,
               known_rotation: knownSource.rotation,
             };
+
+            // Always render diagnostic mugshots — never skip
+            const mugshotViewSpecs: ViewSpec[] = MUGSHOT_VIEWS.map(v => ({
+              name: `mugshot_${v.name}`,
+              yaw: v.yaw,
+              elevation: v.elevation,
+              ground: v.ground,
+              // no clay property → defaults to color clay (mode 2) in renderViews
+            }));
+            await renderViews(
+              client,
+              cache,
+              resolved,
+              finalRotation,
+              finalGroundOffset,
+              outputDir,
+              baseName,
+              mugshotViewSpecs,
+              extents,
+              rawMin,
+              rawMax
+            );
           } else {
             // === PASS 1: Diagnosis — render 2-3 raw views, ask VLM what it sees ===
             const rawRotation = { x: 0, y: 0, z: 0 };
@@ -2411,6 +2455,27 @@ export function registerImportTools(
               else if (fv === 2) finalRotation.y = -90;
               else if (fv === 4) finalRotation.y = 90;
             }
+
+            // Always render diagnostic mugshots — never skip
+            const mugshotViewSpecs: ViewSpec[] = MUGSHOT_VIEWS.map(v => ({
+              name: `mugshot_${v.name}`,
+              yaw: v.yaw,
+              elevation: v.elevation,
+              ground: v.ground,
+            }));
+            await renderViews(
+              client,
+              cache,
+              resolved,
+              finalRotation,
+              finalGroundOffset,
+              outputDir,
+              baseName,
+              mugshotViewSpecs,
+              extents,
+              rawMin,
+              rawMax
+            );
           }
 
           // === PASS 2: Verification loop — always at least 1 pass, even for known sources ===
@@ -2490,7 +2555,7 @@ export function registerImportTools(
 
           // === HERO SHOT — always rendered (thumbnail/reference image) ===
           const heroViews: ViewSpec[] = [
-            { name: 'hero', yaw: 22, elevation: 25, ground: true, clay: false, margin: 0.05 },
+            { name: 'hero', yaw: 22, elevation: 25, ground: true, margin: 0.05 },
           ];
           const heroPaths = await renderViews(
             client,

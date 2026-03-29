@@ -32,9 +32,9 @@ If you have a reference image, `analyze_reference` extracts composition from it 
 
 ### 2. Mesh Analysis & Scene Placement
 
-3D meshes from external sources arrive with unknown orientation, scale, and proportions. The **Mugshot Protocol** (`analyze_mesh`) loads each mesh in isolation, renders 8 views, sends them to a VLM for upright verification, and caches the results in a sidecar file. Scene Placement maintains a spatial database for collision-free positioning via `suggest_placement` and `register_scene_object`.
+3D meshes from external sources arrive with unknown orientation, scale, and proportions. The **Mugshot Protocol** (`analyze_mesh`) loads each mesh in isolation, renders diagnostic views (lean 2-pass: 3 diagnose + 2 verify + 1 hero), sends them to a VLM for upright verification, and caches the results in a sidecar file. Scene Placement maintains a spatial database for collision-free positioning via `suggest_placement` and `register_scene_object`.
 
-> **Details:** [BUILD.md Pre-Phase](mcp/BUILD.md#pre-phase-analyze_mesh-before-any-placement)
+> **Details:** [BUILD.md Pre-Phase](mcp/BUILD.md#pre-phase-analyze_mesh-blocking--before-any-placement)
 
 ---
 
