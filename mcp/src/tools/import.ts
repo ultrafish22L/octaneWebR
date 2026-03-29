@@ -2571,7 +2571,7 @@ export function registerImportTools(
 
           // === HERO SHOT — always rendered (thumbnail/reference image) ===
           const heroViews: ViewSpec[] = [
-            { name: 'hero', yaw: 22, elevation: 25, ground: true, margin: 0.05 },
+            { name: 'hero', yaw: 4, elevation: 7, ground: true, margin: 0.05 },
           ];
           const heroPaths = await renderViews(
             client,
