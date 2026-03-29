@@ -26,19 +26,17 @@
 
 **Before push:** `npm test` + `npm run lint` + `cd mcp && npm run build`.
 
-### On Crash — FULL STOP
-
-Follow the crash protocol below. Then:
+### On Error — FULL STOP
 
 1. Note which tool/call caused it
 2. Check `log_mcp.log` — last success → first error
-3. Relaunch octaneServGrpc, wait ~5s, verify gRPC on port 51022
+3. If server disconnected: relaunch octaneServGrpc, wait ~5s, verify gRPC on port 51022
 4. `load_project` from last checkpoint
 5. Resume from where you left off
 
-### Known Crash Triggers
+### Known Error Triggers
 
-- `import_materialx` — can crash Octane on certain .mtlx files (standard_surface_gold.mtlx confirmed crash).
+- `import_materialx` — returns gRPC error on certain .mtlx files (standard_surface_gold.mtlx confirmed).
 
 ---
 
@@ -147,14 +145,14 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### I. Art Direction (6 tools)
 
-| #   | Test                             | Pass Criteria                      | Render-Check       |
-| --- | -------------------------------- | ---------------------------------- | ------------------ |
-| 1   | `plan_composition`               | Returns spec + validation          | —                  |
-| 2   | `validate_layout`                | Returns issues list                | —                  |
-| 3   | `critique_render`                | Returns scores (5 dimensions)      | Yes — render saved |
-| 4   | `apply_corrections`              | Records score history              | —                  |
-| 5   | `get_art_direction_state`        | Returns specs + scores             | —                  |
-| 6   | `analyze_reference` (with image) | Returns composition data or prompt | —                  |
+| #   | Test                             | Pass Criteria                         | Render-Check       |
+| --- | -------------------------------- | ------------------------------------- | ------------------ |
+| 1   | `plan_composition`               | Returns spec + validation             | —                  |
+| 2   | `validate_layout`                | Returns issues list                   | —                  |
+| 3   | `critique_render`                | Returns A-F grade + comparison scores | Yes — render saved |
+| 4   | `apply_corrections`              | Records score history                 | —                  |
+| 5   | `get_art_direction_state`        | Returns specs + scores                | —                  |
+| 6   | `analyze_reference` (with image) | Returns composition data or prompt    | —                  |
 
 ### J. Creative (2 tools)
 
@@ -165,12 +163,12 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### K. Color & MaterialX (4 tools)
 
-| #   | Test                   | Pass Criteria                                 |
-| --- | ---------------------- | --------------------------------------------- |
-| 1   | `get_ocio_config`      | Returns config data or "no config" error      |
-| 2   | `list_color_spaces`    | Returns color space list or "no config" error |
-| 3   | `list_materialx_nodes` | Returns 100+ categories                       |
-| 4   | `import_materialx`     | CAUTION — may crash Octane. Save scene first. |
+| #   | Test                   | Pass Criteria                                               |
+| --- | ---------------------- | ----------------------------------------------------------- |
+| 1   | `get_ocio_config`      | Returns config data or "no config" error                    |
+| 2   | `list_color_spaces`    | Returns color space list or "no config" error               |
+| 3   | `list_materialx_nodes` | Returns 100+ categories                                     |
+| 4   | `import_materialx`     | CAUTION — may return error on some files. Save scene first. |
 
 ### L. Project (3 tools)
 
@@ -209,7 +207,7 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 | H. Animation       | 5                                                                                | All pass                           |
 | I. Art Direction   | 6                                                                                | 5 pass, 1 needs image input        |
 | J. Creative        | 2                                                                                | All pass                           |
-| K. Color/MaterialX | 4                                                                                | 3 pass, 1 crash risk               |
+| K. Color/MaterialX | 4                                                                                | 3 pass, 1 error risk               |
 | L. Project         | 3                                                                                | All pass                           |
 | M. System          | 9                                                                                | All pass                           |
 | **Total**          | **69** (67 unique tools, `is_animated` in C+H, profile\_\* as 4 tools in 1 test) | **~63 pass**                       |
@@ -220,7 +218,7 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 | Tool                 | Issue                                                | Severity |
 | -------------------- | ---------------------------------------------------- | -------- |
-| `import_materialx`   | Crashes Octane on certain .mtlx files                | HIGH     |
+| `import_materialx`   | Returns gRPC error on certain .mtlx files            | HIGH     |
 | `get_subsample_mode` | Returns stale value after set                        | LOW      |
 | `list_color_spaces`  | Fails without loaded OCIO config                     | EXPECTED |
 | `reset_project`      | `suppressUI` prevents blocking dialog — not an issue | N/A      |

@@ -52,14 +52,30 @@ A 15-dimension mixing board where each slider (-1.0 to +1.0) captures a perceptu
 
 ---
 
-### 4. Vision Critique Loop
+### 4. Vision Critique Loop — Sonnet + Orchestrator
 
-Two independent critics evaluate each render:
+Two critics evaluate each render:
 
-- **Vision Critic** (`critique_render`) — external vision model scores framing, depth, composition, lighting, placement (1-5 each). Framing gates everything: < 3 = back to Phase 1.
+- **Sonnet Comparison** (Anthropic API, two images) — concept art + render side-by-side. Holistic A-F grade with mood/density/composition match. **Sole automated critic.** Grade A or B = pass.
+- **Orchestrator** (main Claude context) — reviews both images and Sonnet's assessment, adds build context, flags disagreements. Backup check against the primary VLM call.
+
+Additionally:
+
 - **Semantic Critic** (`semantic_critique`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
 
-The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign.
+The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign. All assessments logged to `critique_stats.jsonl` per scene.
+
+**⛔ Never self-grade.** If `critique_render` returns a self-critique prompt instead of a Sonnet comparison, the call was made without `reference_image_path`. Fix the call — do not answer the prompt yourself and treat it as a grade. Self-assessment inflates scores and masks problems that Sonnet would catch.
+
+### Model Selection Strategy
+
+| Role                 | Model                    | Why                                                                   |
+| -------------------- | ------------------------ | --------------------------------------------------------------------- |
+| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator |
+| Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding         |
+| Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                           |
+| Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss           |
+| Mugshot verification | moondream3 (otoy-studio) | Orientation is structural, doesn't need holistic judgment             |
 
 > **Details:** [BUILD.md Critique Loop](mcp/BUILD.md#critique-loop--dual-perspective-run-after-every-save_render-in-phases-2-4)
 
@@ -87,15 +103,65 @@ End-to-end from idea to rendered scene:
 
 Each step is optional. You can skip AI generation and import your own meshes, skip SEGA and light manually. Every piece works standalone.
 
+**In DRESS mode, steps 1-7 are NOT optional.** Skip steps only when the input doesn't exist (e.g., no concept art = skip step 2). For autonomous runs, every available step must execute — cutting corners produces primitive-heavy scenes with no artistic direction.
+
 > **Details:** [BUILD.md §8](mcp/BUILD.md#8-3d-asset-pipeline)
 
 ---
 
 ## How It All Fits Together
 
-A full AD-enabled build flows through four gated phases: **Plan** (spatial math + SEGA intent + mesh analysis) → **Frame** (geometry + camera in clay, gate: framing ≥ 3) → **Dress** (materials + lighting + environment) → **Critique** (dual vision/semantic scoring, iterate until pass). AD can be disabled for quick tests — recipe tools still work with sensible defaults.
+A full AD-enabled build flows through four gated phases: **Plan** (spatial math + SEGA intent + mesh analysis) → **Frame** (geometry + camera in clay, gate: Sonnet grade ≥ C) → **Dress** (materials + lighting + environment) → **Critique** (Sonnet + orchestrator scoring, iterate until pass). AD can be disabled for quick tests — recipe tools still work with sensible defaults.
 
 > **Details:** [BUILD.md §3](mcp/BUILD.md#3-dress-protocol) for the full phase-by-phase protocol.
+
+---
+
+## ⚠️ AD Transparency Requirement — MANDATORY
+
+**Every AI/VLM call in the AD system MUST show its full input and output in the tool response.** No silent calls. The user sees everything the AI sees.
+
+### What must be visible in chat for EVERY VLM call:
+
+1. **Prompt sent** — the full text prompt, in a labeled `--- PROMPT ---` block
+2. **Images sent** — file paths of all images passed to the VLM
+3. **Raw response** — the full unedited VLM response text, in a labeled `--- RESPONSE ---` block
+4. **Parsed result** — the structured JSON extracted from the response
+
+### Tool-by-tool requirements:
+
+| Tool                        | VLM Calls                                                                     | Transparency                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `analyze_mesh` (mugshot)    | Pass 1 diagnosis (3 images), Pass 2 verification (2 images, up to 4 attempts) | Each pass: prompt, image paths, raw response in labeled blocks                  |
+| `analyze_reference`         | 1 analysis call + 1 calibration call                                          | Prompt + response + calibration in labeled blocks                               |
+| `critique_render`           | 1 Sonnet comparison (concept+render, two images)                              | Prompt + image paths + response in labeled blocks.                              |
+| `semantic_critique`         | Pixel measurement (local) + optional VLM estimation                           | Gap vector, pixel measurements, worst dimensions, corrections — all in response |
+| `get_vlm_estimation_prompt` | Returns prompt for caller                                                     | Full prompt text returned                                                       |
+
+### Why this matters:
+
+- VLM outputs are probabilistic — the user needs to see what the model said to catch hallucinations
+- Prompt quality directly affects results — visible prompts can be debugged and improved
+- Image inputs determine what the VLM "sees" — the user must verify the right views were sent
+- Same transparency standard as mugshot protocol: if it talks to an AI, the conversation is visible
+
+### Implementation pattern:
+
+All VLM-calling tools return multi-content responses with labeled blocks:
+
+```
+--- MUGSHOT PASS 1 PROMPT ---
+{full prompt text}
+--- END PROMPT ---
+--- MUGSHOT PASS 1 IMAGES ---
+diag_front.png, diag_side.png, diag_top.png
+--- END IMAGES ---
+--- MUGSHOT PASS 1 RESPONSE ---
+{full VLM response}
+--- END RESPONSE ---
+```
+
+**This is not optional.** Any new tool that makes VLM/AI calls MUST follow this pattern.
 
 ---
 

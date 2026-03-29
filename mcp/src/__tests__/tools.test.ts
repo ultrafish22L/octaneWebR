@@ -238,7 +238,7 @@ describe('extractValue edge cases', () => {
 describe('parseCritiqueResponse', () => {
   const validCritique = {
     scores: { framing: 3, depth: 2, composition: 4, lighting: 3, placement: 2 },
-    overall: 2.8,
+    overall: 2.8, // VLM's math — server recomputes to 2.9 via weighted formula
     passed: false,
     corrections: [{ target: 'camera_position', description: 'Move camera back', priority: 1 }],
     observations: 'The scene is too tightly framed.',
@@ -248,7 +248,7 @@ describe('parseCritiqueResponse', () => {
     const result = parseCritiqueResponse(JSON.stringify(validCritique));
     expect(result).not.toBeNull();
     expect(result!.scores.framing).toBe(3);
-    expect(result!.overall).toBe(2.8);
+    expect(result!.overall).toBe(2.9); // server-side weighted recompute
     expect(result!.passed).toBe(false);
     expect(result!.corrections).toHaveLength(1);
     expect(result!.raw).toBeTruthy();
@@ -259,7 +259,7 @@ describe('parseCritiqueResponse', () => {
     const result = parseCritiqueResponse(markdown);
     expect(result).not.toBeNull();
     expect(result!.scores.depth).toBe(2);
-    expect(result!.overall).toBe(2.8);
+    expect(result!.overall).toBe(2.9); // server-side weighted recompute
   });
 
   it('extracts JSON from markdown without language tag', () => {
@@ -276,16 +276,24 @@ describe('parseCritiqueResponse', () => {
     expect(result!.scores.lighting).toBe(3);
   });
 
-  it('returns null for non-JSON text', () => {
-    expect(parseCritiqueResponse('This is just regular text with no JSON.')).toBeNull();
+  it('falls back to description-only for non-JSON text', () => {
+    const result = parseCritiqueResponse('This is just regular text with no JSON.');
+    expect(result).not.toBeNull();
+    expect(result!.description).toBe('This is just regular text with no JSON.');
+    expect(result!.scores.framing).toBe(3); // defaults
+    expect(result!.passed).toBe(false);
   });
 
-  it('returns null for JSON without scores field', () => {
-    expect(parseCritiqueResponse('{"foo": "bar", "overall": 3}')).toBeNull();
+  it('falls back to description-only for JSON without scores field', () => {
+    const result = parseCritiqueResponse('{"foo": "bar", "overall": 3}');
+    expect(result).not.toBeNull();
+    expect(result!.passed).toBe(false);
   });
 
-  it('returns null for JSON without overall number', () => {
-    expect(parseCritiqueResponse('{"scores": {"framing": 3}, "overall": "good"}')).toBeNull();
+  it('falls back to description-only for JSON without valid scores', () => {
+    const result = parseCritiqueResponse('{"scores": {"framing": 3}, "overall": "good"}');
+    expect(result).not.toBeNull();
+    expect(result!.passed).toBe(false);
   });
 
   it('handles pretty-printed JSON in code blocks', () => {
@@ -314,7 +322,12 @@ describe('parseCritiqueResponse', () => {
   });
 
   it('handles empty corrections array', () => {
-    const perfect = { ...validCritique, corrections: [], passed: true, overall: 4.5 };
+    const perfect = {
+      scores: { framing: 5, depth: 4, composition: 5, lighting: 4, placement: 5 },
+      corrections: [],
+      passed: true,
+      overall: 4.5,
+    };
     const result = parseCritiqueResponse(JSON.stringify(perfect));
     expect(result).not.toBeNull();
     expect(result!.corrections).toHaveLength(0);

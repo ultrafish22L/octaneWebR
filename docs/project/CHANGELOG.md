@@ -4,6 +4,43 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.4] - 2026-03-29
+
+### Added
+
+- **Sonnet-only AD vision** — all AD vision calls (critique, reference analysis, calibration) use Anthropic API (Sonnet). Moondream3/otoy-studio only for mugshots.
+- `critiqueWithReference()` sends concept art + render as two images to Sonnet → A-F grade
+- `callVision()` / `callVisionPair()` — unified single/dual-image Sonnet calls
+- Per-scene `critique_stats.jsonl` audit trail for system tuning
+- `ComparisonScores` / `OrchestratorAssessment` on CritiqueRecord
+
+### Changed
+
+- Trimmed VLM prompts to ~3 lines (from 40+)
+- Default mugshot margin 0.05 → 0.1
+- Hero shot now renders on known-source fast path (was missing)
+- `fit_camera` queries actual film resolution for aspect ratio (no more hardcoded 2:1)
+- **MCP_BUILD** — Bumped to 69
+
+### Fixed
+
+- `try/finally` safety for clay mode restoration + node cleanup in `renderViews`
+- Error logging in all catch blocks (no silent swallows)
+
+### Deleted
+
+- Dead `renderMugshots` (~270 lines) — all rendering via `renderViews`
+
+### Docs
+
+- **Autonomous mode guardrails** — BUILD.md §3 adds mandatory phase gates (G0-G7), common drift patterns, and hard rule against self-grading
+- **Cardinal rules 6-8** in CLAUDE.md — Sonnet is the critic, hero meshes from image-to-3D, use suggest_lighting/suggest_material
+- **ADSYSTEM.md** — "never self-grade" block, DRESS mode steps are non-optional
+- Extracted constants: `MUGSHOT_FILM_RESOLUTION`, `MUGSHOT_SAMPLES`, `MUGSHOT_ENV_POWER`, `DEFAULT_MUGSHOT_MARGIN`, `PANCAKE_HEIGHT_THRESHOLD`
+- Extracted helpers: `isPancakeMesh()`, `writePlaneOBJ()`
+
+---
+
 ## [2.4.3] - 2026-03-29
 
 ### Added
@@ -296,4 +333,4 @@ See git history for incremental releases (Jan-Feb 2025). Key milestones: v1.0.0 
 ---
 
 **Status**: Active Development
-**Last Updated**: 2026-03-25
+**Last Updated**: 2026-03-29

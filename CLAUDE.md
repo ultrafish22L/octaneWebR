@@ -2,8 +2,14 @@
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 
-### v2.4.4 changes (MCP_BUILD 63)
+### v2.4.4 changes (MCP_BUILD 69)
 
+- **Sonnet-only AD vision** — all AD vision calls (critique, reference analysis, calibration) use Anthropic API (Sonnet). Moondream3/otoy-studio only for mugshots.
+- `critiqueWithReference()` sends concept art + render as two images to Sonnet → A-F grade
+- `callVision()` / `callVisionPair()` — unified single/dual-image Sonnet calls
+- Trimmed VLM prompts to ~3 lines (from 40+)
+- Per-scene `critique_stats.jsonl` audit trail for system tuning
+- `ComparisonScores` / `OrchestratorAssessment` on CritiqueRecord
 - Deleted dead `renderMugshots` (~270 lines) — all rendering via `renderViews`
 - Extracted constants: `MUGSHOT_FILM_RESOLUTION`, `MUGSHOT_SAMPLES`, `MUGSHOT_ENV_POWER`, `DEFAULT_MUGSHOT_MARGIN`, `PANCAKE_HEIGHT_THRESHOLD`
 - Extracted helpers: `isPancakeMesh()`, `writePlaneOBJ()`
@@ -48,6 +54,9 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 3. **`fit_camera` only** — never `set_camera` to fix framing. Wrong framing = wrong geometry. `set_camera` is Phase 4 only.
 4. **Visual verify EVERY mutation** — `save_render` + `preview_screenshot`, compare both.
 5. **Critique loop iterates** — `critique_render` → `apply_corrections` → fix → re-render → loop until `passed=true` or `exhausted=true`.
+6. **Sonnet is the critic, not you** — `critique_render` with `reference_image_path` = Sonnet grades. Without it = self-critique fallback. Self-grading is unreliable. Always pass concept art path.
+7. **Hero meshes from image-to-3D** — DRESS scenes use generated 3D meshes (Chrome → otoy.studio image-to-3D → GLB → trimesh → OBJ). Primitives are for floors, props, tests — not hero subjects.
+8. **Use suggest_lighting / suggest_material** — they read SEGA intent. Don't manually guess sundir, temperature, or PBR values.
 
 Full workflow, phases, and hard rules: `docs/mcp/BUILD.md`
 
@@ -60,7 +69,7 @@ Full workflow, phases, and hard rules: `docs/mcp/BUILD.md`
 | Command                   | What                                               |
 | ------------------------- | -------------------------------------------------- |
 | `cd mcp && npm run build` | MCP server build (esbuild) — **THE build command** |
-| `npm test` (root)         | Run all tests (vitest, 281 tests)                  |
+| `npm test` (root)         | Run all tests (vitest, 289 tests)                  |
 | `npm run lint` (root)     | ESLint client code                                 |
 
 - **Version bump:** `MCP_BUILD` in `mcp/src/tools/info.ts` → rebuild → kill node.exe → verify `get_octane_version()`

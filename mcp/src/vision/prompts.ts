@@ -109,6 +109,17 @@ Scale by ${scaleHint} to get world-space coordinates.`;
 }
 
 /**
+ * Build a holistic comparison prompt for concept art vs render (two images).
+ * Sent to Sonnet with concept as Image 1, render as Image 2.
+ * Keep it short — Sonnet has both images, it can see what's wrong.
+ */
+export function buildComparisonCritiquePrompt(_spec: CompositionSpec, _phase?: number): string {
+  return `Image 1 is the concept art. Image 2 is the 3D render.
+Compare them and grade the render A-F.
+Answer as JSON: { "grade": "C+", "mood_match": 3, "density_match": 3, "composition_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }`;
+}
+
+/**
  * Parse a VLM response into structured critique scores.
  * Handles both clean JSON and JSON embedded in markdown/text.
  */

@@ -309,7 +309,7 @@ Path prefix: `ORBX/assets_test/`
 
 **Available meshes:** `sphere_hd.obj`, `floor.obj`
 
-**Also in directory:** `standard_surface_gold.mtlx` (caution: may crash Octane on import), mugshot sidecars for sphere_hd.
+**Also in directory:** `standard_surface_gold.mtlx` (caution: may return error on import), mugshot sidecars for sphere_hd.
 
 Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PLANE.
 

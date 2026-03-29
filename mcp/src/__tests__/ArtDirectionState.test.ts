@@ -201,10 +201,12 @@ describe('ArtDirectionState', () => {
       expect(state.checkPrereqs('plan_composition')).toEqual([]);
     });
 
-    it('auto-completes framing_verified when fit_camera + register_scene_object done', () => {
+    it('auto-completes framing_verified when fit_camera + register_scene_object + critique_render done', () => {
       state.completeStep('fit_camera');
       expect(state.isStepDone('framing_verified')).toBe(false);
       state.completeStep('register_scene_object');
+      expect(state.isStepDone('framing_verified')).toBe(false);
+      state.completeStep('critique_render');
       expect(state.isStepDone('framing_verified')).toBe(true);
     });
 

@@ -40,14 +40,15 @@ import {
   type AABB,
 } from '../ScenePlacementState';
 import {
-  critiqueRender as visionCritique,
   analyzeReference as visionAnalyze,
   calibrateReference as visionCalibrate,
+  critiqueWithReference as visionCompare,
 } from '../vision/index';
 import {
-  buildCritiquePrompt as buildVisionCritiquePrompt,
   buildReferenceAnalysisPrompt as buildVisionRefPrompt,
+  buildComparisonCritiquePrompt,
 } from '../vision/prompts';
+import { appendCritiqueStats } from '../vision/stats';
 
 // ── Vector math helpers ──────────────────────────────────────────────
 
@@ -797,59 +798,84 @@ export function registerArtDirectionTools(
         if (iteration > MAX_ITERATIONS)
           warnings.push(`EXHAUSTED: ${iteration} iterations. Step back and rethink the layout.`);
 
-        // Look up cached calibration from spec or artState
-        const calibration =
-          spec.calibration ||
-          ((artState as any)._lastCalibration as
-            | import('../ArtDirectionState').CachedCalibration
-            | undefined);
+        // ── Sonnet comparison (primary critic) ──────────────────────
+        const conceptPath = params.reference_image_path || spec.referenceImagePath;
+        let comparisonResult: import('../vision/index').ComparisonCritiqueResult | null = null;
+        if (conceptPath && fs.existsSync(path.resolve(conceptPath))) {
+          const currentPhase = artState.isActive ? artState.getWorkflowStatus().phase : undefined;
+          const comparisonPrompt = buildComparisonCritiquePrompt(spec, currentPhase);
+          comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
+        }
 
-        // 1 VLM call — composition-focused critique of the render only
-        const critiquePrompt = buildVisionCritiquePrompt(spec);
-        const visionResult = await visionCritique(
-          resolved,
-          critiquePrompt,
-          calibration || undefined
-        );
+        if (comparisonResult) {
+          // Sonnet is the sole automated critic
+          const grade = comparisonResult.grade.charAt(0).toUpperCase();
+          const gradeToScore: Record<string, number> = {
+            A: 5,
+            B: 4,
+            C: 3,
+            D: 2,
+            F: 1,
+          };
+          const overallScore = gradeToScore[grade] ?? 3;
+          const passed = grade === 'A' || grade === 'B';
 
-        if (visionResult) {
           // Record critique
           const record: CritiqueRecord = {
             iteration,
-            overallScore: visionResult.overall,
-            passed: visionResult.passed,
-            scores: visionResult.scores,
-            corrections: visionResult.corrections,
+            overallScore,
+            passed,
+            scores: {
+              framing: comparisonResult.composition_match,
+              depth: comparisonResult.density_match,
+              composition: comparisonResult.composition_match,
+              lighting: comparisonResult.mood_match,
+              placement: comparisonResult.density_match,
+            },
+            corrections: comparisonResult.top_fixes.map((fix, i) => ({
+              target: 'scene',
+              description: fix,
+              priority: i + 1,
+            })),
+            comparison: {
+              grade: comparisonResult.grade,
+              mood_match: comparisonResult.mood_match,
+              density_match: comparisonResult.density_match,
+              composition_match: comparisonResult.composition_match,
+              missing_elements: comparisonResult.missing_elements,
+              top_fixes: comparisonResult.top_fixes,
+              notes: comparisonResult.notes,
+              model: comparisonResult.model,
+              latency_ms: comparisonResult.latency_ms,
+            },
             renderPath: resolved,
             timestamp: Date.now(),
           };
           artState.addCritique(params.spec_name, record);
 
+          // Write stats JSONL
+          appendCritiqueStats(resolved, iteration, record.scores, overallScore, passed, {
+            phase: artState.isActive ? artState.getWorkflowStatus().phase : undefined,
+            comparison: comparisonResult,
+          });
+
+          // Build multi-content response with labeled transparency blocks
           const content: Array<{ type: 'text'; text: string }> = [];
-          if (visionResult.promptSent) {
-            content.push({
-              type: 'text',
-              text: `--- VLM PROMPT SENT ---\n${visionResult.promptSent}\n--- END PROMPT ---`,
-            });
-          }
-          if (visionResult.vlmRawResponse) {
-            content.push({
-              type: 'text',
-              text: `--- VLM RAW RESPONSE (render) ---\n${visionResult.vlmRawResponse}\n--- END RESPONSE ---`,
-            });
-          }
-          if (visionResult.calibrationDescription) {
-            content.push({
-              type: 'text',
-              text: `--- CALIBRATION (concept art, cached) ---\n${visionResult.calibrationDescription}\n--- END CALIBRATION ---`,
-            });
-          }
-          if (visionResult.serverScore) {
-            content.push({
-              type: 'text',
-              text: `--- SERVER SCORE ---\n${JSON.stringify(visionResult.serverScore, null, 2)}\n--- END SCORE ---`,
-            });
-          }
+
+          content.push({
+            type: 'text',
+            text: `--- SONNET CRITIQUE PROMPT ---\n${comparisonResult.promptSent}\n--- END PROMPT ---`,
+          });
+          content.push({
+            type: 'text',
+            text: `--- SONNET CRITIQUE IMAGES ---\nconcept: ${path.resolve(conceptPath!)}\nrender: ${resolved}\n--- END IMAGES ---`,
+          });
+          content.push({
+            type: 'text',
+            text: `--- SONNET CRITIQUE RESPONSE ---\n${comparisonResult.vlmRawResponse}\n--- END RESPONSE ---`,
+          });
+
+          // ── Final JSON result ──
           content.push({
             type: 'text',
             text: JSON.stringify(
@@ -857,26 +883,27 @@ export function registerArtDirectionTools(
                 render_path: resolved,
                 spec_name: params.spec_name,
                 iteration,
-                vision_backend: visionResult.backend,
-                vision_model: visionResult.model,
-                render_description: visionResult.description,
-                top_fix: visionResult.topFix,
-                server_match_score: visionResult.serverScore?.overall,
-                server_passed: visionResult.serverScore?.passed,
-                scores: visionResult.scores,
-                overall: visionResult.overall,
-                passed: visionResult.passed,
-                corrections: visionResult.corrections,
+                vision_model: comparisonResult.model,
+                latency_ms: comparisonResult.latency_ms,
+                // Sonnet assessment
+                grade: comparisonResult.grade,
+                mood_match: comparisonResult.mood_match,
+                density_match: comparisonResult.density_match,
+                composition_match: comparisonResult.composition_match,
+                missing_elements: comparisonResult.missing_elements,
+                top_fixes: comparisonResult.top_fixes,
+                notes: comparisonResult.notes,
+                // Verdict
+                overall: overallScore,
+                passed,
                 warnings,
                 stagnating: artState.isStagnating(params.spec_name),
                 exhausted: artState.isExhausted(params.spec_name),
-                instruction: visionResult.passed
+                instruction: passed
                   ? 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
-                  : visionResult.scores.framing < 3
-                    ? 'FRAMING FAILURE. Call fit_camera to reframe before any other changes. Do not touch lighting or materials until framing ≥ 3.'
-                    : artState.isActive
-                      ? `NOT PASSED (${visionResult.overall.toFixed(1)}/5). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
-                      : `Vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
+                  : artState.isActive
+                    ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
+                    : `Sonnet graded ${comparisonResult.grade}. Apply corrections and re-render.`,
                 ...adWorkflow(artState, 'critique_render'),
               },
               null,
@@ -886,7 +913,7 @@ export function registerArtDirectionTools(
           return { content };
         }
 
-        // Fallback: return prompt for self-critique (v1 behavior)
+        // Fallback: no Anthropic key or no concept art — self-critique
         return jsonResult({
           render_path: resolved,
           critique_prompt: buildCritiquePrompt(spec),
@@ -895,7 +922,7 @@ export function registerArtDirectionTools(
           warnings,
           vision_backend: 'self',
           instruction:
-            'No vision API available. Read the render image, answer critique_prompt, then call apply_corrections with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
+            'No Sonnet API or no concept art. Read the render + concept art yourself, give an A-F grade, then call apply_corrections with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
           ...adWorkflow(artState, 'critique_render'),
         });
       } catch (error: any) {

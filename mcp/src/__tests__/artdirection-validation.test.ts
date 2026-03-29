@@ -21,7 +21,13 @@ function makeSpec(overrides: Partial<CompositionSpec> = {}): CompositionSpec {
       compositionRule: 'rule-of-thirds',
     },
     objects: [
-      { id: 'hero', role: 'hero' as const, position: { x: 0, y: 0, z: 0 }, depthLayer: 0 },
+      {
+        id: 'hero',
+        role: 'hero' as const,
+        position: { x: 0, y: 0, z: 0 },
+        depthLayer: 0,
+        scale: { x: 4, y: 4, z: 4 },
+      },
       { id: 'bg', role: 'secondary' as const, position: { x: 2, y: 0, z: -5 }, depthLayer: 1 },
     ],
     depthLayers: 2,

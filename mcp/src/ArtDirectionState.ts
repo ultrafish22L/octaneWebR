@@ -82,12 +82,36 @@ export interface CritiqueScores {
   placement: number;
 }
 
+/** Sonnet concept-vs-render comparison scores */
+export interface ComparisonScores {
+  grade: string; // A-F
+  mood_match: number; // 1-5
+  density_match: number; // 1-5
+  composition_match: number; // 1-5
+  missing_elements: string[];
+  top_fixes: string[];
+  notes: string;
+  model: string; // Sonnet model ID
+  latency_ms: number; // API call time
+}
+
+/** Orchestrator (main Claude) assessment */
+export interface OrchestratorAssessment {
+  grade: string; // A-F
+  notes: string;
+  agrees_with_sonnet: boolean;
+}
+
 export interface CritiqueRecord {
   iteration: number;
   overallScore: number;
   passed: boolean;
   scores: CritiqueScores;
   corrections: CorrectionEntry[];
+  /** Sonnet concept-vs-render comparison (when concept art available) */
+  comparison?: ComparisonScores;
+  /** Orchestrator assessment (filled by main Claude after reviewing) */
+  orchestrator?: OrchestratorAssessment;
   renderPath: string;
   timestamp: number;
 }

@@ -4,12 +4,12 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ---
 
-## §1 Crashes
+## §1 Known Issues
 
 | Trigger                               | Symptom                                                  | Mitigation                                                                                            |
 | ------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `import_materialx`                    | Crashes Octane on certain .mtlx files                    | Save scene before importing. Confirmed crash on `standard_surface_gold.mtlx`.                         |
-| `get_scene_tree` on large loaded ORBX | Traversing nodes before Octane finishes internal loading | `load_project` waits for `projectManagerChanged` callback. Traversal aborts on first connection loss. |
+| `import_materialx`                    | Returns gRPC error on certain .mtlx files                | Save scene before importing. Confirmed on `standard_surface_gold.mtlx`.                               |
+| `get_scene_tree` on large loaded ORBX | Traversing nodes before server finishes internal loading | `load_project` waits for `projectManagerChanged` callback. Traversal aborts on first connection loss. |
 
 ---
 
@@ -118,7 +118,7 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `verbose` | ALL REQ/RES (firehose — 150K+ lines for large scenes)                                                                                  | Per-gRPC-call timings + REQ/RES                   |
 | `debug`   | Mutating + lifecycle + curated reads (device, RT, camera). Filters inspector enumeration + stats polling. ~77 lines for 2-sphere scene | Tool calls with args + timing + health + profiles |
 | `info`    | Mutating + lifecycle only (create/set/connect/render/camera/save)                                                                      | Tool calls with args only                         |
-| `warn`+   | Errors only                                                                                                                            | Health failures, gate rejections, crashes         |
+| `warn`+   | Errors only                                                                                                                            | Health failures, gate rejections, disconnections  |
 
 | File             | Source                             | Notes                                                                                 |
 | ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------- |
@@ -126,7 +126,7 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `log_mcp.log`    | MCP server                         | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start                         |
 | `log_client.log` | Browser Logger (via `/api/log`)    | Client-side JS errors batched to server. Cleared on dev server start                  |
 
-### On Crash or Error — FULL STOP Protocol
+### On Error — FULL STOP Protocol
 
 1. STOP — do not continue current task
 2. Read ALL 3 log files — every one, every time, no exceptions:
@@ -136,13 +136,12 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 3. Read the error message carefully — the answer is usually in the text
 4. Trace to root cause — don't chase symptoms
 5. One fix → verify all 3 logs + render → repeat until resolved
-6. Stop all servers BEFORE restarting Octane (§9)
 
 **Why all 3?** Errors originate at different layers: client JS, gRPC proxy, or MCP tools. The same failure appears differently in each log — the FIX depends on which layer caused it. All logs go to files, no console-only gaps.
 
 ### Key Rules
 
-- Disable MCP before code changes — auto-start spawns broken processes that crash Octane.
+- Disable MCP before code changes — auto-start spawns broken processes that interfere with the server.
 - Always `evaluate: true` (default) — deferred eval means subsequent calls operate on stale state.
 - Same failure twice → STOP, try fundamentally different approach.
 
@@ -150,7 +149,7 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 
 ## §9 Fresh Start
 
-**Servers die first, octaneServGrpc dies last.** Killing the gRPC server while clients are connected causes hangs.
+**Clients die first, octaneServGrpc dies last.** Killing the gRPC server while clients are connected causes hangs.
 
 ### Shutdown
 
@@ -168,9 +167,9 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 
 ## §SCRATCH: Clean Start Protocol
 
-Full nuclear restart. Required before any clean test run, after MCP restart, infra changes, or crashes.
+Full restart. Required before any clean test run, after MCP restart, or infra changes.
 
-1. Kill all Octane processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
+1. Kill all processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
 2. Stop preview server (`preview_stop`)
 3. Reset MCP (must fully kill, not just disconnect):
    - `taskkill //F //IM node.exe` — kill ALL node processes. The relay port check only runs at MCP startup, so a reconnect won't fix a missed relay.
@@ -183,7 +182,7 @@ Full nuclear restart. Required before any clean test run, after MCP restart, inf
    - **NEVER start a second MCP** if one is already running. That creates duplicate processes and breaks the relay.
    - **Race condition warning:** If you only kill the PID on 51023 (not all node processes), the port may not release fast enough. The new MCP starts, sees 51023 still in use, skips the relay, and the viewport stays dead forever (relay check only runs once at startup).
 4. Verify port 51022 AND 51023 both free
-5. Start the target server (octaneServGrpc or octane.exe), wait for port 51022
+5. Start octaneServGrpc, wait for port 51022
 6. Check `log_serv.log` for startup
 7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
 8. Start dev server + preview (`preview_start`)

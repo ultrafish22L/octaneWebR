@@ -196,8 +196,8 @@ export function profileReset(): void {
   mcpLog('PROFILE RESET', 'debug');
 }
 
-/** Crash signature patterns in gRPC error messages */
-const CRASH_PATTERNS = [
+/** Patterns indicating the gRPC server is unreachable (stopped or restarted). */
+const DISCONNECTION_PATTERNS = [
   'ECONNRESET',
   'ECONNREFUSED',
   'Stream removed',
@@ -206,40 +206,33 @@ const CRASH_PATTERNS = [
 ];
 
 /**
- * Detect Octane crash from gRPC error and throw a structured error message
- * that tells the AI agent exactly what happened and what to do.
+ * Detect server disconnection from gRPC error and return a clear error message.
+ * octaneServGrpc never crashes (GRPC_SAFE wraps all SDK calls), so these patterns
+ * only occur when the server was manually stopped or restarted.
  *
- * Takes an optional client reference to clear cached handles on crash detection,
- * preventing stale-handle errors after Octane restarts.
+ * Clears cached handles via the client ref since a restarted server has fresh state.
  */
-function enhanceCrashError(
+function enhanceConnectionError(
   error: any,
   service: string,
   method: string,
   client?: OctaneMcpClient
 ): Error {
   const msg = String(error?.message || error);
-  const isCrash = CRASH_PATTERNS.some(p => msg.includes(p));
+  const isDisconnect = DISCONNECTION_PATTERNS.some(p => msg.includes(p));
 
-  if (isCrash) {
-    mcpLog(`CRASH DETECTED on ${service}.${method}: ${msg}`, 'error');
-    // Clear cached handles — they're all invalid after a crash
+  if (isDisconnect) {
+    mcpLog(`SERVER DISCONNECTED on ${service}.${method}: ${msg}`, 'error');
     if (client) {
       client.clearRootGraphCache();
       client.resetGrpcChannels();
-      mcpLog('Cleared root graph cache, handle maps, and gRPC channels after crash', 'warn');
+      mcpLog('Cleared caches and gRPC channels after server disconnection', 'warn');
     }
     return new Error(
-      `OCTANE CRASHED (${service}.${method}): ${msg}\n` +
-        `\n` +
-        `Octane has terminated or lost connection. ALL node handles are now INVALID.\n` +
-        `\n` +
-        `Recovery steps:\n` +
-        `1. Restart octaneServGrpc (octaneServGrpc/build/Release/octaneServGrpc.exe)\n` +
-        `2. Wait ~5s for gRPC to listen on port 51022\n` +
-        `3. Rebuild the scene from scratch (all handles are invalidated)\n` +
-        `\n` +
-        `Do NOT retry the same call — the connection is dead.`
+      `SERVER DISCONNECTED (${service}.${method}): ${msg}\n` +
+        `The gRPC server is not responding — it may have been stopped or restarted.\n` +
+        `Check that octaneServGrpc.exe is running on port 51022.\n` +
+        `If restarted: call get_octane_version to reconnect, then get_scene_tree to refresh handles.`
     );
   }
 
@@ -371,8 +364,8 @@ export class OctaneMcpClient {
     timeoutMs?: number
   ): Promise<any> {
     // Serialize: wait for previous call to finish before starting this one.
-    // Octane's message thread processes calls sequentially anyway — sending
-    // concurrent requests only risks race conditions and crashes.
+    // Octane's message thread processes calls sequentially — sending
+    // concurrent requests risks race conditions.
     let resolve: () => void;
     const prev = this.mutex;
     this.mutex = new Promise<void>(r => {
@@ -382,8 +375,8 @@ export class OctaneMcpClient {
     try {
       await prev; // wait for previous call
 
-      // Health check: if connection has been idle, verify Octane is still alive
-      // before sending the real call. Detects manual Octane kills that don't
+      // Health check: if connection has been idle, verify the server is reachable
+      // before sending the real call. Detects server restarts that don't
       // trigger ECONNRESET (because no call was in-flight at the time).
       await this.ensureConnection(service, method);
 
@@ -404,7 +397,7 @@ export class OctaneMcpClient {
         mcpLog(`RES ${service}.${method} ${JSON.stringify(result).substring(0, 500)}`, 'verbose');
       return result;
     } catch (error: any) {
-      throw enhanceCrashError(error, service, method, this);
+      throw enhanceConnectionError(error, service, method, this);
     } finally {
       resolve!();
     }
@@ -437,14 +430,13 @@ export class OctaneMcpClient {
       this.lastSuccessMs = Date.now();
       mcpLog(`[HEALTH] ping OK`, 'debug');
     } catch (e: any) {
-      // BUG FIX: Only reset gRPC channels here, NOT the scene cache.
-      // A failed health check means the channel is stale (e.g., Octane restarted
+      // Only reset gRPC channels here, NOT the scene cache.
+      // A failed health check means the channel is stale (e.g., server restarted
       // or first call with leftover channels). Resetting channels lets the next
-      // real call get a fresh connection. If Octane truly crashed, that real call
-      // will fail with ECONNRESET and the crash handler (enhanceCrashError) will
-      // clear the scene cache then. Clearing the cache here was destroying valid
-      // handles from create_node calls in the current session — causing spurious
-      // GATED rejections on connect_nodes.
+      // real call get a fresh connection. If the server is truly gone, that call
+      // will fail with ECONNRESET and enhanceConnectionError will clear the cache.
+      // Clearing the cache here would destroy valid handles from the current
+      // session — causing spurious GATED rejections.
       mcpLog(
         `[HEALTH] ping FAILED (${e.message}) — resetting channels only (preserving cache, size=${this.sceneCache.knownHandleCount})`,
         'warn'
@@ -465,7 +457,7 @@ export class OctaneMcpClient {
     return handle;
   }
 
-  /** Register a callback to fire when all caches are cleared (load/reset/crash). */
+  /** Register a callback to fire when all caches are cleared (load/reset/disconnect). */
   onClear(callback: () => void): void {
     this._onClearCallbacks.push(callback);
   }

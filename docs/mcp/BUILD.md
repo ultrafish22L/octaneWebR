@@ -21,6 +21,8 @@ Each phase has hard gates — you don't move forward until the current phase pas
 
 **A human is watching.** Get an interesting render on screen as fast as possible. Every MCP call should be driving toward the first visible result. Don't build backstage — build on stage.
 
+> **⚠️ AD TRANSPARENCY: Every VLM/AI call MUST show its full prompt, image paths, and raw response in the tool output.** No silent AI calls. If it talks to a model, the conversation is visible. See [ADSYSTEM.md §Transparency](../ADSYSTEM.md) for the full spec and labeled-block format.
+
 **Priority order:** RT → first geometry + material wired to RT → `start_render` → `fit_camera()` → contrasting environment. Use `fit_camera` after geometry to auto-frame the scene from bounds. Everything else comes after the human has something to look at.
 
 **Check Octane is running** before every build. If gRPC is down, nothing works and the human sees nothing. Verify with `powershell -Command "Get-NetTCPConnection -LocalPort 51022"`.
@@ -63,7 +65,32 @@ Each phase has hard gates — you don't move forward until the current phase pas
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
-**On failure: FULL STOP.** Follow the crash protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
+**On failure: FULL STOP.** Follow the error protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
+
+### ⛔ Autonomous Mode — Mandatory Phase Gates
+
+When running autonomously (multi-scene, unattended), these gates are **non-negotiable**. Each gate HALTS the build if not met. No "I'll do it later" — if you skip a gate, the scene fails.
+
+| Gate   | Check                                                                | If Skipped                                                                          |
+| ------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **G0** | `analyze_reference` was called on concept art                        | Scene has no composition data — layout will be random                               |
+| **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
+| **G2** | Every mesh ran through `analyze_mesh` before `import_geo`            | Orientation will be wrong — wasted iterations                                       |
+| **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
+| **G4** | `semantic_critique` ran at least once per scene                      | No SEGA gap measurement — you can't know what's wrong                               |
+| **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
+| **G6** | `fit_camera` called after every geometry add                         | Camera may not frame all objects                                                    |
+| **G7** | Logs checked (all 3 files) after each phase                          | Silent errors accumulate                                                            |
+
+**If `critique_render` returns a self-critique prompt instead of a Sonnet grade:** STOP. Pass `reference_image_path` pointing to concept art. If Sonnet still fails, investigate the error — do NOT self-grade and move on.
+
+**Common autonomous drift patterns (observed failures):**
+
+- Substituting primitives for 3D meshes "to save time" → flat, CG-looking scenes
+- Skipping Phase 0/0b "because I know what I want" → no SEGA context, generic lighting
+- Running `critique_render` without `reference_image_path` → self-critique fallback, inflated grades
+- Batching 3+ objects without intermediate `fit_camera` + render → framing breaks, objects lost
+- Optimizing scene count over quality → every scene suffers
 
 ### Pre-Phase: analyze_mesh (BLOCKING — before ANY placement)
 
@@ -136,8 +163,8 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 **Hard rules for Phase 1:**
 
-- **Clay mode stays ON** until `critique_render` composition score passes. `critique_render` warns if clay is off during early iterations.
-- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode, and framing must score ≥ 3. Only then can you call `set_clay_mode(0)`.
+- **Clay mode stays ON** until `critique_render` passes. `critique_render` warns if clay is off during early iterations.
+- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. Sonnet grades A-F; grade C or better = pass. Only then can you call `set_clay_mode(0)`.
 - **Only `fit_camera`** — NEVER `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry (position, scale, floor plane size). `set_camera` is for Phase 4 hero shots only.
 - **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
 - **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
@@ -149,11 +176,11 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ✅ RIGHT Phase 1:
   import_geo → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
-  → framing ≥ 3? → YES → set_clay_mode(0) → Phase 2
-  → framing < 3? → fix geometry → fit_camera() → critique_render again
+  → Sonnet grade C+? → YES → set_clay_mode(0) → Phase 2
+  → Sonnet grade D/F? → fix geometry → fit_camera() → critique_render again
 ```
 
-### Phase 2: Materials & Lighting (ONLY after Phase 1 composition passes)
+### Phase 2: Materials & Lighting (ONLY after Phase 1 critique passes)
 
 | Step | Action                                                  | Notes                                                 |
 | ---- | ------------------------------------------------------- | ----------------------------------------------------- |
@@ -187,22 +214,28 @@ Hero camera, fine-tune lighting, final beauty pass `save_render`.
 
 **Requires AD.** Skipped when AD is OFF. When skipped, save the render and move on — no scoring, no corrections. **When AD is ON, both critics run every iteration — never skip one.**
 
-| Step | Action                                                                 | Result                                                             |
-| ---- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| C1   | `critique_render(render_path, spec_name)`                              | Vision model scores (framing/depth/composition/lighting/placement) |
-| C2   | `semantic_critique(render_path)`                                       | Pixel-level intent gap analysis vs SEGA vector                     |
-| C3   | Read the saved render image (Read tool)                                | Visual analysis                                                    |
-| C4   | Synthesize vision critique (C1) + semantic critique (C2) → JSON scores | Dual-perspective evaluation                                        |
-| C5   | `apply_corrections(spec_name, scores, corrections)`                    | Records score, detects stagnation                                  |
-| C6   | If score < 3.5: apply priority-1 corrections, re-render, go to C1      | Iteration                                                          |
-| C7   | If stagnating (2 iterations < 0.3 improvement): redesign plan          | Plan change, not tweaking                                          |
+| Step | Action                                                                       | Result                                          |
+| ---- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
+| C1   | `critique_render(render_path, spec_name, reference_image_path?)`             | Sonnet concept-vs-render comparison (A-F grade) |
+| C2   | `semantic_critique(render_path)`                                             | Pixel-level intent gap analysis vs SEGA vector  |
+| C3   | Read the saved render image + concept art (Read tool)                        | Orchestrator visual review — your own A-F grade |
+| C4   | Compare both assessments: Sonnet + orchestrator                              | Dual-assessment synthesis                       |
+| C5   | `apply_corrections(spec_name, scores, corrections)`                          | Records score, detects stagnation               |
+| C6   | If score < 3.5 OR Sonnet grade < C: fix top corrections, re-render, go to C1 | Iteration                                       |
+| C7   | If stagnating (2 iterations < 0.3 improvement): redesign plan                | Plan change, not tweaking                       |
 
-### Vision Critic
+### Vision Critic — Sonnet + Orchestrator
 
-`critique_render` uses an external vision model — not self-critique. Self-critique inflates scores by 1-2 points.
+`critique_render` runs one automated critic (Sonnet), then the orchestrator (you) adds a second:
 
-- **Two-image comparison** (reference + render) is most effective
-- Vision module: `mcp/src/vision/` with fallback chain
+1. **Sonnet comparison** (Anthropic API, two images) — concept art + render side-by-side. Holistic A-F grade, mood/density/composition match 1-5, missing elements, top fixes. **This is the primary critic.** Grade A or B = pass.
+2. **Orchestrator** (you, main Claude context) — read both images yourself at step C3. Give your own A-F grade. Note whether you agree with Sonnet. You have build context Sonnet doesn't.
+
+Both assessments are logged to `critique_stats.jsonl` per scene for system tuning.
+
+**⛔ `reference_image_path` is MANDATORY** when concept art exists. Without it, Sonnet can't compare — the tool falls back to a self-critique prompt. Self-critique is NOT a substitute for Sonnet judgment. If you see a self-critique prompt returned, you made an error: re-call with the correct path. Never grade yourself and move on.
+
+- Vision module: `mcp/src/vision/` — `critiqueWithReference()` (Sonnet two-image comparison)
 
 ### Render Status — Don't Blind Sleep, Always Check Samples
 
@@ -273,7 +306,7 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Transform pin:** Pin 3 (NT_TRANSFORM_VALUE).
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
-- **Primitive type changes work** on SDK server (all 23 types tested (values 1-23), no crashes). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
+- **Primitive type changes work** — all 23 types tested (values 1-23). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
 - **connect/disconnect auto-flush** — `connect_nodes` and `disconnect_pin` auto-flush `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
 
 Primitive values: see `REFERENCE.md` §7a.
@@ -304,7 +337,7 @@ Generated meshes have unknown orientation. **Never guess — use `analyze_mesh`*
 **FRESH vs SCRATCH vs MINIS:**
 
 - **FRESH** — `reset_project` clears the scene. Every test starts with FRESH.
-- **SCRATCH** — Kill all processes, restart everything. Required after MCP restart, infra changes, or crashes.
+- **SCRATCH** — Kill all processes, restart everything. Required after MCP restart or infra changes.
 - **MINIS** — `load_project("ORBX/smoketest.orbx")` loads a pre-built smoke test scene. Quick validation that Octane + MCP are working without building from scratch.
 
 ---
@@ -313,7 +346,7 @@ Generated meshes have unknown orientation. **Never guess — use `analyze_mesh`*
 
 **CRITICAL:** The only working domain is `https://otoy.studio/`. Navigate to `https://otoy.studio/image-to-3d` for 3D mesh generation. Never click upload buttons (pops OS file dialog) — use "USE URL" toggle + `request_upload_url` instead.
 
-**Generate:** `generate_image_pro` → reference image → OTOY Studio image-to-3D (Chrome UI) → GLB
+**Generate:** `generate_image_pro` → reference image → OTOY Studio image-to-3D (Chrome UI) → GLB. **Use this for hero meshes.** Primitives (NT_GEO_OBJECT) are for ground planes, simple props, and test scenes — not for hero subjects in DRESS-mode scenes.
 
 **Convert:** Python trimesh: `trimesh.load(glb)` → `export('name.obj')` → OBJ + MTL + diffuse PNG
 

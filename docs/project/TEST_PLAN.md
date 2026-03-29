@@ -14,19 +14,19 @@
 5. **Visual proof required**: Screenshots/logs ARE the evidence. Class names lie; pixels don't.
 6. **Test after every fix**: Fix one, verify, then next. No batching.
 7. **Fresh state per test**: Restart dev server and reload scene before each bug test.
-8. **Detect crashes immediately**: Check `log_grpc.log` for `ECONNRESET`/`ECONNREFUSED` after risky actions. If crashed, STOP and wait for user.
+8. **Check logs after risky actions**: Check `log_grpc.log` for errors after risky actions. If server disconnected, STOP and wait for user.
 9. **Lint+build before push**: `npm run lint` + `npm run build`.
 10. **Preview resize**: Always `desktop` preset (1280x800). NOT 1920x1080 (too small when scaled).
 11. **Logs**: `log_grpc.log` (server, `GRPC_DEBUG_LOG=1` by default), `log_client.log` (client).
 
-### If Octane Crashes
+### If Server Disconnects
 
 1. Stop immediately. Read `log_grpc.log` for last success → first error transition.
-2. Log the crash with severity High.
-3. **Stop ALL servers** — `preview_stop` for dev server/preview. Do this BEFORE restarting octaneServGrpc.
+2. Log the issue with severity High.
+3. **Stop clients first** — `preview_stop` for dev server/preview. Do this BEFORE restarting octaneServGrpc.
 4. **Restart octaneServGrpc** — kill the old process, relaunch, wait ~5s for gRPC on port 51022.
-5. **Claude starts servers** — `preview_start` for dev server.
-6. **Claude verifies** — check Octane gRPC (`get_octane_version`), check preview is live (`preview_screenshot`), verify teapot renders.
+5. **Start clients** — `preview_start` for dev server.
+6. **Verify** — check gRPC (`get_octane_version`), check preview is live (`preview_screenshot`), verify teapot renders.
 
 ### Known Octane API Limitations
 
@@ -35,7 +35,7 @@
 
 ### Smoke Test
 
-Select Camera in Outliner → toggle Orthographic checkbox → verify `setPinValueByPinID` in `log_grpc.log` → verify render updates. Run at session start and after any crash.
+Select Camera in Outliner → toggle Orthographic checkbox → verify `setPinValueByPinID` in `log_grpc.log` → verify render updates. Run at session start and after any server restart.
 
 ### DOM Patterns (Automated Testing)
 

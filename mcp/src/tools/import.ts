@@ -320,7 +320,7 @@ const MUGSHOT_TYPES = {
   RT: 56, // NT_RENDERTARGET
   CAM: 13, // NT_CAM_THINLENS
   KERN_PT: 25, // NT_KERN_PATHTRACING
-  KERN_DL: 26, // NT_KERN_DIRECTLIGHTING
+  KERN_DL: 24, // NT_KERN_DIRECTLIGHTING
   GEO_GROUP: 3, // NT_GEO_GROUP
   GEO_OBJECT: 153, // NT_GEO_OBJECT (primitives)
   GEO_MESH: 1, // NT_GEO_MESH
@@ -2103,6 +2103,8 @@ export function registerImportTools(
         let finalGroundOffset = orientation.groundOffsetY;
         let finalConfidence = orientation.confidence;
         let heroPath = '';
+        // VLM transparency: accumulate all prompts + responses for tool output
+        const vlmTranscript: Array<{ type: 'text'; text: string }> = [];
 
         // Check for known source endpoint — skip Pass 1 if axis convention is known
         const knownSource = source_endpoint ? ENDPOINT_AXIS_MAP[source_endpoint] : null;
@@ -2225,6 +2227,20 @@ export function registerImportTools(
               maxTokens: 1000,
             });
 
+            // VLM transparency: log Pass 1 prompt + response
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 1 PROMPT ---\n${diagPrompt}\n--- END PROMPT ---`,
+            });
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 1 RESPONSE ---\n${pass1.text}\n--- END RESPONSE ---`,
+            });
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 1 IMAGES ---\n${diagPaths.map(p => path.basename(p)).join(', ')}\n--- END IMAGES ---`,
+            });
+
             // Parse Pass 1 response
             const jsonMatch = pass1.text.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error('Pass 1: no JSON in VLM response');
@@ -2319,6 +2335,20 @@ export function registerImportTools(
               apiKey,
               model: vlmModel,
               maxTokens: 500,
+            });
+
+            // VLM transparency: log Pass 2 prompt + response
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 2 (attempt ${attempt + 1}) PROMPT ---\n${buildVerificationPrompt()}\n--- END PROMPT ---`,
+            });
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 2 (attempt ${attempt + 1}) RESPONSE ---\n${pass2.text}\n--- END RESPONSE ---`,
+            });
+            vlmTranscript.push({
+              type: 'text',
+              text: `--- MUGSHOT PASS 2 (attempt ${attempt + 1}) IMAGES ---\n${checkPaths.map(p => path.basename(p)).join(', ')}\n--- END IMAGES ---`,
             });
 
             const verifyMatch = pass2.text.match(/\{[\s\S]*\}/);
@@ -2485,7 +2515,8 @@ export function registerImportTools(
           ? `VLM ${visualCheck.verified ? 'verified' : 'checked'} (${finalConfidence} confidence, ${visualCheck.vlm_model})`
           : 'Geometric+semantic only (no VLM)';
 
-        return jsonResult({
+        // Return with VLM transcript for full transparency
+        const resultJson = {
           ...legacyResult,
           cached: false,
           sidecar_path: sidecar,
@@ -2498,7 +2529,17 @@ export function registerImportTools(
                 : ' HERO SHOT available as thumbnail/reference.'
               : ''),
           ...(artState ? adWorkflow(artState, 'analyze_mesh', meshNote) : {}),
-        });
+        };
+        if (vlmTranscript.length > 0) {
+          // Multi-content: VLM transcript blocks + final JSON result
+          return {
+            content: [
+              ...vlmTranscript,
+              { type: 'text' as const, text: JSON.stringify(resultJson, null, 2) },
+            ],
+          };
+        }
+        return jsonResult(resultJson);
       } catch (error: any) {
         mcpLog(`analyze_mesh FAILED: ${error.message}`, 'error');
         return errorResult(error);
@@ -2640,7 +2681,7 @@ export function registerImportTools(
 
   server.tool(
     'attach_mesh',
-    '[Phase 1] Import + place a mesh in one call. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, flushes scene. Requires analyze_mesh to have been run first. If no RT exists, creates one with daylight + DL kernel.',
+    '[Phase 1] Import + place a mesh in one call. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, flushes scene. Requires analyze_mesh to have been run first. If no RT exists, creates one with daylight + PT kernel.',
     {
       obj_path: z.string().describe('Absolute path to OBJ file'),
       role: z
@@ -2898,7 +2939,7 @@ export function registerImportTools(
             rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
             client.sceneCache.addNode(rtHandle, 'Render target', 'NT_RENDERTARGET', 56);
             const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
-            const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_DL);
+            const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_PT);
             const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
             geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
 

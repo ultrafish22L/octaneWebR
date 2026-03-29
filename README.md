@@ -1,4 +1,4 @@
-# OctaneWebR v2.4.3
+# OctaneWebR v2.4.4
 
 A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 
@@ -146,7 +146,7 @@ octaneWebR/
 npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint
-npm test             # 281 tests (Vitest)
+npm test             # 289 tests (Vitest)
 ```
 
 Pre-commit hooks (Husky) run linting and type checks automatically.

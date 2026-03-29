@@ -12,7 +12,7 @@ Recipes are **creative briefs**, not build scripts.
 - Node types, pin indices, pin paths, handle references
 - API calls (`set_attribute`, `connect_nodes`, `update_scene`, etc.)
 - Build order / step-by-step instructions
-- Implementation workarounds or crash prevention notes
+- Implementation workarounds or error prevention notes
 - Handle maps or wiring diagrams
 
 All of that lives in `docs/mcp/REFERENCE.md` (pin layouts, values) and `docs/mcp/BUILD.md` (build workflow). Recipes say **what** to build, not **how**.
@@ -26,7 +26,7 @@ Template recipes are generic. Scene recipes are specific to one build and contai
 
 ## Why
 
-When implementation details are duplicated into recipes, they go stale. The cheatsheet gets updated, the recipe doesn't, and the recipe's outdated instructions override the correct ones. This has caused crashes and wasted sessions — more than once.
+When implementation details are duplicated into recipes, they go stale. The cheatsheet gets updated, the recipe doesn't, and the recipe's outdated instructions override the correct ones. This has caused errors and wasted sessions — more than once.
 
 ## Template
 
