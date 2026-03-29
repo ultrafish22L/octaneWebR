@@ -24,6 +24,9 @@ vite.config.mts.timestamp-*
 .env.local
 .env.*.local
 
+# Runtime data
+data/
+
 # Logs
 *.log
 npm-debug.log*

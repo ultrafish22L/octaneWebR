@@ -259,11 +259,21 @@ async function pollJob(
       throw new Error(`check_job returned unparseable response: ${text.substring(0, 200)}`);
     }
 
+    mcpLog(
+      `VISION: poll ${requestId} status=${result.status} keys=${Object.keys(result).join(',')}`,
+      'info'
+    );
+
     if (result.status === 'completed') {
       // Vision results are in result.vision.answer or result.vision
       if (result.vision?.answer) return result.vision.answer;
       if (result.vision?.caption) return result.vision.caption;
       if (typeof result.vision === 'string') return result.vision;
+      // Fallback: check for result/output at top level (some models return differently)
+      if (result.result)
+        return typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
+      if (result.output)
+        return typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
       // Fallback: return the whole vision object as JSON
       if (result.vision) return JSON.stringify(result.vision);
       return text;
@@ -312,14 +322,15 @@ export async function callAnalyseImage(
 
   // Check if response is an async job ticket (contains requestId)
   let resultText = text;
+  let parsed: any = null;
   try {
-    const parsed = JSON.parse(text);
-    if (parsed.requestId) {
-      mcpLog(`VISION/otoy-studio: async job ${parsed.requestId}, polling…`, 'info');
-      resultText = await pollJob(parsed.requestId, token);
-    }
+    parsed = JSON.parse(text);
   } catch {
     // Not JSON — treat as direct result text
+  }
+  if (parsed?.requestId) {
+    mcpLog(`VISION/otoy-studio: async job ${parsed.requestId}, polling…`, 'info');
+    resultText = await pollJob(parsed.requestId, token);
   }
 
   const elapsed = Date.now() - startMs;

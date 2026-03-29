@@ -1,4 +1,4 @@
-## v2.4.1
+## v2.4.3
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 

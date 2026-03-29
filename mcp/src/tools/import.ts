@@ -295,11 +295,13 @@ const MUGSHOT_TYPES = {
   RT: 56, // NT_RENDERTARGET
   CAM: 13, // NT_CAM_THINLENS
   KERN_PT: 25, // NT_KERN_PATHTRACING
+  KERN_DL: 26, // NT_KERN_DIRECTLIGHTING
   GEO_GROUP: 3, // NT_GEO_GROUP
   GEO_OBJECT: 153, // NT_GEO_OBJECT (primitives)
   GEO_MESH: 1, // NT_GEO_MESH
   GEO_PLACEMENT: 4, // NT_GEO_PLACEMENT
   ENV_DAYLIGHT: 14, // NT_ENV_DAYLIGHT
+  TEX_IMAGE: 34, // NT_TEX_IMAGE
 };
 
 /** Mugshot view configuration. */
@@ -308,27 +310,29 @@ interface MugshotView {
   yaw: number; // camera orbit degrees
   elevation: number;
   clay: boolean; // true = color clay (mode 2), false = normal rendering
+  ground: boolean; // true = show ground plane, false = hide for this view
 }
 
 /**
  * Mugshot views — 8 clay views for full 360° spatial coverage.
  * Geometric guess rotation IS applied so VLM sees the mesh (hopefully) upright.
- * Ring 1: 4 cardinal eye-level views (full horizontal silhouette).
- * Ring 2: 2 elevated diagonals from opposing corners (3D depth).
- * Ring 3: true overhead + below-angle (vertical extremes, catches inversions).
+ * Ring 1: 4 cardinal eye-level views (front/right with ground, back/left without).
+ * Ring 2: 2 elevated diagonals from opposing corners (with ground for shadow cues).
+ * Ring 3: overhead with ground (shadow plan), below-front without ground (underside).
+ * Ground plane is toggled per-view to give VLM unoccluded + gravity-cued views.
  */
 const MUGSHOT_VIEWS: MugshotView[] = [
-  // Ring 1 — Eye-level cardinals (full 360° horizontal)
-  { name: 'front', yaw: 0, elevation: 0, clay: true },
-  { name: 'right', yaw: 90, elevation: 0, clay: true },
-  { name: 'back', yaw: 180, elevation: 0, clay: true },
-  { name: 'left', yaw: 270, elevation: 0, clay: true },
-  // Ring 2 — Elevated diagonals (opposing corners)
-  { name: 'front_high', yaw: 45, elevation: 35, clay: true },
-  { name: 'back_high', yaw: 225, elevation: 35, clay: true },
+  // Ring 1 — Eye-level cardinals
+  { name: 'front', yaw: 0, elevation: 0, clay: true, ground: true },
+  { name: 'right', yaw: 90, elevation: 0, clay: true, ground: true },
+  { name: 'back', yaw: 180, elevation: 0, clay: true, ground: false },
+  { name: 'left', yaw: 270, elevation: 0, clay: true, ground: false },
+  // Ring 2 — Elevated diagonals (ground ON for shadow cues)
+  { name: 'front_high', yaw: 45, elevation: 35, clay: true, ground: true },
+  { name: 'back_high', yaw: 225, elevation: 35, clay: true, ground: true },
   // Ring 3 — Vertical extremes
-  { name: 'top', yaw: 0, elevation: 85, clay: true },
-  { name: 'below_front', yaw: 0, elevation: -25, clay: true },
+  { name: 'top', yaw: 0, elevation: 85, clay: true, ground: true },
+  { name: 'below_front', yaw: 0, elevation: -25, clay: true, ground: false },
 ];
 
 /** Helper: create a node and return its handle. */
@@ -390,6 +394,19 @@ async function setAttrRaw(
   else if (attrType === 11) {
     const v = typeof value === 'object' ? value : { x: 0, y: 0, z: 0 };
     valueParams = { float3_value: { x: v.x, y: v.y, z: v.z } };
+  } else if (attrType === 5) {
+    const v = typeof value === 'object' ? value : { x: 0, y: 0, z: 0 };
+    valueParams = { int3_value: { x: Math.round(v.x), y: Math.round(v.y), z: Math.round(v.z) } };
+  } else if (attrType === 6) {
+    const v = typeof value === 'object' ? value : { x: 0, y: 0, z: 0, w: 0 };
+    valueParams = {
+      int4_value: {
+        x: Math.round(v.x),
+        y: Math.round(v.y),
+        z: Math.round(v.z),
+        w: Math.round(v.w || 0),
+      },
+    };
   } else if (attrType === 14) valueParams = { string_value: String(value) };
   else throw new Error(`Unsupported attr type ${attrType}`);
 
@@ -714,7 +731,27 @@ function burnLabel(
 // ── Mugshot scoreboard for configuration mode ────────────────────────
 
 const SCOREBOARD_PATH = path.resolve(__dirname, '../../data/mugshot_scoreboard.json');
-const AVAILABLE_VLM_MODELS = ['moondream3', 'llava-next', 'florence-2-large'];
+// otoy-studio models: florence-2-large doesn't support 'ask' task. moondream2 is legacy.
+// Anthropic models use direct Claude API (not otoy-studio). Sonnet best for spatial reasoning.
+const OTOY_VLM_MODELS: string[] = []; // disabled: moondream-next/llava-next timeout, moondream3 inaccurate
+const ANTHROPIC_VLM_MODELS = ['claude-sonnet']; // disabled: claude-haiku inconsistent
+const AVAILABLE_VLM_MODELS = [...OTOY_VLM_MODELS, ...ANTHROPIC_VLM_MODELS];
+
+/** Map config model names to Anthropic API model IDs */
+const ANTHROPIC_MODEL_IDS: Record<string, string> = {
+  'claude-haiku': 'claude-haiku-4-5-20251001',
+  'claude-sonnet': 'claude-sonnet-4-20250514',
+};
+
+/** Known source endpoint → axis convention map.
+ * Meshes from these endpoints always need the specified rotation.
+ * Avoids VLM Pass 1 diagnosis when source is known. */
+const ENDPOINT_AXIS_MAP: Record<
+  string,
+  { rotation: [number, number, number]; convention: string }
+> = {
+  huynan: { rotation: [90, 0, 0], convention: 'z_up' },
+};
 
 interface ModelResult {
   is_upright: boolean;
@@ -762,10 +799,10 @@ function saveScoreboard(sb: Scoreboard): void {
   mcpLog(`mugshot: scoreboard saved → ${SCOREBOARD_PATH}`, 'info');
 }
 
-/** Get the preferred VLM model from scoreboard, or fall back to moondream3. */
+/** Get the preferred VLM model from scoreboard, or fall back to first available. */
 function getPreferredModel(): string {
   const sb = loadScoreboard();
-  return sb.preferred_model || 'moondream3';
+  return sb.preferred_model || AVAILABLE_VLM_MODELS[0] || 'claude-sonnet';
 }
 
 /**
@@ -802,6 +839,16 @@ async function renderMugshots(
   await connectRaw(client, rt, geoGroup, 3);
   await connectRaw(client, rt, kern, 6);
 
+  // Set square film resolution (512×512) for mugshot renders
+  const filmHandle = await getConnectedChild(client, rt, 4); // pin 4 = filmSettings
+  if (filmHandle) {
+    const resHandle = await getConnectedChild(client, filmHandle, 0); // pin 0 = resolution
+    if (resHandle) {
+      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 768, y: 768, z: 0 });
+      mcpLog(`mugshot: film resolution set to 768×768 (square)`, 'info');
+    }
+  }
+
   // Disable DOF on camera — pin 14 (aperture)
   const aperturePinHandle = await getConnectedChild(client, cam, 14);
   if (aperturePinHandle) {
@@ -814,11 +861,11 @@ async function renderMugshots(
     await setAttrRaw(client, envPowerHandle, AttributeId.A_VALUE, 9, 0.8);
   }
 
-  // Geo group needs 2 pins: mesh + ground plane
+  // Geo group needs 2 pins: mesh + ground plane (toggled per view)
   const isPancake =
     meshExtents && meshExtents.y / Math.max(meshExtents.x, meshExtents.z, 0.001) < 0.1;
-  const useGroundPlane = !isPancake;
-  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, useGroundPlane ? 2 : 1);
+  const hasAnyGroundViews = !isPancake && MUGSHOT_VIEWS.some(v => v.ground);
+  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, hasAnyGroundViews ? 2 : 1);
 
   // Create mesh + placement for the asset
   const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
@@ -847,7 +894,8 @@ async function renderMugshots(
   await connectRaw(client, geoGroup, placement, 0);
 
   // Ground plane for shadow/gravity cues (skip for pancake meshes)
-  if (useGroundPlane) {
+  let groundPlacementHandle = 0; // tracked for per-view toggle
+  if (hasAnyGroundViews) {
     const groundMesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
     const groundPlacement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
     const groundMaterial = await createNodeRaw(client, 33); // NT_MAT_DIFFUSE
@@ -892,6 +940,7 @@ async function renderMugshots(
     }
 
     await connectRaw(client, geoGroup, groundPlacement, 1);
+    groundPlacementHandle = groundPlacement;
     mcpLog(`mugshot: ground plane added (${footprint.toFixed(1)} units, 50% grey)`, 'info');
   }
 
@@ -938,9 +987,30 @@ async function renderMugshots(
     mcpLog(`mugshot: getSceneBounds failed (${e.message}), using fallback bbox`, 'warn');
   }
 
+  // Track ground plane state for toggling
+  let groundVisible = true;
+
   // Render each view
   for (const view of MUGSHOT_VIEWS) {
-    mcpLog(`mugshot: rendering ${view.name}`, 'info');
+    mcpLog(`mugshot: rendering ${view.name} (ground=${view.ground})`, 'info');
+
+    // Toggle ground plane visibility per view
+    if (groundPlacementHandle && view.ground !== groundVisible) {
+      if (view.ground) {
+        await connectRaw(client, geoGroup, groundPlacementHandle, 1);
+      } else {
+        // Disconnect ground plane from geo group pin 1
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(geoGroup), type: OBJ_API_NODE },
+          pinIdx: 1,
+          sourceNode: { handle: '0', type: OBJ_API_NODE },
+          evaluate: true,
+          doCycleCheck: false,
+        });
+      }
+      groundVisible = view.ground;
+      await client.callMethod('ApiChangeManager', 'update', {});
+    }
 
     // Set clay mode
     await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 2 : 0 });
@@ -968,7 +1038,7 @@ async function renderMugshots(
       try {
         const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
         const s = stats?.statistics ?? stats;
-        if (s?.beautySamplesPerPixel >= 100 || s?.state === 'RSTATE_FINISHED') break;
+        if (s?.beautySamplesPerPixel >= 250 || s?.state === 'RSTATE_FINISHED') break;
       } catch (e: any) {
         mcpLog(`mugshot render poll error: ${e?.message ?? e}`, 'verbose');
       }
@@ -1002,7 +1072,296 @@ async function renderMugshots(
   return savedPaths;
 }
 
-/** Build VLM orientation prompt with mesh metadata for informed analysis. */
+/** View spec for lean mugshot rendering. */
+interface ViewSpec {
+  name: string;
+  yaw: number;
+  elevation: number;
+  ground: boolean;
+  clay?: boolean; // default true — set false for textured hero shots
+  margin?: number; // camera fit margin, default 0.15
+}
+
+/**
+ * Render a small number of views of a mesh in an isolated scene.
+ * Lean replacement for renderMugshots — renders only the views you ask for.
+ * Returns paths to saved PNGs.
+ */
+async function renderViews(
+  client: OctaneMcpClient,
+  cache: ApiCache | null,
+  objPath: string,
+  rotation: { x: number; y: number; z: number },
+  groundOffsetY: number,
+  outputDir: string,
+  baseName: string,
+  views: ViewSpec[],
+  meshExtents?: { x: number; y: number; z: number },
+  rawBoundsMin?: { x: number; y: number; z: number },
+  rawBoundsMax?: { x: number; y: number; z: number }
+): Promise<string[]> {
+  mcpLog(`mugshot: renderViews ${views.map(v => v.name).join(',')} for ${baseName}`, 'info');
+  const savedPaths: string[] = [];
+
+  // Create isolated scene
+  const rt = await createNodeRaw(client, MUGSHOT_TYPES.RT);
+  const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
+  const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_PT);
+  const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
+  const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
+
+  // Wire RT
+  await connectRaw(client, rt, cam, 0);
+  await connectRaw(client, rt, env, 1);
+  await connectRaw(client, rt, geoGroup, 3);
+  await connectRaw(client, rt, kern, 6);
+
+  // 768×768 film
+  const filmHandle = await getConnectedChild(client, rt, 4);
+  if (filmHandle) {
+    const resHandle = await getConnectedChild(client, filmHandle, 0);
+    if (resHandle) {
+      await setAttrRaw(client, resHandle, AttributeId.A_VALUE, 5, { x: 768, y: 768, z: 0 });
+    }
+  }
+
+  // Disable DOF — set aperture to 0 on pin 14 child
+  const aperture = await getConnectedChild(client, cam, 14);
+  if (aperture) {
+    await setAttrRaw(client, aperture, AttributeId.A_VALUE, 9, 0);
+    mcpLog(`mugshot: DOF disabled (aperture handle=${aperture} → 0)`, 'info');
+  } else {
+    mcpLog(`mugshot: WARNING — no aperture child on cam pin 14, DOF may be active`, 'warn');
+  }
+  // Also try setting aperture edge (pin 15) to 1 to sharpen if DOF leaks through
+  const apertureEdge = await getConnectedChild(client, cam, 15);
+  if (apertureEdge) await setAttrRaw(client, apertureEdge, AttributeId.A_VALUE, 9, 1);
+
+  // Env power
+  const envPower = await getConnectedChild(client, env, 2);
+  if (envPower) await setAttrRaw(client, envPower, AttributeId.A_VALUE, 9, 0.8);
+
+  // Ground plane needed?
+  const isPancake =
+    meshExtents && meshExtents.y / Math.max(meshExtents.x, meshExtents.z, 0.001) < 0.1;
+  const hasGround = !isPancake && views.some(v => v.ground);
+  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, hasGround ? 2 : 1);
+
+  // Load mesh + placement
+  const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
+  const placement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
+  await setAttrRaw(client, mesh, AttributeId.A_FILENAME, 14, objPath);
+  await connectRaw(client, placement, mesh, 1);
+
+  // Apply rotation + ground offset
+  const xform = await getConnectedChild(client, placement, 0);
+  if (xform) {
+    await setAttrRaw(client, xform, AttributeId.A_ROTATION, 11, rotation);
+    await setAttrRaw(client, xform, AttributeId.A_TRANSLATION, 11, {
+      x: 0,
+      y: groundOffsetY,
+      z: 0,
+    });
+  }
+  await connectRaw(client, geoGroup, placement, 0);
+
+  // Ground plane
+  let groundPlacement = 0;
+  let groundMesh = 0;
+  let groundMat = 0;
+  let groundPlaneObj = '';
+  if (hasGround) {
+    groundMesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
+    const gp = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
+    groundMat = await createNodeRaw(client, 33); // NT_MAT_DIFFUSE
+    const footprint = meshExtents ? Math.max(meshExtents.x, meshExtents.z, 0.5) * 3 : 3;
+    groundPlaneObj = path.join(outputDir, `${baseName}_ground_plane.obj`);
+    const planeObj = groundPlaneObj;
+    const h = footprint / 2;
+    fs.writeFileSync(
+      planeObj,
+      `# ground\nv ${-h} 0 ${-h}\nv ${h} 0 ${-h}\nv ${h} 0 ${h}\nv ${-h} 0 ${h}\nvn 0 1 0\nf 1//1 2//1 3//1 4//1\n`,
+      'utf8'
+    );
+    await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, planeObj);
+    await connectRaw(client, gp, groundMesh, 1);
+    const diffColor = await getConnectedChild(client, groundMat, 0);
+    if (diffColor)
+      await setAttrRaw(client, diffColor, AttributeId.A_VALUE, 11, { x: 0.5, y: 0.5, z: 0.5 });
+    await connectRaw(client, gp, groundMat, 0);
+    await connectRaw(client, geoGroup, gp, 1);
+    groundPlacement = gp;
+  }
+
+  // Flush + select RT
+  await client.callMethod('ApiChangeManager', 'update', {});
+  await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
+    targetNode: { handle: String(rt), type: OBJ_API_NODE },
+  });
+
+  // Samples — 256 for crisp mugshots
+  const maxSamples = await getConnectedChild(client, kern, 0);
+  if (maxSamples) await setAttrRaw(client, maxSamples, AttributeId.A_VALUE, 3, 256);
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  // Compute MESH-ONLY world-space bounds from raw bounds + rotation + offset.
+  // This excludes the ground plane so camera frames the mesh tightly.
+  let bboxMin = { x: -0.5, y: 0, z: -0.5 };
+  let bboxMax = { x: 0.5, y: 1, z: 0.5 };
+  if (rawBoundsMin && rawBoundsMax) {
+    // Get all 8 corners of the raw AABB
+    const corners = [
+      { x: rawBoundsMin.x, y: rawBoundsMin.y, z: rawBoundsMin.z },
+      { x: rawBoundsMax.x, y: rawBoundsMin.y, z: rawBoundsMin.z },
+      { x: rawBoundsMin.x, y: rawBoundsMax.y, z: rawBoundsMin.z },
+      { x: rawBoundsMax.x, y: rawBoundsMax.y, z: rawBoundsMin.z },
+      { x: rawBoundsMin.x, y: rawBoundsMin.y, z: rawBoundsMax.z },
+      { x: rawBoundsMax.x, y: rawBoundsMin.y, z: rawBoundsMax.z },
+      { x: rawBoundsMin.x, y: rawBoundsMax.y, z: rawBoundsMax.z },
+      { x: rawBoundsMax.x, y: rawBoundsMax.y, z: rawBoundsMax.z },
+    ];
+    // Rotate each corner (Euler XYZ in degrees)
+    const rx = (rotation.x * Math.PI) / 180;
+    const ry = (rotation.y * Math.PI) / 180;
+    const rz = (rotation.z * Math.PI) / 180;
+    const cx = Math.cos(rx),
+      sx = Math.sin(rx);
+    const cy = Math.cos(ry),
+      sy = Math.sin(ry);
+    const cz = Math.cos(rz),
+      sz = Math.sin(rz);
+    // Rotation matrix (XYZ order)
+    const rotPoint = (p: { x: number; y: number; z: number }) => {
+      // X rotation
+      let y1 = p.y * cx - p.z * sx;
+      let z1 = p.y * sx + p.z * cx;
+      // Y rotation
+      let x2 = p.x * cy + z1 * sy;
+      let z2 = -p.x * sy + z1 * cy;
+      // Z rotation
+      let x3 = x2 * cz - y1 * sz;
+      let y3 = x2 * sz + y1 * cz;
+      return { x: x3, y: y3 + groundOffsetY, z: z2 };
+    };
+    const rotated = corners.map(rotPoint);
+    bboxMin = {
+      x: Math.min(...rotated.map(r => r.x)),
+      y: Math.min(...rotated.map(r => r.y)),
+      z: Math.min(...rotated.map(r => r.z)),
+    };
+    bboxMax = {
+      x: Math.max(...rotated.map(r => r.x)),
+      y: Math.max(...rotated.map(r => r.y)),
+      z: Math.max(...rotated.map(r => r.z)),
+    };
+    mcpLog(
+      `mugshot: mesh-only bounds (${bboxMin.x.toFixed(3)},${bboxMin.y.toFixed(3)},${bboxMin.z.toFixed(3)}) → (${bboxMax.x.toFixed(3)},${bboxMax.y.toFixed(3)},${bboxMax.z.toFixed(3)})`,
+      'info'
+    );
+  }
+
+  let groundVisible = true;
+
+  for (const view of views) {
+    // Toggle ground
+    if (groundPlacement && view.ground !== groundVisible) {
+      if (view.ground) {
+        await connectRaw(client, geoGroup, groundPlacement, 1);
+      } else {
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(geoGroup), type: OBJ_API_NODE },
+          pinIdx: 1,
+          sourceNode: { handle: '0', type: OBJ_API_NODE },
+          evaluate: true,
+          doCycleCheck: false,
+        });
+      }
+      groundVisible = view.ground;
+      await client.callMethod('ApiChangeManager', 'update', {});
+    }
+
+    // Clay mode: default on for diagnostic views, off for textured hero shots
+    await client.callMethod('ApiRenderEngine', 'setClayMode', {
+      mode: view.clay === false ? 0 : 2,
+    });
+
+    // Camera
+    const fit = computeFitCamera(bboxMin, bboxMax, view.margin ?? 0.15, view.elevation, view.yaw);
+    await client.callMethod('LiveLink', 'SetCamera', {
+      position: fit.position,
+      target: fit.target,
+      up: { x: 0, y: 1, z: 0 },
+    });
+
+    // Render
+    await client.callMethod('ApiChangeManager', 'update', {});
+    await client.callMethod('ApiRenderEngine', 'continueRendering', {});
+    const t0 = Date.now();
+    while (Date.now() - t0 < 30000) {
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        const stats = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
+        const s = stats?.statistics ?? stats;
+        if (s?.beautySamplesPerPixel >= 250 || s?.state === 'RSTATE_FINISHED') break;
+      } catch {}
+    }
+
+    // Save
+    const outPath = path.join(outputDir, `${baseName}.${view.name}.png`);
+    await client.callMethod(
+      'ApiRenderEngine',
+      'saveImage1',
+      {
+        renderPassId: 0,
+        fullPath: outPath,
+        imageSaveFormat: 0,
+        colorSpace: 1,
+        premultipliedAlphaType: 0,
+        exrCompressionType: 4,
+        exrCompressionLevel: 4.5,
+        asynchronous: false,
+      },
+      120_000
+    );
+    savedPaths.push(outPath);
+    mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
+  }
+
+  await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: 0 });
+
+  // Cleanup: delete all created nodes so mugshots don't pollute the scene
+  const toDelete = [
+    groundMat,
+    groundMesh,
+    groundPlacement,
+    placement,
+    mesh,
+    env,
+    geoGroup,
+    kern,
+    cam,
+    rt,
+  ].filter(h => h > 0);
+  for (const handle of toDelete) {
+    try {
+      await client.callMethod('ApiItem', 'destroy', {
+        objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+      });
+    } catch {}
+  }
+  // Clean up temp ground plane OBJ
+  if (groundPlaneObj) {
+    try {
+      fs.unlinkSync(groundPlaneObj);
+    } catch {}
+  }
+  mcpLog(`mugshot: cleaned up ${toDelete.length} nodes`, 'info');
+
+  return savedPaths;
+}
+
+/** Build VLM orientation prompt — Pass 1: diagnosis only, no rotation numbers. */
 function buildOrientationPrompt(metadata?: {
   filename?: string;
   category?: string;
@@ -1014,87 +1373,118 @@ function buildOrientationPrompt(metadata?: {
 }): string {
   let metaBlock = '';
   if (metadata) {
-    const lines: string[] = ['Mesh metadata (use ONLY for identification, NOT for orientation):'];
-    if (metadata.filename) lines.push(`- Filename: "${metadata.filename}"`);
+    const parts: string[] = [];
+    if (metadata.filename) parts.push(`File: "${metadata.filename}"`);
     if (metadata.category)
-      lines.push(
-        `- Category: ${metadata.category}${metadata.subcategory ? ` (${metadata.subcategory})` : ''}`
+      parts.push(
+        `Category: ${metadata.category}${metadata.subcategory ? ` (${metadata.subcategory})` : ''}`
       );
     if (metadata.extents)
-      lines.push(
-        `- Bounding box extents: ${metadata.extents.x.toFixed(3)} × ${metadata.extents.y.toFixed(3)} × ${metadata.extents.z.toFixed(3)}`
+      parts.push(
+        `Extents: ${metadata.extents.x.toFixed(3)} × ${metadata.extents.y.toFixed(3)} × ${metadata.extents.z.toFixed(3)}`
       );
-    if (metadata.tallestAxis) lines.push(`- Tallest axis: ${metadata.tallestAxis}`);
-    if (metadata.geometricGuess)
-      lines.push(
-        `- Geometric guess rotation applied: (${metadata.geometricGuess.x}, ${metadata.geometricGuess.y}, ${metadata.geometricGuess.z})°`
-      );
-    if (metadata.sceneContext) lines.push(`- Scene context: ${metadata.sceneContext}`);
-    lines.push('');
-    lines.push(
-      'CRITICAL: The metadata tells you WHAT this object is. But you MUST determine orientation'
-    );
-    lines.push('(upright, front direction) ONLY from the actual pixel content of the images.');
-    lines.push(
-      'Do NOT assume the FRONT view (image 1) shows the face/front of the object — it may show the back.'
-    );
-    lines.push(
-      'Do NOT hallucinate features. If you cannot see eye sockets, teeth, or a face in a view, say so.'
-    );
-    metaBlock = '\n' + lines.join('\n') + '\n';
+    if (metadata.tallestAxis) parts.push(`Tallest axis: ${metadata.tallestAxis}`);
+    if (metadata.sceneContext) parts.push(`Scene: ${metadata.sceneContext}`);
+    metaBlock = '\n' + parts.join(' | ') + '\n';
   }
 
-  return `You are analyzing a CONTACT SHEET of 8 clay renders of a 3D mesh for orientation correctness.
-A geometric guess rotation has been applied. The mesh sits on a grey ground plane with shadow cues — shadows indicate where "down" is. If no ground plane is visible, the mesh may be a flat/pancake shape.
+  return `You are analyzing a CONTACT SHEET of 8 clay renders of a 3D mesh for orientation.
+No pre-rotation applied — raw file orientation.
 ${metaBlock}
-The image is a 4×2 CONTACT SHEET grid. Each cell is labeled. Views (left-to-right, top-to-bottom):
-Row 1: 1. FRONT (yaw=0°) | 2. RIGHT (yaw=90°) | 3. BACK (yaw=180°) | 4. LEFT (yaw=270°)
-Row 2: 5. FRONT-HIGH (yaw=45°, 35° above) | 6. BACK-HIGH (yaw=225°, 35° above) | 7. TOP (85° above) | 8. BELOW-FRONT (25° below)
+4×2 grid, left-to-right, top-to-bottom:
+Row 1: FRONT (yaw=0°) | RIGHT (90°) | BACK (180°) | LEFT (270°)
+Row 2: FRONT-HIGH (45°, 35° above) | BACK-HIGH (225°, 35° above) | TOP (85° above) | BELOW-FRONT (0°, 25° below)
 
-Cross-reference ALL views together:
-- FRONT (1) vs BACK (3): verify front/back. Face/eyes/features should appear in one.
-- RIGHT (2) vs LEFT (4): check symmetry and side identity
-- FRONT-HIGH (5) vs BACK-HIGH (6): confirm 3D structure from above
-- TOP (7): plan-view shape — important for orientation of flat/wide objects
-- BELOW-FRONT (8): base/underside — key for detecting inverted objects
-- SHADOWS on ground plane: indicate which direction is DOWN
+Views 1,2,5,6,7 have ground plane with shadows. Views 3,4,8 float (no ground).
 
-If the object is something where orientation does not meaningfully matter (sphere, abstract rock, amorphous blob), set orientation_matters to false.
-
-For thin/flat objects (coins, plates, leaves): side views showing a thin edge/line is EXPECTED and correct — do not flag this as a problem.
-
-Respond in JSON format ONLY (no markdown, no explanation):
+Describe what you see. Do NOT provide rotation numbers. Respond JSON only:
 {
-  "object_type": "description of what this object is",
+  "object_type": "what is this object",
   "is_upright": true/false,
   "orientation_matters": true/false,
-  "confidence": "high" | "medium" | "low",
-  "correction_rotation": {"x": 0, "y": 0, "z": 0},
-  "front_direction": "toward_camera | away | left | right",
+  "pose": "upright | lying_on_back | lying_on_front | lying_on_side | upside_down",
+  "front_visible_in": "view number where the face/front of the object is visible, e.g. 1, 2, 3, or 4",
+  "confidence": "high | medium | low",
   "estimated_height_m": 0.0,
-  "notes": "what you see across all views, cross-reference observations"
+  "notes": "what you see in each relevant view"
+}`;
 }
 
-Rules:
-- "is_upright" = the object is standing naturally as it would in the real world
-- "orientation_matters" = false for symmetric/amorphous objects where any rotation is acceptable
-- "confidence" = how certain you are about the identification and orientation judgment
-- correction_rotation is the ADDITIONAL rotation needed on top of what was already applied
-- If upright AND facing front, set correction_rotation to {0,0,0}
-- If NOT upright, provide the X/Z rotation correction needed
-- "front_direction" is CRITICAL and must be based on PIXEL EVIDENCE, not assumptions:
-  - First identify which view shows the object's natural front (face, eyes, opening, decorative side)
-  - Then report where that front points relative to FRONT camera (view 1):
-  - "toward_camera" = the face/front is visible in view 1 (FRONT)
-  - "away" = the face/front is visible in view 3 (BACK) — meaning it points away from FRONT camera
-  - "left" = the face/front is visible in view 4 (LEFT)
-  - "right" = the face/front is visible in view 2 (RIGHT)
-  - In your notes, state WHICH VIEW number shows the face/front and WHAT features you see there
-- For creatures/skulls: eye sockets, nostrils, jaw opening, teeth define the face
-- A smooth rounded surface is likely the BACK of a skull, not the face
-- Cross-reference opposing views before concluding — describe what you see in BOTH
-- Use metadata to help identify the object type, but determine orientation from pixels only
-- "estimated_height_m" is the real-world height when properly oriented`;
+/** Build VLM verification prompt — Pass 2: confirm corrected orientation. */
+function buildVerificationPrompt(): string {
+  return `You are verifying a CORRECTED orientation of a 3D mesh. A rotation was applied based on a previous analysis.
+
+Same 4×2 contact sheet layout:
+Row 1: FRONT (yaw=0°) | RIGHT (90°) | BACK (180°) | LEFT (270°)
+Row 2: FRONT-HIGH (45°, 35° above) | BACK-HIGH (225°, 35° above) | TOP (85° above) | BELOW-FRONT (0°, 25° below)
+
+Is the object now upright and facing forward? Respond JSON only:
+{
+  "is_correct": true/false,
+  "issue": "none | still_lying_down | upside_down | facing_wrong_way | other",
+  "notes": "what you see"
+}`;
+}
+
+/**
+ * Map VLM diagnosis (pose + front_visible_in + tallest axis) to a deterministic rotation.
+ * We know Octane's coordinate system — VLM just tells us what's wrong.
+ */
+function diagnosisToRotation(
+  pose: string,
+  frontVisibleIn: string | number,
+  tallestAxis: string,
+  boundsMin: number[],
+  boundsMax: number[]
+): { rotation: { x: number; y: number; z: number }; groundOffset: number } {
+  const p = (pose || '').toLowerCase().replace(/[^a-z_]/g, '');
+  let rotation = { x: 0, y: 0, z: 0 };
+  let groundOffset = Math.max(0, -boundsMin[1]);
+
+  // Step 1: Fix upright orientation based on pose + tallest axis
+  if (p === 'lying_on_back' || p === 'lying_on_front') {
+    if (tallestAxis === 'Z') {
+      // Z-up model lying down → rotate X+90 to stand up
+      rotation.x = 90;
+      // After X+90: new Y = -old_Z, so minY = -boundsMax[2]
+      groundOffset = Math.max(0, boundsMax[2]);
+    } else if (tallestAxis === 'X') {
+      // X tallest lying down → rotate Z+90
+      rotation.z = 90;
+      groundOffset = Math.max(0, -boundsMin[0]);
+    }
+    if (p === 'lying_on_front') {
+      // Face-down: also needs 180° flip vs face-up
+      rotation.x += 180;
+      // Recompute ground offset for the flipped case
+      if (tallestAxis === 'Z') {
+        groundOffset = Math.max(0, -boundsMin[2]);
+      }
+    }
+  } else if (p === 'upside_down') {
+    rotation.x = 180;
+    groundOffset = Math.max(0, -boundsMax[1]); // flip Y
+  } else if (p === 'lying_on_side') {
+    if (tallestAxis === 'X') {
+      rotation.z = 90;
+      groundOffset = Math.max(0, -boundsMin[0]);
+    } else if (tallestAxis === 'Z') {
+      rotation.x = 90;
+      groundOffset = Math.max(0, boundsMax[2]);
+    }
+  }
+  // 'upright' → no rotation needed
+
+  // Step 2: Fix front-facing direction based on which view shows the front
+  const fv = parseInt(String(frontVisibleIn), 10);
+  if (fv === 3)
+    rotation.y += 180; // front visible in BACK view → turn 180
+  else if (fv === 2)
+    rotation.y += -90; // front visible in RIGHT view → turn -90
+  else if (fv === 4) rotation.y += 90; // front visible in LEFT view → turn +90
+  // fv === 1 → already facing front, no Y rotation
+
+  return { rotation, groundOffset };
 }
 
 interface MugshotVLMResult {
@@ -1133,7 +1523,8 @@ async function analyzeMugshotsWithVLM(
     return null;
   }
 
-  // Step 1: Compose contact sheet from ALL mugshot views
+  // Step 1: Compose contact sheet from ALL 8 mugshot views (4×2 grid).
+  // Above-front (view 8) is also kept as standalone for two-pass verification.
   const contactDir = path.dirname(mugshotPaths[0]);
   const baseName = path.basename(mugshotPaths[0]).replace(/\.mugshot_.*/, '');
   const contactSheetPath = path.join(contactDir, `${baseName}.mugshot_contact.png`);
@@ -1161,28 +1552,88 @@ async function analyzeMugshotsWithVLM(
     for (const model of AVAILABLE_VLM_MODELS) {
       try {
         mcpLog(`mugshot VLM: testing model "${model}"…`, 'info');
-        const result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
-          model,
-        });
+        let result: { text: string; model?: string };
+
+        if (ANTHROPIC_VLM_MODELS.includes(model)) {
+          // Claude models — direct Anthropic API with base64 image
+          const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
+          const apiKey = getAnthropicKey();
+          if (!apiKey) {
+            mcpLog(`mugshot VLM [${model}]: no Anthropic API key, skipping`, 'warn');
+            modelResults[model] = {
+              is_upright: true,
+              front_direction: 'unknown',
+              correction: [0, 0, 0],
+              confidence: 'low',
+              object_type: 'skipped',
+              notes: 'No ANTHROPIC_API_KEY env var',
+            };
+            continue;
+          }
+          const imgBuf = fs.readFileSync(path.resolve(contactSheetPath));
+          const base64 = imgBuf.toString('base64');
+          const anthropicResult = await callAnthropicVision(
+            prompt,
+            [{ base64, mediaType: 'image/png' }],
+            {
+              apiKey,
+              model: ANTHROPIC_MODEL_IDS[model] || 'claude-haiku-4-5-20251001',
+              maxTokens: 2000,
+            }
+          );
+          result = { text: anthropicResult.text, model: anthropicResult.model };
+        } else {
+          // otoy-studio models (moondream3, moondream-next, llava-next)
+          result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
+            model,
+          });
+        }
 
         const jsonMatch = result.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          const corr = parsed.correction_rotation_deg ??
-            parsed.correction_rotation ?? { x: 0, y: 0, z: 0 };
-          modelResults[model] = {
-            is_upright: parsed.is_upright ?? true,
-            front_direction: parsed.front_direction ?? 'toward_camera',
-            correction: [corr.x || 0, corr.y || 0, corr.z || 0],
-            confidence: parsed.confidence ?? 'medium',
-            object_type: parsed.object_type ?? 'unknown',
-            notes: parsed.notes ?? '',
-            raw_response: result.text,
-          };
-          mcpLog(
-            `mugshot VLM [${model}]: ${parsed.object_type}, upright=${parsed.is_upright}, front=${parsed.front_direction}, confidence=${parsed.confidence}`,
-            'info'
-          );
+          let parsed: any;
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch {
+            // Try repairing common JSON issues (trailing commas, missing braces)
+            let repaired = jsonMatch[0].replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+            const openB = (repaired.match(/\{/g) || []).length;
+            const closeB = (repaired.match(/\}/g) || []).length;
+            for (let i = 0; i < openB - closeB; i++) repaired += '}';
+            try {
+              parsed = JSON.parse(repaired);
+            } catch {
+              /* truly broken */
+            }
+          }
+          if (parsed) {
+            const corr = parsed.correction_rotation_deg ??
+              parsed.correction_rotation ?? { x: 0, y: 0, z: 0 };
+            modelResults[model] = {
+              is_upright: parsed.is_upright ?? true,
+              front_direction: parsed.front_direction ?? 'toward_camera',
+              correction: [corr.x || 0, corr.y || 0, corr.z || 0],
+              confidence: parsed.confidence ?? 'medium',
+              object_type: parsed.object_type ?? 'unknown',
+              notes: parsed.notes ?? '',
+              raw_response: result.text,
+            };
+            mcpLog(
+              `mugshot VLM [${model}]: ${parsed.object_type}, upright=${parsed.is_upright}, front=${parsed.front_direction}, confidence=${parsed.confidence}`,
+              'info'
+            );
+          } else {
+            mcpLog(`mugshot VLM [${model}]: unparseable JSON`, 'warn');
+            modelResults[model] = {
+              is_upright: true,
+              front_direction: 'unknown',
+              correction: [0, 0, 0],
+              confidence: 'low',
+              object_type: 'parse_error',
+              notes: 'JSON parse failed',
+              raw_response: result.text,
+            };
+          }
         } else {
           mcpLog(`mugshot VLM [${model}]: no JSON in response`, 'warn');
           modelResults[model] = {
@@ -1204,6 +1655,7 @@ async function analyzeMugshotsWithVLM(
           confidence: 'low',
           object_type: 'error',
           notes: `Error: ${e.message}`,
+          raw_response: (e as any).rawResponse || '',
         };
       }
     }
@@ -1249,12 +1701,37 @@ async function analyzeMugshotsWithVLM(
   }
 
   // Normal mode: use preferred model only
-  const model = getPreferredModel();
+  // If preferred model is not in AVAILABLE_VLM_MODELS, use first available
+  let model = getPreferredModel();
+  if (AVAILABLE_VLM_MODELS.length > 0 && !AVAILABLE_VLM_MODELS.includes(model)) {
+    model = AVAILABLE_VLM_MODELS[0];
+  }
   try {
     mcpLog(`mugshot VLM: using model "${model}" on contact sheet`, 'info');
-    const result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
-      model,
-    });
+    let result: { text: string; model?: string };
+
+    if (ANTHROPIC_VLM_MODELS.includes(model)) {
+      // Claude models — direct Anthropic API with base64 image
+      const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
+      const apiKey = getAnthropicKey();
+      if (!apiKey) {
+        mcpLog(`mugshot VLM: no Anthropic API key for ${model}`, 'warn');
+        return null;
+      }
+      const imgBuf = fs.readFileSync(path.resolve(contactSheetPath));
+      const base64 = imgBuf.toString('base64');
+      const anthropicResult = await callAnthropicVision(
+        prompt,
+        [{ base64, mediaType: 'image/png' }],
+        { apiKey, model: ANTHROPIC_MODEL_IDS[model] || 'claude-sonnet-4-20250514', maxTokens: 2000 }
+      );
+      result = { text: anthropicResult.text, model: anthropicResult.model };
+    } else {
+      // otoy-studio models (moondream3, moondream-next, llava-next)
+      result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
+        model,
+      });
+    }
 
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -1268,7 +1745,7 @@ async function analyzeMugshotsWithVLM(
       return { ...parsed, vlm_model: result.model || model };
     }
   } catch (e: any) {
-    mcpLog(`mugshot VLM: otoy-studio failed: ${e.message}`, 'warn');
+    mcpLog(`mugshot VLM: failed: ${e.message}`, 'warn');
   }
 
   return null;
@@ -1673,8 +2150,21 @@ export function registerImportTools(
         .describe(
           'Configuration mode: run ALL available VLM models, save results to scoreboard for comparison. Use on several meshes, then score to find best model.'
         ),
+      source_endpoint: z
+        .string()
+        .optional()
+        .describe(
+          'Origin endpoint (e.g. "huynan"). If known, skips VLM diagnosis and applies deterministic axis correction. Pass 2 VLM verification still runs.'
+        ),
     },
-    async ({ obj_path, scene_context, target_height, force_reanalyze, configuration }) => {
+    async ({
+      obj_path,
+      scene_context,
+      target_height,
+      force_reanalyze,
+      configuration,
+      source_endpoint,
+    }) => {
       try {
         const resolved = path.resolve(obj_path);
         if (!fs.existsSync(resolved)) {
@@ -1787,135 +2277,250 @@ export function registerImportTools(
         const scaleFactor =
           desiredHeight > 0 && currentHeight > 0 ? desiredHeight / currentHeight : 1;
 
-        // Tier 3: Visual mugshot analysis via VLM
-        mcpLog(`analyze_mesh: Tier 3 — mugshot rendering + VLM check`, 'info');
+        // Tier 3: Lean VLM orientation — diagnose / correct / verify / hero
+        mcpLog(`analyze_mesh: Tier 3 — lean VLM orientation`, 'info');
         const outputDir = path.dirname(resolved);
         const baseName = path.basename(resolved, '.obj');
+        const rawMin = { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] };
+        const rawMax = { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] };
 
         let visualCheck: any = null;
-        let mugshotPaths: string[] = [];
         let finalRotation = orientation.suggestedRotation;
         let finalGroundOffset = orientation.groundOffsetY;
         let finalConfidence = orientation.confidence;
+        let heroPath = '';
+
+        // Check for known source endpoint — skip Pass 1 if axis convention is known
+        const knownSource = source_endpoint ? ENDPOINT_AXIS_MAP[source_endpoint] : null;
 
         try {
-          // Render 8 mugshot views (full 360° coverage)
-          mugshotPaths = await renderMugshots(
-            client,
-            cache,
-            resolved,
-            orientation.suggestedRotation,
-            orientation.groundOffsetY,
-            outputDir,
-            baseName,
-            extents,
-            { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] },
-            { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] }
-          );
+          const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
+          const apiKey = getAnthropicKey();
+          if (!apiKey) {
+            mcpLog(`analyze_mesh: no Anthropic API key, skipping VLM`, 'warn');
+            throw new Error('No Anthropic API key');
+          }
 
-          // Send to VLM for analysis — include metadata for informed identification
-          const vlmResult = await analyzeMugshotsWithVLM(
-            mugshotPaths,
-            {
+          const vlmModel = ANTHROPIC_MODEL_IDS['claude-sonnet'] || 'claude-sonnet-4-20250514';
+          let diag: any = null;
+
+          if (knownSource) {
+            // === FAST PATH: Known source endpoint — apply deterministic rotation ===
+            mcpLog(
+              `analyze_mesh: known source "${source_endpoint}" → applying ${knownSource.convention} correction (${knownSource.rotation.join(',')})°`,
+              'info'
+            );
+            finalRotation = {
+              x: knownSource.rotation[0],
+              y: knownSource.rotation[1],
+              z: knownSource.rotation[2],
+            };
+            // Recompute ground offset for the applied rotation
+            if (finalRotation.x === 90) finalGroundOffset = Math.max(0, geo.boundsMax[2]);
+            else if (finalRotation.x === -90) finalGroundOffset = Math.max(0, -geo.boundsMin[2]);
+            else finalGroundOffset = Math.max(0, -geo.boundsMin[1]);
+
+            visualCheck = {
+              performed_at: new Date().toISOString(),
+              protocol: 'known_source',
+              vlm_model: vlmModel,
+              source_endpoint,
+              axis_convention: knownSource.convention,
+              known_rotation: knownSource.rotation,
+            };
+          } else {
+            // === PASS 1: Diagnosis — render 2-3 raw views, ask VLM what it sees ===
+            const rawRotation = { x: 0, y: 0, z: 0 };
+            const rawGroundOffset = Math.max(0, -geo.boundsMin[1]);
+            const diagViews: ViewSpec[] = [
+              { name: 'diag_front', yaw: 0, elevation: 0, ground: true },
+              { name: 'diag_side', yaw: 90, elevation: 0, ground: true },
+              { name: 'diag_top', yaw: 0, elevation: 85, ground: true },
+            ];
+            const diagPaths = await renderViews(
+              client,
+              cache,
+              resolved,
+              rawRotation,
+              rawGroundOffset,
+              outputDir,
+              baseName,
+              diagViews,
+              extents,
+              rawMin,
+              rawMax
+            );
+
+            // Send to VLM — individual full-res images, concise prompt
+            const diagPrompt = buildOrientationPrompt({
               filename: path.basename(resolved),
               category: categoryInfo.category,
               subcategory: assetFile,
               extents,
               tallestAxis: orientation.uprightAxis,
-              geometricGuess: orientation.suggestedRotation,
               sceneContext: scene_context,
-            },
-            {
-              configuration:
-                configuration || (scene_context || '').toUpperCase().includes('CONFIG'),
-              meshName: baseName,
-              meshPath: resolved,
-            }
-          );
+            });
+            const diagImages = diagPaths.map(p => ({
+              base64: fs.readFileSync(p).toString('base64'),
+              mediaType: 'image/png' as string,
+            }));
+            const pass1 = await callAnthropicVision(diagPrompt, diagImages, {
+              apiKey,
+              model: vlmModel,
+              maxTokens: 1000,
+            });
 
-          if (vlmResult) {
-            const corr = vlmResult.correction_rotation_deg ??
-              vlmResult.correction_rotation ?? { x: 0, y: 0, z: 0 };
+            // Parse Pass 1 response
+            const jsonMatch = pass1.text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Pass 1: no JSON in VLM response');
+            diag = JSON.parse(jsonMatch[0]);
+            mcpLog(
+              `analyze_mesh: Pass 1 diagnosis — ${diag.object_type}, upright=${diag.is_upright}, pose=${diag.pose}, front_in=${diag.front_visible_in}, confidence=${diag.confidence}`,
+              'info'
+            );
+
             visualCheck = {
               performed_at: new Date().toISOString(),
-              protocol: 'contact_sheet',
-              ground_plane: !(extents.y / Math.max(extents.x, extents.z, 0.001) < 0.1),
-              vlm_model: vlmResult.vlm_model,
-              mugshot_views: MUGSHOT_VIEWS.length,
-              mugshot_paths: mugshotPaths.map(p => path.basename(p)),
-              contact_sheet: `${baseName}.mugshot_contact.png`,
-              mugshot_dir: path.dirname(mugshotPaths[0] || resolved),
-              vlm_response: {
-                object_type: vlmResult.object_type,
-                is_upright: vlmResult.is_upright,
-                orientation_matters: vlmResult.orientation_matters,
-                confidence: vlmResult.confidence,
-                correction_rotation: corr,
-                front_direction: vlmResult.front_direction,
-                estimated_height_m: vlmResult.estimated_height_m,
-                notes: vlmResult.notes,
-              },
-              ...(vlmResult.model_results ? { model_results: vlmResult.model_results } : {}),
-              configuration_mode: !!configuration,
-              confidence: vlmResult.confidence, // VLM self-assessed confidence
+              protocol: 'lean_2pass',
+              vlm_model: pass1.model || vlmModel,
+              pass1_diagnosis: diag,
+              pass1_views: diagPaths.map(p => path.basename(p)),
             };
 
-            // Step 1: Apply upright correction
-            if (!vlmResult.is_upright) {
-              // Mugshot was rendered WITH geometric guess applied.
-              // VLM correction is ADDITIONAL rotation on top of the guess.
-              finalRotation = {
-                x: orientation.suggestedRotation.x + (corr.x || 0),
-                y: orientation.suggestedRotation.y + (corr.y || 0),
-                z: orientation.suggestedRotation.z + (corr.z || 0),
-              };
+            // === MAP DIAGNOSIS → ROTATION (deterministic) ===
+            if (diag.is_upright === false || (diag.pose && diag.pose !== 'upright')) {
+              const mapped = diagnosisToRotation(
+                diag.pose || 'lying_on_back',
+                diag.front_visible_in || '1',
+                orientation.uprightAxis,
+                geo.boundsMin,
+                geo.boundsMax
+              );
+              finalRotation = mapped.rotation;
+              finalGroundOffset = mapped.groundOffset;
               mcpLog(
-                `analyze_mesh: VLM says NOT upright, guess=(${orientation.suggestedRotation.x},${orientation.suggestedRotation.y},${orientation.suggestedRotation.z}) + correction=(${corr.x || 0},${corr.y || 0},${corr.z || 0}) → final=(${finalRotation.x},${finalRotation.y},${finalRotation.z})`,
+                `analyze_mesh: diagnosis mapped → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°, groundOffset=${finalGroundOffset.toFixed(3)}`,
                 'info'
               );
             } else {
-              // VLM confirms the geometric guess made it upright — guess is correct
-              finalRotation = orientation.suggestedRotation;
-              mcpLog(
-                `analyze_mesh: VLM confirms upright with guess rotation (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})° ✓`,
-                'info'
-              );
+              // Upright — just handle front-facing
+              finalRotation = { x: 0, y: 0, z: 0 };
+              finalGroundOffset = rawGroundOffset;
+              const fv = parseInt(String(diag.front_visible_in || '1'), 10);
+              if (fv === 3) finalRotation.y = 180;
+              else if (fv === 2) finalRotation.y = -90;
+              else if (fv === 4) finalRotation.y = 90;
             }
-
-            // Step 2: Apply front-facing correction based on front_direction
-            // The object should face yaw=0° (toward FRONT camera). If VLM says the face
-            // points elsewhere, rotate Y to bring it to front.
-            const fd = (vlmResult.front_direction || '').toLowerCase().replace(/[^a-z_]/g, '');
-            let facingYaw = 0;
-            if (fd === 'away') facingYaw = 180;
-            else if (fd === 'left') facingYaw = 90;
-            else if (fd === 'right') facingYaw = -90;
-            if (facingYaw !== 0 && vlmResult.orientation_matters !== false) {
-              finalRotation = { ...finalRotation, y: finalRotation.y + facingYaw };
-              mcpLog(
-                `analyze_mesh: VLM says front faces "${vlmResult.front_direction}", applying Y+${facingYaw}° → final Y=${finalRotation.y}°`,
-                'info'
-              );
-            }
-
-            // Use VLM height estimate if available and category didn't have a strong one
-            if (vlmResult.estimated_height_m > 0 && categoryInfo.confidence !== 'high') {
-              // Could update desiredHeight here, but keep it advisory
-            }
-
-            finalConfidence = vlmResult.confidence; // VLM self-assessed
-          } else {
-            mcpLog(`analyze_mesh: VLM unavailable, using geometric+semantic only`, 'warn');
-            finalConfidence = orientation.confidence;
           }
+
+          // === PASS 2: Verification loop — always at least 1 pass, even for known sources ===
+          const MAX_VERIFY_PASSES = 4;
+          let verified = false;
+          for (let attempt = 0; attempt < MAX_VERIFY_PASSES; attempt++) {
+            const checkViews: ViewSpec[] = [
+              { name: 'check_front', yaw: 0, elevation: 0, ground: true },
+              { name: 'check_side', yaw: 90, elevation: 0, ground: true },
+            ];
+            const checkPaths = await renderViews(
+              client,
+              cache,
+              resolved,
+              finalRotation,
+              finalGroundOffset,
+              outputDir,
+              baseName,
+              checkViews,
+              extents,
+              rawMin,
+              rawMax
+            );
+
+            const checkImages = checkPaths.map(p => ({
+              base64: fs.readFileSync(p).toString('base64'),
+              mediaType: 'image/png' as string,
+            }));
+            const pass2 = await callAnthropicVision(buildVerificationPrompt(), checkImages, {
+              apiKey,
+              model: vlmModel,
+              maxTokens: 500,
+            });
+
+            const verifyMatch = pass2.text.match(/\{[\s\S]*\}/);
+            if (verifyMatch) {
+              const vResult = JSON.parse(verifyMatch[0]);
+              mcpLog(
+                `analyze_mesh: Pass 2 verify (attempt ${attempt + 1}) — correct=${vResult.is_correct}, issue=${vResult.issue}`,
+                'info'
+              );
+              visualCheck[`pass2_attempt_${attempt + 1}`] = {
+                views: checkPaths.map(p => path.basename(p)),
+                result: vResult,
+              };
+
+              if (vResult.is_correct) {
+                verified = true;
+                break;
+              }
+
+              // Adjust based on issue
+              const issue = (vResult.issue || '').toLowerCase();
+              if (issue === 'upside_down') {
+                finalRotation.x += 180;
+              } else if (issue === 'facing_wrong_way') {
+                finalRotation.y += 180;
+              } else if (issue === 'still_lying_down') {
+                finalRotation.x = -finalRotation.x;
+                if (finalRotation.x === 0) finalRotation.x = 90;
+              }
+              // Recompute ground offset
+              if (finalRotation.x === 90) finalGroundOffset = Math.max(0, geo.boundsMax[2]);
+              else if (finalRotation.x === -90) finalGroundOffset = Math.max(0, -geo.boundsMin[2]);
+              else if (finalRotation.x === 180) finalGroundOffset = Math.max(0, geo.boundsMax[1]);
+              else finalGroundOffset = Math.max(0, -geo.boundsMin[1]);
+
+              mcpLog(
+                `analyze_mesh: adjusting → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°`,
+                'info'
+              );
+            }
+          }
+
+          visualCheck.verified = verified;
+          finalConfidence = verified ? 'high' : diag?.confidence || 'medium';
+
+          // === HERO SHOT — always rendered (thumbnail/reference image) ===
+          const heroViews: ViewSpec[] = [
+            { name: 'hero', yaw: 22, elevation: 25, ground: true, clay: false, margin: 0.05 },
+          ];
+          const heroPaths = await renderViews(
+            client,
+            cache,
+            resolved,
+            finalRotation,
+            finalGroundOffset,
+            outputDir,
+            baseName,
+            heroViews,
+            extents,
+            rawMin,
+            rawMax
+          );
+          heroPath = heroPaths[0] || '';
+          visualCheck.hero_shot = path.basename(heroPath);
+          mcpLog(`analyze_mesh: hero shot → ${heroPath}`, 'info');
+
+          if (diag?.orientation_matters === false) {
+            visualCheck.orientation_matters = false;
+          }
+          visualCheck.confidence = finalConfidence;
         } catch (e: any) {
-          mcpLog(`analyze_mesh: mugshot/VLM failed (non-fatal): ${e.message}`, 'warn');
+          mcpLog(`analyze_mesh: VLM failed (non-fatal): ${e.message}`, 'warn');
           // Fall back to geometric+semantic only
         }
 
-        // Build v4 sidecar (contact sheet, ground plane, configuration mode)
+        // Build v5 sidecar (lean 2-pass VLM)
         const result: any = {
-          version: 4,
+          version: 5,
           obj_file: path.basename(resolved),
           analyzed_at: new Date().toISOString(),
           geometry: {
@@ -1932,16 +2537,27 @@ export function registerImportTools(
             subcategory: assetFile,
             natural_height_m: categoryInfo.naturalHeightM,
             orientation_matters:
-              visualCheck?.vlm_response?.orientation_matters ?? categoryInfo.expectUpright,
+              visualCheck?.orientation_matters ??
+              visualCheck?.pass1_diagnosis?.orientation_matters ??
+              categoryInfo.expectUpright,
             confidence: categoryInfo.confidence,
           },
+          ...(source_endpoint && knownSource
+            ? {
+                source: {
+                  endpoint: source_endpoint,
+                  axis_convention: knownSource.convention,
+                  known_rotation: knownSource.rotation,
+                },
+              }
+            : {}),
           visual_check: visualCheck,
           final_suggestion: {
             rotation_deg: [finalRotation.x, finalRotation.y, finalRotation.z],
             ground_offset_y: finalGroundOffset,
             scale_factor: scaleFactor,
             notes: visualCheck
-              ? `VLM-verified: ${visualCheck.vlm_response.is_upright ? 'upright confirmed — no rotation needed' : `correction applied — rotate (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})°`}. ${categoryInfo.category}.`
+              ? `VLM ${visualCheck.verified ? 'verified' : 'unverified'}: ${finalRotation.x === 0 && finalRotation.y === 0 && finalRotation.z === 0 ? 'upright, no rotation needed' : `rotate (${finalRotation.x}, ${finalRotation.y}, ${finalRotation.z})°`}. ${categoryInfo.category}.`
               : `Geometric+semantic only (VLM unavailable). ${orientation.notes}`,
           },
         };
@@ -1992,15 +2608,21 @@ export function registerImportTools(
         }
 
         const meshNote = visualCheck
-          ? `VLM verified (${finalConfidence} confidence, ${visualCheck.vlm_model})`
+          ? `VLM ${visualCheck.verified ? 'verified' : 'checked'} (${finalConfidence} confidence, ${visualCheck.vlm_model})`
           : 'Geometric+semantic only (no VLM)';
 
         return jsonResult({
           ...legacyResult,
           cached: false,
           sidecar_path: sidecar,
+          ...(heroPath ? { hero_shot: heroPath } : {}),
           instruction:
-            'Use placement_suggestion to set transform on the mesh placement. These are SUGGESTIONS — override if your scene intent differs (flying objects, tilted angles, etc.).',
+            'Use placement_suggestion to set transform on the mesh placement. These are SUGGESTIONS — override if your scene intent differs (flying objects, tilted angles, etc.).' +
+            (heroPath
+              ? visualCheck?.verified === false
+                ? ' HERO SHOT available — orientation UNVERIFIED. Show to human for manual review before proceeding.'
+                : ' HERO SHOT available as thumbnail/reference.'
+              : ''),
           ...(artState ? adWorkflow(artState, 'analyze_mesh', meshNote) : {}),
         });
       } catch (error: any) {
@@ -2134,6 +2756,346 @@ export function registerImportTools(
         });
       } catch (error: any) {
         mcpLog(`score_mugshot_models FAILED: ${error.message}`, 'error');
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── attach_mesh ──────────────────────────────────────────────────
+  // One-call mesh placement: import (if needed) → apply sidecar transforms → wire to RT → flush.
+
+  server.tool(
+    'attach_mesh',
+    '[Phase 1] Import + place a mesh in one call. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, flushes scene. Requires analyze_mesh to have been run first. If no RT exists, creates one with daylight + DL kernel.',
+    {
+      obj_path: z.string().describe('Absolute path to OBJ file'),
+      role: z
+        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+        .default('hero')
+        .describe('Role in composition (for scene awareness)'),
+      position: z
+        .object({
+          x: z.number(),
+          y: z.number(),
+          z: z.number(),
+        })
+        .optional()
+        .describe('Override world position (default: auto from sidecar y_offset)'),
+      rotation_override: z
+        .object({
+          x: z.number(),
+          y: z.number(),
+          z: z.number(),
+        })
+        .optional()
+        .describe('Override rotation in degrees (default: from sidecar)'),
+      scale_override: z
+        .number()
+        .optional()
+        .describe('Override uniform scale (default: from sidecar)'),
+      geo_group_handle: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe(
+          'Existing geo group handle to attach to. If omitted, finds or creates one on the active RT.'
+        ),
+      pin_index: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe('Pin index on geo group (default: auto-append)'),
+    },
+    async ({
+      obj_path,
+      role,
+      position,
+      rotation_override,
+      scale_override,
+      geo_group_handle,
+      pin_index,
+    }) => {
+      try {
+        const resolved = path.resolve(obj_path);
+        if (!fs.existsSync(resolved)) {
+          return errorResult(new Error(`File not found: ${resolved}`));
+        }
+
+        // 1. Read sidecar
+        const sidecar = resolved.replace(/\.obj$/i, '.mesh_info.json');
+        if (!fs.existsSync(sidecar)) {
+          return errorResult(
+            new Error(`No .mesh_info.json sidecar found. Run analyze_mesh("${resolved}") first.`)
+          );
+        }
+        const meshInfo = JSON.parse(fs.readFileSync(sidecar, 'utf-8'));
+        const suggestion = meshInfo.final_suggestion || meshInfo.placement_suggestion;
+        if (!suggestion) {
+          return errorResult(
+            new Error('Sidecar has no placement suggestion. Re-run analyze_mesh.')
+          );
+        }
+
+        // Extract transforms from sidecar
+        const rot =
+          rotation_override ||
+          (() => {
+            const r = suggestion.rotation_deg || suggestion.rotation;
+            if (Array.isArray(r)) return { x: r[0], y: r[1], z: r[2] };
+            return r || { x: 0, y: 0, z: 0 };
+          })();
+        const scaleFactor = scale_override ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+        const yOffset = position?.y ?? suggestion.ground_offset_y ?? suggestion.y_offset ?? 0;
+        const pos = position || { x: 0, y: yOffset, z: 0 };
+
+        mcpLog(
+          `attach_mesh: ${path.basename(resolved)} rot=(${rot.x},${rot.y},${rot.z}) scale=${scaleFactor} pos=(${pos.x},${pos.y},${pos.z})`,
+          'info'
+        );
+
+        // 2. Import the mesh (reuse import_geo internals)
+        const ext = path.extname(resolved).toLowerCase();
+        const derivedName = path
+          .basename(resolved, ext)
+          .replace(/[^a-zA-Z0-9_-]/g, '_')
+          .substring(0, 40);
+
+        const rootGraph = await client.getRootNodeGraph();
+
+        // Create mesh node
+        const meshResult = await client.callMethod('ApiNode', 'create', {
+          type: NodeTypeId.NT_GEO_MESH,
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
+        });
+        const meshHandle = extractHandle(meshResult) ?? 0;
+        if (!meshHandle) throw new Error('Failed to create mesh node');
+        client.sceneCache.addNode(meshHandle, derivedName, 'NT_GEO_MESH', 1);
+
+        // Load OBJ
+        await client.callMethod(
+          'ApiItem',
+          'setValueByAttrID',
+          {
+            objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_FILENAME,
+            string_value: resolved.replace(/\//g, '\\'),
+            evaluate: false,
+          },
+          120_000
+        );
+        await client.callMethod('ApiItem', 'setValueByAttrID', {
+          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_RELOAD,
+          bool_value: true,
+          evaluate: false,
+        });
+
+        // Create placement + connect mesh
+        const placementResult = await client.callMethod('ApiNode', 'create', {
+          type: NodeTypeId.NT_GEO_PLACEMENT,
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
+        });
+        const placementHandle = extractHandle(placementResult) ?? 0;
+        if (!placementHandle) throw new Error('Failed to create placement node');
+        client.sceneCache.addNode(
+          placementHandle,
+          `${derivedName}_placement`,
+          'NT_GEO_PLACEMENT',
+          4
+        );
+
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
+          pinIdx: 1,
+          sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
+          evaluate: false,
+          doCycleCheck: true,
+        });
+
+        // Create material + handle textures
+        const objDir = path.dirname(resolved);
+        const mtlPath = resolved.replace(/\.obj$/i, '.mtl');
+        const hasMtl = fs.existsSync(mtlPath);
+        let texturePaths: string[] = [];
+
+        if (hasMtl) {
+          // Parse .mtl to find referenced texture maps
+          try {
+            const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
+            const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
+            for (const line of mapLines) {
+              const texFile = line.replace(/^map_\w+\s+/, '').trim();
+              const texFullPath = path.resolve(objDir, texFile);
+              if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
+                texturePaths.push(texFullPath);
+              }
+            }
+          } catch {
+            /* best-effort */
+          }
+          mcpLog(
+            `attach_mesh: .mtl found with ${texturePaths.length} texture(s) — Octane loads internally`,
+            'info'
+          );
+        } else {
+          // Pick up loose texture files next to OBJ (exclude mugshots)
+          try {
+            const siblings = fs.readdirSync(objDir);
+            texturePaths = siblings
+              .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
+              .map(f => path.join(objDir, f));
+          } catch {
+            /* best-effort */
+          }
+        }
+
+        const matResult = await client.callMethod('ApiNode', 'create', {
+          type: NodeTypeId.NT_MAT_UNIVERSAL,
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
+        });
+        const matHandle = extractHandle(matResult) ?? 0;
+        let texHandle = 0;
+        if (matHandle) {
+          client.sceneCache.addNode(matHandle, `${derivedName}_mat`, 'NT_MAT_UNIVERSAL', 130);
+          await client.callMethod('ApiNode', 'connectToIx', {
+            objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
+            pinIdx: 0,
+            sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
+            evaluate: false,
+            doCycleCheck: true,
+          });
+
+          // If no .mtl but has loose textures, create explicit texture node on albedo
+          if (texturePaths.length > 0 && !hasMtl) {
+            const texResult = await client.callMethod('ApiNode', 'create', {
+              type: MUGSHOT_TYPES.TEX_IMAGE,
+              ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+              configurePins: true,
+            });
+            texHandle = extractHandle(texResult) ?? 0;
+            if (texHandle) {
+              client.sceneCache.addNode(texHandle, `${derivedName}_tex`, 'NT_TEX_IMAGE', 34);
+              await client.callMethod(
+                'ApiItem',
+                'setValueByAttrID',
+                {
+                  objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
+                  attribute_id: AttributeId.A_FILENAME,
+                  string_value: texturePaths[0].replace(/\//g, '\\'),
+                  evaluate: false,
+                },
+                120_000
+              );
+              // Connect texture → material albedo (pin 2)
+              await client.callMethod('ApiNode', 'connectToIx', {
+                objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+                pinIdx: 2,
+                sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
+                evaluate: false,
+                doCycleCheck: true,
+              });
+            }
+          }
+        }
+
+        // 3. Apply transform from sidecar
+        const transformHandle = await getConnectedChild(client, placementHandle, 0);
+        if (transformHandle) {
+          await setAttrRaw(client, transformHandle, AttributeId.A_ROTATION, 11, rot);
+          await setAttrRaw(client, transformHandle, AttributeId.A_SCALE, 11, {
+            x: scaleFactor,
+            y: scaleFactor,
+            z: scaleFactor,
+          });
+          await setAttrRaw(client, transformHandle, AttributeId.A_TRANSLATION, 11, pos);
+        }
+
+        // 4. Find or create geo group on RT
+        let geoGroup = geo_group_handle || 0;
+        let rtHandle = 0;
+
+        if (!geoGroup) {
+          {
+            rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
+            client.sceneCache.addNode(rtHandle, 'Render target', 'NT_RENDERTARGET', 56);
+            const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
+            const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_DL);
+            const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
+            geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
+
+            await connectRaw(client, rtHandle, cam, 0);
+            await connectRaw(client, rtHandle, env, 1);
+            await connectRaw(client, rtHandle, geoGroup, 3);
+            await connectRaw(client, rtHandle, kern, 6);
+
+            // Disable DOF
+            const aperture = await getConnectedChild(client, cam, 14);
+            if (aperture) await setAttrRaw(client, aperture, AttributeId.A_VALUE, 9, 0);
+
+            // Set as active RT
+            await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
+              targetNode: { handle: String(rtHandle), type: OBJ_API_NODE },
+            });
+            mcpLog(`attach_mesh: created new RT ${rtHandle} with geo group ${geoGroup}`, 'info');
+          }
+        } // end if (!geoGroup)
+
+        // 5. Connect placement to geo group
+        // Find next available pin (auto-expand)
+        const actualPin =
+          pin_index ??
+          (await (async () => {
+            // Count current connections on geo group
+            for (let i = 0; i < 64; i++) {
+              const child = await getConnectedChild(client, geoGroup, i);
+              if (!child) return i;
+            }
+            return 0;
+          })());
+
+        // Ensure geo group has enough pins
+        await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, actualPin + 1);
+        await connectRaw(client, geoGroup, placementHandle, actualPin);
+
+        // 6. Flush
+        await client.callMethod('ApiChangeManager', 'update', {});
+        await client.callMethod('ApiRenderEngine', 'continueRendering', {});
+
+        mcpLog(`attach_mesh: ${derivedName} attached at geo group pin ${actualPin}`, 'info');
+
+        return jsonResult({
+          success: true,
+          mesh: derivedName,
+          handles: {
+            mesh: meshHandle,
+            placement: placementHandle,
+            transform: transformHandle,
+            material: matHandle,
+            texture: texHandle || undefined,
+            geo_group: geoGroup,
+            render_target: rtHandle || undefined,
+          },
+          applied_transform: {
+            rotation: rot,
+            scale: scaleFactor,
+            position: pos,
+          },
+          geo_group_pin: actualPin,
+          sidecar_source: sidecar,
+          category: meshInfo.semantic?.category,
+          has_mtl: hasMtl,
+          has_texture: texHandle > 0 || hasMtl,
+          texture_count: texturePaths.length,
+          instruction:
+            'Mesh is attached and rendering. Use fit_camera to frame it, then save_render to verify.',
+        });
+      } catch (error: any) {
+        mcpLog(`attach_mesh FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }

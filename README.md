@@ -1,4 +1,4 @@
-# OctaneWebR v2.4.1
+# OctaneWebR v2.4.3
 
 A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 

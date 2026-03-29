@@ -4,6 +4,29 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.3] - 2026-03-29
+
+### Added
+
+- **Source endpoint tracking** — `analyze_mesh` accepts `source_endpoint` param. Known endpoints (e.g. "huynan") skip VLM Pass 1 and apply deterministic axis correction. Sidecar records source, axis convention, and known rotation.
+- **Endpoint axis map** — `ENDPOINT_AXIS_MAP` config for deterministic Z-up → Y-up correction per endpoint. Currently: huynan → X+90°.
+
+### Fixed
+
+- **Blurry mugshots** — Render wait threshold was 100 samples but max was set to 256. Now waits for 250 samples before saving.
+- **Node accumulation** — `renderViews()` now deletes all created nodes (RT, camera, kernel, env, geo group, mesh, placement, ground plane) after rendering. Scene tree stays clean across multiple `analyze_mesh` runs.
+- **Washed-out hero shot** — Hero shot now renders with textures (`clay: false`) instead of color clay mode. Diagnostic/check views remain clay for VLM clarity.
+- **Loose hero framing** — Hero shot margin reduced from 0.15 (15%) to 0.05 (5%) for tighter framing. `ViewSpec` now supports per-view `margin` and `clay` overrides.
+- **Ground plane temp file cleanup** — Generated ground plane OBJ files are deleted after rendering.
+
+### Changed
+
+- **Pass 2 max attempts** — Increased from 3 to 4 iterations for verification loop.
+- **Autonomous operation** — `analyze_mesh` proceeds autonomously by default. Human review only flagged when `verified: false` after max Pass 2 attempts. Hero shot always rendered as thumbnail/reference.
+- **MCP_BUILD** — Bumped to 61.
+
+---
+
 ## [2.4.1] - 2026-03-25
 
 ### Added
