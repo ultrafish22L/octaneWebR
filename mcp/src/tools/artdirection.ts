@@ -660,10 +660,16 @@ export function registerArtDirectionTools(
       const analysisPrompt = buildVisionRefPrompt(params.scene_description, params.scale_hint);
 
       // Run vision analysis + calibration in parallel
-      const [visionResult, calibResult] = await Promise.all([
-        visionAnalyze(resolved, analysisPrompt),
-        visionCalibrate(resolved),
-      ]);
+      let visionResult: Awaited<ReturnType<typeof visionAnalyze>>;
+      let calibResult: Awaited<ReturnType<typeof visionCalibrate>>;
+      try {
+        [visionResult, calibResult] = await Promise.all([
+          visionAnalyze(resolved, analysisPrompt),
+          visionCalibrate(resolved),
+        ]);
+      } catch (error: any) {
+        return errorResult(`Vision analysis failed: ${error.message}`);
+      }
 
       // Store calibration in artState for later critique_render calls
       if (calibResult.calibration) {

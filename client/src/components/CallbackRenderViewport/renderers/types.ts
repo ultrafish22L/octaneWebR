@@ -107,6 +107,9 @@ export interface DXSharedSurfaceAddon {
 
   /** Close a duplicated NT handle to prevent leaks */
   closeSurface(handle: number): void;
+
+  /** Release D3D11 device, context, and cached staging texture on shutdown */
+  destroyDevice(): void;
 }
 
 // ============================================================================

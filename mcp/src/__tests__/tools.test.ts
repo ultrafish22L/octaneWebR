@@ -12,33 +12,30 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SceneCache } from '../SceneCache';
-import { jsonResult, errorResult, gateHandle, extractHandle, extractValue } from '../tools/utils';
+import { jsonResult, errorResult, extractHandle, extractValue } from '../tools/utils';
 import { parseCritiqueResponse } from '../vision/prompts';
 
 describe('create_node: cache tracking', () => {
-  it('addNode + trackHandle populates scene cache after creation', () => {
+  it('addNode populates scene cache after creation', () => {
     const cache = new SceneCache();
     const handle = 42;
 
     // Simulate what create_node does after successful creation
     cache.addNode(handle, 'MyMaterial', 'NT_MAT_UNIVERSAL', 130);
-    cache.trackHandle(handle);
 
     expect(cache.getTypeName(handle)).toBe('NT_MAT_UNIVERSAL');
-    expect(cache.validateHandle(handle).valid).toBe(true);
+    expect(cache.hasNode(handle)).toBe(true);
   });
 
-  it('tracks auto-created pin children', () => {
+  it('caches auto-created pin children', () => {
     const cache = new SceneCache();
     cache.addNode(100, 'GeoObject', 'NT_GEO_OBJECT', 82);
-    cache.trackHandle(100);
 
-    // Simulate pin child tracking
+    // Simulate pin child caching
     const pinChildHandle = 200;
-    cache.trackHandle(pinChildHandle);
     cache.addNode(pinChildHandle, '', 'NT_TRANSFORM_VALUE', 23);
 
-    expect(cache.validateHandle(pinChildHandle).valid).toBe(true);
+    expect(cache.hasNode(pinChildHandle)).toBe(true);
     expect(cache.getTypeName(pinChildHandle)).toBe('NT_TRANSFORM_VALUE');
   });
 });
@@ -47,36 +44,8 @@ describe('create_node: cache tracking', () => {
 // connect_nodes logic
 // ────────────────────────────────────────────────────────────
 
-describe('connect_nodes: handle gating', () => {
-  it('rejects unknown target handle', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100); // populate cache so bypass doesn't kick in
-
-    const result = gateHandle('connect_nodes(target)', 999, cache);
-    expect(result).not.toBeNull();
-    expect(result!.isError).toBe(true);
-    const parsed = JSON.parse(result!.content[0].text);
-    expect(parsed.error).toContain('GATED');
-  });
-
-  it('rejects unknown source handle', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100);
-
-    const result = gateHandle('connect_nodes(source)', 888, cache);
-    expect(result).not.toBeNull();
-    expect(result!.isError).toBe(true);
-  });
-
-  it('allows both handles when known', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100);
-    cache.trackHandle(200);
-
-    expect(gateHandle('connect_nodes(target)', 100, cache)).toBeNull();
-    expect(gateHandle('connect_nodes(source)', 200, cache)).toBeNull();
-  });
-});
+// Handle gating removed — server validates all handles.
+// Type mismatch detection still tested below.
 
 describe('connect_nodes: type mismatch detection', () => {
   it('detects mismatched source/target types via cache', () => {
@@ -130,29 +99,20 @@ describe('connect_nodes: type mismatch detection', () => {
 // ────────────────────────────────────────────────────────────
 
 describe('delete_node: cache cleanup', () => {
-  it('removeNode clears handle from cache', () => {
+  it('removeNode clears node from cache', () => {
     const cache = new SceneCache();
     cache.addNode(100, 'Sphere', 'NT_GEO_OBJECT', 82);
-    cache.trackHandle(100);
-    // Track a second handle so cache stays in strict mode after removal
-    cache.trackHandle(200);
 
-    expect(cache.validateHandle(100).valid).toBe(true);
+    expect(cache.hasNode(100)).toBe(true);
 
     cache.removeNode(100);
-    // After removal, handle 100 should be unknown (not just stale)
-    const check = cache.validateHandle(100);
-    expect(check.valid).toBe(false);
-    // Handle 200 should still be valid
-    expect(cache.validateHandle(200).valid).toBe(true);
+    expect(cache.hasNode(100)).toBe(false);
   });
 
   it('removeNode cleans up connections referencing deleted handle', () => {
     const cache = new SceneCache();
     cache.addNode(100, 'RT', 'NT_RENDERTARGET', 113);
     cache.addNode(200, 'Camera', 'NT_CAM_THINLENS', 10);
-    cache.trackHandle(100);
-    cache.trackHandle(200);
     cache.setConnection(100, 0, 200);
 
     expect(cache.getConnection(100, 0)).toBe(200);
@@ -365,55 +325,12 @@ describe('SceneCache: connection tracking for connect_nodes', () => {
 
   it('clear() resets all state', () => {
     cache.addNode(100, 'Test', 'NT_MAT_UNIVERSAL', 130);
-    cache.trackHandle(100);
     cache.setConnection(100, 0, 200);
 
     cache.clear();
 
-    // After clear, cache is unpopulated — bypass mode lets handles through
-    // but type info should be gone
     expect(cache.getTypeName(100)).toBeUndefined();
     expect(cache.getConnection(100, 0)).toBeUndefined();
-  });
-});
-
-// ────────────────────────────────────────────────────────────
-// gateHandle: comprehensive edge cases
-// ────────────────────────────────────────────────────────────
-
-describe('gateHandle: comprehensive', () => {
-  it('bypass mode when cache unpopulated (no handles tracked)', () => {
-    const cache = new SceneCache();
-    // Empty cache = bypass mode — allows any handle
-    expect(gateHandle('test_tool', 42, cache)).toBeNull();
-    expect(gateHandle('test_tool', 99999, cache)).toBeNull();
-  });
-
-  it('strict mode when cache populated (at least one handle tracked)', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100);
-
-    // Known handle: allowed
-    expect(gateHandle('test_tool', 100, cache)).toBeNull();
-    // Unknown handle: blocked
-    expect(gateHandle('test_tool', 200, cache)).not.toBeNull();
-  });
-
-  it('always rejects handle 0', () => {
-    const emptyCache = new SceneCache();
-    expect(gateHandle('test_tool', 0, emptyCache)).not.toBeNull();
-
-    const populatedCache = new SceneCache();
-    populatedCache.trackHandle(100);
-    expect(gateHandle('test_tool', 0, populatedCache)).not.toBeNull();
-  });
-
-  it('error message includes tool name', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100);
-    const result = gateHandle('my_custom_tool', 999, cache);
-    const parsed = JSON.parse(result!.content[0].text);
-    expect(parsed.error).toContain('my_custom_tool');
   });
 });
 

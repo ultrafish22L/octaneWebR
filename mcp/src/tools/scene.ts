@@ -16,7 +16,6 @@ import {
   errorResult,
   extractHandle,
   extractValue,
-  gateHandle,
   OBJ_API_ITEM,
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
@@ -191,7 +190,6 @@ export async function populateSceneCache(
   const rootHandle = await client.getRootNodeGraph();
   const tree = await traverseGraph(client, cache, rootHandle, 0, maxDepth);
   walkTreeIntoCache(client, cache, tree, rootHandle);
-  client.sceneCache.markPopulated();
 }
 
 export function registerSceneTools(
@@ -219,7 +217,6 @@ export function registerSceneTools(
 
         // Populate scene cache from traversal results
         walkTreeIntoCache(client, cache, tree, rootHandle);
-        client.sceneCache.markPopulated();
 
         if (compact) {
           // Flatten tree to minimal tuples: [handle, name, typeName]
@@ -254,10 +251,6 @@ export function registerSceneTools(
     },
     async ({ handle, connected_only }) => {
       try {
-        // Gate: reject handles never seen by any MCP tool
-        const gated = gateHandle('get_node_info', handle, client.sceneCache);
-        if (gated) return gated;
-
         const nameResult = await client.callMethod('ApiItem', 'name', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
@@ -398,11 +391,9 @@ export function registerSceneTools(
           // Node may not support pins
         }
 
-        // Track all discovered handles for crash prevention
-        client.sceneCache.trackHandle(handle);
+        // Cache discovered connections for AI context
         for (const pin of info.pins) {
           if (pin.connected_handle && pin.connected_handle !== 0) {
-            client.sceneCache.trackHandle(pin.connected_handle);
             client.sceneCache.setConnection(handle, pin.index, pin.connected_handle);
           }
         }

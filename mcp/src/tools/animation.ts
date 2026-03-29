@@ -8,7 +8,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
-import { jsonResult, errorResult, gateHandle, extractValue, OBJ_API_ITEM } from './utils';
+import { jsonResult, errorResult, extractValue, OBJ_API_ITEM } from './utils';
 import { enumeratePins } from './pin-utils';
 
 // ObjectRef type for root node graph (ApiRootNodeGraph)
@@ -46,9 +46,6 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type }) => {
       try {
-        const gated = gateHandle('get_animation_data', handle, client.sceneCache);
-        if (gated) return gated;
-
         const result = await client.callMethod('ApiItem', 'getAnimByAttr', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           attribute_id,
@@ -98,9 +95,6 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle }) => {
       try {
-        const gated = gateHandle('is_node_animated', handle, client.sceneCache);
-        if (gated) return gated;
-
         // Get attribute count
         const countResult = await client.callMethod('ApiItem', 'attrCount', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
@@ -177,9 +171,6 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type, pattern, values, period, animation_type }) => {
       try {
-        const gated = gateHandle('set_animation_data', handle, client.sceneCache);
-        if (gated) return gated;
-
         if (pattern.length !== values.length) {
           return errorResult(
             `pattern length (${pattern.length}) must match values length (${values.length})`
@@ -247,9 +238,6 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id }) => {
       try {
-        const gated = gateHandle('clear_animation', handle, client.sceneCache);
-        if (gated) return gated;
-
         await client.callMethod('ApiItem', 'clearAnim', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           id: attribute_id,

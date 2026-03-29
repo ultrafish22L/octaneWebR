@@ -15,7 +15,6 @@ import {
   errorResult,
   extractHandle,
   extractValue,
-  gateHandle,
   OBJ_API_ITEM,
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
@@ -156,13 +155,10 @@ export function registerNodeTools(
 
         await notifyWebapp({ type: 'nodeAdded', handle: newHandle });
 
-        // Track all handles returned to the AI for crash prevention,
-        // and add auto-created children to the nodes Map so getTypeName() works
+        // Cache auto-created pin children so getTypeName() works
         // for subsequent connect_nodes type validation.
-        client.sceneCache.trackHandle(newHandle);
         for (const p of pins) {
           if (p.handle !== 0) {
-            client.sceneCache.trackHandle(p.handle);
             // Cache child with its defaultNodeType from ApiCache if known
             const childTypeName = cachedInfo?.pins.find(
               cp => cp.index === p.index
@@ -202,7 +198,6 @@ export function registerNodeTools(
                   float_value: 0,
                   evaluate: false,
                 });
-                client.sceneCache.trackHandle(apertureHandle);
                 warnings.push(
                   'DOF disabled (aperture set to 0). Set aperture > 0 on camera pin 14 to re-enable.'
                 );
@@ -265,9 +260,6 @@ export function registerNodeTools(
     { handle: z.number().int().nonnegative().describe('Node handle to delete') },
     async ({ handle }) => {
       try {
-        const gated = gateHandle('delete_node', handle, client.sceneCache);
-        if (gated) return gated;
-
         await client.callMethod('ApiItem', 'destroy', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
@@ -306,12 +298,6 @@ export function registerNodeTools(
     async ({ target_handle, pin_index: pin_index_in, pin_name, source_handle }) => {
       let pin_index = pin_index_in; // mutable — auto-slot may override
       try {
-        // Gate: reject handles never seen by any MCP tool
-        const gatedTarget = gateHandle('connect_nodes(target)', target_handle, client.sceneCache);
-        if (gatedTarget) return gatedTarget;
-        const gatedSource = gateHandle('connect_nodes(source)', source_handle, client.sceneCache);
-        if (gatedSource) return gatedSource;
-
         // --- Pin type validation (cache-first, gRPC fallback) ---
         const sourceTypeName = client.sceneCache.getTypeName(source_handle);
         const targetTypeName = client.sceneCache.getTypeName(target_handle);
@@ -561,9 +547,6 @@ export function registerNodeTools(
     },
     async ({ handle, pin_index }) => {
       try {
-        const gated = gateHandle('disconnect_pin', handle, client.sceneCache);
-        if (gated) return gated;
-
         await client.callMethod('ApiNode', 'connectToIx', {
           objectPtr: { handle: String(handle), type: OBJ_API_NODE },
           pinIdx: pin_index,
@@ -592,9 +575,6 @@ export function registerNodeTools(
     },
     async ({ node_type, target_handle, pin_index }) => {
       try {
-        const gated = gateHandle('create_and_connect(target)', target_handle, client.sceneCache);
-        if (gated) return gated;
-
         // --- Create ---
         const typeId = cache?.getNodeTypeId(node_type);
         if (typeId === undefined) {
@@ -693,9 +673,6 @@ export function registerNodeTools(
     },
     async ({ handle, name }) => {
       try {
-        const gated = gateHandle('rename_node', handle, client.sceneCache);
-        if (gated) return gated;
-
         await client.callMethod('ApiItem', 'setName', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           name,
@@ -770,7 +747,6 @@ export function registerNodeTools(
                 });
                 const nodeName = String(extractValue(nameResult) ?? '');
                 results.push({ handle: itemHandle, name: nodeName });
-                client.sceneCache.trackHandle(itemHandle);
               }
             }
           }
@@ -799,7 +775,6 @@ export function registerNodeTools(
                 });
                 const nodeName = String(extractValue(nameResult) ?? '');
                 results.push({ handle: itemHandle, name: nodeName });
-                client.sceneCache.trackHandle(itemHandle);
               }
             }
           }
@@ -874,7 +849,6 @@ export function registerNodeTools(
                           });
                           const subNodeName = String(extractValue(subNameResult) ?? '');
                           results.push({ handle: subItemHandle, name: subNodeName });
-                          client.sceneCache.trackHandle(subItemHandle);
                         }
                       }
                     }
@@ -904,9 +878,6 @@ export function registerNodeTools(
     },
     async ({ handle }) => {
       try {
-        const gated = gateHandle('duplicate_node', handle, client.sceneCache);
-        if (gated) return gated;
-
         const rootHandle = await client.getRootNodeGraph();
         const result = await client.callMethod('ApiNodeGraph', 'copyItemTree', {
           objectPtr: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },

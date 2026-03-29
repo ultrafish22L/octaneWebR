@@ -11,7 +11,7 @@
  * (Octane waits for in-progress RPCs to finish, infinite streams never finish).
  * On expiry, reconnects immediately.
  *
- * On Octane crash/restart, reconnects with exponential backoff (2s, 4s, 8s... 30s max).
+ * On server restart, reconnects with a fixed 5s retry interval.
  *
  * IMPORTANT: Only ONE stream should be opened per gRPC channel. Opening multiple
  * streams causes Octane to send large newImage data to each, which can trigger
@@ -52,25 +52,21 @@ export interface CallbackStreamOptions {
 }
 
 const DEFAULT_DEADLINE_MS = 60_000;
+const RECONNECT_INTERVAL_MS = 5_000;
 const OCTANE_GONE_PATTERN = /ECONNRESET|ECONNREFUSED|CANCELLED|Stream removed|socket hang up/i;
-const BACKOFF_BASE_MS = 2_000;
-const BACKOFF_MAX_MS = 30_000;
 
 export class CallbackStreamManager {
   private stream: any = null;
   private active = false;
   private running = false; // true between start() and stop()
+  private disconnected = false; // true after connection loss, cleared on successful data
   private listeners = new Map<CallbackType, Set<(event: CallbackEvent | NewImageEvent) => void>>();
   private deadlineMs: number;
   private log: (msg: string, level?: string) => void;
   private onConnectionLost?: () => void;
   private onReconnected?: () => void;
   private handleNewImage: boolean;
-
-  // Reconnect state
-  private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private wasConnected = false; // true after first successful data
 
   /**
    * @param getService Function that returns a gRPC service stub by name.
@@ -97,11 +93,10 @@ export class CallbackStreamManager {
     }
   }
 
-  /** Start streaming — auto-reconnects on deadline expiry and Octane crash. */
+  /** Start streaming — auto-reconnects on deadline expiry and server restart. */
   start(): void {
     if (this.stream || this.active) return;
     this.running = true;
-    this.reconnectAttempt = 0;
     this.openStream();
   }
 
@@ -162,22 +157,15 @@ export class CallbackStreamManager {
     return this.active;
   }
 
-  /** Is the stream attempting to reconnect after a disconnection? */
-  get isReconnecting(): boolean {
-    return this.running && !this.active && this.reconnectAttempt > 0;
-  }
-
   // ── Private ───────────────────────────────────────────────────────
 
   private scheduleReconnect(): void {
     if (!this.running || this.reconnectTimer) return;
-    const delay = Math.min(BACKOFF_BASE_MS * Math.pow(2, this.reconnectAttempt), BACKOFF_MAX_MS);
-    this.reconnectAttempt++;
-    this.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempt})`, 'info');
+    this.log(`Reconnecting in ${RECONNECT_INTERVAL_MS}ms`, 'info');
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.running) this.openStream();
-    }, delay);
+    }, RECONNECT_INTERVAL_MS);
   }
 
   private openStream(): void {
@@ -196,22 +184,14 @@ export class CallbackStreamManager {
       const deadline = Date.now() + this.deadlineMs;
       this.stream = streamService.callbackChannel({}, null, { deadline });
 
-      // Stream opened successfully — if reconnecting, fire onReconnected immediately
-      // so callers can re-register callbacks (waiting for data creates a chicken-and-egg:
-      // Octane won't send newImage until callbacks are re-registered).
-      if (this.reconnectAttempt > 0 && this.wasConnected) {
-        this.log('Stream reconnected successfully', 'info');
-        this.reconnectAttempt = 0;
-        this.onReconnected?.();
-      }
-
       this.stream.on('data', (callbackRequest: any) => {
         try {
-          // Reset reconnect state on successful data (backup for edge cases)
-          if (this.reconnectAttempt > 0) {
-            this.reconnectAttempt = 0;
+          // First successful data after a disconnection — fire onReconnected
+          if (this.disconnected) {
+            this.disconnected = false;
+            this.log('Stream reconnected successfully', 'info');
+            this.onReconnected?.();
           }
-          this.wasConnected = true;
           this.dispatch(callbackRequest);
         } catch (error: any) {
           this.log(`Error processing callback: ${error.message}`, 'error');
@@ -232,7 +212,7 @@ export class CallbackStreamManager {
         const octaneGone = OCTANE_GONE_PATTERN.test(msg);
 
         if (!this.running) {
-          // Voluntary stop() — cancel was intentional, not a real disconnection
+          // Voluntary stop() — cancel was intentional
           this.log('Stream cancelled (clean shutdown)', 'debug');
         } else if (isDeadline) {
           // Normal deadline expiry — reconnect immediately
@@ -240,10 +220,17 @@ export class CallbackStreamManager {
           this.openStream();
         } else if (octaneGone) {
           this.log('Octane connection lost', 'warn');
-          this.onConnectionLost?.();
+          if (!this.disconnected) {
+            this.disconnected = true;
+            this.onConnectionLost?.();
+          }
           this.scheduleReconnect();
         } else {
           this.log(`Stream error: ${msg}`, 'error');
+          if (!this.disconnected) {
+            this.disconnected = true;
+            this.onConnectionLost?.();
+          }
           this.scheduleReconnect();
         }
       });
@@ -254,7 +241,6 @@ export class CallbackStreamManager {
         this.stream = null;
         // Reconnect if still running
         if (this.running) {
-          this.log('Reconnecting callback stream...', 'debug');
           this.openStream();
         }
       });
@@ -264,7 +250,6 @@ export class CallbackStreamManager {
       this.log(`Failed to start callback streaming: ${error.message}`, 'error');
       this.active = false;
       this.stream = null;
-      // Retry with backoff if running (e.g. gRPC channels reset, service stub not yet available)
       if (this.running) {
         this.scheduleReconnect();
       }

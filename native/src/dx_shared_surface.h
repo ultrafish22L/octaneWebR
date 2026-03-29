@@ -29,14 +29,18 @@ using Microsoft::WRL::ComPtr;
  * reused for all subsequent shared surface operations.
  */
 struct DeviceState {
-    ComPtr<ID3D11Device1>       device;
-    ComPtr<ID3D11DeviceContext>  ctx;
+    ComPtr<ID3D11Device1>        device;
+    ComPtr<ID3D11DeviceContext1>  ctx;
 
     // Cached staging texture — reused across frames, recreated on dimension change.
-    ComPtr<ID3D11Texture2D>     staging;
-    uint32_t                    stagingW   = 0;
-    uint32_t                    stagingH   = 0;
-    DXGI_FORMAT                 stagingFmt = DXGI_FORMAT_UNKNOWN;
+    ComPtr<ID3D11Texture2D>      staging;
+    uint32_t                     stagingW   = 0;
+    uint32_t                     stagingH   = 0;
+    DXGI_FORMAT                  stagingFmt = DXGI_FORMAT_UNKNOWN;
+
+    // Cached shared texture — avoids expensive OpenSharedResource1 per frame.
+    HANDLE                       cachedHandle    = nullptr;
+    ComPtr<ID3D11Texture2D>      cachedSharedTex;
 
     bool initialized = false;
 };

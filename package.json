@@ -87,7 +87,6 @@
       "dist/client/**/*",
       "dist/electron/**/*",
       "server/dist/**/*",
-      "../octaneServGrpc/proto/**/*",
       "mcp/src/shared/CallbackStreamManager.*",
       "mcp/data/octane-api-cache.json",
       "api-version.config.js",

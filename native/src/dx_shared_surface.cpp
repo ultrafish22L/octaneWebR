@@ -204,7 +204,7 @@ Napi::Value InitDevice(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
 
-    g_device.device->GetImmediateContext(reinterpret_cast<ID3D11DeviceContext**>(g_device.ctx.GetAddressOf()));
+    g_device.device->GetImmediateContext1(&g_device.ctx);
     g_device.initialized = true;
 
     return env.Undefined();
@@ -290,23 +290,28 @@ Napi::Value MapSurface(const Napi::CallbackInfo& info) {
     uint64_t handleVal = info[0].As<Napi::Number>().Int64Value();
     HANDLE ntHandle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(handleVal));
 
-    // Open the shared texture
-    ComPtr<ID3D11Texture2D> sharedTex;
-    HRESULT hr = g_device.device->OpenSharedResource1(
-        ntHandle, IID_PPV_ARGS(&sharedTex));
-    if (FAILED(hr)) {
-        Napi::Error::New(env, "mapSurface: OpenSharedResource1 failed")
-            .ThrowAsJavaScriptException();
-        return env.Null();
+    // Open the shared texture (cached — only re-open when handle changes)
+    if (ntHandle != g_device.cachedHandle || !g_device.cachedSharedTex) {
+        g_device.cachedSharedTex.Reset();
+        HRESULT hr = g_device.device->OpenSharedResource1(
+            ntHandle, IID_PPV_ARGS(&g_device.cachedSharedTex));
+        if (FAILED(hr)) {
+            g_device.cachedHandle = nullptr;
+            Napi::Error::New(env, "mapSurface: OpenSharedResource1 failed")
+                .ThrowAsJavaScriptException();
+            return env.Null();
+        }
+        g_device.cachedHandle = ntHandle;
     }
+    ID3D11Texture2D* sharedTex = g_device.cachedSharedTex.Get();
 
     // Get texture dimensions
     D3D11_TEXTURE2D_DESC texDesc;
     sharedTex->GetDesc(&texDesc);
 
-    // Acquire keyed mutex (Octane uses key 0)
+    // Acquire keyed mutex (Octane uses key 0 per SDK contract)
     ComPtr<IDXGIKeyedMutex> keyedMutex;
-    hr = sharedTex.As(&keyedMutex);
+    HRESULT hr = sharedTex->QueryInterface(IID_PPV_ARGS(&keyedMutex));
     if (FAILED(hr)) {
         Napi::Error::New(env, "mapSurface: texture does not support keyed mutex")
             .ThrowAsJavaScriptException();
@@ -329,9 +334,13 @@ Napi::Value MapSurface(const Napi::CallbackInfo& info) {
     }
 
     // GPU DMA copy: shared texture → staging texture
-    g_device.ctx->CopyResource(g_device.staging.Get(), sharedTex.Get());
+    g_device.ctx->CopyResource(g_device.staging.Get(), sharedTex);
 
-    // Release the mutex immediately after the copy command is queued
+    // Flush ensures the DMA copy completes before releasing the mutex —
+    // without this, Octane could overwrite the shared texture mid-copy.
+    g_device.ctx->Flush();
+
+    // Release the keyed mutex (key=0 per Octane SDK contract)
     keyedMutex->ReleaseSync(0);
 
     // Map the staging texture for CPU read
@@ -389,6 +398,11 @@ void CloseSurface(const Napi::CallbackInfo& info) {
     if (info.Length() >= 1 && info[0].IsNumber()) {
         uint64_t handleVal = info[0].As<Napi::Number>().Int64Value();
         HANDLE ntHandle = reinterpret_cast<HANDLE>(static_cast<uintptr_t>(handleVal));
+        // Invalidate cache if this is the cached handle
+        if (ntHandle == g_device.cachedHandle) {
+            g_device.cachedSharedTex.Reset();
+            g_device.cachedHandle = nullptr;
+        }
         if (ntHandle && ntHandle != INVALID_HANDLE_VALUE) {
             CloseHandle(ntHandle);
         }
@@ -403,6 +417,8 @@ void CloseSurface(const Napi::CallbackInfo& info) {
  */
 void DestroyDevice(const Napi::CallbackInfo&) {
 #ifdef _WIN32
+    g_device.cachedSharedTex.Reset();
+    g_device.cachedHandle = nullptr;
     g_device.staging.Reset();
     g_device.ctx.Reset();
     g_device.device.Reset();

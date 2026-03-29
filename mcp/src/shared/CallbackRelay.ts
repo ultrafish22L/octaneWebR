@@ -87,7 +87,6 @@ export class CallbackRelay {
     this.heartbeatInterval = setInterval(() => {
       this.broadcastBinary('heartbeat', {
         streamActive: this.stream.isActive,
-        reconnecting: this.stream.isReconnecting,
       });
     }, 2000);
   }

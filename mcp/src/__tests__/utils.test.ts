@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { SceneCache } from '../SceneCache';
 import {
   jsonResult,
   errorResult,
-  gateHandle,
   extractHandle,
   extractValue,
   validateFilePath,
@@ -32,37 +30,6 @@ describe('errorResult', () => {
     const result = errorResult(new Error('crash'));
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('crash');
-  });
-});
-
-describe('gateHandle', () => {
-  it('returns null (allow) for valid handles', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100);
-    expect(gateHandle('test_tool', 100, cache)).toBeNull();
-  });
-
-  it('returns error for unknown handles', () => {
-    const cache = new SceneCache();
-    cache.trackHandle(100); // populate so bypass doesn't kick in
-    const result = gateHandle('test_tool', 999, cache);
-    expect(result).not.toBeNull();
-    expect(result!.isError).toBe(true);
-    const parsed = JSON.parse(result!.content[0].text);
-    expect(parsed.error).toContain('GATED');
-  });
-
-  it('allows through when cache is unpopulated (bypass)', () => {
-    const cache = new SceneCache();
-    // Empty cache, unpopulated — bypass mode
-    expect(gateHandle('test_tool', 42, cache)).toBeNull();
-  });
-
-  it('rejects handle 0', () => {
-    const cache = new SceneCache();
-    const result = gateHandle('test_tool', 0, cache);
-    expect(result).not.toBeNull();
-    expect(result!.isError).toBe(true);
   });
 });
 

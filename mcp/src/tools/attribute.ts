@@ -7,7 +7,7 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
-import { jsonResult, errorResult, gateHandle, OBJ_API_ITEM } from './utils';
+import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 import { AttrType, AttributeId } from '../shared/OctaneConstants';
 
 /** Targeted error message when hasAttr returns false */
@@ -168,9 +168,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type }) => {
       try {
-        const gated = gateHandle('get_attribute', handle, client.sceneCache);
-        if (gated) return gated;
-
         // Pre-check: does this handle actually support this attribute?
         const hasAttrResult = await client.callMethod('ApiItem', 'hasAttr', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
@@ -225,10 +222,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id, expected_type, value, skip_evaluate }) => {
       try {
-        // Gate: reject handles never seen by any MCP tool
-        const gated = gateHandle('set_attribute', handle, client.sceneCache);
-        if (gated) return gated;
-
         // Pre-check: does this handle actually support this attribute?
         // ApiItem.hasAttr is a safe per-instance check (no crash risk).
         const hasAttrResult = await client.callMethod('ApiItem', 'hasAttr', {
@@ -298,9 +291,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle }) => {
       try {
-        const gated = gateHandle('get_all_attributes', handle, client.sceneCache);
-        if (gated) return gated;
-
         // Get attribute count
         const countResult = await client.callMethod('ApiItem', 'attrCount', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
@@ -357,9 +347,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id }) => {
       try {
-        const gated = gateHandle('get_attribute_info', handle, client.sceneCache);
-        if (gated) return gated;
-
         const result = await client.callMethod('ApiItem', 'attrInfo', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           id: attribute_id,
@@ -404,9 +391,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, pin_index, attribute_id, expected_type }) => {
       try {
-        const gated = gateHandle('get_pin_value', handle, client.sceneCache);
-        if (gated) return gated;
-
         // Get connected node on this pin
         const { getConnectedHandle } = await import('./pin-utils');
         const connHandle = await getConnectedHandle(client, handle, pin_index);
@@ -414,10 +398,8 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           return errorResult(`Pin ${pin_index} on handle ${handle} has no connected node`);
         }
 
-        // Track discovered handle so subsequent get/set_attribute calls aren't gated
-        if (!client.sceneCache.validateHandle(connHandle).valid) {
-          client.sceneCache.addNode(connHandle, `pin_${pin_index}_child`, 'NT_UNKNOWN', 0);
-        }
+        // Cache discovered pin child for AI context
+        client.sceneCache.addNode(connHandle, `pin_${pin_index}_child`, 'NT_UNKNOWN', 0);
 
         // Auto-detect attribute type if not specified
         let resolvedType = expected_type;
@@ -500,9 +482,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     },
     async ({ handle, attribute_id }) => {
       try {
-        const gated = gateHandle('is_animated', handle, client.sceneCache);
-        if (gated) return gated;
-
         const result = await client.callMethod('ApiItem', 'isAnimated', {
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
           id: attribute_id,

@@ -97,8 +97,7 @@ const EMPTY_RESULT = (prompt: string): VisionCallResult => ({
 export async function callVision(imagePath: string, prompt: string): Promise<VisionCallResult> {
   const apiKey = getAnthropicKey();
   if (!apiKey) {
-    mcpLog('VISION: no Anthropic API key — falling back to self', 'warn');
-    return EMPTY_RESULT(prompt);
+    throw new Error('VISION: Anthropic API key not configured — set ANTHROPIC_API_KEY env var');
   }
 
   const img = readImageBase64(imagePath);
@@ -118,8 +117,7 @@ export async function callVision(imagePath: string, prompt: string): Promise<Vis
       vlmRawResponse: result.text,
     };
   } catch (error: any) {
-    mcpLog(`VISION: Sonnet failed: ${error.message}`, 'error');
-    return EMPTY_RESULT(prompt);
+    throw new Error(`VISION: Sonnet call failed: ${error.message}`);
   }
 }
 
@@ -134,8 +132,7 @@ export async function callVisionPair(
 ): Promise<VisionCallResult> {
   const apiKey = getAnthropicKey();
   if (!apiKey) {
-    mcpLog('VISION: no Anthropic API key — falling back to self', 'warn');
-    return EMPTY_RESULT(prompt);
+    throw new Error('VISION: Anthropic API key not configured — set ANTHROPIC_API_KEY env var');
   }
 
   const img1 = readImageBase64(imagePath1);
@@ -157,8 +154,7 @@ export async function callVisionPair(
       vlmRawResponse: result.text,
     };
   } catch (error: any) {
-    mcpLog(`VISION: Sonnet failed: ${error.message}`, 'error');
-    return EMPTY_RESULT(prompt);
+    throw new Error(`VISION: Sonnet call failed: ${error.message}`);
   }
 }
 

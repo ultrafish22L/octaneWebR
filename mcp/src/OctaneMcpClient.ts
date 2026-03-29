@@ -424,7 +424,7 @@ export class OctaneMcpClient {
     }
 
     const idleStr = idleMs !== null ? `${idleMs}ms` : 'first call';
-    mcpLog(`[HEALTH] ping — idle ${idleStr}, cache=${this.sceneCache.knownHandleCount}`, 'debug');
+    mcpLog(`[HEALTH] ping — idle ${idleStr}, cache=${this.sceneCache.nodeCount}`, 'debug');
     try {
       await this.base.callMethod('ApiInfo', 'octaneVersion', {}, { timeout: 5000 });
       this.lastSuccessMs = Date.now();
@@ -435,10 +435,8 @@ export class OctaneMcpClient {
       // or first call with leftover channels). Resetting channels lets the next
       // real call get a fresh connection. If the server is truly gone, that call
       // will fail with ECONNRESET and enhanceConnectionError will clear the cache.
-      // Clearing the cache here would destroy valid handles from the current
-      // session — causing spurious GATED rejections.
       mcpLog(
-        `[HEALTH] ping FAILED (${e.message}) — resetting channels only (preserving cache, size=${this.sceneCache.knownHandleCount})`,
+        `[HEALTH] ping FAILED (${e.message}) — resetting channels only (preserving cache, size=${this.sceneCache.nodeCount})`,
         'warn'
       );
       this.rootGraphHandle = null;

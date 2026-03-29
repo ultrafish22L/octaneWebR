@@ -40,31 +40,6 @@ export function errorResult(error: unknown) {
   };
 }
 
-// ── Handle validation gate ───────────────────────────────────────────
-
-import type { SceneCache } from '../SceneCache';
-import { mcpLog } from '../OctaneMcpClient';
-
-/**
- * Validate a handle against the SceneCache before sending to Octane.
- * Returns an error result if the handle was never returned by any MCP tool,
- * or null if the handle is valid (caller should proceed).
- *
- * The error message starts with "GATED" so the AI immediately knows
- * the call was blocked before reaching Octane.
- * Logged at 'warn' level to log_mcp.log for false-positive investigation.
- */
-export function gateHandle(
-  toolName: string,
-  handle: number,
-  cache: SceneCache
-): ReturnType<typeof errorResult> | null {
-  const check = cache.validateHandle(handle);
-  if (check.valid) return null;
-  mcpLog(`GATE ${toolName} rejected handle ${handle}: ${check.reason}`, 'warn');
-  return errorResult(`GATED — ${toolName} blocked before reaching Octane. ${check.reason}`);
-}
-
 // ── gRPC response extractors ─────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
