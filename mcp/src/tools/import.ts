@@ -1900,9 +1900,9 @@ export function registerImportTools(
 
   server.tool(
     'analyze_mesh',
-    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE import_geo. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). MUST run on every OBJ before placement.',
+    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). Accepts OBJ, GLB, or glTF — GLB/glTF files are auto-converted to OBJ. MUST run on every mesh before placement.',
     {
-      obj_path: z.string().describe('Absolute path to OBJ file'),
+      obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
       scene_context: z
         .string()
         .optional()
@@ -1939,12 +1939,29 @@ export function registerImportTools(
       source_endpoint,
     }) => {
       try {
-        const resolved = path.resolve(obj_path);
+        let resolved = path.resolve(obj_path);
         if (!fs.existsSync(resolved)) {
           return errorResult(new Error(`File not found: ${resolved}`));
         }
-        if (!resolved.toLowerCase().endsWith('.obj')) {
-          return errorResult(new Error('analyze_mesh currently supports .obj files only'));
+        const ext = path.extname(resolved).toLowerCase();
+        const SUPPORTED = ['.obj', '.glb', '.gltf'];
+        if (!SUPPORTED.includes(ext)) {
+          return errorResult(
+            new Error(`Unsupported format "${ext}". Supported: ${SUPPORTED.join(', ')}`)
+          );
+        }
+
+        // GLB/glTF → convert to OBJ first (same conversion as import_geo)
+        if (ext !== '.obj') {
+          const outDir = path.join(path.dirname(resolved), path.basename(resolved, ext));
+          const derivedName = path.basename(resolved, ext);
+          mcpLog(`analyze_mesh: converting ${resolved} → OBJ`, 'info');
+          const conv = await convertGlbToObj(resolved, outDir, derivedName);
+          resolved = path.resolve(conv.objPath);
+          mcpLog(
+            `analyze_mesh: converted → ${resolved} (${conv.vertices} verts, ${conv.faces} faces)`,
+            'info'
+          );
         }
 
         const sidecar = sidecarPath(resolved);
