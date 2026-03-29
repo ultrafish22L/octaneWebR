@@ -340,6 +340,17 @@ class OctaneGrpcClient {
       slog.info(`Registering callbacks with ID: ${this.callbackId || '(new)'}`);
       await this.registerGrpcCallbacks();
 
+      // Ensure shared surface output is OFF in dev/browser mode
+      // (a previous Electron session may have left it enabled)
+      try {
+        await this.callMethod('ApiRenderEngine', 'setSharedSurfaceOutputType', {
+          type: 0, // SHARED_SURFACE_TYPE_NONE
+          realTime: false,
+        });
+      } catch {
+        /* non-fatal */
+      }
+
       // Try MCP relay first (single shared stream), fall back to own gRPC stream
       this.connectToMcpRelay();
       slog.info('Callback registration complete');

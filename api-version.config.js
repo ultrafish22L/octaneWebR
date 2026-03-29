@@ -97,7 +97,9 @@ const getApiVersionName = () => {
 };
 
 // Single source of truth: octaneServGrpc/proto/. No duplicate copies.
-const getProtoDir = () => '../../octaneServGrpc/proto';
+// OCTANE_PROTO_DIR override for packaged Electron builds where protos
+// are in extraResources (e.g. resources/server/proto) not relative to repo.
+const getProtoDir = () => process.env.OCTANE_PROTO_DIR || '../../octaneServGrpc/proto';
 
 module.exports = {
   /** @deprecated Read from apiVersionState instead for runtime updates */

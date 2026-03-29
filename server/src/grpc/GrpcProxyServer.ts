@@ -37,7 +37,7 @@ enum LogLevel {
   DEBUG = 4,
 }
 
-const LOG_LEVEL = LogLevel.INFO;
+const LOG_LEVEL = LogLevel.DEBUG;
 
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -172,8 +172,14 @@ class GrpcClient {
         }
       });
     });
-    this.sharedStream.on('newStatistics', () => this.pollRenderStatistics());
-    this.sharedStream.on('newImage', () => this.grabAndNotifyImage());
+    this.sharedStream.on('newStatistics', () => {
+      log.debug('[ownStream] newStatistics event');
+      this.pollRenderStatistics();
+    });
+    this.sharedStream.on('newImage', () => {
+      log.debug('[ownStream] newImage event — calling grabAndNotifyImage');
+      this.grabAndNotifyImage();
+    });
   }
 
   async initialize(): Promise<void> {
@@ -198,6 +204,10 @@ class GrpcClient {
     this.isRegistering = true;
     try {
       this.callbackId = (Date.now() % 1000000000) + Math.floor(Math.random() * 1000);
+
+      // Register our own callbacks and open our own gRPC stream.
+      // Don't use the MCP relay — it breaks when serv restarts and heartbeats
+      // mask the dead callback stream, preventing fallback.
       await this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
         callback: { callbackSource: 'grpc', callbackId: this.callbackId },
         userData: 0,
@@ -210,12 +220,10 @@ class GrpcClient {
       } catch {
         /* non-fatal */
       }
-
-      // Try MCP relay first (single shared stream), fall back to own gRPC stream
-      this.connectToMcpRelay();
+      this.sharedStream.start();
 
       this.isCallbackRegistered = true;
-      log.info('Callbacks registered');
+      log.info('Callbacks registered (own stream)');
 
       // Enable dxSS shared surface mode if native addon is available
       await this.enableSharedSurface();
@@ -244,122 +252,118 @@ class GrpcClient {
 
   /**
    * Try connecting to MCP's callback relay on ws://127.0.0.1:51023.
-   * If MCP is running, we consume its single gRPC callback stream — no duplicate.
-   * If MCP isn't there, fall back to our own gRPC stream.
+   * Returns true if connected (MCP owns the callback stream), false if unavailable.
+   * When connected via relay, we must NOT register our own gRPC callbacks
+   * (that would overwrite MCP's callbackId and break its stream).
    */
-  private connectToMcpRelay(): void {
-    try {
-      const { WebSocket: WsClient } = require('ws') as typeof import('ws');
-      log.debug(`Attempting MCP relay connection to ${GrpcClient.MCP_RELAY_URL}`);
-      const ws = new WsClient(GrpcClient.MCP_RELAY_URL, { handshakeTimeout: 2000 });
-      let settled = false;
+  private tryConnectToMcpRelay(): Promise<boolean> {
+    return new Promise(resolve => {
+      try {
+        const { WebSocket: WsClient } = require('ws') as typeof import('ws');
+        log.debug(`Attempting MCP relay connection to ${GrpcClient.MCP_RELAY_URL}`);
+        const ws = new WsClient(GrpcClient.MCP_RELAY_URL, { handshakeTimeout: 2000 });
+        let settled = false;
 
-      ws.on('open', () => {
-        settled = true;
-        log.info('Connected to MCP callback relay — using shared stream');
-        this.usingRelay = true;
-        this.mcpRelayWs = ws;
-        this.sharedStream.stop();
+        ws.on('open', () => {
+          settled = true;
+          log.info('Connected to MCP callback relay — using shared stream');
+          this.usingRelay = true;
+          this.mcpRelayWs = ws;
+          resolve(true);
+        });
 
-        // Watchdog: if no messages arrive within 5s, relay is stale — fall back
-        this.relayWatchdog = setTimeout(() => {
-          if (this.usingRelay && !this.relayGotMessage) {
-            log.warn('MCP relay connected but silent for 5s — falling back to own stream');
-            this.disconnectMcpRelay();
-            this.fallbackToOwnStream('MCP relay silent');
-          }
-        }, 5000);
-      });
+        ws.on('message', (raw: Buffer | string) => {
+          this.relayGotMessage = true;
+          try {
+            // Relay sends binary frames: [4B headerLen LE][JSON header][optional pixel payload]
+            const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+            log.debug(`[relay] message ${buf.length}B`);
+            if (buf.length < 4) return;
 
-      ws.on('message', (raw: Buffer | string) => {
-        this.relayGotMessage = true;
-        try {
-          // Relay sends binary frames: [4B headerLen LE][JSON header][optional pixel payload]
-          const buf = Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
-          if (buf.length < 4) return;
+            const headerLen = buf.readUInt32LE(0);
+            if (headerLen <= 0 || headerLen > buf.length - 4) return;
 
-          const headerLen = buf.readUInt32LE(0);
-          if (headerLen <= 0 || headerLen > buf.length - 4) return;
+            const headerStr = buf.toString('utf8', 4, 4 + headerLen);
+            const msg = JSON.parse(headerStr);
+            log.debug(`[relay] type=${msg.type} hasPixels=${buf.length > 4 + headerLen}`);
 
-          const headerStr = buf.toString('utf8', 4, 4 + headerLen);
-          const msg = JSON.parse(headerStr);
-
-          if (msg.type === 'newImage') {
-            // Check if the relay already included pixel data in this frame
-            const pixelOffset = 4 + headerLen;
-            const hasPixels = buf.length > pixelOffset && msg.renderImage;
-            if (hasPixels) {
-              // Relay sent full frame with pixels — forward directly to browser WS clients
-              const ri = msg.renderImage;
-              const pixelBuf = buf.subarray(pixelOffset);
-              this.notifyCallbacks({
-                callback_source: ri.callback_source || 'relay',
-                callback_id: ri.callback_id || this.callbackId,
-                user_data: ri.user_data || 0,
-                render_images: {
-                  data: [
-                    {
-                      buffer: { data: pixelBuf, size: pixelBuf.length },
-                      size: { x: ri.width, y: ri.height },
-                      type: ri.format,
-                      pitch: ri.pitch,
-                      tonemappedSamplesPerPixel: ri.tonemappedSamplesPerPixel || 0,
-                      renderTime: ri.renderTime || 0,
-                    },
-                  ],
-                },
+            if (msg.type === 'newImage') {
+              // Check if the relay already included pixel data in this frame
+              const pixelOffset = 4 + headerLen;
+              const hasPixels = buf.length > pixelOffset && msg.renderImage;
+              if (hasPixels) {
+                // Relay sent full frame with pixels — forward directly to browser WS clients
+                const ri = msg.renderImage;
+                const pixelBuf = buf.subarray(pixelOffset);
+                this.notifyCallbacks({
+                  callback_source: ri.callback_source || 'relay',
+                  callback_id: ri.callback_id || this.callbackId,
+                  user_data: ri.user_data || 0,
+                  render_images: {
+                    data: [
+                      {
+                        buffer: { data: pixelBuf, size: pixelBuf.length },
+                        size: { x: ri.width, y: ri.height },
+                        type: ri.format,
+                        pitch: ri.pitch,
+                        tonemappedSamplesPerPixel: ri.tonemappedSamplesPerPixel || 0,
+                        renderTime: ri.renderTime || 0,
+                      },
+                    ],
+                  },
+                });
+              } else {
+                // No pixel data in relay frame — grab pixels ourselves
+                this.grabAndNotifyImage();
+              }
+              this.pollRenderStatistics();
+            } else if (msg.type === 'newStatistics') {
+              this.pollRenderStatistics();
+            } else if (msg.type === 'renderFailure') {
+              this.renderFailureCallbacks.forEach(cb => {
+                try {
+                  cb({ user_data: msg.userData, timestamp: msg.timestamp });
+                } catch {
+                  /* */
+                }
               });
-            } else {
-              // No pixel data in relay frame — grab pixels ourselves
-              this.grabAndNotifyImage();
+            } else if (msg.type === 'projectManagerChanged') {
+              this.projectManagerCallbacks.forEach(cb => {
+                try {
+                  cb({ user_data: msg.userData, timestamp: msg.timestamp });
+                } catch {
+                  /* */
+                }
+              });
             }
-            this.pollRenderStatistics();
-          } else if (msg.type === 'newStatistics') {
-            this.pollRenderStatistics();
-          } else if (msg.type === 'renderFailure') {
-            this.renderFailureCallbacks.forEach(cb => {
-              try {
-                cb({ user_data: msg.userData, timestamp: msg.timestamp });
-              } catch {
-                /* */
-              }
-            });
-          } else if (msg.type === 'projectManagerChanged') {
-            this.projectManagerCallbacks.forEach(cb => {
-              try {
-                cb({ user_data: msg.userData, timestamp: msg.timestamp });
-              } catch {
-                /* */
-              }
-            });
+          } catch (e: any) {
+            log.error('MCP relay message error:', e.message);
           }
-        } catch (e: any) {
-          log.error('MCP relay message error:', e.message);
-        }
-      });
+        });
 
-      ws.on('error', (err: any) => {
-        if (!settled) {
-          settled = true;
-          log.debug(`MCP relay error: ${err?.message || 'unknown'}`);
-          this.fallbackToOwnStream('MCP relay unavailable');
-        }
-      });
+        ws.on('error', (err: any) => {
+          if (!settled) {
+            settled = true;
+            log.debug(`MCP relay error: ${err?.message || 'unknown'}`);
+            resolve(false);
+          }
+        });
 
-      ws.on('close', () => {
-        if (this.usingRelay) {
-          this.usingRelay = false;
-          this.mcpRelayWs = null;
-          this.fallbackToOwnStream('MCP relay disconnected');
-        } else if (!settled) {
-          settled = true;
-          this.fallbackToOwnStream('MCP relay closed before open');
-        }
-      });
-    } catch (e: any) {
-      log.debug(`MCP relay require failed: ${e?.message}`);
-      this.fallbackToOwnStream('ws module unavailable');
-    }
+        ws.on('close', () => {
+          if (this.usingRelay) {
+            this.usingRelay = false;
+            this.mcpRelayWs = null;
+            this.fallbackToOwnStream('MCP relay disconnected');
+          } else if (!settled) {
+            settled = true;
+            resolve(false);
+          }
+        });
+      } catch (e: any) {
+        log.debug(`MCP relay require failed: ${e?.message}`);
+        resolve(false);
+      }
+    });
   }
 
   private disconnectMcpRelay(): void {
@@ -387,6 +391,21 @@ class GrpcClient {
       return;
     }
     log.info(`${reason} — falling back to own gRPC callback stream`);
+    // Register our own callbacks now (we avoided this while relay was active)
+    log.debug('[fallback] registering own callbacks with callbackId=' + this.callbackId);
+    this.callMethod('ApiRenderEngine', 'setOnNewImageCallback', {
+      callback: { callbackSource: 'grpc', callbackId: this.callbackId },
+      userData: 0,
+    })
+      .then(() => log.debug('[fallback] setOnNewImageCallback OK'))
+      .catch((e: any) => log.error('[fallback] setOnNewImageCallback failed:', e.message));
+    this.callMethod('ApiRenderEngine', 'setOnNewStatisticsCallback', {
+      callback: { callbackSource: 'grpc', callbackId: this.callbackId },
+      userData: 0,
+    })
+      .then(() => log.debug('[fallback] setOnNewStatisticsCallback OK'))
+      .catch((e: any) => log.error('[fallback] setOnNewStatisticsCallback failed:', e.message));
+    log.debug('[fallback] starting sharedStream');
     this.sharedStream.start();
   }
 
@@ -395,6 +414,11 @@ class GrpcClient {
   /**
    * Enable dxSS shared surface mode after callbacks are registered.
    * Called once from registerOctaneCallbacks if the native addon is loaded.
+   *
+   * Prerequisites per Octane SDK (apirender.h):
+   *  1. Device must support D3D11 shared surfaces
+   *  2. Exactly one async tonemap render pass must be enabled
+   *  3. Then call setSharedSurfaceOutputType(D3D11, realTime)
    */
   async enableSharedSurface(): Promise<void> {
     if (!this.dxAddon || this.ssEnabled) return;
@@ -405,10 +429,38 @@ class GrpcClient {
       });
       log.info(`[dxSS] Registered viewport client PID ${process.pid}`);
 
-      // Enable shared surface output on the server (must be explicit — not enabled at startup)
+      // Step 1: Check device support (non-fatal if RPC not implemented)
+      try {
+        const ssInfo = await this.callMethod('ApiRenderEngine', 'deviceSharedSurfaceInfo', {
+          deviceIndex: 0,
+        });
+        if (ssInfo?.result?.d3D11?.supported === false) {
+          log.warn('[dxSS] Device 0 does not support D3D11 shared surfaces — skipping');
+          return;
+        }
+        if (ssInfo?.result?.d3D11?.adapterLuid) {
+          log.info(
+            `[dxSS] Device 0 supports D3D11, adapter LUID: ${ssInfo.result.d3D11.adapterLuid}`
+          );
+        }
+      } catch {
+        log.info('[dxSS] deviceSharedSurfaceInfo not available — assuming D3D11 supported');
+      }
+
+      // Step 2: Set async tonemap render passes (beauty pass only)
+      try {
+        const passResult = await this.callMethod('ApiRenderEngine', 'setAsyncTonemapRenderPasses', {
+          tonemapPasses: { data: ['RENDER_PASS_BEAUTY'] },
+        });
+        log.info(`[dxSS] Async tonemap passes set: ${passResult?.result ? 'ok' : 'failed'}`);
+      } catch (e: any) {
+        log.warn(`[dxSS] setAsyncTonemapRenderPasses failed: ${e.message} — trying without`);
+      }
+
+      // Step 3: Enable shared surface output
       await this.callMethod('ApiRenderEngine', 'setSharedSurfaceOutputType', {
         type: 1, // SHARED_SURFACE_TYPE_D3D11
-        realtime: true,
+        realTime: false,
       });
       log.info('[dxSS] Enabled D3D11 shared surface output on server');
 
@@ -420,10 +472,30 @@ class GrpcClient {
     }
   }
 
+  /**
+   * Disable dxSS shared surface mode.
+   * Called by non-Electron paths to ensure SS is off (in case a previous
+   * Electron session left it enabled).
+   */
+  async disableSharedSurface(): Promise<void> {
+    try {
+      await this.callMethod('ApiRenderEngine', 'setSharedSurfaceOutputType', {
+        type: 0, // SHARED_SURFACE_TYPE_NONE
+        realTime: false,
+      });
+    } catch {
+      // Non-fatal
+    }
+  }
+
   /** Fetch pixel data on demand after a newImage notification. Gated to prevent flooding. */
   private grabAndNotifyImage(): void {
-    if (this.isGrabbingFrame) return;
+    if (this.isGrabbingFrame) {
+      log.debug('[grab] skipped — already grabbing');
+      return;
+    }
     this.isGrabbingFrame = true;
+    log.debug(`[grab] starting — ssEnabled=${this.ssEnabled} dxAddon=${!!this.dxAddon}`);
 
     // dxSS fast path: grab shared frame handle, read texture via native addon
     if (this.ssEnabled && this.dxAddon) {
@@ -450,16 +522,39 @@ class GrpcClient {
    */
   private async grabSharedFrame(): Promise<void> {
     const t0 = Date.now();
+    log.debug('[dxSS] grabSharedFrame RPC calling...');
     const result = await this.callMethod('SharedSurfaceFrameService', 'grabSharedFrame', {});
+    log.debug(
+      `[dxSS] grabSharedFrame RPC returned: result=${result?.result} hasFrame=${!!result?.frame} handle=${result?.frame?.handle}`
+    );
 
     if (!result?.result || !result.frame?.handle) {
-      // SS not available this frame (e.g., Octane fell back to CPU buffer)
+      log.debug('[dxSS] no SS handle — falling back to pixel grab');
       return this.grabPixelFrame();
     }
 
     const f = result.frame;
     const handleVal = Number(f.handle);
     const frameId = String(f.frameId);
+    const w = Number(f.width);
+    const h = Number(f.height);
+    log.debug(
+      `[dxSS] frame: handle=${handleVal} frameId=${frameId} ${w}x${h} luid=${f.adapterLuid}`
+    );
+
+    // Skip 0x0 frames (empty scene / no RT) — mapSurface would hang
+    if (w === 0 || h === 0) {
+      log.debug('[dxSS] skipping 0x0 frame — releasing handle');
+      this.callMethod('SharedSurfaceFrameService', 'releaseSharedFrame', { frameId }).catch(
+        () => {}
+      );
+      try {
+        this.dxAddon.closeSurface(handleVal);
+      } catch {
+        /* */
+      }
+      return;
+    }
 
     // Track in-flight handle for stale cleanup
     this.ssInflight.set(handleVal, { frameId, timestamp: t0 });
@@ -474,6 +569,7 @@ class GrpcClient {
 
       // Open shared texture → GPU DMA to staging → Map to CPU buffer
       const t1 = Date.now();
+      log.debug(`[dxSS] mapSurface(${handleVal})...`);
       const pixels = this.dxAddon.mapSurface(handleVal);
       const t2 = Date.now();
 
@@ -574,7 +670,11 @@ class GrpcClient {
 
   /** Standard pixel path: grab pixels via protobuf. */
   private async grabPixelFrame(): Promise<void> {
+    log.debug('[pixel] grabRenderResult calling...');
     const result = await this.callMethod('ApiRenderEngine', 'grabRenderResult', {});
+    log.debug(
+      `[pixel] grabRenderResult returned: result=${result?.result} images=${result?.renderImages?.data?.length ?? 0}`
+    );
     if (result?.result && result.renderImages?.data?.length > 0) {
       const img = result.renderImages.data[0];
       if (!img?.buffer?.data || img.buffer.data.length === 0) {

@@ -55,14 +55,21 @@ async function createWindow(): Promise<void> {
     // Start standalone gRPC proxy server for production
     // Dynamic import since GrpcProxyServer has heavy dependencies
     const appRoot = app.getAppPath();
-    const { startGrpcProxyServer } = require(
-      path.join(appRoot, 'server/dist/grpc/GrpcProxyServer')
-    );
 
     // Proto and cache paths: packaged app uses extraResources, dev uses source
     const protoServerPath = app.isPackaged
       ? path.join(process.resourcesPath, 'server')
       : path.join(appRoot, 'server');
+
+    // Set proto dir for api-version.config.js before loading the server module.
+    // In packaged builds, protos are in extraResources at server/proto/.
+    if (app.isPackaged) {
+      process.env.OCTANE_PROTO_DIR = 'proto';
+    }
+
+    const { startGrpcProxyServer } = require(
+      path.join(appRoot, 'server/dist/grpc/GrpcProxyServer')
+    );
 
     const apiCachePath = app.isPackaged
       ? path.join(process.resourcesPath, 'mcp/data/octane-api-cache.json')

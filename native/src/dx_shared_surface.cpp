@@ -309,25 +309,22 @@ Napi::Value MapSurface(const Napi::CallbackInfo& info) {
     D3D11_TEXTURE2D_DESC texDesc;
     sharedTex->GetDesc(&texDesc);
 
-    // Acquire keyed mutex (Octane uses key 0 per SDK contract)
+    // Try keyed mutex if present — cloned surfaces share the underlying texture.
+    // Octane uses key 0 per SDK contract. Short timeout to avoid deadlock;
+    // if acquire fails, proceed anyway (may get stale frame).
     ComPtr<IDXGIKeyedMutex> keyedMutex;
+    bool hasMutex = false;
     HRESULT hr = sharedTex->QueryInterface(IID_PPV_ARGS(&keyedMutex));
-    if (FAILED(hr)) {
-        Napi::Error::New(env, "mapSurface: texture does not support keyed mutex")
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    hr = keyedMutex->AcquireSync(0, 5000); // 5 second timeout
-    if (FAILED(hr)) {
-        Napi::Error::New(env, "mapSurface: AcquireSync timeout")
-            .ThrowAsJavaScriptException();
-        return env.Null();
+    if (SUCCEEDED(hr) && keyedMutex) {
+        hr = keyedMutex->AcquireSync(0, 100);
+        if (SUCCEEDED(hr)) {
+            hasMutex = true;
+        }
     }
 
     // Ensure staging texture is ready
     if (!ensureStagingTexture(texDesc.Width, texDesc.Height, texDesc.Format)) {
-        keyedMutex->ReleaseSync(0);
+        if (hasMutex) keyedMutex->ReleaseSync(0);
         Napi::Error::New(env, "mapSurface: failed to create staging texture")
             .ThrowAsJavaScriptException();
         return env.Null();
@@ -335,13 +332,9 @@ Napi::Value MapSurface(const Napi::CallbackInfo& info) {
 
     // GPU DMA copy: shared texture → staging texture
     g_device.ctx->CopyResource(g_device.staging.Get(), sharedTex);
-
-    // Flush ensures the DMA copy completes before releasing the mutex —
-    // without this, Octane could overwrite the shared texture mid-copy.
     g_device.ctx->Flush();
 
-    // Release the keyed mutex (key=0 per Octane SDK contract)
-    keyedMutex->ReleaseSync(0);
+    if (hasMutex) keyedMutex->ReleaseSync(0);
 
     // Map the staging texture for CPU read
     D3D11_MAPPED_SUBRESOURCE mapped;
