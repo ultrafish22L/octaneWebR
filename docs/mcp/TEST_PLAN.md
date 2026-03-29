@@ -118,7 +118,7 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 | #   | Test                                                 | Pass Criteria                          | Render-Check             |
 | --- | ---------------------------------------------------- | -------------------------------------- | ------------------------ |
-| 1   | `set_clay_mode` (1=grey)                             | success: true                          | Yes — grey render        |
+| 1   | `set_clay_mode` (2=color)                            | success: true                          | Yes — color clay render  |
 | 2   | `get_clay_mode`                                      | Returns current mode                   | —                        |
 | 3   | `set_clay_mode` (0=none)                             | success: true                          | Yes — materials restored |
 | 4   | `set_render_priority` (HIGH) → `get_render_priority` | Round-trip matches                     | —                        |

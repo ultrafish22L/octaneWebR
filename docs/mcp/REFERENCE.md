@@ -307,9 +307,9 @@ See `BUILD.md` Phase 1 for the full setup sequence. Key points:
 
 Path prefix: `ORBX/assets_test/`
 
-**Available:** `sphere_hd.obj`, `floor.obj`
+**Available meshes:** `sphere_hd.obj`, `floor.obj`
 
-**Also in directory (textures/images):** `art_cyber.jpg`, `art_surreal.jpg`, `gallery_env.jpg`, `hdri_sunset_ocean.png`, `lava_env.jpg`, `space_env.jpg`
+**Also in directory:** `standard_surface_gold.mtlx` (caution: may crash Octane on import), mugshot sidecars for sphere_hd.
 
 Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PLANE.
 
@@ -386,22 +386,6 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ## §12 GLB Pipeline
 
-### Convert GLB → OBJ + Textures
+OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_mesh` for reliable orientation.
 
-```python
-import trimesh
-scene = trimesh.load('model.glb')
-scene.export('model.obj')  # OBJ + MTL
-# Extract baked texture (trimesh OBJ export strips it):
-scene.geometry[mesh_name].visual.material.baseColorTexture.save('model_diffuse.png')
-```
-
-### Load in Octane
-
-1. `NT_GEO_MESH` + `A_FILENAME` + `A_RELOAD` (see §1 File Loading Pattern)
-2. `NT_TEX_IMAGE` with diffuse PNG → connect to material `pin_index: 0` (replaces auto-created RGB child)
-3. No `A_RELOAD` needed for image textures — they load on connect
-
-### Orientation
-
-OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_mesh` for reliable orientation via VLM mugshot (see `BUILD.md` Pre-Phase).
+Full GLB→OBJ conversion, texture extraction, and Octane loading workflow: see `BUILD.md` §8.

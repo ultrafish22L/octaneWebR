@@ -51,6 +51,14 @@ Each phase has hard gates — you don't move forward until the current phase pas
 
 ---
 
+## Scene Folders
+
+- **Real scenes** → `aigenerated/{scene-name}/` (concept_art.png, recipe.md, scene.orbx, assets/, renders/)
+- **Test/smoke scenes** → `temp/` subfolders (disposable, no recipe needed)
+- **Renders always go in scene folder** — `aigenerated/{scene}/renders/`, NOT `temp/renders/`
+
+---
+
 ## §3 DRESS Protocol
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
@@ -113,11 +121,11 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-**CLAY MODE ON.** Call `set_clay_mode(1)` before first render. All Phase 1 renders are clay — no materials, no lighting tuning. The only goal is correct composition: right objects, right framing, right camera.
+**CLAY MODE ON.** Call `set_clay_mode(2)` (color clay) before first render. All Phase 1 renders are clay — no materials, no lighting tuning. The only goal is correct composition: right objects, right framing, right camera. Color clay preserves diffuse textures for better visibility than grey clay (mode 1), which washes out against bright environments.
 
 | Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(1)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
+| 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(2)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
 | 2    | Import mesh via `import_geo(file_path)` → placement → geo group → RT `pin_index:3`                                                        | **Object exists**. `import_geo` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                     |
 | 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
 | 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |

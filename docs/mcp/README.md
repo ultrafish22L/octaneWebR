@@ -238,72 +238,21 @@ Beyond basic node manipulation, the MCP server includes several high-level syste
 
 ### MCP Resources (9 read-only)
 
-Besides tools, the MCP server exposes 9 resources for type system discovery — no side effects, safe to query anytime:
-
-| Resource              | URI                                           | What It Returns                                      |
-| --------------------- | --------------------------------------------- | ---------------------------------------------------- |
-| Node types            | `octane://node-types`                         | All 755+ types with id, category, pin count          |
-| Types by category     | `octane://node-types/{category}`              | Filter by MAT, TEX, GEO, LIGHT, etc.                 |
-| Pin layout            | `octane://pin-layout/{typeName}`              | All pins: index, id, name, type, defaults            |
-| Compatibility         | `octane://compatibility/{pinType}`            | What nodes can connect to a pin type                 |
-| Primitive types       | `octane://primitive-types`                    | NT_GEO_OBJECT shapes (Box=1, Sphere=20, etc.)        |
-| Node info (live)      | `octane://node-info/{typeName}`               | Full metadata from Octane (cached after first query) |
-| Pin info (live)       | `octane://pin-info/{typeName}/{pinIndex}`     | Deep pin metadata: ranges, enum values, defaults     |
-| Attribute info (live) | `octane://attribute-info/{typeName}/{attrId}` | Type, defaults, min/max, description                 |
-| Scene snapshot        | `octane://scene`                              | Current scene: all nodes, connections, staleness     |
-
-These are especially useful when working with unfamiliar node types — query `pin-layout` instead of guessing pin indices.
+See [REFERENCE.md §11](./REFERENCE.md) for the full resource table. Key resources: `octane://pin-layout/{typeName}` (resolves pin_index vs pin_id confusion), `octane://scene` (current scene snapshot).
 
 ---
 
 ## Companion MCP Servers
 
-The `.mcp.json` config also registers two companion servers that work alongside the Octane MCP:
-
-### Octane Docs MCP
-
-Search Octane's Lua scripting API, browse modules, look up function signatures, and find code examples. Useful when Claude needs to understand Octane node types or attribute semantics.
-
-### OTOY Studio — MCP server for AI images/3D/video/music/vision
-
-Generate AI assets for your Octane scenes:
-
-| Tool                   | What It Does                             |
-| ---------------------- | ---------------------------------------- |
-| `generate_image`       | Text-to-image (Flux)                     |
-| `generate_image_pro`   | Higher quality image generation          |
-| `edit_image`           | Modify existing images with text prompts |
-| `generate_video_veo3`  | Text-to-video (Google Veo3)              |
-| `generate_video_kling` | Text-to-video (Kling)                    |
-| `image_to_video_kling` | Animate a still image                    |
-| `generate_music`       | AI music generation                      |
-| `upscale_image`        | Upscale resolution                       |
-| `chat_completion`      | General AI chat                          |
-
-**Workflow example:** Generate a texture in OTOY Studio → download → apply as image texture in Octane via MCP.
+`.mcp.json` registers two companions: **octane-docs** (Octane Lua API search, module browsing, code examples) and **otoy-studio** (AI image/3D/video/music generation — use `generate_image_pro` for concept art, image-to-3D for meshes).
 
 ---
 
 ## Scene Building
 
-For node graph structure, pin layouts, and attribute IDs: [REFERENCE.md](./REFERENCE.md).
-For build workflow and phases: [BUILD.md](./BUILD.md).
-For pitfalls and workarounds: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+For build workflow and phases: [BUILD.md](./BUILD.md). For pin layouts and attribute IDs: [REFERENCE.md](./REFERENCE.md). For pitfalls: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
 
 Environment variables: `OCTANE_HOST` (default `127.0.0.1`), `OCTANE_PORT` (default `51022`).
-
----
-
-## Quick Troubleshooting
-
-| Problem                           | Fix                                                                                         |
-| --------------------------------- | ------------------------------------------------------------------------------------------- |
-| MCP won't connect                 | Is Octane running on port 51022? Did you `cd mcp && npm run build`? Is `.mcp.json` present? |
-| Commands succeed, nothing happens | Silent connection failure — see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) §4               |
-| Octane hung                       | `taskkill /F /IM octane.exe` (Windows) or `pkill -f octane` (Linux/macOS)                   |
-| octaneWebR not updating           | `refresh_webapp` via MCP, or re-select node to refresh inspector                            |
-
-For full troubleshooting: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ---
 

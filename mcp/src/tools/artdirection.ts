@@ -783,7 +783,7 @@ export function registerArtDirectionTools(
           const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
           if (clayMode === 0 && !framingVerified) {
             warnings.push(
-              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(1), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
+              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
             );
           }
         } catch {

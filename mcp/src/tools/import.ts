@@ -34,6 +34,8 @@ import { AttributeId, NodeTypeId } from '../shared/OctaneConstants';
 import { enumeratePins } from './pin-utils';
 import { analyzeReference } from '../vision/index';
 
+import zlib from 'zlib';
+
 const execFileAsync = promisify(execFile);
 
 /** Default output directory for converted assets */
@@ -305,7 +307,7 @@ interface MugshotView {
   name: string; // e.g. "front_clay"
   yaw: number; // camera orbit degrees
   elevation: number;
-  clay: boolean; // true = grey clay, false = textured
+  clay: boolean; // true = color clay (mode 2), false = normal rendering
 }
 
 /**
@@ -406,11 +408,371 @@ async function setAttrRaw(
   );
 }
 
+// ── Zero-dep PNG read/write for contact sheet ──────────────────────
+
+/** Read PNG pixels — minimal decoder using zlib.inflateSync. */
+function readPngPixels(
+  buffer: Buffer
+): { width: number; height: number; pixels: Uint8Array } | null {
+  const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  for (let i = 0; i < 8; i++) if (buffer[i] !== PNG_SIG[i]) return null;
+
+  let width = 0,
+    height = 0,
+    bitDepth = 0,
+    colorType = 0;
+  const idatChunks: Buffer[] = [];
+  let offset = 8;
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IHDR') {
+      width = buffer.readUInt32BE(offset + 8);
+      height = buffer.readUInt32BE(offset + 12);
+      bitDepth = buffer[offset + 16];
+      colorType = buffer[offset + 17];
+    } else if (type === 'IDAT') {
+      idatChunks.push(buffer.subarray(offset + 8, offset + 8 + length));
+    } else if (type === 'IEND') break;
+    offset += 12 + length;
+  }
+  if (width === 0 || height === 0 || idatChunks.length === 0) return null;
+  if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6)) return null;
+
+  const compressed = Buffer.concat(idatChunks);
+  let decompressed: Buffer;
+  try {
+    decompressed = zlib.inflateSync(compressed);
+  } catch {
+    return null;
+  }
+
+  const channels = colorType === 6 ? 4 : 3;
+  const rowBytes = 1 + width * channels;
+  const pixels = new Uint8Array(width * height * 4);
+  const prevRow = new Uint8Array(width * channels);
+  let srcOff = 0;
+
+  for (let y = 0; y < height; y++) {
+    const filter = decompressed[srcOff++];
+    const row = new Uint8Array(width * channels);
+    for (let x = 0; x < width * channels; x++) {
+      const raw = decompressed[srcOff++];
+      const a = x >= channels ? row[x - channels] : 0;
+      const b = prevRow[x];
+      switch (filter) {
+        case 0:
+          row[x] = raw;
+          break;
+        case 1:
+          row[x] = (raw + a) & 0xff;
+          break;
+        case 2:
+          row[x] = (raw + b) & 0xff;
+          break;
+        case 3:
+          row[x] = (raw + ((a + b) >> 1)) & 0xff;
+          break;
+        case 4: {
+          const c = x >= channels ? prevRow[x - channels] : 0;
+          const p = a + b - c;
+          const pa = Math.abs(p - a),
+            pb = Math.abs(p - b),
+            pc = Math.abs(p - c);
+          row[x] = (raw + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 0xff;
+          break;
+        }
+        default:
+          row[x] = raw;
+      }
+    }
+    for (let x = 0; x < width; x++) {
+      const dstIdx = (y * width + x) * 4;
+      const srcIdx = x * channels;
+      pixels[dstIdx] = row[srcIdx];
+      pixels[dstIdx + 1] = row[srcIdx + 1];
+      pixels[dstIdx + 2] = row[srcIdx + 2];
+      pixels[dstIdx + 3] = channels === 4 ? row[srcIdx + 3] : 255;
+    }
+    prevRow.set(row);
+  }
+  return { width, height, pixels };
+}
+
+/** Encode RGBA pixels to PNG buffer (zero-dep, filter=None). */
+function encodePng(width: number, height: number, pixels: Uint8Array): Buffer {
+  // Build raw scanlines: filter byte (0=None) + RGBA row
+  const rawLen = height * (1 + width * 4);
+  const raw = Buffer.alloc(rawLen);
+  let off = 0;
+  for (let y = 0; y < height; y++) {
+    raw[off++] = 0; // filter: None
+    for (let x = 0; x < width; x++) {
+      const si = (y * width + x) * 4;
+      raw[off++] = pixels[si];
+      raw[off++] = pixels[si + 1];
+      raw[off++] = pixels[si + 2];
+      raw[off++] = pixels[si + 3];
+    }
+  }
+  const compressed = zlib.deflateSync(raw);
+
+  // Assemble PNG file
+  const chunks: Buffer[] = [];
+
+  // Signature
+  chunks.push(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+  // Helper: write chunk (type + data)
+  function writeChunk(type: string, data: Buffer) {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length, 0);
+    const typeB = Buffer.from(type, 'ascii');
+    const crcInput = Buffer.concat([typeB, data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(crcInput), 0);
+    chunks.push(len, typeB, data, crc);
+  }
+
+  // IHDR
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // color type: RGBA
+  ihdr[10] = 0; // compression
+  ihdr[11] = 0; // filter
+  ihdr[12] = 0; // interlace
+  writeChunk('IHDR', ihdr);
+
+  // IDAT
+  writeChunk('IDAT', compressed);
+
+  // IEND
+  writeChunk('IEND', Buffer.alloc(0));
+
+  return Buffer.concat(chunks);
+}
+
+/** CRC32 for PNG chunks. */
+function crc32(buf: Buffer): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc ^= buf[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 /**
- * Render 6 mugshot views of a single mesh on an isolated ground plane.
- * Pre-pass: expects an empty/reset scene. Builds temp scene, renders, cleans up.
+ * Compose multiple mugshot PNGs into a single labeled contact sheet.
+ * 2×4 grid with labels burned into each cell. Zero external dependencies.
+ * Returns the path to the saved contact sheet PNG.
+ */
+function composeContactSheet(imagePaths: string[], labels: string[], outputPath: string): string {
+  // Read all source images
+  const images: Array<{ width: number; height: number; pixels: Uint8Array }> = [];
+  for (const p of imagePaths) {
+    const buf = fs.readFileSync(p);
+    const img = readPngPixels(buf);
+    if (!img) throw new Error(`Failed to read PNG: ${p}`);
+    images.push(img);
+  }
+
+  // Grid layout: 4 columns × 2 rows (8 images)
+  const cols = 4;
+  const rows = Math.ceil(images.length / cols);
+  const cellW = images[0].width;
+  const cellH = images[0].height;
+  const labelH = 20; // pixels for label bar
+  const gridW = cols * cellW;
+  const gridH = rows * (cellH + labelH);
+
+  const out = new Uint8Array(gridW * gridH * 4);
+  // Fill with dark grey background
+  for (let i = 0; i < out.length; i += 4) {
+    out[i] = 30;
+    out[i + 1] = 30;
+    out[i + 2] = 30;
+    out[i + 3] = 255;
+  }
+
+  for (let idx = 0; idx < images.length; idx++) {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const img = images[idx];
+    const dstX = col * cellW;
+    const dstY = row * (cellH + labelH) + labelH; // image below label
+
+    // Copy image pixels
+    for (let y = 0; y < img.height && y < cellH; y++) {
+      for (let x = 0; x < img.width && x < cellW; x++) {
+        const si = (y * img.width + x) * 4;
+        const di = ((dstY + y) * gridW + (dstX + x)) * 4;
+        out[di] = img.pixels[si];
+        out[di + 1] = img.pixels[si + 1];
+        out[di + 2] = img.pixels[si + 2];
+        out[di + 3] = img.pixels[si + 3];
+      }
+    }
+
+    // Burn label into the label bar (simple 5×7 pixel font)
+    const label = labels[idx] || `${idx + 1}`;
+    const labelY = row * (cellH + labelH);
+    burnLabel(out, gridW, gridH, dstX + 4, labelY + 4, label);
+  }
+
+  const png = encodePng(gridW, gridH, out);
+  fs.writeFileSync(outputPath, png);
+  mcpLog(`mugshot: contact sheet saved → ${outputPath} (${gridW}×${gridH})`, 'info');
+  return outputPath;
+}
+
+/** Burn text into pixel buffer using a minimal 5×7 bitmap font. */
+function burnLabel(
+  pixels: Uint8Array,
+  imgW: number,
+  imgH: number,
+  startX: number,
+  startY: number,
+  text: string
+) {
+  // Minimal ASCII bitmap font (5×7, chars 32-127)
+  // Only define what we need: 0-9, A-Z, a-z, space, °, (, ), -, =, .
+  const GLYPH_W = 5,
+    GLYPH_H = 7,
+    SPACING = 1;
+  const glyphs: Record<string, number[]> = {
+    ' ': [0, 0, 0, 0, 0, 0, 0],
+    '0': [0x0e, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0e],
+    '1': [0x04, 0x0c, 0x04, 0x04, 0x04, 0x04, 0x0e],
+    '2': [0x0e, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1f],
+    '3': [0x0e, 0x11, 0x01, 0x06, 0x01, 0x11, 0x0e],
+    '4': [0x02, 0x06, 0x0a, 0x12, 0x1f, 0x02, 0x02],
+    '5': [0x1f, 0x10, 0x1e, 0x01, 0x01, 0x11, 0x0e],
+    '6': [0x06, 0x08, 0x10, 0x1e, 0x11, 0x11, 0x0e],
+    '7': [0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08],
+    '8': [0x0e, 0x11, 0x11, 0x0e, 0x11, 0x11, 0x0e],
+    '9': [0x0e, 0x11, 0x11, 0x0f, 0x01, 0x02, 0x0c],
+    A: [0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11],
+    B: [0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e],
+    C: [0x0e, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0e],
+    D: [0x1e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1e],
+    E: [0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f],
+    F: [0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x10],
+    G: [0x0e, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0f],
+    H: [0x11, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11],
+    I: [0x0e, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e],
+    K: [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11],
+    L: [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f],
+    M: [0x11, 0x1b, 0x15, 0x15, 0x11, 0x11, 0x11],
+    N: [0x11, 0x11, 0x19, 0x15, 0x13, 0x11, 0x11],
+    O: [0x0e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e],
+    P: [0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10],
+    R: [0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11],
+    S: [0x0e, 0x11, 0x10, 0x0e, 0x01, 0x11, 0x0e],
+    T: [0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
+    U: [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e],
+    W: [0x11, 0x11, 0x11, 0x15, 0x15, 0x1b, 0x11],
+    Y: [0x11, 0x11, 0x0a, 0x04, 0x04, 0x04, 0x04],
+    '-': [0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00],
+    '.': [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04],
+    '=': [0x00, 0x00, 0x1f, 0x00, 0x1f, 0x00, 0x00],
+    '(': [0x02, 0x04, 0x08, 0x08, 0x08, 0x04, 0x02],
+    ')': [0x08, 0x04, 0x02, 0x02, 0x02, 0x04, 0x08],
+  };
+
+  let cx = startX;
+  for (const ch of text.toUpperCase()) {
+    const glyph = glyphs[ch];
+    if (!glyph) {
+      cx += GLYPH_W + SPACING;
+      continue;
+    }
+    for (let gy = 0; gy < GLYPH_H; gy++) {
+      const row = glyph[gy];
+      for (let gx = 0; gx < GLYPH_W; gx++) {
+        if (row & (0x10 >> gx)) {
+          const px = cx + gx;
+          const py = startY + gy;
+          if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+            const di = (py * imgW + px) * 4;
+            pixels[di] = 255;
+            pixels[di + 1] = 255;
+            pixels[di + 2] = 0;
+            pixels[di + 3] = 255;
+          }
+        }
+      }
+    }
+    cx += GLYPH_W + SPACING;
+  }
+}
+
+// ── Mugshot scoreboard for configuration mode ────────────────────────
+
+const SCOREBOARD_PATH = path.resolve(__dirname, '../../data/mugshot_scoreboard.json');
+const AVAILABLE_VLM_MODELS = ['moondream3', 'llava-next', 'florence-2-large'];
+
+interface ModelResult {
+  is_upright: boolean;
+  front_direction: string;
+  correction: [number, number, number];
+  confidence: string;
+  object_type: string;
+  notes: string;
+  raw_response?: string;
+}
+
+interface ScoreboardRun {
+  mesh: string;
+  path: string;
+  timestamp: string;
+  ground_truth: {
+    is_upright: boolean;
+    front_direction: string;
+    correction: [number, number, number];
+  } | null;
+  model_results: Record<string, ModelResult>;
+}
+
+interface Scoreboard {
+  runs: ScoreboardRun[];
+  preferred_model: string | null;
+  scores: Record<string, { accuracy: number; total: number; correct: number }>;
+}
+
+function loadScoreboard(): Scoreboard {
+  try {
+    if (fs.existsSync(SCOREBOARD_PATH)) {
+      return JSON.parse(fs.readFileSync(SCOREBOARD_PATH, 'utf8'));
+    }
+  } catch {
+    /* corrupt */
+  }
+  return { runs: [], preferred_model: null, scores: {} };
+}
+
+function saveScoreboard(sb: Scoreboard): void {
+  const dir = path.dirname(SCOREBOARD_PATH);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(SCOREBOARD_PATH, JSON.stringify(sb, null, 2), 'utf8');
+  mcpLog(`mugshot: scoreboard saved → ${SCOREBOARD_PATH}`, 'info');
+}
+
+/** Get the preferred VLM model from scoreboard, or fall back to moondream3. */
+function getPreferredModel(): string {
+  const sb = loadScoreboard();
+  return sb.preferred_model || 'moondream3';
+}
+
+/**
+ * Render mugshot views of a single mesh in an isolated scene.
+ * Includes a ground plane with shadows for orientation cues.
  *
- * Returns paths to the 6 saved PNGs.
+ * Returns paths to the saved PNGs.
  */
 async function renderMugshots(
   client: OctaneMcpClient,
@@ -452,8 +814,11 @@ async function renderMugshots(
     await setAttrRaw(client, envPowerHandle, AttributeId.A_VALUE, 9, 0.8);
   }
 
-  // Geo group needs 1 pin for the mesh (no ground plane — it occludes side views)
-  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, 1);
+  // Geo group needs 2 pins: mesh + ground plane
+  const isPancake =
+    meshExtents && meshExtents.y / Math.max(meshExtents.x, meshExtents.z, 0.001) < 0.1;
+  const useGroundPlane = !isPancake;
+  await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, useGroundPlane ? 2 : 1);
 
   // Create mesh + placement for the asset
   const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
@@ -478,8 +843,57 @@ async function renderMugshots(
     });
   }
 
-  // Connect placement to geo group (pin 0 — only object, no ground plane)
+  // Connect placement to geo group pin 0
   await connectRaw(client, geoGroup, placement, 0);
+
+  // Ground plane for shadow/gravity cues (skip for pancake meshes)
+  if (useGroundPlane) {
+    const groundMesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
+    const groundPlacement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
+    const groundMaterial = await createNodeRaw(client, 33); // NT_MAT_DIFFUSE
+
+    // Use built-in plane (OBJ not needed — set mesh type to plane via attribute)
+    // Actually we need a simple plane OBJ. Create one inline.
+    const footprint = meshExtents ? Math.max(meshExtents.x, meshExtents.z, 0.5) * 3 : 3;
+    const planeObjPath = path.join(outputDir, `${baseName}_ground_plane.obj`);
+    const half = footprint / 2;
+    fs.writeFileSync(
+      planeObjPath,
+      [
+        '# mugshot ground plane',
+        `v ${-half} 0 ${-half}`,
+        `v ${half} 0 ${-half}`,
+        `v ${half} 0 ${half}`,
+        `v ${-half} 0 ${half}`,
+        'vn 0 1 0',
+        'f 1//1 2//1 3//1 4//1',
+      ].join('\n'),
+      'utf8'
+    );
+
+    await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, planeObjPath);
+    await connectRaw(client, groundPlacement, groundMesh, 1);
+
+    // 50% grey diffuse material
+    const diffColorHandle = await getConnectedChild(client, groundMaterial, 0);
+    if (diffColorHandle) {
+      await setAttrRaw(client, diffColorHandle, AttributeId.A_VALUE, 11, {
+        x: 0.5,
+        y: 0.5,
+        z: 0.5,
+      });
+    }
+    await connectRaw(client, groundPlacement, groundMaterial, 0); // material pin
+
+    // Ground plane sits at Y=0 (mesh base)
+    const groundXform = await getConnectedChild(client, groundPlacement, 0);
+    if (groundXform) {
+      await setAttrRaw(client, groundXform, AttributeId.A_TRANSLATION, 11, { x: 0, y: 0, z: 0 });
+    }
+
+    await connectRaw(client, geoGroup, groundPlacement, 1);
+    mcpLog(`mugshot: ground plane added (${footprint.toFixed(1)} units, 50% grey)`, 'info');
+  }
 
   // Flush scene so Octane computes post-rotation bounds
   await client.callMethod('ApiChangeManager', 'update', {});
@@ -529,7 +943,7 @@ async function renderMugshots(
     mcpLog(`mugshot: rendering ${view.name}`, 'info');
 
     // Set clay mode
-    await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 1 : 0 });
+    await client.callMethod('ApiRenderEngine', 'setClayMode', { mode: view.clay ? 2 : 0 });
 
     // Use computeFitCamera — same proven math as the fit_camera MCP tool
     const fit = computeFitCamera(meshBboxMin, meshBboxMax, 0.15, view.elevation, view.yaw);
@@ -630,25 +1044,20 @@ function buildOrientationPrompt(metadata?: {
     metaBlock = '\n' + lines.join('\n') + '\n';
   }
 
-  return `You are analyzing 8 clay renders of a 3D mesh for orientation correctness.
-A geometric guess rotation has been applied. The mesh is in empty space (no ground plane).
+  return `You are analyzing a CONTACT SHEET of 8 clay renders of a 3D mesh for orientation correctness.
+A geometric guess rotation has been applied. The mesh sits on a grey ground plane with shadow cues — shadows indicate where "down" is. If no ground plane is visible, the mesh may be a flat/pancake shape.
 ${metaBlock}
-Views (in image order):
-1. FRONT (yaw=0°, eye level) — looking at the front face
-2. RIGHT (yaw=90°, eye level) — looking at the right side
-3. BACK (yaw=180°, eye level) — looking at the rear
-4. LEFT (yaw=270°, eye level) — looking at the left side
-5. FRONT-HIGH (yaw=45°, 35° above) — elevated three-quarter from front-right
-6. BACK-HIGH (yaw=225°, 35° above) — elevated three-quarter from back-left
-7. TOP (near-overhead, 85° above) — plan view looking straight down
-8. BELOW-FRONT (yaw=0°, 25° below eye level) — looking slightly upward at the base
+The image is a 4×2 CONTACT SHEET grid. Each cell is labeled. Views (left-to-right, top-to-bottom):
+Row 1: 1. FRONT (yaw=0°) | 2. RIGHT (yaw=90°) | 3. BACK (yaw=180°) | 4. LEFT (yaw=270°)
+Row 2: 5. FRONT-HIGH (yaw=45°, 35° above) | 6. BACK-HIGH (yaw=225°, 35° above) | 7. TOP (85° above) | 8. BELOW-FRONT (25° below)
 
-Cross-reference strategy:
-- Compare FRONT (1) vs BACK (3) to verify front/back orientation
-- Compare RIGHT (2) vs LEFT (4) to check symmetry and side identity
-- Compare FRONT-HIGH (5) vs BACK-HIGH (6) for 3D structure confirmation
-- TOP (7) reveals plan-view shape (important for flat or wide objects)
-- BELOW-FRONT (8) shows the base/underside — key for detecting inverted objects
+Cross-reference ALL views together:
+- FRONT (1) vs BACK (3): verify front/back. Face/eyes/features should appear in one.
+- RIGHT (2) vs LEFT (4): check symmetry and side identity
+- FRONT-HIGH (5) vs BACK-HIGH (6): confirm 3D structure from above
+- TOP (7): plan-view shape — important for orientation of flat/wide objects
+- BELOW-FRONT (8): base/underside — key for detecting inverted objects
+- SHADOWS on ground plane: indicate which direction is DOWN
 
 If the object is something where orientation does not meaningfully matter (sphere, abstract rock, amorphous blob), set orientation_matters to false.
 
@@ -688,14 +1097,7 @@ Rules:
 - "estimated_height_m" is the real-world height when properly oriented`;
 }
 
-/**
- * Send mugshot images to VLM for orientation analysis.
- * Returns structured orientation data or null if VLM unavailable.
- */
-async function analyzeMugshotsWithVLM(
-  mugshotPaths: string[],
-  metadata?: Parameters<typeof buildOrientationPrompt>[0]
-): Promise<{
+interface MugshotVLMResult {
   object_type: string;
   is_upright: boolean;
   orientation_matters: boolean;
@@ -706,20 +1108,153 @@ async function analyzeMugshotsWithVLM(
   estimated_height_m: number;
   notes: string;
   vlm_model?: string;
-} | null> {
-  const prompt = buildOrientationPrompt(metadata);
-  const { detectBackend } = await import('../vision/index');
-  const backend = detectBackend();
+  /** All model results when running in configuration mode */
+  model_results?: Record<string, ModelResult>;
+}
 
-  if (backend === 'self') {
-    mcpLog('mugshot VLM: no vision backend available, skipping visual check', 'warn');
+/**
+ * Send mugshot contact sheet to VLM for orientation analysis.
+ * Composes ALL mugshot views into a single labeled grid, sends to otoy-studio.
+ * In configuration mode, runs ALL available VLM models and saves results to scoreboard.
+ * Returns structured orientation data or null if VLM unavailable.
+ *
+ * NOTE: Only uses otoy-studio as vision backend. Anthropic/Gemini direct API
+ * paths are NOT used for mugshot analysis — those stay for critique_render only.
+ */
+async function analyzeMugshotsWithVLM(
+  mugshotPaths: string[],
+  metadata?: Parameters<typeof buildOrientationPrompt>[0],
+  options?: { configuration?: boolean; meshName?: string; meshPath?: string }
+): Promise<MugshotVLMResult | null> {
+  const { extractOtoyStudioToken } = await import('../vision/otoy-studio');
+  const token = extractOtoyStudioToken();
+  if (!token) {
+    mcpLog('mugshot VLM: no otoy-studio token available, skipping visual check', 'warn');
     return null;
   }
 
-  // Use otoy-studio analyse_image — analyse the first mugshot (front view is most informative)
+  // Step 1: Compose contact sheet from ALL mugshot views
+  const contactDir = path.dirname(mugshotPaths[0]);
+  const baseName = path.basename(mugshotPaths[0]).replace(/\.mugshot_.*/, '');
+  const contactSheetPath = path.join(contactDir, `${baseName}.mugshot_contact.png`);
+
+  const labels = MUGSHOT_VIEWS.map((v, i) => `${i + 1}. ${v.name.toUpperCase()} yaw=${v.yaw}`);
+
   try {
-    const { analyseImageFromFile } = await import('../vision/otoy-studio');
-    const result = await analyseImageFromFile(path.resolve(mugshotPaths[0]), 'ask', prompt);
+    composeContactSheet(mugshotPaths, labels, contactSheetPath);
+  } catch (e: any) {
+    mcpLog(`mugshot VLM: contact sheet failed: ${e.message}`, 'warn');
+    return null;
+  }
+
+  const prompt = buildOrientationPrompt(metadata);
+  const { analyseImageFromFile } = await import('../vision/otoy-studio');
+
+  // Configuration mode: run ALL models on the same contact sheet
+  if (options?.configuration) {
+    mcpLog(
+      `mugshot VLM: CONFIGURATION MODE — running ${AVAILABLE_VLM_MODELS.length} models`,
+      'info'
+    );
+    const modelResults: Record<string, ModelResult> = {};
+
+    for (const model of AVAILABLE_VLM_MODELS) {
+      try {
+        mcpLog(`mugshot VLM: testing model "${model}"…`, 'info');
+        const result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
+          model,
+        });
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const corr = parsed.correction_rotation_deg ??
+            parsed.correction_rotation ?? { x: 0, y: 0, z: 0 };
+          modelResults[model] = {
+            is_upright: parsed.is_upright ?? true,
+            front_direction: parsed.front_direction ?? 'toward_camera',
+            correction: [corr.x || 0, corr.y || 0, corr.z || 0],
+            confidence: parsed.confidence ?? 'medium',
+            object_type: parsed.object_type ?? 'unknown',
+            notes: parsed.notes ?? '',
+            raw_response: result.text,
+          };
+          mcpLog(
+            `mugshot VLM [${model}]: ${parsed.object_type}, upright=${parsed.is_upright}, front=${parsed.front_direction}, confidence=${parsed.confidence}`,
+            'info'
+          );
+        } else {
+          mcpLog(`mugshot VLM [${model}]: no JSON in response`, 'warn');
+          modelResults[model] = {
+            is_upright: true,
+            front_direction: 'unknown',
+            correction: [0, 0, 0],
+            confidence: 'low',
+            object_type: 'unknown',
+            notes: 'No JSON response',
+            raw_response: result.text,
+          };
+        }
+      } catch (e: any) {
+        mcpLog(`mugshot VLM [${model}]: failed: ${e.message}`, 'warn');
+        modelResults[model] = {
+          is_upright: true,
+          front_direction: 'unknown',
+          correction: [0, 0, 0],
+          confidence: 'low',
+          object_type: 'error',
+          notes: `Error: ${e.message}`,
+        };
+      }
+    }
+
+    // Save to scoreboard
+    const sb = loadScoreboard();
+    const meshName = options.meshName || baseName;
+    // Remove existing run for same mesh if present
+    sb.runs = sb.runs.filter(r => r.mesh !== meshName);
+    sb.runs.push({
+      mesh: meshName,
+      path: options.meshPath || '',
+      timestamp: new Date().toISOString(),
+      ground_truth: null,
+      model_results: modelResults,
+    });
+    saveScoreboard(sb);
+
+    // Use preferred model's result (or moondream3 fallback) for the return value
+    const preferredModel = getPreferredModel();
+    const bestResult =
+      modelResults[preferredModel] || modelResults['moondream3'] || Object.values(modelResults)[0];
+
+    if (bestResult) {
+      return {
+        object_type: bestResult.object_type,
+        is_upright: bestResult.is_upright,
+        orientation_matters: true,
+        confidence: bestResult.confidence as any,
+        correction_rotation: {
+          x: bestResult.correction[0],
+          y: bestResult.correction[1],
+          z: bestResult.correction[2],
+        },
+        front_direction: bestResult.front_direction,
+        estimated_height_m: 0,
+        notes: `[CONFIG MODE] ${Object.keys(modelResults).length} models tested. Using ${preferredModel}: ${bestResult.notes}`,
+        vlm_model: preferredModel,
+        model_results: modelResults,
+      };
+    }
+    return null;
+  }
+
+  // Normal mode: use preferred model only
+  const model = getPreferredModel();
+  try {
+    mcpLog(`mugshot VLM: using model "${model}" on contact sheet`, 'info');
+    const result = await analyseImageFromFile(path.resolve(contactSheetPath), 'ask', prompt, {
+      model,
+    });
 
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -730,7 +1265,7 @@ async function analyzeMugshotsWithVLM(
         `mugshot VLM: ${parsed.object_type}, upright=${parsed.is_upright}, orientation_matters=${parsed.orientation_matters}, confidence=${parsed.confidence}`,
         'info'
       );
-      return { ...parsed, vlm_model: result.model };
+      return { ...parsed, vlm_model: result.model || model };
     }
   } catch (e: any) {
     mcpLog(`mugshot VLM: otoy-studio failed: ${e.message}`, 'warn');
@@ -1115,7 +1650,7 @@ export function registerImportTools(
 
   server.tool(
     'analyze_mesh',
-    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE import_geo. Renders 6 mugshots (front/right/top × clay/textured), sends to VLM for upright verification, caches result in .mesh_info.json sidecar. MUST run on every OBJ before placement — import_geo will warn if skipped. Without this, you are guessing orientation and will waste iterations on wrong rotation.',
+    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE import_geo. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). MUST run on every OBJ before placement.',
     {
       obj_path: z.string().describe('Absolute path to OBJ file'),
       scene_context: z
@@ -1131,8 +1666,15 @@ export function registerImportTools(
         .optional()
         .default(false)
         .describe('Ignore cached sidecar, re-run analysis'),
+      configuration: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe(
+          'Configuration mode: run ALL available VLM models, save results to scoreboard for comparison. Use on several meshes, then score to find best model.'
+        ),
     },
-    async ({ obj_path, scene_context, target_height, force_reanalyze }) => {
+    async ({ obj_path, scene_context, target_height, force_reanalyze, configuration }) => {
       try {
         const resolved = path.resolve(obj_path);
         if (!fs.existsSync(resolved)) {
@@ -1148,26 +1690,53 @@ export function registerImportTools(
         if (!force_reanalyze && fs.existsSync(sidecar)) {
           try {
             const cached = JSON.parse(fs.readFileSync(sidecar, 'utf8'));
-            // v3 sidecar (8-view mugshots) is fully cached
-            if (cached.version >= 3 && cached.visual_check?.performed_at) {
+            // v4 sidecar (contact sheet + ground plane) is fully cached
+            if (cached.version >= 4 && cached.visual_check?.performed_at) {
+              // If configuration mode requested but this wasn't a config run, don't use cache
+              if (configuration && !cached.visual_check?.configuration_mode) {
+                mcpLog(
+                  `analyze_mesh: v4 cached but configuration mode requested — re-analyzing`,
+                  'info'
+                );
+              } else {
+                mcpLog(
+                  `analyze_mesh: returning v4 cached sidecar for ${path.basename(resolved)}`,
+                  'info'
+                );
+                const cachedNote = cached.visual_check?.confidence
+                  ? `Cached VLM (${cached.visual_check.confidence} confidence, ${cached.visual_check.protocol || 'legacy'})`
+                  : 'Cached (no VLM data)';
+                return jsonResult({
+                  ...cached,
+                  cached: true,
+                  sidecar_path: sidecar,
+                  instruction:
+                    'Cached analysis returned (v4 with contact sheet + ground plane). Use final_suggestion for transform. Override if scene intent differs.',
+                  ...(artState ? adWorkflow(artState, 'analyze_mesh', cachedNote) : {}),
+                });
+              }
+            }
+            // v3 sidecar (8-view mugshots, no contact sheet) — return with upgrade hint
+            if (cached.version === 3 && cached.visual_check?.performed_at && !configuration) {
               mcpLog(
-                `analyze_mesh: returning v3 cached sidecar for ${path.basename(resolved)}`,
+                `analyze_mesh: returning v3 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
                 'info'
               );
               const cachedNote = cached.visual_check?.confidence
-                ? `Cached VLM (${cached.visual_check.confidence} confidence)`
-                : 'Cached (no VLM data)';
+                ? `Cached v3 VLM (${cached.visual_check.confidence} confidence, upgrade to v4 available)`
+                : 'Cached v3 (no VLM data)';
               return jsonResult({
                 ...cached,
                 cached: true,
+                upgrade_available: true,
                 sidecar_path: sidecar,
                 instruction:
-                  'Cached analysis returned (v3 with 8-view visual check). Use final_suggestion for transform. Override if scene intent differs.',
+                  'Cached v3 analysis (individual mugshots, no contact sheet). Still valid. Use force_reanalyze=true to upgrade to v4 (contact sheet + ground plane) for better orientation accuracy.',
                 ...(artState ? adWorkflow(artState, 'analyze_mesh', cachedNote) : {}),
               });
             }
             // v2 sidecar (4-view) — still valid, return with upgrade hint
-            if (cached.version === 2 && cached.visual_check?.performed_at) {
+            if (cached.version === 2 && cached.visual_check?.performed_at && !configuration) {
               mcpLog(
                 `analyze_mesh: returning v2 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
                 'info'
@@ -1186,7 +1755,7 @@ export function registerImportTools(
               });
             }
             // v1 sidecar — run full analysis
-            mcpLog(`analyze_mesh: v1 sidecar found, upgrading to v3 with visual check`, 'info');
+            mcpLog(`analyze_mesh: v1 sidecar found, upgrading to v4 with contact sheet`, 'info');
           } catch {
             mcpLog(`analyze_mesh: corrupt sidecar, re-analyzing`, 'warn');
           }
@@ -1245,24 +1814,36 @@ export function registerImportTools(
           );
 
           // Send to VLM for analysis — include metadata for informed identification
-          const vlmResult = await analyzeMugshotsWithVLM(mugshotPaths, {
-            filename: path.basename(resolved),
-            category: categoryInfo.category,
-            subcategory: assetFile,
-            extents,
-            tallestAxis: orientation.uprightAxis,
-            geometricGuess: orientation.suggestedRotation,
-            sceneContext: scene_context,
-          });
+          const vlmResult = await analyzeMugshotsWithVLM(
+            mugshotPaths,
+            {
+              filename: path.basename(resolved),
+              category: categoryInfo.category,
+              subcategory: assetFile,
+              extents,
+              tallestAxis: orientation.uprightAxis,
+              geometricGuess: orientation.suggestedRotation,
+              sceneContext: scene_context,
+            },
+            {
+              configuration:
+                configuration || (scene_context || '').toUpperCase().includes('CONFIG'),
+              meshName: baseName,
+              meshPath: resolved,
+            }
+          );
 
           if (vlmResult) {
             const corr = vlmResult.correction_rotation_deg ??
               vlmResult.correction_rotation ?? { x: 0, y: 0, z: 0 };
             visualCheck = {
               performed_at: new Date().toISOString(),
+              protocol: 'contact_sheet',
+              ground_plane: !(extents.y / Math.max(extents.x, extents.z, 0.001) < 0.1),
               vlm_model: vlmResult.vlm_model,
               mugshot_views: MUGSHOT_VIEWS.length,
               mugshot_paths: mugshotPaths.map(p => path.basename(p)),
+              contact_sheet: `${baseName}.mugshot_contact.png`,
               mugshot_dir: path.dirname(mugshotPaths[0] || resolved),
               vlm_response: {
                 object_type: vlmResult.object_type,
@@ -1274,6 +1855,8 @@ export function registerImportTools(
                 estimated_height_m: vlmResult.estimated_height_m,
                 notes: vlmResult.notes,
               },
+              ...(vlmResult.model_results ? { model_results: vlmResult.model_results } : {}),
+              configuration_mode: !!configuration,
               confidence: vlmResult.confidence, // VLM self-assessed confidence
             };
 
@@ -1330,9 +1913,9 @@ export function registerImportTools(
           // Fall back to geometric+semantic only
         }
 
-        // Build v3 sidecar (8-view mugshots, orientation_matters, VLM confidence)
+        // Build v4 sidecar (contact sheet, ground plane, configuration mode)
         const result: any = {
-          version: 3,
+          version: 4,
           obj_file: path.basename(resolved),
           analyzed_at: new Date().toISOString(),
           geometry: {
@@ -1400,10 +1983,10 @@ export function registerImportTools(
           },
         };
 
-        // Write v2 sidecar cache
+        // Write v4 sidecar cache
         try {
           fs.writeFileSync(sidecar, JSON.stringify(result, null, 2), 'utf8');
-          mcpLog(`analyze_mesh: wrote v3 sidecar ${sidecar}`, 'info');
+          mcpLog(`analyze_mesh: wrote v4 sidecar ${sidecar}`, 'info');
         } catch (e: any) {
           mcpLog(`analyze_mesh: failed to write sidecar: ${e.message}`, 'warn');
         }
@@ -1422,6 +2005,135 @@ export function registerImportTools(
         });
       } catch (error: any) {
         mcpLog(`analyze_mesh FAILED: ${error.message}`, 'error');
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── score_mugshot_models ──────────────────────────────────────────
+
+  server.tool(
+    'score_mugshot_models',
+    'Score VLM models from configuration mode runs. Set ground_truth on scoreboard entries first, then call this to compute accuracy per model and set the preferred model.',
+    {
+      set_ground_truth: z
+        .array(
+          z.object({
+            mesh: z.string().describe('Mesh name (matches scoreboard run)'),
+            is_upright: z.boolean(),
+            front_direction: z.string().describe('toward_camera | away | left | right'),
+            correction: z.array(z.number()).length(3).describe('[x, y, z] degrees'),
+          })
+        )
+        .optional()
+        .describe('Set ground truth for meshes before scoring'),
+    },
+    async ({ set_ground_truth }) => {
+      try {
+        const sb = loadScoreboard();
+
+        // Apply ground truth if provided
+        if (set_ground_truth) {
+          for (const gt of set_ground_truth) {
+            const run = sb.runs.find(r => r.mesh === gt.mesh);
+            if (run) {
+              run.ground_truth = {
+                is_upright: gt.is_upright,
+                front_direction: gt.front_direction,
+                correction: gt.correction as [number, number, number],
+              };
+              mcpLog(`mugshot scoring: set ground truth for "${gt.mesh}"`, 'info');
+            } else {
+              mcpLog(`mugshot scoring: no run found for "${gt.mesh}"`, 'warn');
+            }
+          }
+        }
+
+        // Score all models
+        const runsWithTruth = sb.runs.filter(r => r.ground_truth !== null);
+        if (runsWithTruth.length === 0) {
+          saveScoreboard(sb);
+          return jsonResult({
+            message: 'No runs with ground_truth set. Set ground_truth first, then score.',
+            runs: sb.runs.map(r => ({ mesh: r.mesh, has_ground_truth: !!r.ground_truth })),
+          });
+        }
+
+        const modelScores: Record<string, { correct: number; total: number; details: any[] }> = {};
+
+        for (const run of runsWithTruth) {
+          const gt = run.ground_truth!;
+          for (const [model, result] of Object.entries(run.model_results)) {
+            if (!modelScores[model]) modelScores[model] = { correct: 0, total: 0, details: [] };
+            const ms = modelScores[model];
+            ms.total += 3; // 3 criteria per mesh
+
+            const uprightMatch = result.is_upright === gt.is_upright;
+            const frontMatch =
+              result.front_direction.toLowerCase().replace(/[^a-z_]/g, '') ===
+              gt.front_direction.toLowerCase().replace(/[^a-z_]/g, '');
+            const corrClose = result.correction.every(
+              (v, i) => Math.abs(v - gt.correction[i]) <= 15
+            );
+
+            if (uprightMatch) ms.correct++;
+            if (frontMatch) ms.correct++;
+            if (corrClose) ms.correct++;
+
+            ms.details.push({
+              mesh: run.mesh,
+              upright: uprightMatch ? '✓' : `✗ (got ${result.is_upright}, want ${gt.is_upright})`,
+              front: frontMatch
+                ? '✓'
+                : `✗ (got ${result.front_direction}, want ${gt.front_direction})`,
+              correction: corrClose
+                ? '✓'
+                : `✗ (got [${result.correction}], want [${gt.correction}])`,
+            });
+          }
+        }
+
+        // Compute accuracy and find best
+        const ranked: Array<{
+          model: string;
+          accuracy: number;
+          correct: number;
+          total: number;
+          details: any[];
+        }> = [];
+        for (const [model, scores] of Object.entries(modelScores)) {
+          const accuracy =
+            scores.total > 0 ? Math.round((scores.correct / scores.total) * 1000) / 10 : 0;
+          ranked.push({
+            model,
+            accuracy,
+            correct: scores.correct,
+            total: scores.total,
+            details: scores.details,
+          });
+          sb.scores[model] = { accuracy, total: scores.total, correct: scores.correct };
+        }
+        ranked.sort((a, b) => b.accuracy - a.accuracy);
+
+        // Set preferred model to the best performer
+        if (ranked.length > 0) {
+          sb.preferred_model = ranked[0].model;
+          mcpLog(
+            `mugshot scoring: preferred model set to "${ranked[0].model}" (${ranked[0].accuracy}%)`,
+            'info'
+          );
+        }
+
+        saveScoreboard(sb);
+
+        return jsonResult({
+          ranked,
+          preferred_model: sb.preferred_model,
+          meshes_scored: runsWithTruth.length,
+          total_runs: sb.runs.length,
+        });
+      } catch (error: any) {
+        mcpLog(`score_mugshot_models FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }
