@@ -1,7 +1,8 @@
 /**
- * Import & Analysis Tools — import_glb, analyze_mesh
+ * Import & Analysis Tools — import_geo, analyze_mesh
  *
- * import_glb: Converts external 3D assets (GLB/glTF) to OBJ and loads them into Octane.
+ * import_geo: Imports 3D geometry (OBJ, GLB/glTF) into Octane. OBJ loaded directly;
+ *             GLB/glTF converted to OBJ first via Python trimesh.
  * analyze_mesh: Analyzes an OBJ mesh file to suggest orientation, scale, and ground placement.
  *              Results cached in .mesh_info.json sidecar files next to the OBJ.
  *              v2: Includes visual mugshot analysis via VLM for reliable orientation detection.
@@ -747,10 +748,10 @@ export function registerImportTools(
   artState?: ArtDirectionState
 ) {
   server.tool(
-    'import_glb',
-    'Import a GLB/glTF 3D model into the Octane scene. Converts to OBJ, creates mesh + placement + material with texture, and returns all handles. The placement is NOT connected to a geo group — caller must do that. Orientation note: OTOY Studio GLBs are Z-up; apply rotation {90,0,0} on placement transform to stand upright in Octane (Y-up).',
+    'import_geo',
+    'Import a 3D model (OBJ, GLB, glTF) into the Octane scene. Creates mesh + placement + material, returns all handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Placement is NOT connected to a geo group — caller must do that.',
     {
-      glb_path: z.string().describe('Absolute path to GLB file (e.g. C:\\Users\\...\\model.glb)'),
+      file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
       name: z
         .string()
         .optional()
@@ -770,21 +771,25 @@ export function registerImportTools(
         .optional()
         .describe('Roughness value 0-1 for material (default: 0.4)'),
     },
-    async ({ glb_path, name: assetName, metallic, roughness }) => {
+    async ({ file_path, name: assetName, metallic, roughness }) => {
       try {
         // Validate input path
-        if (!fs.existsSync(glb_path)) {
-          return errorResult(new Error(`File not found: ${glb_path}`));
+        if (!fs.existsSync(file_path)) {
+          return errorResult(new Error(`File not found: ${file_path}`));
         }
-        if (!glb_path.toLowerCase().endsWith('.glb') && !glb_path.toLowerCase().endsWith('.gltf')) {
-          return errorResult(new Error('File must be .glb or .gltf'));
+        const ext = path.extname(file_path).toLowerCase();
+        const SUPPORTED = ['.obj', '.glb', '.gltf'];
+        if (!SUPPORTED.includes(ext)) {
+          return errorResult(
+            new Error(`Unsupported format "${ext}". Supported: ${SUPPORTED.join(', ')}`)
+          );
         }
 
         // Derive name from filename if not provided
         const derivedName =
           assetName ||
           path
-            .basename(glb_path, path.extname(glb_path))
+            .basename(file_path, ext)
             .replace(/[^a-zA-Z0-9_-]/g, '_')
             .substring(0, 40);
         const outDir = path.join(ASSETS_DIR, derivedName);
@@ -793,13 +798,64 @@ export function registerImportTools(
         const pathError = validateFilePath(outDir);
         if (pathError) return errorResult(new Error(pathError));
 
-        // Phase 1: Convert GLB → OBJ
-        mcpLog(`import_glb: converting ${glb_path} → ${outDir}/${derivedName}.obj`, 'info');
-        const conv = await convertGlbToObj(glb_path, outDir, derivedName);
-        mcpLog(
-          `import_glb: converted ${conv.vertices} verts, ${conv.faces} faces, ${conv.texturePaths.length} textures`,
-          'info'
-        );
+        // Phase 1: Get OBJ path — convert if GLB/glTF, use directly if OBJ
+        let objPath: string;
+        let texturePaths: string[] = [];
+        let vertices = 0;
+        let faces = 0;
+        let boundsMin: [number, number, number] = [0, 0, 0];
+        let boundsMax: [number, number, number] = [0, 0, 0];
+        let hasMtl = false;
+
+        if (ext === '.obj') {
+          // OBJ — load directly, no conversion needed
+          objPath = path.resolve(file_path);
+          mcpLog(`import_geo: loading OBJ directly: ${objPath}`, 'info');
+
+          // Check for .mtl companion — Octane reads it automatically
+          const objDir = path.dirname(objPath);
+          const mtlPath = objPath.replace(/\.obj$/i, '.mtl');
+          if (fs.existsSync(mtlPath)) {
+            hasMtl = true;
+            mcpLog(`import_geo: found .mtl companion — Octane will load textures from it`, 'info');
+            // Parse .mtl to find referenced texture maps
+            try {
+              const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
+              const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
+              for (const line of mapLines) {
+                const texFile = line.replace(/^map_\w+\s+/, '').trim();
+                const texFullPath = path.resolve(objDir, texFile);
+                if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
+                  texturePaths.push(texFullPath);
+                }
+              }
+              mcpLog(`import_geo: .mtl references ${texturePaths.length} texture(s)`, 'info');
+            } catch {
+              /* mtl parse is best-effort */
+            }
+          }
+          // Also pick up any loose texture files next to OBJ (exclude mugshots from analyze_mesh)
+          if (texturePaths.length === 0) {
+            const siblings = fs.readdirSync(objDir);
+            texturePaths = siblings
+              .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
+              .map(f => path.join(objDir, f));
+          }
+        } else {
+          // GLB/glTF — convert to OBJ
+          mcpLog(`import_geo: converting ${file_path} → ${outDir}/${derivedName}.obj`, 'info');
+          const conv = await convertGlbToObj(file_path, outDir, derivedName);
+          mcpLog(
+            `import_geo: converted ${conv.vertices} verts, ${conv.faces} faces, ${conv.texturePaths.length} textures`,
+            'info'
+          );
+          objPath = conv.objPath;
+          texturePaths = conv.texturePaths;
+          vertices = conv.vertices;
+          faces = conv.faces;
+          boundsMin = conv.boundsMin;
+          boundsMax = conv.boundsMax;
+        }
 
         // Phase 2: Create NT_GEO_MESH and set filename
         const rootGraph = await client.getRootNodeGraph();
@@ -818,7 +874,7 @@ export function registerImportTools(
           {
             objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
             attribute_id: AttributeId.A_FILENAME,
-            string_value: conv.objPath.replace(/\//g, '\\'),
+            string_value: objPath.replace(/\//g, '\\'),
             evaluate: false,
           },
           120_000
@@ -865,8 +921,11 @@ export function registerImportTools(
             enterWrapperNode: true,
           });
           transformHandle = extractHandle(connResult) ?? 0;
+          if (transformHandle) {
+            client.sceneCache.addNode(transformHandle, 'Transform', 'NT_TRANSFORM_VALUE', 0);
+          }
         } catch (e: any) {
-          mcpLogLazy('verbose', () => `[import:glb:transform_child] ${e?.message ?? e}`);
+          mcpLogLazy('verbose', () => `[import:geo:transform_child] ${e?.message ?? e}`);
           /* no transform child */
         }
 
@@ -892,8 +951,9 @@ export function registerImportTools(
         });
 
         let texHandle = 0;
-        // If textures were exported, create NT_TEX_IMAGE and connect to albedo
-        if (conv.texturePaths.length > 0) {
+        // If OBJ has .mtl, Octane loads textures internally — don't override albedo.
+        // Only create explicit texture node for GLB conversions or loose textures without .mtl.
+        if (texturePaths.length > 0 && !hasMtl) {
           const texResult = await client.callMethod('ApiNode', 'create', {
             type: NodeTypeId.NT_TEX_IMAGE,
             ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
@@ -912,7 +972,7 @@ export function registerImportTools(
               {
                 objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
                 attribute_id: AttributeId.A_FILENAME,
-                string_value: conv.texturePaths[0].replace(/\//g, '\\'),
+                string_value: texturePaths[0].replace(/\//g, '\\'),
                 evaluate: false,
               },
               120_000
@@ -961,19 +1021,32 @@ export function registerImportTools(
         }
 
         mcpLog(
-          `import_glb: complete — mesh=${meshHandle} placement=${placementHandle} material=${matHandle}`,
+          `import_geo: complete — mesh=${meshHandle} placement=${placementHandle} material=${matHandle} tex=${texHandle || 'none'}`,
           'info'
         );
 
         // Compute mesh extents for orientation help
         const extents = [
-          conv.boundsMax[0] - conv.boundsMin[0],
-          conv.boundsMax[1] - conv.boundsMin[1],
-          conv.boundsMax[2] - conv.boundsMin[2],
+          boundsMax[0] - boundsMin[0],
+          boundsMax[1] - boundsMin[1],
+          boundsMax[2] - boundsMin[2],
         ];
+
+        // Check for cached mesh_info sidecar (from prior analyze_mesh)
+        const sidecarPath = objPath.replace(/\.obj$/i, '.mesh_info.json');
+        let meshInfo: any = null;
+        if (fs.existsSync(sidecarPath)) {
+          try {
+            meshInfo = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'));
+            mcpLog(`import_geo: found cached mesh_info sidecar`, 'info');
+          } catch {
+            /* ignore parse errors */
+          }
+        }
 
         return jsonResult({
           success: true,
+          source_format: ext,
           handles: {
             mesh: meshHandle,
             placement: placementHandle,
@@ -981,31 +1054,50 @@ export function registerImportTools(
             material: matHandle,
             texture: texHandle || undefined,
           },
-          conversion: {
-            obj_path: conv.objPath,
-            textures: conv.texturePaths,
-            vertices: conv.vertices,
-            faces: conv.faces,
-          },
+          obj_path: objPath,
+          textures: texturePaths,
+          vertices,
+          faces,
           bounds: {
-            min: conv.boundsMin,
-            max: conv.boundsMax,
+            min: boundsMin,
+            max: boundsMax,
             extents,
           },
-          orientation_hint:
-            'OTOY Studio GLBs are Z-up. Set placement transform rotation to {90,0,0} to stand upright in Octane (Y-up). Orbit 3 views (front/right/top) to discover facing direction before framing.',
+          mesh_info: meshInfo
+            ? {
+                rotation_deg: meshInfo.final_suggestion?.rotation_deg,
+                scale_factor: meshInfo.final_suggestion?.scale_factor,
+                ground_offset_y: meshInfo.final_suggestion?.ground_offset_y,
+                category: meshInfo.semantic?.category,
+              }
+            : undefined,
+          has_mtl: hasMtl,
+          has_texture: texHandle > 0 || hasMtl,
+          texture_note: hasMtl
+            ? 'OBJ has .mtl — Octane loads textures internally. Do NOT override albedo. Only set roughness/metallic/specular/IOR on the material.'
+            : undefined,
           next_steps: [
-            `FIRST: call analyze_mesh on ${conv.objPath} — generates mugshots for VLM orientation analysis`,
+            ...(meshInfo
+              ? []
+              : [
+                  `FIRST: call analyze_mesh on ${objPath} — generates mugshots for VLM orientation analysis`,
+                ]),
             `Connect placement (${placementHandle}) to geo group via pin_index N`,
-            `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {90, Y_rotation, 0})`,
+            `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {rx, ry, rz})`,
             `Set transform position: set_attribute(${transformHandle}, ${AttributeId.A_TRANSLATION}, 11, {x, y, z})`,
             `Set transform scale: set_attribute(${transformHandle}, ${AttributeId.A_SCALE}, 11, {s, s, s})`,
+            ...(meshInfo
+              ? [
+                  `Apply cached suggestion: rotation=${JSON.stringify(meshInfo.final_suggestion?.rotation_deg)}, scale=${meshInfo.final_suggestion?.scale_factor}`,
+                ]
+              : []),
           ],
-          instruction:
-            'Asset imported. NEXT: call analyze_mesh on the OBJ path to generate mugshots and get VLM-verified orientation before placing in scene.',
+          instruction: meshInfo
+            ? 'Asset imported with cached mesh analysis. Apply suggested transforms, connect to geo group, then fit_camera + save_render to verify.'
+            : 'Asset imported. NEXT: call analyze_mesh on the OBJ path to generate mugshots and get VLM-verified orientation before placing in scene.',
         });
       } catch (error: any) {
-        mcpLog(`import_glb FAILED: ${error.message}`, 'error');
+        mcpLog(`import_geo FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }

@@ -58,7 +58,20 @@ For compat-mode quirks (mesh unloading, etc.) see `ALPHA5_COMPAT.md`.
 
 ### Attribute Types
 
-AT_BOOL=1, AT_INT=3, AT_INT2=4, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_STRING=14
+| Type      | ID  | Notes                                                    |
+| --------- | --- | -------------------------------------------------------- |
+| AT_BOOL   | 1   |                                                          |
+| AT_INT    | 3   | Scalar int (auto-extracts .x from int4 responses)        |
+| AT_INT2   | 4   |                                                          |
+| AT_INT3   | 5   |                                                          |
+| AT_INT4   | 6   | **Used by int value nodes** (pass scalar → auto-wraps)   |
+| AT_FLOAT  | 9   | Scalar float (auto-extracts .x from float4 responses)    |
+| AT_FLOAT2 | 90  | Note: 90 not 10                                          |
+| AT_FLOAT3 | 11  | Transform, color {x,y,z}                                 |
+| AT_FLOAT4 | 12  | **Used by float value nodes** (pass scalar → auto-wraps) |
+| AT_STRING | 14  |                                                          |
+
+**Float/int value nodes** (children of daylight, sun direction, etc.) use `AT_FLOAT4`/`AT_INT4` internally, even for logically-scalar values. You can pass a plain number to `set_attribute` with `expected_type=12` and it auto-wraps to `{x:val,y:0,z:0,w:0}`. Reading with `expected_type=9` (AT_FLOAT) auto-extracts the `.x` component.
 
 ---
 

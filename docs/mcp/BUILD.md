@@ -101,21 +101,34 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### Phase 1: First Visual (get render on screen ASAP)
 
-| Step | Action                                                                                                                                                               | Result                                                                                                                                                                                                                                                               |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)`                                                                                                                                       | RT handle + pin handles                                                                                                                                                                                                                                              |
-| 2    | Create first mesh (NT_GEO_MESH + .obj or NT_GEO_OBJECT) + LOUD material `{1,0,0}` → placement → geo group → RT `pin_index:3`                                         | **Object exists**. Wiring details: `REFERENCE.md` §5. **Must follow mesh loading pattern** — see `REFERENCE.md` §1. Verify with `get_geometry_stats()` (triCount > 0).                                                                                               |
-| 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                                                     | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
-| 4    | Create environment → `connect_nodes(env, RT, pin_id:43)`. **Do not** call `get_node_info` on env children immediately after connecting — wait or sequence carefully. | Sky + lighting appear. DOF is auto-disabled on new RTs.                                                                                                                                                                                                              |
+**CLAY MODE ON.** Call `set_clay_mode(1)` before first render. All Phase 1 renders are clay — no materials, no lighting tuning. The only goal is correct composition: right objects, right framing, right camera.
 
-### Phase 2: Materials & Lighting
+| Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(1)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
+| 2    | Import mesh via `import_geo(file_path)` → placement → geo group → RT `pin_index:3`                                                        | **Object exists**. `import_geo` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                     |
+| 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
+| 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |
+| 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `critique_render` must pass composition before Phase 2.**                                                                                                                                                                |
 
-| Step | Action                                                    | Notes                              |
-| ---- | --------------------------------------------------------- | ---------------------------------- |
-| 5    | Swap loud material for real material                      | Gold, glass, etc. — visible change |
-| 6    | Create PT kernel → `connect_nodes(kernel, RT, pin_id:89)` | Better render quality              |
-| 7    | Tune environment (sunset hour, turbidity, etc.)           | Mood change visible immediately    |
-| 8    | Render + save                                             | Checkpoint                         |
+**Hard rules for Phase 1:**
+
+- **Clay mode stays ON** until `critique_render` composition score passes. `critique_render` warns if clay is off during early iterations.
+- **Only `fit_camera`** — never `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry.
+- **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
+- **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
+
+### Phase 2: Materials & Lighting (ONLY after Phase 1 composition passes)
+
+| Step | Action                                                  | Notes                                                 |
+| ---- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 5    | `set_clay_mode(0)` — turn off clay                      | Materials become visible                              |
+| 6    | `suggest_lighting(mood)` → apply lighting setup         | Use SEGA-driven suggestions, not manual sundir poking |
+| 7    | `suggest_material(surface_type)` → apply PBR properties | Respect .mtl textures — don't override albedo         |
+| 8    | Tune environment (sunset hour, turbidity, etc.)         | Mood change visible immediately                       |
+| 9    | Render + save                                           | Checkpoint                                            |
+
+**Use `suggest_lighting` and `suggest_material`** — they take SEGA intent into account. Don't manually poke at sundir children, turbidity values, or material pin floats unless the suggest tools don't cover your case.
 
 ### Phase 3: Assembly
 
@@ -131,7 +144,7 @@ For each additional object:
 
 ### Phase 4: Polish
 
-Hero camera, floor, fine-tune lighting, final beauty pass `save_render`.
+Hero camera, fine-tune lighting, final beauty pass `save_render`.
 
 **Hero camera comes at the end.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_composition`) for the beauty pass.
 

@@ -38,8 +38,13 @@ export function extractOtoyStudioToken(mcpJsonPath?: string): string | null {
       if (!args) continue;
       const headerIdx = args.indexOf('--header');
       if (headerIdx >= 0 && args[headerIdx + 1]) {
-        const match = args[headerIdx + 1].match(/Bearer\s+(\S+)/);
-        if (match) return match[1];
+        // Resolve ${ENV_VAR} placeholders from process.env
+        const resolved = args[headerIdx + 1].replace(
+          /\$\{(\w+)\}/g,
+          (_, name) => process.env[name] || ''
+        );
+        const match = resolved.match(/Bearer\s+(\S+)/);
+        if (match && match[1]) return match[1];
       }
     } catch (e: any) {
       mcpLogLazy('verbose', () => `[vision:otoy-studio:extractToken:${p}] ${e?.message ?? e}`);
@@ -53,32 +58,65 @@ const WORKER_BASE = 'https://otoy-studio-mcp.charlie-1e5.workers.dev';
 
 /**
  * Upload an image file to OTOY Studio's R2 storage.
- * Returns both the proxy download URL and the full R2 signed URL.
+ * Uses the MCP JSON-RPC protocol to call request_upload_url, then PUTs the file.
  */
 export async function uploadImage(filePath: string, token: string): Promise<UploadResult> {
   const filename = path.basename(filePath);
 
-  // Step 1: Get upload URL via MCP proxy
-  const resp = await fetch(`${WORKER_BASE}/s/upload?filename=${encodeURIComponent(filename)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  // Step 1: Get upload URL via MCP JSON-RPC (same protocol as callAnalyseImage)
+  const resp = await fetch(`${WORKER_BASE}/mcp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: { name: 'request_upload_url', arguments: { filename } },
+      id: '1',
+    }),
   });
 
   if (!resp.ok) {
-    // Fallback: try the tool-style endpoint
-    const resp2 = await fetch(
-      `${WORKER_BASE}/upload-url?filename=${encodeURIComponent(filename)}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    if (!resp2.ok) {
-      throw new Error(`Failed to get upload URL: ${resp2.status} ${await resp2.text()}`);
-    }
-    const data = await resp2.json();
-    return parseUploadResponse(data, filePath, token);
+    throw new Error(`Failed to get upload URL: ${resp.status} ${await resp.text()}`);
   }
 
-  const data = await resp.json();
+  // Parse JSON-RPC response (may be SSE or plain JSON)
+  let data: any = null;
+  const contentType = resp.headers.get('content-type') || '';
+
+  if (contentType.includes('text/event-stream')) {
+    const body = await resp.text();
+    for (const line of body.split('\n')) {
+      if (line.startsWith('data:')) {
+        try {
+          const evt = JSON.parse(line.slice(5).trim());
+          if (evt.result?.content) {
+            const textContent = evt.result.content.find((c: any) => c.type === 'text');
+            if (textContent) data = JSON.parse(textContent.text);
+          }
+        } catch {
+          /* skip */
+        }
+      }
+    }
+  } else {
+    const rpc = await resp.json();
+    if (rpc.error)
+      throw new Error(
+        `request_upload_url RPC error: ${rpc.error.message || JSON.stringify(rpc.error)}`
+      );
+    const content = rpc.result?.content;
+    if (Array.isArray(content)) {
+      const textContent = content.find((c: any) => c.type === 'text');
+      if (textContent) data = JSON.parse(textContent.text);
+    }
+  }
+
+  if (!data) throw new Error('request_upload_url returned no data');
+
   return parseUploadResponse(data, filePath, token);
 }
 
@@ -130,7 +168,126 @@ export interface AnalyseImageResult {
 }
 
 /**
- * Call analyse_image on the OTOY Studio worker via Streamable HTTP (JSON-RPC).
+ * Call an MCP tool on the OTOY Studio worker via JSON-RPC.
+ * Returns the text content from the response.
+ */
+async function callMcpTool(
+  toolName: string,
+  args: Record<string, string>,
+  token: string
+): Promise<string> {
+  const resp = await fetch(`${WORKER_BASE}/mcp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: { name: toolName, arguments: args },
+      id: '1',
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`OTOY Studio ${toolName} ${resp.status}: ${errText.substring(0, 300)}`);
+  }
+
+  const contentType = resp.headers.get('content-type') || '';
+  let text = '';
+
+  if (contentType.includes('text/event-stream')) {
+    const body = await resp.text();
+    for (const line of body.split('\n')) {
+      if (line.startsWith('data:')) {
+        try {
+          const evt = JSON.parse(line.slice(5).trim());
+          if (evt.result?.content) {
+            text = evt.result.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text)
+              .join('\n');
+          }
+        } catch {
+          /* skip */
+        }
+      }
+    }
+  } else {
+    const data = await resp.json();
+    if (data.error) {
+      throw new Error(`${toolName} RPC error: ${data.error.message || JSON.stringify(data.error)}`);
+    }
+    const content = data.result?.content;
+    if (Array.isArray(content)) {
+      text = content
+        .filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text)
+        .join('\n');
+    }
+  }
+
+  return text;
+}
+
+/**
+ * Poll check_job until completion or timeout.
+ * analyse_image is async — returns a requestId that needs polling.
+ */
+async function pollJob(
+  requestId: string,
+  token: string,
+  timeoutMs: number = 90_000
+): Promise<string> {
+  const startMs = Date.now();
+  const pollIntervalMs = 3000;
+
+  // Initial wait before first poll
+  await new Promise(r => setTimeout(r, 3000));
+
+  while (Date.now() - startMs < timeoutMs) {
+    const text = await callMcpTool('check_job', { request_id: requestId }, token);
+    let result: any;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      // Non-JSON response — might be the final text itself
+      if (text && text.length > 20) return text;
+      throw new Error(`check_job returned unparseable response: ${text.substring(0, 200)}`);
+    }
+
+    if (result.status === 'completed') {
+      // Vision results are in result.vision.answer or result.vision
+      if (result.vision?.answer) return result.vision.answer;
+      if (result.vision?.caption) return result.vision.caption;
+      if (typeof result.vision === 'string') return result.vision;
+      // Fallback: return the whole vision object as JSON
+      if (result.vision) return JSON.stringify(result.vision);
+      return text;
+    }
+
+    if (result.status === 'failed') {
+      throw new Error(`Vision job failed: ${result.error || 'unknown error'}`);
+    }
+
+    // Still pending — wait and retry
+    mcpLogLazy(
+      'verbose',
+      () =>
+        `VISION: polling ${requestId} (${result.status}, elapsed ${Math.round((Date.now() - startMs) / 1000)}s)`
+    );
+    await new Promise(r => setTimeout(r, pollIntervalMs));
+  }
+
+  throw new Error(`Vision job ${requestId} timed out after ${timeoutMs}ms`);
+}
+
+/**
+ * Call analyse_image on the OTOY Studio worker via JSON-RPC.
+ * Handles the async flow: submit → poll check_job → return result.
  */
 export async function callAnalyseImage(
   imageUrl: string,
@@ -151,71 +308,27 @@ export async function callAnalyseImage(
   );
   const startMs = Date.now();
 
-  const resp = await fetch(`${WORKER_BASE}/mcp`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json, text/event-stream',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'tools/call',
-      params: { name: 'analyse_image', arguments: args },
-      id: '1',
-    }),
-  });
+  const text = await callMcpTool('analyse_image', args, token);
 
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`OTOY Studio analyse_image ${resp.status}: ${errText.substring(0, 300)}`);
-  }
-
-  const contentType = resp.headers.get('content-type') || '';
-  let text = '';
-
-  if (contentType.includes('text/event-stream')) {
-    // SSE response — parse event stream for the result
-    const body = await resp.text();
-    for (const line of body.split('\n')) {
-      if (line.startsWith('data:')) {
-        try {
-          const evt = JSON.parse(line.slice(5).trim());
-          if (evt.result?.content) {
-            text = evt.result.content
-              .filter((c: any) => c.type === 'text')
-              .map((c: any) => c.text)
-              .join('\n');
-          }
-        } catch {
-          /* skip non-JSON lines */
-        }
-      }
+  // Check if response is an async job ticket (contains requestId)
+  let resultText = text;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed.requestId) {
+      mcpLog(`VISION/otoy-studio: async job ${parsed.requestId}, polling…`, 'info');
+      resultText = await pollJob(parsed.requestId, token);
     }
-  } else {
-    // JSON-RPC response
-    const data = await resp.json();
-    if (data.error) {
-      throw new Error(
-        `analyse_image RPC error: ${data.error.message || JSON.stringify(data.error)}`
-      );
-    }
-    const content = data.result?.content;
-    if (Array.isArray(content)) {
-      text = content
-        .filter((c: any) => c.type === 'text')
-        .map((c: any) => c.text)
-        .join('\n');
-    }
+  } catch {
+    // Not JSON — treat as direct result text
   }
 
   const elapsed = Date.now() - startMs;
   mcpLog(
-    `VISION/otoy-studio: analyse_image responded in ${elapsed}ms (${text.length} chars)`,
+    `VISION/otoy-studio: analyse_image responded in ${elapsed}ms (${resultText.length} chars)`,
     'info'
   );
 
-  return { text, model: options?.model || 'moondream3' };
+  return { text: resultText, model: options?.model || 'moondream3' };
 }
 
 /**

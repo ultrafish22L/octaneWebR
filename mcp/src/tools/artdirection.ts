@@ -42,10 +42,10 @@ import {
 import {
   critiqueRender as visionCritique,
   analyzeReference as visionAnalyze,
+  calibrateReference as visionCalibrate,
 } from '../vision/index';
 import {
   buildCritiquePrompt as buildVisionCritiquePrompt,
-  buildComparisonPrompt,
   buildReferenceAnalysisPrompt as buildVisionRefPrompt,
 } from '../vision/prompts';
 
@@ -658,21 +658,68 @@ export function registerArtDirectionTools(
 
       const analysisPrompt = buildVisionRefPrompt(params.scene_description, params.scale_hint);
 
-      // Try external vision analysis first
-      const visionResult = await visionAnalyze(resolved, analysisPrompt);
+      // Run vision analysis + calibration in parallel
+      const [visionResult, calibResult] = await Promise.all([
+        visionAnalyze(resolved, analysisPrompt),
+        visionCalibrate(resolved),
+      ]);
+
+      // Store calibration in artState for later critique_render calls
+      if (calibResult.calibration) {
+        // Store on any spec that references this image
+        for (const spec of Object.values((artState as any).specs || {})) {
+          const s = spec as any;
+          if (s.referenceImagePath && path.resolve(s.referenceImagePath) === resolved) {
+            s.calibration = calibResult.calibration;
+          }
+        }
+        // Also store on artState directly for lookup
+        (artState as any)._lastCalibration = calibResult.calibration;
+        (artState as any)._lastCalibrationPath = resolved;
+      }
+
       if (visionResult && visionResult.backend !== 'self') {
-        return jsonResult({
-          image_path: resolved,
-          analysis: visionResult.data,
-          raw_analysis: visionResult.data ? undefined : visionResult.raw,
-          backend: visionResult.backend,
-          model: visionResult.model,
-          scale_hint: params.scale_hint,
-          instruction: visionResult.data
-            ? 'Vision analysis complete. Feed the analysis data into plan_composition, scaling relative positions by scale_hint.'
-            : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_composition.',
-          ...adWorkflow(artState, 'analyze_reference'),
+        const content: Array<{ type: 'text'; text: string }> = [];
+        if (visionResult.promptSent) {
+          content.push({
+            type: 'text',
+            text: `--- VLM ANALYSIS PROMPT ---\n${visionResult.promptSent}\n--- END PROMPT ---`,
+          });
+        }
+        if (visionResult.vlmRawResponse) {
+          content.push({
+            type: 'text',
+            text: `--- VLM ANALYSIS RESPONSE ---\n${visionResult.vlmRawResponse}\n--- END RESPONSE ---`,
+          });
+        }
+        if (calibResult.calibration) {
+          content.push({
+            type: 'text',
+            text: `--- VLM CALIBRATION (cached for critique) ---\n${calibResult.calibration.composition}\n--- END CALIBRATION ---`,
+          });
+        }
+        content.push({
+          type: 'text',
+          text: JSON.stringify(
+            {
+              image_path: resolved,
+              analysis: visionResult.data,
+              raw_analysis: visionResult.data ? undefined : visionResult.raw,
+              backend: visionResult.backend,
+              model: visionResult.model,
+              scale_hint: params.scale_hint,
+              calibration_cached: !!calibResult.calibration,
+              calibration_keywords: calibResult.calibration?.keywords?.slice(0, 20),
+              instruction: visionResult.data
+                ? 'Vision analysis complete. Calibration cached. Feed the analysis data into plan_composition, scaling relative positions by scale_hint.'
+                : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_composition.',
+              ...adWorkflow(artState, 'analyze_reference'),
+            },
+            null,
+            2
+          ),
         });
+        return { content };
       }
 
       // Fallback: return prompt for self-analysis (v1 behavior)
@@ -727,6 +774,22 @@ export function registerArtDirectionTools(
 
         const iteration = artState.getIterationCount(params.spec_name) + 1;
         const warnings: string[] = [];
+
+        // Clay mode check — composition should be validated before lighting
+        if (iteration <= 2) {
+          try {
+            const clayResult = await client.callMethod('ApiRenderEngine', 'clayMode', {});
+            const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
+            if (clayMode === 0) {
+              warnings.push(
+                'CLAY MODE OFF during composition check. Use set_clay_mode(1) for Phase 1 composition validation — lighting/materials distract from framing assessment. Only disable clay after composition passes.'
+              );
+            }
+          } catch {
+            /* clay mode check is advisory */
+          }
+        }
+
         if (artState.isStagnating(params.spec_name))
           warnings.push(
             'STAGNATING: Last 2 iterations improved <0.3. Redesign the plan instead of tweaking.'
@@ -734,19 +797,23 @@ export function registerArtDirectionTools(
         if (iteration > MAX_ITERATIONS)
           warnings.push(`EXHAUSTED: ${iteration} iterations. Step back and rethink the layout.`);
 
-        // Try external vision critique
-        const critiquePrompt = params.reference_image_path
-          ? buildComparisonPrompt(spec)
-          : buildVisionCritiquePrompt(spec);
+        // Look up cached calibration from spec or artState
+        const calibration =
+          spec.calibration ||
+          ((artState as any)._lastCalibration as
+            | import('../ArtDirectionState').CachedCalibration
+            | undefined);
 
+        // 1 VLM call — composition-focused critique of the render only
+        const critiquePrompt = buildVisionCritiquePrompt(spec);
         const visionResult = await visionCritique(
           resolved,
           critiquePrompt,
-          params.reference_image_path ? path.resolve(params.reference_image_path) : undefined
+          calibration || undefined
         );
 
         if (visionResult) {
-          // External vision worked — record and return scores directly
+          // Record critique
           const record: CritiqueRecord = {
             iteration,
             overallScore: visionResult.overall,
@@ -758,29 +825,65 @@ export function registerArtDirectionTools(
           };
           artState.addCritique(params.spec_name, record);
 
-          return jsonResult({
-            render_path: resolved,
-            spec_name: params.spec_name,
-            iteration,
-            vision_backend: visionResult.backend,
-            vision_model: visionResult.model,
-            scores: visionResult.scores,
-            overall: visionResult.overall,
-            passed: visionResult.passed,
-            corrections: visionResult.corrections,
-            observations: visionResult.observations || visionResult.differences,
-            warnings,
-            stagnating: artState.isStagnating(params.spec_name),
-            exhausted: artState.isExhausted(params.spec_name),
-            instruction: visionResult.passed
-              ? 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
-              : visionResult.scores.framing < 3
-                ? 'FRAMING FAILURE. Call fit_camera to reframe before any other changes. Do not touch lighting or materials until framing ≥ 3.'
-                : artState.isActive
-                  ? `NOT PASSED (${visionResult.overall.toFixed(1)}/5). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
-                  : `Vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
-            ...adWorkflow(artState, 'critique_render'),
+          const content: Array<{ type: 'text'; text: string }> = [];
+          if (visionResult.promptSent) {
+            content.push({
+              type: 'text',
+              text: `--- VLM PROMPT SENT ---\n${visionResult.promptSent}\n--- END PROMPT ---`,
+            });
+          }
+          if (visionResult.vlmRawResponse) {
+            content.push({
+              type: 'text',
+              text: `--- VLM RAW RESPONSE (render) ---\n${visionResult.vlmRawResponse}\n--- END RESPONSE ---`,
+            });
+          }
+          if (visionResult.calibrationDescription) {
+            content.push({
+              type: 'text',
+              text: `--- CALIBRATION (concept art, cached) ---\n${visionResult.calibrationDescription}\n--- END CALIBRATION ---`,
+            });
+          }
+          if (visionResult.serverScore) {
+            content.push({
+              type: 'text',
+              text: `--- SERVER SCORE ---\n${JSON.stringify(visionResult.serverScore, null, 2)}\n--- END SCORE ---`,
+            });
+          }
+          content.push({
+            type: 'text',
+            text: JSON.stringify(
+              {
+                render_path: resolved,
+                spec_name: params.spec_name,
+                iteration,
+                vision_backend: visionResult.backend,
+                vision_model: visionResult.model,
+                render_description: visionResult.description,
+                top_fix: visionResult.topFix,
+                server_match_score: visionResult.serverScore?.overall,
+                server_passed: visionResult.serverScore?.passed,
+                scores: visionResult.scores,
+                overall: visionResult.overall,
+                passed: visionResult.passed,
+                corrections: visionResult.corrections,
+                warnings,
+                stagnating: artState.isStagnating(params.spec_name),
+                exhausted: artState.isExhausted(params.spec_name),
+                instruction: visionResult.passed
+                  ? 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
+                  : visionResult.scores.framing < 3
+                    ? 'FRAMING FAILURE. Call fit_camera to reframe before any other changes. Do not touch lighting or materials until framing ≥ 3.'
+                    : artState.isActive
+                      ? `NOT PASSED (${visionResult.overall.toFixed(1)}/5). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
+                      : `Vision scored ${visionResult.overall.toFixed(1)}/5. Apply corrections and re-render.`,
+                ...adWorkflow(artState, 'critique_render'),
+              },
+              null,
+              2
+            ),
           });
+          return { content };
         }
 
         // Fallback: return prompt for self-critique (v1 behavior)

@@ -35,6 +35,20 @@ export interface CameraSpec {
   compositionRule: 'rule-of-thirds' | 'centered' | 'golden-ratio' | 'diagonal';
 }
 
+/** Cached VLM calibration of concept art — run once, used for all critique comparisons. */
+export interface CachedCalibration {
+  /** VLM's composition description of concept art (same prompt as render critique) */
+  composition: string;
+  /** VLM's semantic dimension estimates for concept art */
+  semanticEstimates?: Record<string, number>;
+  /** Extracted keywords from calibration description */
+  keywords?: string[];
+  /** Which VLM model produced this calibration */
+  vlmModel: string;
+  /** When calibration was generated */
+  timestamp: number;
+}
+
 export interface CompositionSpec {
   name: string;
   description: string;
@@ -47,6 +61,8 @@ export interface CompositionSpec {
   sceneExtents: { min: Vec3; max: Vec3 };
   /** SEGA semantic target vector — links composition to artistic intent. */
   semanticTarget?: Record<string, number>;
+  /** Cached VLM calibration of concept art */
+  calibration?: CachedCalibration;
 }
 
 export interface CorrectionEntry {

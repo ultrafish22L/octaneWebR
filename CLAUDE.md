@@ -36,17 +36,21 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 4. `plan_composition` → validated layout → then `validate_layout` to confirm geometry
 5. `suggest_placement` for each object → collision-free positions
 
-**Phase 1 — Frame** (geometry + camera ONLY) 6. Build RT → first mesh + loud material `{1,0,0}` → `start_render`. **Read `BUILD.md` Phase 1 for wiring details.** 7. `fit_camera()` → `save_render` + `preview_screenshot` → verify framing visually 8. Place remaining objects → `fit_camera()` after EACH → `register_scene_object` for each 9. **GATE: render + verify ALL objects visible and properly framed. Do NOT proceed to Phase 2 until framing is correct.**
+**Phase 1 — Frame** (geometry + camera in CLAY MODE) 6. `set_clay_mode(1)` → Build RT → `import_geo(file_path)` → `start_render`. **Read `BUILD.md` Phase 1 for wiring details.** 7. `fit_camera()` → `save_render` + `preview_screenshot` → verify framing visually 8. Place remaining objects → `fit_camera()` after EACH → `register_scene_object` for each 9. **GATE: `critique_render` must pass composition. Do NOT proceed to Phase 2 until composition passes. Clay stays ON.**
 
-**Phase 2 — Dress** (materials, lighting, mood — ONLY after Phase 1 gate passes) 10. `set_artistic_intent` (preset or NL from recipe mood) 11. `suggest_lighting` → build lights (depends on camera-subject geometry from Phase 1) 12. `suggest_material` → apply PBR properties. **TEXTURE RULE: if mesh has .mtl textures, do NOT override albedo — only apply roughness/metallic/specular/IOR.** 13. Environment setup (HDRI or sky)
+**Phase 2 — Dress** (materials, lighting, mood — ONLY after Phase 1 composition passes) 10. `set_clay_mode(0)` → `set_artistic_intent` (preset or NL from recipe mood) 11. `suggest_lighting` → apply lighting setup (uses SEGA intent — don't manually poke sundir) 12. `suggest_material` → apply PBR properties. **TEXTURE RULE: if mesh has .mtl textures, do NOT override albedo — only apply roughness/metallic/specular/IOR.** 13. Environment setup (HDRI or sky)
 
 **Phase 3 — Critique** (ITERATE — do not run once and stop) 14. `critique_render` + `semantic_critique` — framing score must be ≥3 or critique returns FRAMING FAILURE 15. If framing < 3 → go back to Phase 1 (fix camera, not lighting) 16. `apply_corrections` → fix worst dimension → re-render → `critique_render` again 17. If `semantic_critique` shows gaps → `adjust_artistic_intent` to close them → re-render 18. **LOOP 16-17 until passed=true or exhausted=true. Do NOT stop after one critique.** 19. Save .orbx at milestones.
 
 ### Hard Rules
 
 - **Visual verify EVERY mutation** — `save_render` (engine truth) + `preview_screenshot` (user viewport), COMPARE both. No exceptions.
+- **Clay mode for Phase 1** — `set_clay_mode(1)` before first render. Keep clay ON until `critique_render` composition passes. No lighting/material work in clay.
+- **`fit_camera()` only** — never `set_camera` to work around framing problems. If `fit_camera` frames wrong, fix the geometry (e.g. oversized floor plane). Never bypass auto-framing.
+- **No infinite floor planes** — floor at scale 30 = 300-unit bounds = useless `fit_camera`. Keep ground geometry scene-sized (≤3x scene width).
 - **`fit_camera()`** after every geo placement — only way to verify all geo visible
 - **Framing before aesthetics** — never adjust lighting/mood until camera framing is confirmed
+- **Use `suggest_lighting`/`suggest_material`** — don't manually poke sundir children or material pin floats. The suggest tools use SEGA intent.
 - **Preserve mesh textures** — if OBJ has .mtl + .png textures, do NOT replace albedo with flat colors. `suggest_material` albedo is for untextured meshes only.
 - **Critique loop ITERATES** — run critique_render → apply_corrections → fix → re-render → critique_render again. Do NOT stop after one critique. Loop until passed=true or exhausted=true.
 - **`semantic_critique`** alongside `critique_render` — if gaps found, call `adjust_artistic_intent` to close them

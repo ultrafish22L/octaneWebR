@@ -1,27 +1,25 @@
 /**
  * VisionCritic — orchestrates vision calls for render critique via OTOY Studio.
  *
- * Single backend: otoy-studio analyse_image (moondream3 / florence-2 / llava-next).
- * Falls back to 'self' (prompt-only) when no OTOY Studio token is available.
+ * Architecture:
+ * - calibrateReference(): Run once on concept art → cached calibration (C)
+ * - critiqueRender(): 1 VLM call per render → description compared against calibration
+ * - Server-side scoring via scoring.ts (keyword overlap + composition match)
+ * - VLM just describes. AD reasons. Server scores.
  */
 
-import path from 'path';
 import { mcpLog } from '../OctaneMcpClient';
-import {
-  extractOtoyStudioToken,
-  analyseImageFromFile,
-  callAnalyseImage,
-  uploadImage,
-} from './otoy-studio';
-import { parseCritiqueResponse } from './prompts';
+import { extractOtoyStudioToken, analyseImageFromFile } from './otoy-studio';
+import { parseCritiqueResponse, buildCalibrationPrompt } from './prompts';
 import { PASS_THRESHOLD, MIN_DIMENSION_SCORE } from '../ArtDirectionState';
+import type { CachedCalibration } from '../ArtDirectionState';
+import { computeServerScore, type ServerScore } from './scoring';
 
 export type VisionBackend = 'otoy-studio' | 'self';
 
 /**
  * Recompute overall score and passed flag server-side.
  * Enforces framing-gated weighted scoring regardless of VLM output.
- * Weights: framing×2, placement×1.5, composition×1.5, depth×1, lighting×1 (÷7)
  */
 function enforceFramingGate(scores: VisionCritiqueResult['scores']): {
   overall: number;
@@ -34,7 +32,6 @@ function enforceFramingGate(scores: VisionCritiqueResult['scores']): {
       scores.depth * 1 +
       scores.lighting * 1) /
     7;
-  // Cap overall at 2.5 if framing is below 3
   const overall = scores.framing < 3 ? Math.min(weighted, 2.5) : weighted;
   const allAboveMin = Object.values(scores).every(s => s >= MIN_DIMENSION_SCORE);
   const passed = overall >= PASS_THRESHOLD && scores.framing >= 3 && allAboveMin;
@@ -60,15 +57,27 @@ export interface VisionCritiqueResult {
   }>;
   raw: string;
   model?: string;
-  observations?: string;
-  differences?: string;
+  /** VLM's natural language description of the render */
+  description?: string;
+  /** Cached calibration description (for AD comparison) */
+  calibrationDescription?: string;
+  /** Server-side match score */
+  serverScore?: ServerScore;
+  /** Single most important fix */
+  topFix?: string;
+  /** The full prompt sent to the VLM (for debugging) */
+  promptSent?: string;
+  /** The raw unprocessed VLM response text (for debugging) */
+  vlmRawResponse?: string;
 }
 
 export interface VisionAnalysisResult {
   backend: VisionBackend;
-  data: any; // parsed JSON from the vision model
+  data: any;
   raw: string;
   model?: string;
+  promptSent?: string;
+  vlmRawResponse?: string;
 }
 
 /**
@@ -79,133 +88,160 @@ export function detectBackend(): VisionBackend {
 }
 
 /**
- * Call analyse_image with a prompt on one or two image files.
- * For two images (render + reference), captions the reference and embeds
- * the description in the render's ask prompt.
+ * Call analyse_image on a single image with a prompt.
  */
-async function callVision(
-  prompt: string,
-  imagePaths: string[]
-): Promise<{ text: string; backend: VisionBackend; model?: string }> {
+async function callVisionSingle(
+  imagePath: string,
+  prompt: string
+): Promise<{
+  text: string;
+  backend: VisionBackend;
+  model?: string;
+  promptSent: string;
+  vlmRawResponse: string;
+}> {
   const token = extractOtoyStudioToken();
   if (!token) {
-    return { text: '', backend: 'self' };
+    return { text: '', backend: 'self', promptSent: prompt, vlmRawResponse: '' };
   }
 
   try {
-    if (imagePaths.length === 2) {
-      // Two images: render (0) + reference (1).
-      // Caption the reference, then ask about the render with that context.
-      const [renderPath, refPath] = imagePaths;
-
-      // Upload both in parallel
-      const [renderUpload, refUpload] = await Promise.all([
-        uploadImage(renderPath, token),
-        uploadImage(refPath, token),
-      ]);
-
-      const refUrl = refUpload.downloadUrlFull || refUpload.downloadUrl;
-      const renderUrl = renderUpload.downloadUrlFull || renderUpload.downloadUrl;
-
-      // Caption the reference
-      const refCaption = await callAnalyseImage(refUrl, 'caption', 'detailed', { token });
-
-      // Ask about the render with reference context
-      const augmentedPrompt =
-        `REFERENCE IMAGE DESCRIPTION:\n${refCaption.text}\n\n` +
-        `Now evaluate the RENDER image against that reference.\n\n${prompt}`;
-
-      const result = await callAnalyseImage(renderUrl, 'ask', augmentedPrompt, { token });
-      return { text: result.text, backend: 'otoy-studio', model: result.model };
-    }
-
-    // Single image
-    const result = await analyseImageFromFile(imagePaths[0], 'ask', prompt, { token });
-    return { text: result.text, backend: 'otoy-studio', model: result.model };
+    const result = await analyseImageFromFile(imagePath, 'ask', prompt, { token });
+    return {
+      text: result.text,
+      backend: 'otoy-studio',
+      model: result.model,
+      promptSent: prompt,
+      vlmRawResponse: result.text,
+    };
   } catch (error: any) {
     mcpLog(`VISION: otoy-studio failed: ${error.message}`, 'warn');
-    return { text: '', backend: 'self' };
+    return { text: '', backend: 'self', promptSent: prompt, vlmRawResponse: '' };
   }
 }
 
+// ── Calibration ───────────────────────────────────────────────────────
+
 /**
- * Critique a render using analyse_image.
- * Returns structured scores or null if backend unavailable (caller falls back to self-critique).
+ * Calibrate concept art — run VLM composition questions on the reference image
+ * and return a CachedCalibration for future comparisons.
+ * Run once per scene, cache the result.
+ */
+export async function calibrateReference(
+  imagePath: string
+): Promise<{ calibration: CachedCalibration | null; promptSent: string; vlmRawResponse: string }> {
+  const prompt = buildCalibrationPrompt();
+  const { text, backend, model, promptSent, vlmRawResponse } = await callVisionSingle(
+    imagePath,
+    prompt
+  );
+
+  if (backend === 'self' || !text) {
+    return { calibration: null, promptSent, vlmRawResponse };
+  }
+
+  // Extract keywords from the composition description
+  const keywords = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3)
+    .filter((w, i, arr) => arr.indexOf(w) === i); // dedupe
+
+  const calibration: CachedCalibration = {
+    composition: text,
+    keywords,
+    vlmModel: model || 'unknown',
+    timestamp: Date.now(),
+  };
+
+  return { calibration, promptSent, vlmRawResponse };
+}
+
+// ── Critique ──────────────────────────────────────────────────────────
+
+/**
+ * Critique a render — 1 VLM call. Compares render description against
+ * cached calibration server-side (keyword overlap + composition match).
  */
 export async function critiqueRender(
   renderPath: string,
   critiquePrompt: string,
-  refImagePath?: string
+  calibration?: CachedCalibration
 ): Promise<VisionCritiqueResult | null> {
-  const imagePaths = refImagePath ? [renderPath, refImagePath] : [renderPath];
-  const prompt = refImagePath
-    ? `Image 1 is a 3D RENDER. Image 2 is the REFERENCE target.\n\n${critiquePrompt}`
-    : critiquePrompt;
-
-  const { text, backend, model } = await callVision(prompt, imagePaths);
-
-  if (backend === 'self' || !text) {
-    return null; // Caller falls back to self-critique
-  }
-
-  const parsed = parseCritiqueResponse(text);
-  if (!parsed) {
-    mcpLog(
-      `VISION: failed to parse otoy-studio response as JSON: ${text.substring(0, 200)}`,
-      'warn'
-    );
-    // Return raw text so caller can still use it
-    return {
-      backend,
-      scores: { framing: 3, depth: 3, composition: 3, lighting: 3, placement: 3 },
-      overall: 3,
-      passed: false,
-      corrections: [],
-      raw: text,
-      model,
-      observations: text.substring(0, 500),
-    };
-  }
-
-  // Server-side enforcement: recompute overall/passed with framing-gate
-  const enforced = enforceFramingGate(parsed.scores);
-
-  return {
-    backend,
-    scores: parsed.scores,
-    overall: enforced.overall,
-    passed: enforced.passed,
-    corrections: parsed.corrections || [],
-    raw: parsed.raw,
-    model,
-    observations: (parsed as any).observations,
-    differences: (parsed as any).differences,
-  };
-}
-
-/**
- * Analyze a reference image using analyse_image.
- * Returns structured scene data or null if backend unavailable.
- */
-export async function analyzeReference(
-  imagePath: string,
-  analysisPrompt: string
-): Promise<VisionAnalysisResult | null> {
-  const { text, backend, model } = await callVision(analysisPrompt, [imagePath]);
+  const { text, backend, model, promptSent, vlmRawResponse } = await callVisionSingle(
+    renderPath,
+    critiquePrompt
+  );
 
   if (backend === 'self' || !text) {
     return null;
   }
 
-  // Try to parse as JSON — handles truncated responses from token limits
+  // Parse VLM response for any structured data (scores, corrections)
+  const parsed = parseCritiqueResponse(text);
+  const description = parsed?.description || text;
+
+  // Server-side scoring: compare render description against calibration
+  let serverScore: ServerScore | undefined;
+  if (calibration?.composition) {
+    serverScore = computeServerScore(description, calibration.composition);
+  }
+
+  // Use parsed scores if available, otherwise default to 3
+  const scores = parsed?.scores || {
+    framing: 3,
+    depth: 3,
+    composition: 3,
+    lighting: 3,
+    placement: 3,
+  };
+  const enforced = enforceFramingGate(scores);
+
+  return {
+    backend,
+    scores,
+    overall: enforced.overall,
+    passed: enforced.passed,
+    corrections: parsed?.corrections || [],
+    raw: parsed?.raw || text,
+    model,
+    description,
+    calibrationDescription: calibration?.composition,
+    serverScore,
+    topFix: parsed?.topFix,
+    promptSent,
+    vlmRawResponse,
+  };
+}
+
+// ── Reference Analysis ────────────────────────────────────────────────
+
+/**
+ * Analyze a reference image — extract structured scene data.
+ * Separate from calibration: this extracts JSON for scene building,
+ * calibration extracts natural language for comparison.
+ */
+export async function analyzeReference(
+  imagePath: string,
+  analysisPrompt: string
+): Promise<VisionAnalysisResult | null> {
+  const { text, backend, model, promptSent, vlmRawResponse } = await callVisionSingle(
+    imagePath,
+    analysisPrompt
+  );
+
+  if (backend === 'self' || !text) {
+    return null;
+  }
+
+  // Try to parse as JSON
   let data: any = null;
   const candidates = [text];
 
-  // Extract from markdown code blocks
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) candidates.push(jsonMatch[1]);
 
-  // Extract bare JSON object
   const braceMatch = text.match(/\{[\s\S]*/);
   if (braceMatch) candidates.push(braceMatch[0]);
 
@@ -214,9 +250,7 @@ export async function analyzeReference(
     try {
       data = JSON.parse(candidate);
     } catch {
-      // Try repairing truncated JSON by closing open brackets/braces
-      let repaired = candidate.trim();
-      repaired = repaired.replace(/,\s*$/, '');
+      let repaired = candidate.trim().replace(/,\s*$/, '');
       const opens = (repaired.match(/\[/g) || []).length;
       const closes = (repaired.match(/\]/g) || []).length;
       const openBraces = (repaired.match(/\{/g) || []).length;
@@ -225,15 +259,12 @@ export async function analyzeReference(
       for (let i = 0; i < openBraces - closeBraces; i++) repaired += '}';
       try {
         data = JSON.parse(repaired);
-        mcpLog(
-          `VISION: repaired truncated JSON (added ${opens - closes} ] and ${openBraces - closeBraces} })`,
-          'info'
-        );
+        mcpLog(`VISION: repaired truncated JSON`, 'info');
       } catch {
         /* truly unparseable */
       }
     }
   }
 
-  return { backend, data, raw: text, model };
+  return { backend, data, raw: text, model, promptSent, vlmRawResponse };
 }

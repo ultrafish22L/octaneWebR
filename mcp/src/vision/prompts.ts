@@ -1,100 +1,57 @@
 /**
- * Structured prompts for vision critique and reference analysis.
+ * Vision critique prompts — description-first approach.
  *
- * These prompts are designed to be evaluator-agnostic — they work with
- * Claude self-critique, OTOY Studio chat_completion, or direct API calls.
- * The key improvement over v1: forces SPECIFIC MEASURABLE comparisons
- * instead of vague subjective scoring.
+ * VLM describes what it sees in natural language (its strength),
+ * then provides minimal numeric scores. All scoring math (weighting,
+ * framing gate, pass/fail) stays server-side in normalizeScores().
  */
 
 import { mcpLogLazy } from '../OctaneMcpClient';
 import type { CompositionSpec } from '../ArtDirectionState';
-import { PASS_THRESHOLD, MIN_DIMENSION_SCORE } from '../ArtDirectionState';
 
 /**
  * Build a structured critique prompt for a single render.
  * Forces measurable observations, not vague impressions.
  */
 export function buildCritiquePrompt(spec: CompositionSpec): string {
-  const objectList = spec.objects
-    .map(
-      o =>
-        `- "${o.id}" (${o.role}): planned at {${o.position.x.toFixed(1)}, ${o.position.y.toFixed(1)}, ${o.position.z.toFixed(1)}}, depth layer ${o.depthLayer}`
-    )
-    .join('\n');
+  const objectList = spec.objects.map(o => `  - "${o.id}" (${o.role})`).join('\n');
 
-  return `You are a harsh 3D art critic. Analyze this render against the composition plan below.
-BE STRICT. A score of 4+ means professional quality. Most first-draft renders deserve 2-3.
+  return `Look at this 3D render and check the COMPOSITION against the plan below.
+Ignore lighting, color, and mood for now — focus only on what is visible and how it is framed.
 
-COMPOSITION PLAN:
-- Focal point: "${spec.focalPoint}"
-- Depth layers planned: ${spec.depthLayers}
-- Composition rule: ${spec.camera.compositionRule}
-- Lighting mood: ${spec.lightingMood}
-- Objects:
+THE PLAN:
+- Scene: "${spec.description}"
+- Focal point: "${spec.focalPoint}" (${spec.camera.compositionRule})
+- Expected objects:
 ${objectList}
 
-MEASURE THESE SPECIFICS (don't guess — count and estimate):
-- How many distinct objects are visible? (compare to ${spec.objects.length} planned)
-- What fraction of the frame does the focal point "${spec.focalPoint}" occupy? (<5% = too small, >50% = too large)
-- How many distinct depth planes can you identify? (count by size/fog differences)
-- Where does the visual weight sit on a 3x3 grid?
-- Is there clear light direction or is it flat/ambient?
-
-SCORE each 1-5 (be harsh — 3 = acceptable, 4 = good, 5 = professional):
-
-1. FRAMING (1-5): Subject well-framed? Not too small, not cropped? Appropriate headroom/lead room?
-2. DEPTH (1-5): Can you perceive ${spec.depthLayers}+ distinct depth layers? Size diminution? Atmospheric perspective? Or flat?
-3. COMPOSITION (1-5): Focal point near ${spec.camera.compositionRule} power points? Clear visual hierarchy? Good negative space?
-4. LIGHTING (1-5): Clear key light direction? Shadow modeling? Mood matches "${spec.lightingMood}"? Or flat/harsh?
-5. PLACEMENT (1-5): Objects at planned positions? Natural arrangement? Any clipping/floating/intersection?
-
-For EACH score below 4, provide a SPECIFIC correction:
-- target: what to change (camera_position, camera_target, object_position, object_scale, light_power, environment_power)
-- objectId: which object (if applicable)
-- description: exact change needed with direction and magnitude
-- priority: 1=critical, 2=important, 3=polish
-
-Respond as JSON only:
-{"scores":{"framing":N,"depth":N,"composition":N,"lighting":N,"placement":N},"overall":N,"passed":BOOL,"corrections":[{"target":"...","objectId":"...","description":"...","priority":N}],"observations":"2-3 sentences of what you actually see"}
-
-SCORING RULES (follow exactly):
-overall = weighted average: (framing×2 + placement×1.5 + composition×1.5 + depth×1 + lighting×1) / 7
-passed = overall >= ${PASS_THRESHOLD} AND framing >= 3 AND no score < ${MIN_DIMENSION_SCORE}
-CRITICAL: If framing < 3, cap overall at 2.5 regardless of other scores. A beautifully lit scene with wrong framing is WORTHLESS — fix camera first.`;
+Answer each question:
+1. Is the main subject ("${spec.focalPoint}") fully visible — head to toe, no cropping? Or is part of it cut off?
+2. Is this a wide shot, medium shot, or close-up? The plan calls for the full scene to be visible.
+3. Is the ground/floor visible? How much of the frame does it take up?
+4. List every object you can see. Compare to the expected objects above — what is missing?
+5. Where is the main subject positioned in the frame (center, left, right, top, bottom)?
+6. How much empty space surrounds the subject? Too tight, about right, or too much?
+7. What is the single most important composition fix needed?`;
 }
 
 /**
- * Build a two-image comparison prompt (render vs reference).
- * Forces the critic to identify specific differences.
+ * Build a calibration prompt for concept art — same composition questions as critique
+ * but without "THE PLAN" section (the concept art IS the plan).
+ * Run once per scene, cache the result as the VLM calibration baseline.
  */
-export function buildComparisonPrompt(spec: CompositionSpec): string {
-  return `You are comparing a 3D RENDER (image 1) against a REFERENCE image (image 2).
-Your job: identify SPECIFIC, MEASURABLE differences. Be harsh and precise.
+export function buildCalibrationPrompt(): string {
+  return `Look at this image and describe its composition in detail.
+Ignore artistic style and color — focus only on what is visible and how it is framed.
 
-REFERENCE is the target. RENDER is the attempt. Score how close the RENDER matches the REFERENCE.
-
-COMPARE these specifics:
-1. Count visible main objects in each image. Same number?
-2. Compare depth: how many distinct depth layers in each? Does render have same depth spread?
-3. Compare lighting: warm/cool? Direction? Contrast? Same mood?
-4. Compare color palette: what are the dominant colors in each?
-5. Compare composition: where is the focal point in each? Same grid position?
-6. Compare scale: are objects similar relative sizes?
-7. Compare atmosphere: is there fog/haze in reference? In render?
-
-SCORE each 1-5 (how close render matches reference):
-
-1. FRAMING (1-5): Same framing/camera angle? Same amount of scene visible?
-2. DEPTH (1-5): Same depth spread? Same number of layers? Same depth cues (fog, size)?
-3. COMPOSITION (1-5): Focal point in same position? Same visual weight distribution?
-4. LIGHTING (1-5): Same light direction? Same warmth? Same contrast/mood?
-5. PLACEMENT (1-5): Objects in similar relative positions? Similar spacing?
-
-For scores below 4, provide SPECIFIC corrections to make render match reference better.
-
-Respond as JSON only:
-{"scores":{"framing":N,"depth":N,"composition":N,"lighting":N,"placement":N},"overall":N,"passed":BOOL,"corrections":[{"target":"...","description":"...","priority":N}],"differences":"3-4 sentences listing the biggest visual differences between render and reference"}`;
+Answer each question:
+1. Is the main subject fully visible — head to toe, no cropping? Or is part of it cut off?
+2. Is this a wide shot, medium shot, or close-up?
+3. Is the ground/floor visible? How much of the frame does it take up?
+4. List every distinct object or element you can see.
+5. Where is the main subject positioned in the frame (center, left, right, top, bottom)?
+6. How much empty space surrounds the subject? Tight framing, about right, or lots of space?
+7. Describe the overall composition in one sentence.`;
 }
 
 /**
@@ -155,7 +112,25 @@ Scale by ${scaleHint} to get world-space coordinates.`;
  * Parse a VLM response into structured critique scores.
  * Handles both clean JSON and JSON embedded in markdown/text.
  */
-export function parseCritiqueResponse(response: string): {
+/**
+ * Coerce a score value to a valid number 1-5.
+ * Handles string numbers ("3"), floats (3.5), and clamps to range.
+ * Returns null if value is not a usable number.
+ */
+function coerceScore(v: unknown): number | null {
+  if (typeof v === 'number' && !isNaN(v)) return Math.max(1, Math.min(5, v));
+  if (typeof v === 'string') {
+    const n = parseFloat(v);
+    if (!isNaN(n)) return Math.max(1, Math.min(5, n));
+  }
+  return null;
+}
+
+/**
+ * Normalize a parsed JSON object into valid critique scores.
+ * Handles VLM quirks: string numbers, missing fields, out-of-range values.
+ */
+export interface NormalizedCritique {
   scores: {
     framing: number;
     depth: number;
@@ -166,42 +141,133 @@ export function parseCritiqueResponse(response: string): {
   overall: number;
   passed: boolean;
   corrections: Array<{ target: string; objectId?: string; description: string; priority: number }>;
+  description: string;
+  differences: string;
+  topFix: string;
   raw: string;
-} | null {
-  try {
-    // Try direct JSON parse
-    const data = JSON.parse(response);
-    if (data.scores && typeof data.overall === 'number') {
-      return { ...data, raw: response };
-    }
-  } catch (e: any) {
-    mcpLogLazy('debug', () => `[vision:parseCritique:directJSON] ${e?.message ?? e}`);
-    // Try extracting JSON from markdown code blocks
-    const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
+}
+
+function normalizeScores(data: any): NormalizedCritique | null {
+  // Accept scores at top level (new format) or nested in scores:{} (old format)
+  const s = data?.scores ?? data;
+  if (!s) return null;
+
+  const framing = coerceScore(s.framing);
+  const depth = coerceScore(s.depth);
+  const composition = coerceScore(s.composition);
+  const lighting = coerceScore(s.lighting);
+  const placement = coerceScore(s.placement);
+
+  // Need at least 3 valid scores to be usable
+  const validCount = [framing, depth, composition, lighting, placement].filter(
+    v => v !== null
+  ).length;
+  if (validCount < 3) return null;
+
+  const scores = {
+    framing: framing ?? 3,
+    depth: depth ?? 3,
+    composition: composition ?? 3,
+    lighting: lighting ?? 3,
+    placement: placement ?? 3,
+  };
+
+  // Recompute overall server-side (don't trust VLM math)
+  const weighted =
+    (scores.framing * 2 +
+      scores.placement * 1.5 +
+      scores.composition * 1.5 +
+      scores.depth * 1 +
+      scores.lighting * 1) /
+    7;
+  const overall = scores.framing < 3 ? Math.min(weighted, 2.5) : weighted;
+
+  const allAboveMin = Object.values(scores).every(v => v >= 1.5);
+  const passed = overall >= 4.0 && scores.framing >= 3 && allAboveMin;
+
+  // Extract text fields from either top-level data or nested
+  const description = data?.description || data?.render_description || '';
+  const differences = data?.differences || data?.matches_plan || '';
+  const topFix = data?.top_fix || '';
+
+  // Legacy corrections array (old format) — convert top_fix to corrections if needed
+  let corrections: Array<{
+    target: string;
+    objectId?: string;
+    description: string;
+    priority: number;
+  }> = [];
+  if (Array.isArray(data?.corrections)) {
+    corrections = data.corrections;
+  } else if (topFix) {
+    corrections = [{ target: 'scene', description: topFix, priority: 1 }];
+  }
+
+  return {
+    scores,
+    overall: Math.round(overall * 10) / 10,
+    passed,
+    corrections,
+    description,
+    differences,
+    topFix,
+    raw: JSON.stringify(data),
+  };
+}
+
+export function parseCritiqueResponse(response: string): NormalizedCritique | null {
+  // Candidates to try parsing, in order of confidence
+  const candidates: string[] = [response];
+
+  // Extract from markdown code blocks
+  const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) candidates.push(jsonMatch[1]);
+
+  // Extract bare JSON object containing "scores"
+  const braceMatch = response.match(/\{[\s\S]*"scores"[\s\S]*\}/);
+  if (braceMatch) candidates.push(braceMatch[0]);
+
+  for (const candidate of candidates) {
+    try {
+      const data = JSON.parse(candidate);
+      const result = normalizeScores(data);
+      if (result) return result;
+    } catch {
+      // Try repairing truncated JSON
+      let repaired = candidate.trim().replace(/,\s*$/, '');
+      const opens = (repaired.match(/\[/g) || []).length;
+      const closes = (repaired.match(/\]/g) || []).length;
+      const openBraces = (repaired.match(/\{/g) || []).length;
+      const closeBraces = (repaired.match(/\}/g) || []).length;
+      for (let i = 0; i < opens - closes; i++) repaired += ']';
+      for (let i = 0; i < openBraces - closeBraces; i++) repaired += '}';
       try {
-        const data = JSON.parse(jsonMatch[1]);
-        if (data.scores && typeof data.overall === 'number') {
-          return { ...data, raw: response };
+        const data = JSON.parse(repaired);
+        const result = normalizeScores(data);
+        if (result) {
+          mcpLogLazy('info', () => `[vision:parseCritique] repaired truncated JSON`);
+          return result;
         }
-      } catch (e2: any) {
-        mcpLogLazy('debug', () => `[vision:parseCritique:codeBlock] ${e2?.message ?? e2}`);
-        /* continue */
-      }
-    }
-    // Try finding JSON object in text
-    const braceMatch = response.match(/\{[\s\S]*"scores"[\s\S]*\}/);
-    if (braceMatch) {
-      try {
-        const data = JSON.parse(braceMatch[0]);
-        if (data.scores && typeof data.overall === 'number') {
-          return { ...data, raw: response };
-        }
-      } catch (e3: any) {
-        mcpLogLazy('debug', () => `[vision:parseCritique:braceMatch] ${e3?.message ?? e3}`);
-        /* give up */
+      } catch {
+        /* truly unparseable */
       }
     }
   }
+
+  // Description-only response (no JSON / no scores) — treat raw text as description
+  if (response.trim().length > 20) {
+    mcpLogLazy('info', () => `[vision:parseCritique] no JSON found, using raw text as description`);
+    return {
+      scores: { framing: 3, depth: 3, composition: 3, lighting: 3, placement: 3 },
+      overall: 3,
+      passed: false,
+      corrections: [],
+      description: response.trim(),
+      differences: '',
+      topFix: '',
+      raw: response,
+    };
+  }
+
   return null;
 }
