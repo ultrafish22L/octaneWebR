@@ -153,7 +153,7 @@ export function registerCameraTools(
 
   server.tool(
     'set_camera',
-    'Set camera position and/or target in world coordinates. Triggers scene evaluation (updates render). At least one of position or target required. Changes reflected in octaneWebR viewport in real time.',
+    '[Phase 4 ONLY] Set camera position and/or target in world coordinates. ⛔ Do NOT use in Phase 1 — use fit_camera instead. set_camera is for Phase 4 hero shots only. If framing is wrong, fix geometry (position/scale/floor size), not the camera. Using set_camera to work around bad framing masks geometry problems.',
     {
       position: Vec3Schema.optional().describe('Camera position in world coordinates'),
       target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
@@ -173,7 +173,20 @@ export function registerCameraTools(
         params.up = up ?? { x: 0, y: 1, z: 0 };
 
         await client.callMethod('LiveLink', 'SetCamera', params);
-        return jsonResult({ success: true });
+
+        // Phase 1 warning: if framing_verified hasn't been completed, warn loudly
+        const warnings: string[] = [];
+        if (artState.isActive && !artState.isStepDone('framing_verified')) {
+          warnings.push(
+            '⛔ PHASE VIOLATION: set_camera used before framing_verified. In Phase 1, use fit_camera ONLY. set_camera is for Phase 4 hero shots. If fit_camera frames wrong, fix the geometry (position, scale, floor plane size) — do NOT hack the camera.'
+          );
+        }
+
+        return jsonResult({
+          success: true,
+          ...(warnings.length > 0 ? { warnings } : {}),
+          ...adWorkflow(artState, 'fit_camera'), // track as camera operation
+        });
       } catch (error: any) {
         return errorResult(error);
       }

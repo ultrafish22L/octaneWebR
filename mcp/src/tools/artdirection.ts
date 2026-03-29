@@ -646,7 +646,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'analyze_reference',
-    'Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
+    '[Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
     {
       image_path: z.string().describe('Absolute path to reference image'),
       scene_description: z.string(),
@@ -775,19 +775,19 @@ export function registerArtDirectionTools(
         const iteration = artState.getIterationCount(params.spec_name) + 1;
         const warnings: string[] = [];
 
-        // Clay mode check — composition should be validated before lighting
-        if (iteration <= 2) {
-          try {
-            const clayResult = await client.callMethod('ApiRenderEngine', 'clayMode', {});
-            const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
-            if (clayMode === 0) {
-              warnings.push(
-                'CLAY MODE OFF during composition check. Use set_clay_mode(1) for Phase 1 composition validation — lighting/materials distract from framing assessment. Only disable clay after composition passes.'
-              );
-            }
-          } catch {
-            /* clay mode check is advisory */
+        // Clay mode check — Phase 1 composition MUST be validated in clay
+        // Check on ALL iterations when framing_verified hasn't been completed
+        const framingVerified = artState.isStepDone('framing_verified');
+        try {
+          const clayResult = await client.callMethod('ApiRenderEngine', 'clayMode', {});
+          const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
+          if (clayMode === 0 && !framingVerified) {
+            warnings.push(
+              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(1), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
+            );
           }
+        } catch {
+          /* clay mode check is advisory */
         }
 
         if (artState.isStagnating(params.spec_name))
@@ -1196,7 +1196,7 @@ export function registerArtDirectionTools(
 
   server.tool(
     'register_scene_object',
-    'Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
+    '[Phase 1] Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
     {
       handle: z.number().int().min(0).describe('Node handle of the placed object'),
       name: z.string().describe('Display name (e.g. "Fairy", "Crystal Sphere")'),

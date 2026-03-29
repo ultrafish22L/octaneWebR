@@ -147,7 +147,6 @@ npm run dev          # Dev server with HMR (port 43929)
 npm run build        # Production build
 npm run lint         # ESLint
 npm test             # 281 tests (Vitest)
-npx tsc --noEmit     # Type check
 ```
 
 Pre-commit hooks (Husky) run linting and type checks automatically.

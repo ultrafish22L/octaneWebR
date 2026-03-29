@@ -749,7 +749,7 @@ export function registerImportTools(
 ) {
   server.tool(
     'import_geo',
-    'Import a 3D model (OBJ, GLB, glTF) into the Octane scene. Creates mesh + placement + material, returns all handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Placement is NOT connected to a geo group — caller must do that.',
+    '[Phase 1] Import a 3D model (OBJ, GLB, glTF) into the Octane scene. Creates mesh + placement + material, returns all handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Placement is NOT connected to a geo group — caller must do that. Apply rotation/scale from analyze_mesh sidecar (.mesh_info.json) before connecting to geo group.',
     {
       file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
       name: z
@@ -1035,6 +1035,7 @@ export function registerImportTools(
         // Check for cached mesh_info sidecar (from prior analyze_mesh)
         const sidecarPath = objPath.replace(/\.obj$/i, '.mesh_info.json');
         let meshInfo: any = null;
+        const analyzeMeshWarnings: string[] = [];
         if (fs.existsSync(sidecarPath)) {
           try {
             meshInfo = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'));
@@ -1042,6 +1043,12 @@ export function registerImportTools(
           } catch {
             /* ignore parse errors */
           }
+        }
+        if (!meshInfo) {
+          analyzeMeshWarnings.push(
+            `⛔ NO MESH ANALYSIS: analyze_mesh was NOT run on "${path.basename(objPath)}". You are guessing orientation and scale. STOP and run analyze_mesh("${objPath}") FIRST — it renders 6 mugshots (front/right/top × clay/textured) and caches the result. Then re-import with correct rotation/scale from the .mesh_info.json sidecar.`
+          );
+          mcpLog(`import_geo: ⛔ NO SIDECAR — analyze_mesh not run for ${objPath}`, 'warning');
         }
 
         return jsonResult({
@@ -1092,9 +1099,10 @@ export function registerImportTools(
                 ]
               : []),
           ],
+          warnings: analyzeMeshWarnings.length > 0 ? analyzeMeshWarnings : undefined,
           instruction: meshInfo
             ? 'Asset imported with cached mesh analysis. Apply suggested transforms, connect to geo group, then fit_camera + save_render to verify.'
-            : 'Asset imported. NEXT: call analyze_mesh on the OBJ path to generate mugshots and get VLM-verified orientation before placing in scene.',
+            : '⛔ Asset imported WITHOUT mesh analysis. Orientation is unknown — you are guessing. STOP: call analyze_mesh on the OBJ path NOW to generate mugshots and get VLM-verified orientation. Then apply the sidecar rotation/scale.',
         });
       } catch (error: any) {
         mcpLog(`import_geo FAILED: ${error.message}`, 'error');
@@ -1107,7 +1115,7 @@ export function registerImportTools(
 
   server.tool(
     'analyze_mesh',
-    'Analyze a mesh file (OBJ) and suggest proper orientation, scale, and ground placement for the scene. Returns advisory suggestions — not forced. Results cached in a .mesh_info.json sidecar next to the OBJ file. Use before placing meshes to avoid upside-down characters, floor penetration, and bunched objects.',
+    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE import_geo. Renders 6 mugshots (front/right/top × clay/textured), sends to VLM for upright verification, caches result in .mesh_info.json sidecar. MUST run on every OBJ before placement — import_geo will warn if skipped. Without this, you are guessing orientation and will waste iterations on wrong rotation.',
     {
       obj_path: z.string().describe('Absolute path to OBJ file'),
       scene_context: z

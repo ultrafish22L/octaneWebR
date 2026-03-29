@@ -149,18 +149,27 @@ const STEP_PHASE: Record<AdStep, number> = {
   apply_corrections: 3,
 };
 
-/** Prerequisites: which steps must be done before this step. */
+/**
+ * Prerequisites: which steps must be done before this step.
+ *
+ * critique_render has NO prereqs — it's used in BOTH:
+ *   - Phase 1 (clay composition check, before framing_verified)
+ *   - Phase 3 (final critique loop, after dress)
+ *
+ * framing_verified requires critique_render because the clay-mode
+ * critique IS the gate. You can't skip it by just running fit_camera.
+ */
 const STEP_PREREQS: Partial<Record<AdStep, AdStep[]>> = {
   plan_composition: ['analyze_mesh'],
   validate_layout: ['plan_composition'],
   suggest_placement: ['plan_composition'],
   fit_camera: [], // always allowed — Phase 1 entry
   register_scene_object: ['fit_camera'],
-  framing_verified: ['fit_camera', 'register_scene_object'],
+  framing_verified: ['fit_camera', 'register_scene_object', 'critique_render'],
   set_artistic_intent: ['framing_verified'],
   suggest_lighting: ['set_artistic_intent'],
   suggest_material: ['framing_verified'],
-  critique_render: ['set_artistic_intent', 'framing_verified'],
+  critique_render: [], // no prereqs — used in Phase 1 (clay) AND Phase 3 (final)
   apply_corrections: ['critique_render'],
 };
 
@@ -179,8 +188,9 @@ const STEP_NEXT: Partial<Record<AdStep, { step: AdStep; reason: string }>> = {
   suggest_placement: { step: 'fit_camera', reason: 'Frame the placed objects' },
   fit_camera: { step: 'register_scene_object', reason: 'Register placed object in scene DB' },
   register_scene_object: {
-    step: 'fit_camera',
-    reason: 'Frame again after registering (or verify framing if all objects placed)',
+    step: 'critique_render',
+    reason:
+      'Run critique_render IN CLAY MODE to verify composition. framing_verified gate requires critique_render + fit_camera + register_scene_object.',
   },
   framing_verified: {
     step: 'set_artistic_intent',
@@ -238,15 +248,25 @@ export class ArtDirectionState {
 
   // ── Workflow checklist ────────────────────────────────────────────
 
-  /** Mark a step as completed with optional quality note. Auto-derives gate steps. */
+  /**
+   * Mark a step as completed with optional quality note. Auto-derives gate steps.
+   *
+   * framing_verified requires ALL THREE:
+   *   1. fit_camera (scene is framed)
+   *   2. register_scene_object (objects registered in scene DB)
+   *   3. critique_render (VLM confirmed composition in clay mode)
+   *
+   * This prevents skipping the clay-mode critique gate before Phase 2.
+   */
   completeStep(step: AdStep, note?: string): void {
     this._completedSteps.add(step);
     if (note) this._stepNotes.set(step, note);
-    // Auto-complete framing_verified gate when both fit_camera and register_scene_object done
+    // Auto-complete framing_verified when all three Phase 1 gates are met
     if (
-      (step === 'fit_camera' || step === 'register_scene_object') &&
+      (step === 'fit_camera' || step === 'register_scene_object' || step === 'critique_render') &&
       this._completedSteps.has('fit_camera') &&
-      this._completedSteps.has('register_scene_object')
+      this._completedSteps.has('register_scene_object') &&
+      this._completedSteps.has('critique_render')
     ) {
       this._completedSteps.add('framing_verified');
     }
@@ -451,6 +471,10 @@ export class ArtDirectionState {
  * Build workflow fields to include in a tool response when AD is active.
  * Marks the step complete, checks prereqs, returns status for the response.
  * Returns undefined when AD is inactive (spread into response is a no-op).
+ *
+ * Missing prerequisites produce GATE VIOLATION errors (not just warnings).
+ * The step still completes (tools already executed), but the violation is
+ * surfaced loudly so the agent corrects course.
  */
 export function adWorkflow(
   artState: ArtDirectionState,
@@ -461,11 +485,20 @@ export function adWorkflow(
   const missing = artState.checkPrereqs(step);
   artState.completeStep(step, note);
   const status = artState.getWorkflowStatus(step);
+
+  const gateViolations =
+    missing.length > 0
+      ? missing.map(
+          m =>
+            `⛔ GATE VIOLATION: "${m}" must be completed before "${step}". Go back and complete it NOW. Do not continue forward.`
+        )
+      : undefined;
+
   return {
     ad_workflow: {
       step_completed: step,
-      prereq_warnings:
-        missing.length > 0 ? missing.map(m => `⚠ Missing prerequisite: ${m}`) : undefined,
+      gate_violations: gateViolations,
+      protocol_ok: !gateViolations,
       ...status,
     },
   };

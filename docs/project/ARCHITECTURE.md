@@ -115,11 +115,10 @@ The compat layer in `OctaneGrpcClientBase.callMethod()` translates method names 
 ## Build
 
 - **Dev**: `npm run dev` (Vite with HMR)
-- **Prod**: `npm run build` (tsc + vite build, output in `dist/`)
-- **Type check**: `npx tsc --noEmit`
+- **Prod**: `npm run build` (vite build, output in `dist/`)
 - **Lint**: `npm run lint`
 - **Test**: `npm test` (281 tests: SceneCache, tools, utils, constants, ArtDirectionState, geometric validation)
-- **MCP**: `cd mcp && npm run build` (esbuild)
+- **MCP**: `cd mcp && npm run build` (esbuild — do NOT use `tsc`, it OOMs)
 
 ## gRPC Internals
 
