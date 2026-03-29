@@ -810,7 +810,14 @@ export function registerArtDirectionTools(
         if (conceptPath && fs.existsSync(path.resolve(conceptPath))) {
           const currentPhase = artState.isActive ? artState.getWorkflowStatus().phase : undefined;
           const comparisonPrompt = buildComparisonCritiquePrompt(spec, currentPhase);
-          comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
+          try {
+            comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
+          } catch (visError: any) {
+            warnings.push(
+              `Vision comparison failed: ${visError.message}. Falling back to self-critique.`
+            );
+            comparisonResult = null;
+          }
         }
 
         if (comparisonResult) {

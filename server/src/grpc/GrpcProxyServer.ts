@@ -719,7 +719,11 @@ export async function startGrpcProxyServer(
   const protoBasePath = options.protoBasePath || path.resolve(__dirname, '../../../server');
   const apiCachePath =
     options.apiCachePath || path.resolve(__dirname, '../../../mcp/data/octane-api-cache.json');
-  const fileRoots = (options.fileRoots || [process.env.OCTANE_FILE_ROOTS || 'C:\\otoyla'])
+  const fileRoots = (
+    options.fileRoots || [
+      process.env.OCTANE_FILE_ROOTS || process.env.HOME || process.env.USERPROFILE || '.',
+    ]
+  )
     .flatMap(r => r.split(','))
     .map(r => path.resolve(r.trim()))
     .filter(Boolean);

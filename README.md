@@ -131,14 +131,14 @@ octaneWebR/
 
 ## Environment Variables
 
-| Variable            | Default     | Purpose                                                        |
-| ------------------- | ----------- | -------------------------------------------------------------- |
-| `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host                                               |
-| `OCTANE_PORT`       | `51022`     | Octane gRPC port                                               |
-| `WORKER_1`          | `43929`     | Dev server port                                                |
-| `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address (use `127.0.0.1` on untrusted networks)   |
-| `OCTANE_FILE_ROOTS` | —           | Allowed file browser roots (comma-separated)                   |
-| `GRPC_DEBUG_LOG`    | `1`         | Log mutating gRPC calls to `log_grpc.log` (set `0` to disable) |
+| Variable            | Default     | Purpose                                                                                  |
+| ------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| `OCTANE_HOST`       | `127.0.0.1` | Octane gRPC host                                                                         |
+| `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                                         |
+| `WORKER_1`          | `43929`     | Dev server port                                                                          |
+| `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address (use `127.0.0.1` on untrusted networks)                             |
+| `OCTANE_FILE_ROOTS` | `~`         | Comma-separated dirs MCP/UI can read/write (scenes, renders, meshes). `*` = unrestricted |
+| `GRPC_DEBUG_LOG`    | `1`         | Log mutating gRPC calls to `log_grpc.log` (set `0` to disable)                           |
 
 ## Development
 

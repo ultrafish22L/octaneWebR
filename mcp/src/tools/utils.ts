@@ -7,12 +7,28 @@ import path from 'path';
 // ── File path validation ─────────────────────────────────────────────
 
 /**
+ * Default root for OCTANE_FILE_ROOTS when the env var is unset.
+ * Uses the user's home directory as a reasonable cross-platform default.
+ */
+const DEFAULT_FILE_ROOT = process.env.HOME || process.env.USERPROFILE || '.';
+
+/**
  * Validate a file path against OCTANE_FILE_ROOTS.
  * Returns null if valid, or an error message string if blocked.
- * Set OCTANE_FILE_ROOTS=* to allow all paths.
+ *
+ * OCTANE_FILE_ROOTS — comma-separated list of directory paths that MCP tools
+ * are allowed to read from / write to. Should include your scenes directory
+ * and any folder where renders, concept art, or meshes are stored.
+ *
+ *   Windows:  OCTANE_FILE_ROOTS=C:\otoyla,D:\assets
+ *   macOS:    OCTANE_FILE_ROOTS=/Users/you/otoyla,/Volumes/renders
+ *   Linux:    OCTANE_FILE_ROOTS=/home/you/otoyla
+ *
+ * Set OCTANE_FILE_ROOTS=* to disable path checking entirely (unrestricted).
+ * When unset, defaults to the user's home directory.
  */
 export function validateFilePath(filePath: string): string | null {
-  const rootsEnv = process.env.OCTANE_FILE_ROOTS || 'C:\\otoyla';
+  const rootsEnv = process.env.OCTANE_FILE_ROOTS || DEFAULT_FILE_ROOT;
   const roots = rootsEnv.split(',').map(r => path.resolve(r.trim()));
 
   // Wildcard = unrestricted

@@ -13,6 +13,7 @@ All notable changes to octaneWebR.
 - `callVision()` / `callVisionPair()` — unified single/dual-image Sonnet calls
 - Per-scene `critique_stats.jsonl` audit trail for system tuning
 - `ComparisonScores` / `OrchestratorAssessment` on CritiqueRecord
+- **Calibration persistence** — `calibrateReference()` saves `.calibration.json` sidecar next to concept art, reloads on future sessions. Skips Sonnet call when cached.
 
 ### Changed
 
@@ -20,22 +21,31 @@ All notable changes to octaneWebR.
 - Default mugshot margin 0.05 → 0.1
 - Hero shot now renders on known-source fast path (was missing)
 - `fit_camera` queries actual film resolution for aspect ratio (no more hardcoded 2:1)
+- **SceneCache simplified** — removed all validation/staleness tracking (~170 lines). Pure hint layer, server owns all validation.
+- **CallbackStreamManager simplified** — removed exponential backoff, replaced with fixed 5s reconnect interval. Removed `isReconnecting` state.
+- **OCTANE_FILE_ROOTS** — default changed from hardcoded `C:\otoyla` to user home directory. Works cross-platform.
 - **MCP_BUILD** — Bumped to 69
 
 ### Fixed
 
 - `try/finally` safety for clay mode restoration + node cleanup in `renderViews`
 - Error logging in all catch blocks (no silent swallows)
+- **Vision silent fallback** — `callVision()`/`callVisionPair()` now throw on missing API key or Sonnet error instead of returning empty results silently
+- **critique_render vision failure** — `visionCompare()` wrapped in try-catch, falls back to self-critique with warning instead of failing the entire tool
 
 ### Deleted
 
 - Dead `renderMugshots` (~270 lines) — all rendering via `renderViews`
+- `gateHandle()`, `trackHandle()`, `validateHandle()` — all handle validation moved to server
+- SceneCache staleness API: `isNodeStale`, `staleNodeCount`, `getNodeAge`, `touchNode`, `markPopulated`, `isPopulated`, `knownHandleCount`
+- CallbackStreamManager backoff: `reconnectAttempt`, `BACKOFF_BASE_MS`, `BACKOFF_MAX_MS`, `isReconnecting`
 
 ### Docs
 
 - **Autonomous mode guardrails** — BUILD.md §3 adds mandatory phase gates (G0-G7), common drift patterns, and hard rule against self-grading
 - **Cardinal rules 6-8** in CLAUDE.md — Sonnet is the critic, hero meshes from image-to-3D, use suggest_lighting/suggest_material
-- **ADSYSTEM.md** — "never self-grade" block, DRESS mode steps are non-optional
+- **ADSYSTEM.md** — "never self-grade" block, DRESS mode steps are non-optional; moondream3 role clarified (mugshot pre-pass only)
+- **OCTANE_FILE_ROOTS** documented in README.md and QUICKSTART.md with cross-platform examples
 - Extracted constants: `MUGSHOT_FILM_RESOLUTION`, `MUGSHOT_SAMPLES`, `MUGSHOT_ENV_POWER`, `DEFAULT_MUGSHOT_MARGIN`, `PANCAKE_HEIGHT_THRESHOLD`
 - Extracted helpers: `isPancakeMesh()`, `writePlaneOBJ()`
 

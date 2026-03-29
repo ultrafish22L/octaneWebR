@@ -42,6 +42,39 @@ function readImageBase64(filePath: string): { base64: string; mediaType: string 
   };
 }
 
+// ── Calibration Persistence ────────────────────────────────────────
+
+/** Sidecar path: /path/to/concept_art.png → /path/to/concept_art.png.calibration.json */
+function calibrationPath(imagePath: string): string {
+  return path.resolve(imagePath) + '.calibration.json';
+}
+
+/** Save calibration as JSON sidecar next to the concept art image. */
+export function saveCalibration(imagePath: string, calibration: CachedCalibration): void {
+  try {
+    fs.writeFileSync(calibrationPath(imagePath), JSON.stringify(calibration, null, 2), 'utf8');
+    mcpLog(`VISION: saved calibration → ${calibrationPath(imagePath)}`, 'debug');
+  } catch (e: any) {
+    mcpLog(`VISION: failed to save calibration: ${e.message}`, 'warn');
+  }
+}
+
+/** Load calibration from sidecar. Returns null if missing or corrupt. */
+export function loadCalibration(imagePath: string): CachedCalibration | null {
+  const p = calibrationPath(imagePath);
+  if (!fs.existsSync(p)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (data && typeof data.composition === 'string' && typeof data.vlmModel === 'string') {
+      mcpLog(`VISION: loaded cached calibration from ${p}`, 'debug');
+      return data as CachedCalibration;
+    }
+  } catch (e: any) {
+    mcpLog(`VISION: corrupt calibration file ${p}: ${e.message}`, 'warn');
+  }
+  return null;
+}
+
 /** Try to extract JSON from a VLM response (handles markdown blocks, truncation). */
 function parseJsonResponse(raw: string): any | null {
   const candidates = [raw];
@@ -167,6 +200,12 @@ export async function callVisionPair(
 export async function calibrateReference(
   imagePath: string
 ): Promise<{ calibration: CachedCalibration | null; promptSent: string; vlmRawResponse: string }> {
+  // Check for cached calibration on disk first
+  const cached = loadCalibration(imagePath);
+  if (cached) {
+    return { calibration: cached, promptSent: '(cached from disk)', vlmRawResponse: '' };
+  }
+
   const prompt = buildCalibrationPrompt();
   const { text, backend, model, promptSent, vlmRawResponse } = await callVision(imagePath, prompt);
 
@@ -181,13 +220,18 @@ export async function calibrateReference(
     .filter(w => w.length > 3)
     .filter((w, i, arr) => arr.indexOf(w) === i);
 
+  const calibration: CachedCalibration = {
+    composition: text,
+    keywords,
+    vlmModel: model || 'unknown',
+    timestamp: Date.now(),
+  };
+
+  // Persist to disk for future sessions
+  saveCalibration(imagePath, calibration);
+
   return {
-    calibration: {
-      composition: text,
-      keywords,
-      vlmModel: model || 'unknown',
-      timestamp: Date.now(),
-    },
+    calibration,
     promptSent,
     vlmRawResponse,
   };

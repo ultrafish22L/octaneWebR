@@ -69,13 +69,13 @@ The loop iterates: render → score → fix weakest → re-render → re-score. 
 
 ### Model Selection Strategy
 
-| Role                 | Model                    | Why                                                                   |
-| -------------------- | ------------------------ | --------------------------------------------------------------------- |
-| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator |
-| Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding         |
-| Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                           |
-| Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss           |
-| Mugshot verification | moondream3 (otoy-studio) | Orientation is structural, doesn't need holistic judgment             |
+| Role                 | Model                    | Why                                                                            |
+| -------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator          |
+| Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding                  |
+| Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                                    |
+| Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss                    |
+| Mugshot verification | moondream3 (otoy-studio) | `analyze_mesh` pre-pass only — checks orientation/scale, not aesthetic quality |
 
 > **Details:** [BUILD.md Critique Loop](mcp/BUILD.md#critique-loop--dual-perspective-run-after-every-save_render-in-phases-2-4)
 

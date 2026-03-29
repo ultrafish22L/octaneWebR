@@ -986,9 +986,14 @@ export function octaneGrpcPlugin(): Plugin {
           return;
         }
         // File listing endpoint for remote file browser
-        // Path restricted to OCTANE_FILE_ROOTS (default: C:\otoyla). Set to "*" for unrestricted.
+        // Path restricted to OCTANE_FILE_ROOTS (default: user home). Set to "*" for unrestricted.
         if (url?.startsWith('/api/files/list')) {
-          const fileRoots: string[] = (process.env.OCTANE_FILE_ROOTS || 'C:\\otoyla')
+          const fileRoots: string[] = (
+            process.env.OCTANE_FILE_ROOTS ||
+            process.env.HOME ||
+            process.env.USERPROFILE ||
+            '.'
+          )
             .split(',')
             .map(r => path.resolve(r.trim()))
             .filter(Boolean);

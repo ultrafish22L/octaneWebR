@@ -85,14 +85,36 @@ describe('extractValue', () => {
 });
 
 describe('validateFilePath', () => {
+  const origRoots = process.env.OCTANE_FILE_ROOTS;
+
+  afterEach(() => {
+    if (origRoots !== undefined) process.env.OCTANE_FILE_ROOTS = origRoots;
+    else delete process.env.OCTANE_FILE_ROOTS;
+  });
+
   it('rejects paths outside allowed roots', () => {
-    const err = validateFilePath('C:\\Windows\\System32\\evil.exe');
+    process.env.OCTANE_FILE_ROOTS = '/allowed/root';
+    const err = validateFilePath('/other/place/evil.exe');
     expect(err).not.toBeNull();
     expect(err).toContain('outside allowed roots');
   });
 
-  it('allows paths within default root', () => {
-    const err = validateFilePath('C:\\otoyla\\scenes\\test.orbx');
+  it('allows paths within configured root', () => {
+    process.env.OCTANE_FILE_ROOTS = '/allowed/root';
+    const err = validateFilePath('/allowed/root/scenes/test.orbx');
     expect(err).toBeNull();
+  });
+
+  it('supports wildcard to disable checking', () => {
+    process.env.OCTANE_FILE_ROOTS = '*';
+    const err = validateFilePath('/anywhere/at/all.orbx');
+    expect(err).toBeNull();
+  });
+
+  it('supports multiple comma-separated roots', () => {
+    process.env.OCTANE_FILE_ROOTS = '/root/a,/root/b';
+    expect(validateFilePath('/root/a/file.orbx')).toBeNull();
+    expect(validateFilePath('/root/b/file.orbx')).toBeNull();
+    expect(validateFilePath('/root/c/file.orbx')).not.toBeNull();
   });
 });
