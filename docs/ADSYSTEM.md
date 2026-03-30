@@ -32,9 +32,9 @@ If you have a reference image, `analyze_reference` extracts composition from it 
 
 ### 2. Mesh Analysis & Scene Placement
 
-3D meshes from external sources arrive with unknown orientation, scale, and proportions. The **Mugshot Protocol** (`analyze_mesh`) loads each mesh in isolation, renders diagnostic views (lean 2-pass: 3 diagnose + 2 verify + 1 hero), sends them to a VLM for upright verification, and caches the results in a sidecar file. Scene Placement maintains a spatial database for collision-free positioning via `suggest_placement` and `register_scene_object`.
+3D meshes from external sources arrive with unknown orientation, scale, and proportions. The **Mugshot Protocol** (`analyze_geo`) loads each mesh in isolation, renders diagnostic views (lean 2-pass: 3 diagnose + 2 verify + 1 hero), sends them to a VLM for upright verification, and caches the results in a sidecar file. Scene Placement maintains a spatial database for collision-free positioning via `suggest_placement` and `register_scene_object`.
 
-> **Details:** [BUILD.md Pre-Phase](mcp/BUILD.md#pre-phase-analyze_mesh-blocking--before-any-placement)
+> **Details:** [BUILD.md Pre-Phase](mcp/BUILD.md#pre-phase-analyze_geo-blocking--before-any-placement)
 
 ---
 
@@ -61,7 +61,7 @@ Two critics evaluate each render:
 
 Additionally:
 
-- **Semantic Critic** (`semantic_critique`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
+- **Semantic Critic** (`evaluate_semantics`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
 
 The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign. All assessments logged to `critique_stats.jsonl` per scene.
 
@@ -69,13 +69,13 @@ The loop iterates: render → score → fix weakest → re-render → re-score. 
 
 ### Model Selection Strategy
 
-| Role                 | Model                    | Why                                                                            |
-| -------------------- | ------------------------ | ------------------------------------------------------------------------------ |
-| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator          |
-| Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding                  |
-| Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                                    |
-| Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss                    |
-| Mugshot verification | moondream3 (otoy-studio) | `analyze_mesh` pre-pass only — checks orientation/scale, not aesthetic quality |
+| Role                 | Model                    | Why                                                                           |
+| -------------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator         |
+| Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding                 |
+| Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                                   |
+| Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss                   |
+| Mugshot verification | moondream3 (otoy-studio) | `analyze_geo` pre-pass only — checks orientation/scale, not aesthetic quality |
 
 > **Details:** [BUILD.md Critique Loop](mcp/BUILD.md#critique-loop--dual-perspective-run-after-every-save_render-in-phases-2-4)
 
@@ -96,7 +96,7 @@ End-to-end from idea to rendered scene:
 1. **Concept art** — `generate_image_pro` (OTOY Studio MCP) from text description
 2. **Reference analysis** — `analyze_reference` extracts composition into structured recipe
 3. **3D mesh generation** — `que.otoy.studio` API (Hunyuan-3D v3.1 Pro) → OBJ + PBR textures
-4. **Mesh analysis** — `analyze_mesh` mugshot protocol for orientation/scale
+4. **Mesh analysis** — `analyze_geo` mugshot protocol for orientation/scale
 5. **Scene build** — Import, apply materials/lighting from SEGA intent, collision-free placement
 6. **Critique and iterate** — Vision critique loop until render matches intent
 
@@ -131,10 +131,10 @@ A full AD-enabled build flows through four gated phases: **Plan** (spatial math 
 
 | Tool                        | VLM Calls                                                                     | Transparency                                                                    |
 | --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `analyze_mesh` (mugshot)    | Pass 1 diagnosis (3 images), Pass 2 verification (2 images, up to 4 attempts) | Each pass: prompt, image paths, raw response in labeled blocks                  |
+| `analyze_geo` (mugshot)     | Pass 1 diagnosis (3 images), Pass 2 verification (2 images, up to 4 attempts) | Each pass: prompt, image paths, raw response in labeled blocks                  |
 | `analyze_reference`         | 1 analysis call + 1 calibration call                                          | Prompt + response + calibration in labeled blocks                               |
 | `critique_render`           | 1 Sonnet comparison (concept+render, two images)                              | Prompt + image paths + response in labeled blocks.                              |
-| `semantic_critique`         | Pixel measurement (local) + optional VLM estimation                           | Gap vector, pixel measurements, worst dimensions, corrections — all in response |
+| `evaluate_semantics`        | Pixel measurement (local) + optional VLM estimation                           | Gap vector, pixel measurements, worst dimensions, corrections — all in response |
 | `get_vlm_estimation_prompt` | Returns prompt for caller                                                     | Full prompt text returned                                                       |
 
 ### Why this matters:

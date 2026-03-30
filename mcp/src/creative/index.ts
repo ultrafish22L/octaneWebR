@@ -28,11 +28,8 @@ export function registerCreativeTools(
     {
       title: 'Suggest Lighting',
       description:
-        '[Phase 2] Camera must be positioned first (fit_camera). Get a computed lighting recipe from mood + scene bounds. ' +
-        'Returns light positions, colors (Kelvin), power, key:fill:rim ratios. ' +
-        'PREFER setup_lighting() instead — it calls this internally AND creates all lights automatically. ' +
-        'Use suggest_lighting only when you need the recipe without creating nodes. ' +
-        'Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
+        '[Phase 2] Get lighting recipe from mood + scene bounds. Returns positions, colors (K), power, ratios. ' +
+        'PREFER setup_lighting() — creates lights automatically. This returns recipe only.',
       inputSchema: {
         mood: z
           .string()
@@ -74,9 +71,8 @@ export function registerCreativeTools(
       title: 'Suggest Material',
       description:
         '[Phase 2] Get PBR values for a surface type. Returns roughness, metallic, specular, IOR, albedo. ' +
-        'NEXT: You MUST apply these values — use read_pin_value to get child handles, then set_attribute on each. ' +
-        'If mesh has .mtl textures, do NOT override albedo — apply only roughness/metallic/specular/IOR. ' +
-        'Call with surface_type:"list" to see all 30+ types.',
+        "Apply via read_pin_value + set_attribute. Don't override albedo if mesh has .mtl textures. " +
+        'Call with surface_type:"list" to see all types.',
       inputSchema: {
         surface_type: z
           .string()

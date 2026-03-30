@@ -11,8 +11,8 @@
  *
  * Tool names updated for v3 renames:
  *   create_and_connect → create_connected
- *   import_geo → import_mesh
- *   attach_mesh → place_mesh
+ *   import_geo → import_geo
+ *   attach_mesh → place_geo
  *   update_scene → flush_changes
  *   delete_unconnected → cleanup_orphans
  *   get_all_attributes → list_attributes
@@ -274,10 +274,10 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 - Cause: missing reference_image_path parameter
 - Fix: pass reference_image_path pointing to concept art PNG
 
-### "place_mesh errors"
-- Cause 1: analyze_mesh not run → no .mesh_info.json sidecar
+### "place_geo errors"
+- Cause 1: analyze_geo not run → no .mesh_info.json sidecar
 - Cause 2: OBJ file path wrong or file doesn't exist
-- Fix: run analyze_mesh first, verify file path, try again
+- Fix: run analyze_geo first, verify file path, try again
 - Do NOT fall back to manual create_node chains — diagnose the error
 
 ## After 2 Failures of the Same Kind
@@ -318,19 +318,22 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
    **GATE: validate_layout passes with 0 errors. Do NOT create nodes until this passes.**
 
 ## Phase 0.5 — ASSETS
-5. analyze_mesh(obj_path, source_endpoint:"huynan") for EVERY mesh
+5. analyze_geo(obj_path, source_endpoint:"huynan") for EVERY mesh
    - Creates .mesh_info.json sidecar with orientation/scale/offset
-   - MUST run before place_mesh. No exceptions.
+   - MUST run before place_geo. No exceptions.
    - While meshes generate (~3 min), build scene infrastructure (RT, kernel, env)
+5b. Generate HDRI via OTOY Studio: flux-pro/new with equirectangular panorama prompt
+   - Save to aigenerated/{scene}/assets/hdri_{scene}.png
+   - Apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
 
 ## Phase 1 — FRAME (clay mode)
 6. set_clay_mode(2) → color clay ON
 7. create_node("NT_RENDERTARGET") → RT (auto-creates camera + kernel)
-8. place_mesh(obj_path, role:"hero") → imports, orients, wires, auto-registers in placement state
-   If using primitives (not place_mesh): call register_scene_object(handle, name, role, position, bounds) manually
+8. place_geo(obj_path, role:"hero") → imports, orients, wires, auto-registers in placement state
+   For primitives (ground, hills, backdrops): place_geo(type:"primitive", shape:"box", ...) → auto-wires + registers
 9. fit_camera(framing_mode:"subjects") → frames hero+secondary, EXCLUDES ground. MANDATORY after every geo add.
-10. start_render() → FIRST VISUAL
-11. Add remaining objects: place_mesh (or create + register_scene_object) → fit_camera(framing_mode:"subjects") → render after EACH
+10. start_render() → FIRST VISUAL — check get_render_status immediately, 10 samples enough for clay
+11. Add remaining objects: place_geo/place_geo → fit_camera(framing_mode:"subjects") → render + VERIFY each object visible after EACH
 12. **Creative review** (MANDATORY before critique):
     - "What else does this scene need?" Walls? Backdrop? Environment?
     - "Is anything floating?" Objects must be grounded.
@@ -343,7 +346,8 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 ### Phase 1 Hard Rules:
 - Clay mode stays ON until critique passes
 - ONLY fit_camera — NEVER set_camera to fix framing (fix geometry instead)
-- HDRI environment is standard for art scenes (not daylight)
+- Generate HDRI from concept art via OTOY Studio (equirectangular panorama)
+- Apply HDRI to NT_ENV_TEXTURE with NT_TEX_IMAGE using SPHERE PROJECTION
 - No infinite floor planes (scale <= 3x scene width)
 - reference_image_path is MANDATORY for critique
 
@@ -361,14 +365,15 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 17. Second creative review: "Does the lighting tell a story?"
 
 ### Phase 2 Rules:
-- **Ground planes = primitives.** Use NT_GEO_OBJECT (Plane=15), not place_mesh with OBJ files. Never analyze_mesh on a flat quad.
+- **Ground planes = primitives.** Use place_geo(type:"primitive", shape:"plane"), not place_geo(type:"mesh"). Never analyze_geo on a flat quad.
 - **setup_lighting for the 3-point rig.** Don't manually create emissive planes — that's what the tool does internally.
 - **create_light for individual lights.** Glowing mushrooms, neon signs, accent lights — pass material_handle to add emission to existing objects.
 
 ## Phase 3 — CRITIQUE LOOP
 18. critique_render(render_path, spec_name, reference_image_path) → Sonnet grade
-19. semantic_critique(render_path) → SEGA gap measurement
+19. evaluate_semantics(render_path) → SEGA gap measurement
 20. Read render + concept art yourself → orchestrator grade (be HARSH on framing)
+    **MANDATORY: State your own A-F grade explicitly.** Format: "Orchestrator grade: C+. [reason]." Not optional.
 21. apply_corrections(spec_name, iteration, overall_score, passed, scores)
 22. If grade < B+: fix top corrections, re-render, go to 18
 23. If stagnating (2 iterations < 0.3 improvement): redesign plan, don't tweak
@@ -382,7 +387,7 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 24. set_camera(position, target) → hero shot composition
 25. save_render(path) → beauty render
 26. save_project(path) → persist scene
-27. Check 3 log files (log_mcp, log_grpc, log_serv) — 0 errors
+27. Check 3 log files (log_mcp, log_grpc, log_client) — 0 errors
 28. reset_project() → clean for next scene
 
 ## HARD RULES:
@@ -411,7 +416,7 @@ Query octane://sega/presets for available SEGA presets.`,
         source_endpoint: z
           .string()
           .optional()
-          .describe('Origin endpoint (e.g. "huynan") for analyze_mesh'),
+          .describe('Origin endpoint (e.g. "huynan") for analyze_geo'),
       },
     },
     async ({ obj_path, source_endpoint }) => ({
@@ -422,14 +427,14 @@ Query octane://sega/presets for available SEGA presets.`,
             type: 'text' as const,
             text: `Import a mesh into the scene with correct orientation and placement.
 
-1. **analyze_mesh(obj_path, source_endpoint:"huynan")**
+1. **analyze_geo(obj_path, source_endpoint:"huynan")**
    - Renders 8 mugshots, VLM verifies orientation
    - Creates .mesh_info.json sidecar with rotation/scale/offset
-   - MUST run before place_mesh. No exceptions.
+   - MUST run before place_geo. No exceptions.
    - For Hunyuan-generated meshes, pass source_endpoint:"huynan" to skip VLM and apply known correction
    - Pass target_height to override auto-estimated scale
 
-2. **place_mesh(obj_path, role:"hero|secondary|accent|prop|ground")**
+2. **place_geo(obj_path, role:"hero|secondary|accent|prop|ground")**
    - Reads .mesh_info.json sidecar, applies transforms automatically
    - Wires: placement → geo group → RT (creates RT if none exists)
    - Auto-registers in scene placement state (fit_camera knows about it)
@@ -437,7 +442,7 @@ Query octane://sega/presets for available SEGA presets.`,
    - Optional: geo_group_handle to attach to specific geo group
 
 3. **fit_camera(framing_mode:"subjects")**
-   - MANDATORY after every place_mesh call
+   - MANDATORY after every place_geo call
    - Always pass framing_mode:"subjects" — excludes ground plane from framing
    - Params: elevation (default 20°), yaw (default 0°), margin (default 0.3)
 
@@ -446,13 +451,13 @@ Query octane://sega/presets for available SEGA presets.`,
 
 ## GOTCHAS:
 - GLB/glTF files auto-converted to OBJ (texture paths may need fixing)
-- If place_mesh errors: DIAGNOSE the error. Don't fall back to manual create_node chains.
-- Scale: analyze_mesh estimates real-world height. Override with target_height if wrong.
+- If place_geo errors: DIAGNOSE the error. Don't fall back to manual create_node chains.
+- Scale: analyze_geo estimates real-world height. Override with target_height if wrong.
 - Always check the render — orientation issues are common with new mesh sources.
 
-## PREFER place_mesh over import_mesh:
-- place_mesh: reads sidecar, wires to RT, registers in placement state (PREFERRED)
-- import_mesh: raw import, no sidecar, no wiring — only for manual control`,
+## PREFER place_geo over import_geo:
+- place_geo: reads sidecar, wires to RT, registers in placement state (PREFERRED)
+- import_geo: raw import, no sidecar, no wiring — only for manual control`,
           },
         },
       ],
@@ -546,14 +551,15 @@ Query octane://sega/presets for available SEGA presets.`,
    **MANDATORY: reference_image_path must point to concept art.**
    If you get a self-critique prompt back → you forgot the reference path. Re-call.
 
-## C2. semantic_critique(render_path)
+## C2. evaluate_semantics(render_path)
    → Pixel analysis measures gap vs SEGA target vector
    → Returns gap dimensions + correction suggestions
    → Only useful AFTER framing is correct
 
 ## C3. Read the render image yourself (Read tool on the saved PNG)
-   → Give your own A-F grade. Be HARSH on framing.
-   → Note disagreements with Sonnet.
+   → **MANDATORY: State your own A-F grade explicitly.**
+   → Format: "Orchestrator grade: C+. [1 sentence reason]." This is non-negotiable.
+   → Be HARSH on framing. Note disagreements with Sonnet.
    → You have build context Sonnet doesn't.
 
 ## C4. Synthesize: Sonnet grade + your grade + semantic gaps
@@ -629,7 +635,7 @@ Query octane://sega/presets for available SEGA presets.`,
 ## TECHNICAL
 - [ ] Clay mode OFF for Phase 2+ renders (set_clay_mode(0))
 - [ ] RT has camera (pin 0), geometry (pin 3), kernel (pin 6) connected
-- [ ] All mesh_info.json orientation transforms applied via place_mesh
+- [ ] All mesh_info.json orientation transforms applied via place_geo
 - [ ] No infinite floor planes (scale <= 3x scene width)
 - [ ] fit_camera called after last geometry change
 

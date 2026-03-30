@@ -7,7 +7,7 @@
  * Dynamic pins: ensureDynamicPin handles geo group pin expansion.
  *
  * AABB: computeWorldAABB transforms local mesh bounds to world space with
- * full Euler rotation support. Used by place_mesh and register_scene_object.
+ * full Euler rotation support. Used by place_geo and register_scene_object.
  */
 
 import { OctaneMcpClient, mcpLog, mcpLogLazy } from '../OctaneMcpClient';
@@ -201,8 +201,8 @@ const MAX_DYNAMIC_PINS = 32;
  *  2. If pinIndex specified: expand pins if needed
  *  3. If pinIndex omitted: find first empty slot or append
  *
- * Shared by connect_nodes (node.ts) and place_mesh (import.ts) to prevent
- * code drift. Previously place_mesh had a broken reimplementation that
+ * Shared by connect_nodes (node.ts) and place_geo (import.ts) to prevent
+ * code drift. Previously place_geo had a broken reimplementation that
  * crashed on fresh geo groups with 0 pins.
  *
  * @returns The pin index to use for the connection.
@@ -297,8 +297,8 @@ interface Vec3 {
  * Steps: scale local bounds → build Euler XYZ rotation matrix → project
  * all 8 corners through rotation → find min/max → translate to world position.
  *
- * Shared by place_mesh (import.ts) and register_scene_object (artdirection.ts).
- * Previously each had its own implementation; place_mesh's was broken
+ * Shared by place_geo (import.ts) and register_scene_object (artdirection.ts).
+ * Previously each had its own implementation; place_geo's was broken
  * (no rotation, wrong field names).
  */
 export function computeWorldAABB(

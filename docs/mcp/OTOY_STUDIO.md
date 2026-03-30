@@ -33,7 +33,9 @@ POST /r2/otoy-studio/flux-pro/new
 }
 ```
 
-**Mesh concept images** should use `"square_hd"`, white background, isolated object, product photography style. This gives Hunyuan clean input.
+**HDRI environment images** should use `"landscape_16_9"` with prompt: `"360 degree equirectangular panorama, [scene description], high dynamic range, seamless horizon, photorealistic, landscape 16:9"`. Apply via `NT_ENV_TEXTURE` + `NT_TEX_IMAGE` with **sphere projection**.
+
+**Mesh concept images** should use `"square_hd"`, white background, isolated object, product photography style. Add `", no base, no pedestal, no stand"` to the prompt when the scene doesn't want display bases. This gives Hunyuan clean input.
 
 ### Image-to-3D (hero meshes)
 
@@ -110,12 +112,14 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
 ## Pipeline Integration (AD Scene Build)
 
 ```
-1. Concept art — REST flux-pro/new → save concept_art.png
-2. analyze_reference (Octane MCP) — extract composition
-3. Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated)
-4. Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → OBJ + textures
-5. analyze_mesh (Octane MCP) → orientation check
-6. place_mesh (Octane MCP) → place in scene
+1.  Concept art — REST flux-pro/new → save concept_art.png
+1b. HDRI environment — REST flux-pro/new (equirectangular panorama prompt, landscape_16_9)
+    → save hdri.png → apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
+2.  analyze_reference (Octane MCP) — extract composition
+3.  Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated, no pedestal)
+4.  Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → OBJ + textures
+5.  analyze_geo (Octane MCP) → orientation check
+6.  place_geo (Octane MCP) → place in scene
 ```
 
 **Parallel work:** Steps 3-4 take ~3 min. During that time, build scene infrastructure in Octane (RT, kernel, environment, floor).

@@ -53,6 +53,16 @@ Each phase has hard gates — you don't move forward until the current phase pas
 
 ---
 
+### Scene Complexity
+
+- **Standard:** Daylight/HDRI env, solid materials, no volumetrics. Use for pipeline tests.
+- **Advanced:** Water surfaces, reflective/refractive materials, fog.
+- **Very Advanced:** Underwater, volumetric scattering, custom RGB environments, caustics.
+
+For pipeline tests, always use Standard complexity scenes.
+
+---
+
 ## Scene Folders
 
 - **Real scenes** → `aigenerated/{scene-name}/` (concept_art.png, recipe.md, scene.orbx, assets/, renders/)
@@ -75,7 +85,7 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 | ------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **G0** | `analyze_reference` was called on concept art                        | Scene has no composition data — layout will be random                               |
 | **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
-| **G2** | Every mesh ran through `analyze_mesh` before `import_mesh`           | Orientation will be wrong — wasted iterations                                       |
+| **G2** | Every mesh ran through `analyze_geo` before `import_geo`             | Orientation will be wrong — wasted iterations                                       |
 | **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
 | **G4** | `evaluate_semantics` ran at least once per scene                     | No SEGA gap measurement — you can't know what's wrong                               |
 | **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
@@ -93,15 +103,15 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 - Optimizing scene count over quality → every scene suffers
 - **Skipping creative review** → 3 objects on a floor is never a finished scene. Walls, textures, HDRI = mandatory
 - **Concept/scope mismatch** → generating a full-room interior concept then building a product shot. Match concept art to buildable scope.
-- **Falling back to manual node wiring** when `place_mesh` errors → diagnose the error, don't work around it
+- **Falling back to manual node wiring** when `place_geo` errors → diagnose the error, don't work around it
 - **Soft orchestrator self-critique** → grading your own render D when it's clearly F. Be harsh on framing.
 - **No parallel work** → waiting idle during 3-min mesh generation instead of building scene infrastructure
 
-### Pre-Phase: analyze_mesh (BLOCKING — before ANY placement)
+### Pre-Phase: analyze_geo (BLOCKING — before ANY placement)
 
-> **⛔ HARD GATE: Do NOT call `import_mesh` on any mesh until `analyze_mesh` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
+> **⛔ HARD GATE: Do NOT call `import_geo` on any mesh until `analyze_geo` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
 
-Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls in the scene yet.
+Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls in the scene yet.
 
 **Lean 2-pass VLM protocol (default):**
 
@@ -112,18 +122,18 @@ Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-
 | Hero              | 1 (yaw 22°, elevation 25°)                             | Textured (clay off), tight margin | Reference thumbnail for human review                                         |
 
 - **Known source fast path:** When `source_endpoint` matches `ENDPOINT_AXIS_MAP` (e.g. "huynan" → X+90°), Pass 1 is skipped — deterministic correction applied directly, then Pass 2 verifies.
-- **Configuration mode:** `analyze_mesh(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Use `score_mugshot_models` to rank accuracy.
+- **Configuration mode:** `analyze_geo(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Use `benchmark_vlm_models` to rank accuracy.
 - **Sidecar:** `.mesh_info.json` v5 — geometry, semantic, source, visual_check (pass1 + pass2 arrays), final_suggestion.
 - **Autonomous:** Proceeds without human input. Flags `verified: false` only if Pass 2 fails after 4 attempts.
 
 **Related tools:**
 
-- `place_mesh` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
-- `score_mugshot_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
+- `place_geo` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
+- `benchmark_vlm_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
 
 ```
-❌ import_mesh("gargoyle.obj") → guess rotation → wrong → waste iterations
-✅ analyze_mesh("gargoyle.obj") → read sidecar → place_mesh or import_mesh with correction → correct first try
+❌ import_geo("gargoyle.obj") → guess rotation → wrong → waste iterations
+✅ analyze_geo("gargoyle.obj") → read sidecar → place_geo or import_geo with correction → correct first try
 ```
 
 ---
@@ -161,7 +171,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(2)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
-| 2    | Import mesh via `import_mesh(file_path)` → placement → geo group → RT `pin_index:3`                                                       | **Object exists**. `import_mesh` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                    |
+| 2    | Import mesh via `import_geo(file_path)` → placement → geo group → RT `pin_index:3`                                                        | **Object exists**. `import_geo` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                     |
 | 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
 | 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |
 | 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `critique_render` must pass composition before Phase 2.**                                                                                                                                                                |
@@ -173,8 +183,18 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 - **Only `fit_camera`** — NEVER `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry (position, scale, floor plane size). `set_camera` is for Phase 4 hero shots only.
 - **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
 - **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
-- **Apply `mesh_info` transforms** — every imported mesh must use the rotation/scale from its `.mesh_info.json` sidecar (generated by `analyze_mesh`). Never guess orientation.
-- **HDRI environment is standard** for art scenes. Use daylight or texture environment only for testing. Generate HDRI prompts: `360 degree equirectangular panorama, [scene description], high dynamic range, seamless horizon`
+- **Apply `mesh_info` transforms** — every imported mesh must use the rotation/scale from its `.mesh_info.json` sidecar (generated by `analyze_geo`). Never guess orientation.
+- **HDRI environment is standard** for art scenes. Use daylight or texture environment only for testing.
+- **Primitives via `place_geo`** — ground planes, hills, backdrops, pedestals → `place_geo(type:"primitive", shape:"box")`. Never `analyze_geo`/`place_geo` on a flat quad.
+
+**HDRI Generation (for any scene with concept art):**
+
+1. Generate via OTOY Studio REST API: `POST /r2/otoy-studio/flux-pro/new`
+   Prompt: `"360 degree equirectangular panorama, [scene description from concept], high dynamic range, seamless horizon, photorealistic, landscape 16:9"`
+2. Poll `status_url` → download result PNG
+3. Save to `aigenerated/{scene}/assets/hdri_{scene}.png`
+4. Create `NT_ENV_TEXTURE` → create `NT_TEX_IMAGE` with HDRI file → **set sphere projection** on the image texture node → connect texture to env, env to RT environment pin
+5. Sphere projection is REQUIRED for equirectangular HDRIs to wrap correctly as a sky dome
 
 ### ⛔ Creative Review Pass (MANDATORY before critique)
 
@@ -203,10 +223,10 @@ If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't 
 
 ```
 ❌ WRONG Phase 1:
-  import_mesh → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → dress
+  import_geo → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → dress
 
 ✅ RIGHT Phase 1:
-  import_mesh → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
+  import_geo → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
   → Sonnet grade C+? → YES → set_clay_mode(0) → Phase 2
   → Sonnet grade D/F? → fix geometry → fit_camera() → critique_render again
 ```
@@ -223,14 +243,14 @@ If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't 
 
 **Use `setup_lighting` for the full 3-point rig** — it reads SEGA intent, computes positions from subject bounds, creates emissive planes, and dims the environment automatically. Use `create_light` for individual lights (accents, practicals, glowing objects). Use `set_daylight` to adjust environment without pin-chasing. Use `suggest_lighting` only if you need the recipe without creating nodes.
 
-**Ground planes and simple shapes** — use `NT_GEO_OBJECT` primitives (Plane=15, Box=1, Sphere=20), not `place_mesh` with OBJ files. Never analyze_mesh on a flat quad.
+**Ground planes and simple shapes** — use `place_geo(type:"primitive", shape:"plane")`, not `place_geo(type:"mesh")` with OBJ files. Never `analyze_geo` on a flat quad.
 
 ### Phase 3: Assembly
 
 For each additional object:
 
 1. `suggest_placement(object_name, bounds)` — get collision-free position from scene placement DB
-2. Create mesh → apply analyze_mesh rotation → material → placement at suggested position → connect to geo group
+2. Create mesh → apply analyze_geo rotation → material → placement at suggested position → connect to geo group
 3. `register_scene_object(name, position, bounds)` — update scene DB (warns on overlap)
 4. `fit_camera()` → render → verify
 5. `get_scene_placement_state()` — inspect DB if placement looks wrong
@@ -247,15 +267,18 @@ Hero camera, fine-tune lighting, final beauty pass `save_render`.
 
 **Requires AD.** Skipped when AD is OFF. When skipped, save the render and move on — no scoring, no corrections. **When AD is ON, both critics run every iteration — never skip one.**
 
-| Step | Action                                                                       | Result                                          |
-| ---- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
-| C1   | `critique_render(render_path, spec_name, reference_image_path?)`             | Sonnet concept-vs-render comparison (A-F grade) |
-| C2   | `evaluate_semantics(render_path)`                                            | Pixel-level intent gap analysis vs SEGA vector  |
-| C3   | Read the saved render image + concept art (Read tool)                        | Orchestrator visual review — your own A-F grade |
-| C4   | Compare both assessments: Sonnet + orchestrator                              | Dual-assessment synthesis                       |
-| C5   | `apply_corrections(spec_name, scores, corrections)`                          | Records score, detects stagnation               |
-| C6   | If score < 3.5 OR Sonnet grade < C: fix top corrections, re-render, go to C1 | Iteration                                       |
-| C7   | If stagnating (2 iterations < 0.3 improvement): redesign plan                | Plan change, not tweaking                       |
+| Step | Action                                                           | Result                                          |
+| ---- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| C1   | `critique_render(render_path, spec_name, reference_image_path?)` | Sonnet concept-vs-render comparison (A-F grade) |
+| C2   | `evaluate_semantics(render_path)`                                | Pixel-level intent gap analysis vs SEGA vector  |
+| C3   | Read the saved render image + concept art (Read tool)            | Orchestrator visual review — your own A-F grade |
+
+**Orchestrator grade is MANDATORY.** You MUST state your own A-F grade explicitly before proceeding to C4. "I read it and it looks ok" is NOT a grade. State: `"Orchestrator grade: C+. [1 sentence reason]."` This is non-negotiable.
+
+| C4 | Compare both assessments: Sonnet + orchestrator | Dual-assessment synthesis |
+| C5 | `apply_corrections(spec_name, scores, corrections)` | Records score, detects stagnation |
+| C6 | If score < 3.5 OR Sonnet grade < C: fix top corrections, re-render, go to C1 | Iteration |
+| C7 | If stagnating (2 iterations < 0.3 improvement): redesign plan | Plan change, not tweaking |
 
 ### Vision Critic — Sonnet + Orchestrator
 
@@ -284,14 +307,16 @@ After `start_render` or `set_camera`, call `get_render_status` to check `state: 
 
 Log these alongside every saved render for calibration and debugging. A low-res or noisy render is a data quality issue — knowing the sample count explains it.
 
+**Clay verification renders:** Don't wait for full convergence. 10 samples is sufficient for checking object visibility and framing. Call `get_render_status` immediately after `start_render` — don't sleep first. Full sample counts only matter for beauty/critique renders.
+
 **Polling pattern** (do NOT sleep-then-save):
 
 ```
 start_render(rt_handle)
 loop:
-  sleep 2
   status = get_render_status()
   if status.state == "RSTATE_FINISHED": break
+  sleep 2
 save_render(path)
 ```
 
@@ -352,7 +377,7 @@ Primitive values: see `REFERENCE.md` §7a.
 
 ### 3D Asset Orientation
 
-Generated meshes have unknown orientation. **Never guess — use `analyze_mesh`** for reliable orientation via VLM mugshot. OTOY Studio GLBs are Z-up → rotate +90° on X. Set film aspect BEFORE framing.
+Generated meshes have unknown orientation. **Never guess — use `analyze_geo`** for reliable orientation via VLM mugshot. OTOY Studio GLBs are Z-up → rotate +90° on X. Set film aspect BEFORE framing.
 
 ### Manual Camera Math (rare — only when fit_camera insufficient)
 
@@ -395,14 +420,14 @@ Response: `request_id` + `status_url` + `response_url`. Poll `status_url` until 
 
 **Load in Octane:**
 
-1. `analyze_mesh(obj_path, source_endpoint:"huynan")` — mandatory, uses known-source fast path for Hunyuan meshes
-2. `place_mesh(obj_path, position, role)` — preferred, reads sidecar, applies transforms, wires to geo group + RT in one call
+1. `analyze_geo(obj_path, source_endpoint:"huynan")` — mandatory, uses known-source fast path for Hunyuan meshes
+2. `place_geo(obj_path, position, role)` — preferred, reads sidecar, applies transforms, wires to geo group + RT in one call
 3. `fit_camera` after each placement
 
-**⚠️ `place_mesh` troubleshooting:**
+**⚠️ `place_geo` troubleshooting:**
 
-- **"pin index 0 out of range (pinCount is 0)"** — geo group exists but has no pins. Ensure RT is created first and geo group is connected to RT pin 3 BEFORE calling `place_mesh`. The tool needs an existing RT+geo group chain.
-- **If `place_mesh` fails, diagnose the error.** Don't fall back to manual `create_node(NT_GEO_MESH)` + `set_attribute(A_FILENAME)` + `create_node(NT_GEO_PLACEMENT)` + manual transform + manual connections. That path skips sidecar transforms and is error-prone.
+- **"pin index 0 out of range (pinCount is 0)"** — geo group exists but has no pins. Ensure RT is created first and geo group is connected to RT pin 3 BEFORE calling `place_geo`. The tool needs an existing RT+geo group chain.
+- **If `place_geo` fails, diagnose the error.** Don't fall back to manual `create_node(NT_GEO_MESH)` + `set_attribute(A_FILENAME)` + `create_node(NT_GEO_PLACEMENT)` + manual transform + manual connections. That path skips sidecar transforms and is error-prone.
 
 **Parallel work during mesh generation (~3 min):**
 While image-to-3D jobs are processing, build scene infrastructure:

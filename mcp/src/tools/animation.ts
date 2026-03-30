@@ -9,7 +9,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, extractValue, OBJ_API_ITEM } from './utils';
-import { enumeratePins } from './pin-utils';
 
 // ObjectRef type for root node graph (ApiRootNodeGraph)
 const OBJ_API_ROOT_NODE_GRAPH = 18;

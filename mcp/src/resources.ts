@@ -398,7 +398,7 @@ export function registerResources(
                     'analyze_reference',
                     'plan_composition',
                     'validate_layout',
-                    'analyze_mesh',
+                    'analyze_geo',
                   ],
                   gate: 'validate_layout passes with 0 errors',
                 },
@@ -416,7 +416,7 @@ export function registerResources(
                   description: 'Clay mode ON. Import geometry, frame camera, verify composition',
                   tools: [
                     'set_clay_mode',
-                    'place_mesh',
+                    'place_geo',
                     'fit_camera',
                     'register_scene_object',
                     'start_render',
@@ -437,6 +437,9 @@ export function registerResources(
                   description: 'Materials + lighting. Clay mode OFF.',
                   tools: [
                     'set_clay_mode',
+                    'setup_lighting',
+                    'create_light',
+                    'set_daylight',
                     'suggest_lighting',
                     'suggest_material',
                     'set_artistic_intent',

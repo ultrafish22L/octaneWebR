@@ -1,6 +1,6 @@
 {
   "name": "octaneweb-react",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "description": "OctaneWeb ported to React TypeScript with Node.js gRPC",
   "main": "dist/electron/main.js",
   "scripts": {
@@ -21,8 +21,13 @@
     "mcp:start": "cd mcp && npx tsx src/index.ts",
     "prepare": "husky",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:43929 && electron .\"",
-    "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win",
-    "electron:build:dir": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win --dir"
+    "electron:dev:integrated": "cross-env OCTANE_INTEGRATED=true concurrently \"vite\" \"wait-on http://localhost:43929 && electron .\"",
+    "electron:build": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win && npm run electron:copy-bin",
+    "electron:build:dir": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win --dir",
+    "electron:build:integrated": "npm run build && tsc -p electron/tsconfig.json && cross-env OCTANE_INTEGRATED=true electron-builder --win -c electron-builder.integrated.yml && npm run electron:copy-bin:integrated",
+    "electron:build:integrated:dir": "npm run build && tsc -p electron/tsconfig.json && cross-env OCTANE_INTEGRATED=true electron-builder --win --dir -c electron-builder.integrated.yml",
+    "electron:copy-bin": "node -e \"const fs=require('fs'),p=require('path'),src='dist/electron-build',dst=p.resolve('../bin');fs.mkdirSync(dst,{recursive:true});const cp=(s,d)=>{if(fs.statSync(s).isDirectory()){fs.mkdirSync(d,{recursive:true});fs.readdirSync(s).forEach(f=>cp(p.join(s,f),p.join(d,f)))}else fs.copyFileSync(s,d)};fs.readdirSync(src).filter(f=>f.endsWith('.exe')||f==='win-unpacked').forEach(f=>cp(p.join(src,f),p.join(dst,f)));console.log('Copied electron dist to ../bin/')\"",
+    "electron:copy-bin:integrated": "node -e \"const fs=require('fs'),p=require('path'),src='dist/electron-build-integrated',dst=p.resolve('../bin');fs.mkdirSync(dst,{recursive:true});const cp=(s,d)=>{if(fs.statSync(s).isDirectory()){fs.mkdirSync(d,{recursive:true});fs.readdirSync(s).forEach(f=>cp(p.join(s,f),p.join(d,f)))}else fs.copyFileSync(s,d)};fs.readdirSync(src).filter(f=>f.endsWith('.exe')||f==='win-unpacked').forEach(f=>cp(p.join(src,f),p.join(dst,f)));console.log('Copied integrated electron dist to ../bin/')\""
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
@@ -47,6 +52,10 @@
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -62,9 +71,6 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vitest": "^4.0.18",
-    "electron": "^35.0.0",
-    "electron-builder": "^26.0.0",
-    "concurrently": "^9.0.0",
     "wait-on": "^8.0.0"
   },
   "lint-staged": {

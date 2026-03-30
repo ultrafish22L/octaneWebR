@@ -386,6 +386,6 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ## §12 GLB Pipeline
 
-OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_mesh` for reliable orientation.
+OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_geo` for reliable orientation.
 
 Full GLB→OBJ conversion, texture extraction, and Octane loading workflow: see `BUILD.md` §8.

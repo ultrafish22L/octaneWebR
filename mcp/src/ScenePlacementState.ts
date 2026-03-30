@@ -30,7 +30,7 @@ export interface ScenePlacementEntry {
   scale: Vec3;
   /** World-space axis-aligned bounding box (after transform) */
   boundsWorld: AABB;
-  /** Mesh analysis from analyze_mesh sidecar, if available */
+  /** Mesh analysis from analyze_geo sidecar, if available */
   meshInfo?: {
     category: string;
     naturalHeightM: number;
@@ -235,8 +235,8 @@ export class ScenePlacementState {
 
     return {
       position,
-      rotation: { x: 0, y: 0, z: 0 }, // Rotation comes from analyze_mesh
-      scale: { x: 1, y: 1, z: 1 }, // Scale comes from analyze_mesh
+      rotation: { x: 0, y: 0, z: 0 }, // Rotation comes from analyze_geo
+      scale: { x: 1, y: 1, z: 1 }, // Scale comes from analyze_geo
       reasoning,
       clearances,
       warnings,

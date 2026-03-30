@@ -332,7 +332,7 @@ export function registerLightingTools(
     {
       title: 'Create Light',
       description:
-        '[Phase 2] Create a light in one call. Supports emissive primitives (plane/box/sphere), emissive meshes, native lights (quad/sphere/spot), or adding emission to an existing material. Handles all node creation, emission setup (efficiency=1.0), and geo group wiring automatically.',
+        '[Phase 2] Create a light in one call. Emissive primitives, native lights (quad/sphere/spot), or emission on existing material. Auto-wires with efficiency=1.0.',
       inputSchema: {
         type: z
           .enum(['emissive', 'quad', 'sphere', 'spot'])
@@ -592,7 +592,7 @@ export function registerLightingTools(
           }
           if (!boundsMin || !boundsMax) {
             return errorResult(
-              'No subject bounds available. Pass subject_bounds_min/max or register objects with place_mesh first.'
+              'No subject bounds available. Pass subject_bounds_min/max or register objects with place_geo first.'
             );
           }
         }

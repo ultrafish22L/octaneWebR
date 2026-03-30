@@ -185,16 +185,16 @@ export function registerCameraTools(
 
         // Phase 1 warning: if framing_verified hasn't been completed, warn loudly
         const warnings: string[] = [];
-        if (artState.isActive && !artState.isStepDone('framing_verified')) {
+        if (artState?.isActive && !artState.isStepDone('framing_verified')) {
           warnings.push(
-            '⛔ PHASE VIOLATION: set_camera used before framing_verified. In Phase 1, use fit_camera ONLY. set_camera is for Phase 4 hero shots. If fit_camera frames wrong, fix the geometry (position, scale, floor plane size) — do NOT hack the camera.'
+            '⛔ PHASE VIOLATION: set_camera used before framing_verified. In Phase 1, use fit_camera ONLY. set_camera is for Phase 4 hero shots.'
           );
         }
 
         return jsonResult({
           success: true,
           ...(warnings.length > 0 ? { warnings } : {}),
-          ...adWorkflow(artState, 'fit_camera'), // track as camera operation
+          ...(artState ? adWorkflow(artState, 'fit_camera') : {}),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -382,7 +382,7 @@ export function registerCameraTools(
         if (framingSource === 'scene_bounds_fallback') {
           result.warning =
             'Placement state is empty — using full scene bounds (includes ground planes, lights). ' +
-            'Framing may be inaccurate. Use register_scene_object or place_mesh to register objects for correct subject framing.';
+            'Framing may be inaccurate. Use register_scene_object or place_geo to register objects for correct subject framing.';
         }
 
         return jsonResult(result);

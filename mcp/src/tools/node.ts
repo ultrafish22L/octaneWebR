@@ -287,11 +287,8 @@ export function registerNodeTools(
     {
       title: 'Connect Nodes',
       description:
-        "[All phases] Connect source node to a target node's input pin. " +
-        'Use pin_name (preferred, e.g. "diffuse", "geometry", "camera") or pin_index (for dynamic/movable pins). ' +
-        'Query octane://pin-layout/{typeName} for available pins. Query octane://constants for RT pin layout. ' +
-        'Connection is auto-verified after wiring. ' +
-        'Gotcha: Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
+        "[All phases] Connect source node to a target node's input pin. Use pin_name (preferred) or pin_index. " +
+        'Auto-verified after wiring. Cannot connect to auto-created internal children.',
       inputSchema: {
         target_handle: z
           .number()

@@ -4,6 +4,37 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.6] - 2026-03-30
+
+### Added
+
+- **`place_geo` tool** — unified geometry placement for primitives and meshes. Creates node, sets shape/transform/material, wires to geo group, auto-registers in placement state. Replaces manual `create_node` + `connect_nodes` for primitives. Mesh path calls `import_geo` internally and reads sidecar.
+- **HDRI generation workflow** — documented in BUILD.md, OTOY_STUDIO.md, and dress-workflow prompt. Generate equirectangular panorama via OTOY Studio flux-pro, apply with sphere projection.
+- **`clearScene()` on ArtDirectionState and SemanticState** — composition specs and SEGA intent survive `reset_project`. Only scene-specific state (handles, critique history) is cleared.
+- **Public API on ArtDirectionState** — `setCalibration()`, `getCalibration()`, `getSpecs()` replace `as any` private field access.
+
+### Changed
+
+- **MCP_BUILD** — bumped to 71
+- **Tool renames** — `analyze_mesh` → `analyze_geo`, `import_mesh` → `import_geo`. `place_mesh` removed (use `place_geo`).
+- **Tool description compression** — top 15 tool descriptions reduced ~58% (3,100 chars cut). Phase tags and critical gotchas preserved.
+- **Vision MIME detection** — sniffs file header bytes instead of extension. Fixes JPEG-in-PNG from OTOY Studio.
+- **`findOrCreateGeoGroup` helper** — wires geo group to existing RT instead of creating duplicate RT.
+- **Orchestrator grade** — mandatory at critique step C3. Added to BUILD.md, dress-workflow, and critique-loop prompts.
+- **Scene complexity classification** — Standard/Advanced/Very Advanced added to BUILD.md.
+
+### Fixed
+
+- **Null guard on `artState`** in camera.ts `set_camera` — prevented runtime crash when AD state is undefined.
+- **Stale tool names** — 66 references to `analyze_mesh`/`import_mesh`/`place_mesh` replaced across 14 files.
+- **`semantic_critique` → `evaluate_semantics`** — fixed in ADSYSTEM.md, sega/index.ts, prompts.ts.
+- **`score_mugshot_models` → `benchmark_vlm_models`** — fixed in BUILD.md and import.ts.
+- **`log_serv` → `log_client`** — fixed in dress-workflow prompt.
+- **Phase 2 tools in `octane://workflow/phases`** — added `setup_lighting`, `create_light`, `set_daylight`.
+- **Dead imports** — removed unused `path`/`fs` in attribute.ts, unused `enumeratePins` in animation.ts.
+
+---
+
 ## [2.4.5] - 2026-03-29
 
 ### Added

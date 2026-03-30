@@ -189,15 +189,15 @@ describe('ArtDirectionState', () => {
     });
 
     it('tracks completed steps', () => {
-      state.completeStep('analyze_mesh');
-      expect(state.isStepDone('analyze_mesh')).toBe(true);
+      state.completeStep('analyze_geo');
+      expect(state.isStepDone('analyze_geo')).toBe(true);
       expect(state.isStepDone('plan_composition')).toBe(false);
     });
 
     it('checks prerequisites', () => {
-      // plan_composition requires analyze_mesh
-      expect(state.checkPrereqs('plan_composition')).toEqual(['analyze_mesh']);
-      state.completeStep('analyze_mesh');
+      // plan_composition requires analyze_geo
+      expect(state.checkPrereqs('plan_composition')).toEqual(['analyze_geo']);
+      state.completeStep('analyze_geo');
       expect(state.checkPrereqs('plan_composition')).toEqual([]);
     });
 
@@ -211,51 +211,51 @@ describe('ArtDirectionState', () => {
     });
 
     it('getWorkflowStatus shows completed and pending', () => {
-      state.completeStep('analyze_mesh');
+      state.completeStep('analyze_geo');
       state.completeStep('plan_composition');
       const status = state.getWorkflowStatus('plan_composition');
-      expect(status.completed).toContain('analyze_mesh');
+      expect(status.completed).toContain('analyze_geo');
       expect(status.completed).toContain('plan_composition');
       expect(status.pending).toContain('validate_layout');
       expect(status.next_step?.step).toBe('validate_layout');
     });
 
     it('resets workflow on resetWorkflow', () => {
-      state.completeStep('analyze_mesh');
+      state.completeStep('analyze_geo');
       state.resetWorkflow();
-      expect(state.isStepDone('analyze_mesh')).toBe(false);
+      expect(state.isStepDone('analyze_geo')).toBe(false);
     });
 
     it('clear resets workflow', () => {
-      state.completeStep('analyze_mesh');
+      state.completeStep('analyze_geo');
       state.clear();
-      expect(state.isStepDone('analyze_mesh')).toBe(false);
+      expect(state.isStepDone('analyze_geo')).toBe(false);
     });
   });
 
   describe('adWorkflow helper', () => {
     it('returns undefined when inactive', () => {
-      expect(adWorkflow(state, 'analyze_mesh')).toBeUndefined();
+      expect(adWorkflow(state, 'analyze_geo')).toBeUndefined();
     });
 
     it('returns workflow status when active', () => {
       state.setMode('active');
-      const result = adWorkflow(state, 'analyze_mesh');
+      const result = adWorkflow(state, 'analyze_geo');
       expect(result).toBeDefined();
       expect(result!.ad_workflow).toBeDefined();
       const wf = result!.ad_workflow as any;
-      expect(wf.step_completed).toBe('analyze_mesh');
-      expect(wf.completed).toContain('analyze_mesh');
+      expect(wf.step_completed).toBe('analyze_geo');
+      expect(wf.completed).toContain('analyze_geo');
     });
 
     it('reports missing prerequisites', () => {
       state.setMode('active');
-      // plan_composition requires analyze_mesh — skip it
+      // plan_composition requires analyze_geo — skip it
       const result = adWorkflow(state, 'plan_composition');
       const wf = result!.ad_workflow as any;
       expect(wf.prereq_warnings).toBeDefined();
       expect(wf.prereq_warnings.length).toBeGreaterThan(0);
-      expect(wf.prereq_warnings[0]).toContain('analyze_mesh');
+      expect(wf.prereq_warnings[0]).toContain('analyze_geo');
     });
   });
 });

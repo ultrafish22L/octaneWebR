@@ -1,0 +1,53 @@
+# electron-builder config for integrated builds (octaneGrpcSE bundled inside)
+# Usage: npm run electron:build:integrated
+
+appId: com.otoy.octanewebr
+productName: octaneWebR
+directories:
+  output: dist/electron-build-integrated
+  buildResources: electron/resources
+
+files:
+  - dist/client/**/*
+  - dist/electron/**/*
+  - server/dist/**/*
+  - mcp/src/shared/CallbackStreamManager.*
+  - mcp/data/octane-api-cache.json
+  - api-version.config.js
+  - grpc-constants.js
+
+extraResources:
+  # octaneGrpcSE runtime (exe + Octane SDK DLLs + data) from dev/bin/
+  - from: ../bin/
+    to: octane-server/
+    filter:
+      - octaneGrpcSE.exe
+      - "*.dll"
+      - "*.dat"
+      - "*.pak"
+      - "*.bin"
+      - "*.json"
+      - "*.exe"
+      - "!octaneServGrpc.exe"
+  # Proto files for gRPC client
+  - from: ../octaneServGrpc/proto
+    to: server/proto
+  # MCP API cache
+  - from: mcp/data/octane-api-cache.json
+    to: mcp/data/octane-api-cache.json
+  # App icon
+  - from: build/icon.ico
+    to: icon.ico
+  # DX shared surface native addon
+  - from: native/build/Release/dx_shared_surface.node
+    to: native/dx_shared_surface.node
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

@@ -8,13 +8,27 @@
  *             serves built static files, and handles all API routes.
  */
 
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
+import { spawnOctaneServer, OctaneServerHandle } from './octane-process';
 
 const isDev = !app.isPackaged;
 
+// Integrated mode: env var for dev, auto-detect bundled server for production
+function detectIntegrated(): boolean {
+  if (process.env.OCTANE_INTEGRATED === 'true') return true;
+  if (!isDev) {
+    const bundledExe = path.join(process.resourcesPath, 'octane-server/octaneGrpcSE.exe');
+    return fs.existsSync(bundledExe);
+  }
+  return false;
+}
+const isIntegrated = detectIntegrated();
+
 let mainWindow: BrowserWindow | null = null;
 let proxyServer: { close: () => Promise<void> } | null = null;
+let octaneServer: OctaneServerHandle | null = null;
 
 // dxSS native addon — loaded once, shared with GrpcProxyServer
 let dxAddon: any = null;
@@ -50,6 +64,36 @@ async function createWindow(): Promise<void> {
 
   // Load DX addon before starting server
   loadDxAddon();
+
+  // Integrated mode: spawn octaneServGrpc as a child process
+  if (isIntegrated) {
+    const exePath = isDev
+      ? path.resolve(app.getAppPath(), '../bin/octaneGrpcSE.exe')
+      : path.join(process.resourcesPath, 'octane-server/octaneGrpcSE.exe');
+
+    const cwd = isDev
+      ? path.resolve(app.getAppPath(), '../bin')
+      : path.join(process.resourcesPath, 'octane-server');
+
+    try {
+      console.log(`[Electron] Spawning octaneServGrpc from ${exePath}`);
+      octaneServer = await spawnOctaneServer({
+        exePath,
+        port: 51022,
+        logLevel: 'info',
+        cwd,
+      });
+      console.log(`[Electron] octaneServGrpc ready on port ${octaneServer.port}`);
+      process.env.OCTANE_PORT = String(octaneServer.port);
+    } catch (err: any) {
+      dialog.showErrorBox(
+        'Octane Server Error',
+        `Failed to start integrated Octane server:\n${err.message}`
+      );
+      app.quit();
+      return;
+    }
+  }
 
   if (!isDev) {
     // Start standalone gRPC proxy server for production
@@ -143,5 +187,10 @@ app.on('before-quit', async () => {
   if (proxyServer) {
     await proxyServer.close();
     proxyServer = null;
+  }
+  if (octaneServer) {
+    console.log('[Electron] Shutting down integrated octaneServGrpc...');
+    await octaneServer.kill();
+    octaneServer = null;
   }
 });

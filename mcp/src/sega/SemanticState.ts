@@ -156,7 +156,19 @@ export class SemanticState {
 
   // ── Lifecycle ─────────────────────────────────────────────────────
 
-  /** Clear all state. Called on crash, reset_project, load_project. */
+  /** Clear scene-specific state but preserve global intent vector.
+   *  Called on reset_project — per-object overrides are invalid but
+   *  the mood/intent set in Phase 0b survives for the next build. */
+  clearScene(): void {
+    this.state = {
+      global: this.state.global, // PRESERVED — artistic intent is planning data
+      overrides: {}, // cleared — per-object overrides reference scene handles
+      history: [], // cleared — adjustment history is scene-specific
+      learnedAdjustments: this.state.learnedAdjustments, // PRESERVED — cross-scene learning
+    };
+  }
+
+  /** Full clear — only on explicit user request or new project. */
   clear(): void {
     this.state = {
       global: {},

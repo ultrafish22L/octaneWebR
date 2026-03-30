@@ -71,10 +71,7 @@ export function registerSegaTools(
       title: 'Set Artistic Intent',
       description:
         '[Phase 0b / Phase 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
-        'Phase 0b: Initialize mood before geometry (drives suggest_lighting/suggest_material values). ' +
-        'Phase 2: Refine mood after framing is confirmed. ' +
-        'Returns: semantic vector, resolved parameter recipes (lighting, material, camera), Berlyne warnings. ' +
-        'Query octane://sega/presets for available presets. Query octane://sega/dimensions for dimension names. ' +
+        'Drives suggest_lighting/suggest_material values. Returns resolved parameters + Berlyne warnings. ' +
         'Call with preset:"list" to see all presets.',
       inputSchema: {
         preset: z
@@ -266,8 +263,7 @@ export function registerSegaTools(
     {
       title: 'Adjust Artistic Intent',
       description:
-        '[Phase 2] Fine-tune a single semantic dimension. Only use after framing is confirmed (Phase 1 complete). ' +
-        'Supports absolute (set to value) or relative (delta from current). Per-object override if object_id provided. ' +
+        '[Phase 2] Fine-tune a single semantic dimension. Absolute (set to value) or relative (delta from current). ' +
         'Returns updated vector + resolved parameters + warnings.',
       inputSchema: {
         dimension: z
@@ -366,18 +362,14 @@ export function registerSegaTools(
     }
   );
 
-  // ── semantic_critique ─────────────────────────────────────────────
+  // ── evaluate_semantics ─────────────────────────────────────────────
 
   server.registerTool(
     'evaluate_semantics',
     {
       title: 'Evaluate Semantics',
       description:
-        '[Phase 3] Evaluates mood/style gaps — only useful AFTER framing is correct. ' +
-        'Measures how well a render matches the target artistic intent. ' +
-        'Analyzes pixel data (contrast, warmth, saturation, atmosphere) and computes ' +
-        'a semantic gap vector showing exactly what dimensions need adjustment. ' +
-        'Returns gap vector, convergence status, and correction suggestions.',
+        '[Phase 3] Measure mood/style gap between render and SEGA target. Returns gap vector + correction suggestions. Only useful after framing is correct.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to the rendered image (PNG)'),
         vlm_measurements: z
@@ -439,7 +431,7 @@ export function registerSegaTools(
       description:
         'Get a prompt for VLM (vision model) to estimate perceptual semantic dimensions ' +
         'from a render image. Use this prompt with the vision critic, then pass results ' +
-        'to semantic_critique as vlm_measurements.',
+        'to evaluate_semantics as vlm_measurements.',
       annotations: { readOnlyHint: true },
     },
     async () => {
@@ -471,7 +463,7 @@ export function registerSegaTools(
           ),
           instruction:
             'Send this prompt along with the render image to a vision model. ' +
-            'Parse the response and pass the measurements to semantic_critique as vlm_measurements.',
+            'Parse the response and pass the measurements to evaluate_semantics as vlm_measurements.',
         });
       } catch (error: any) {
         return errorResult(error);

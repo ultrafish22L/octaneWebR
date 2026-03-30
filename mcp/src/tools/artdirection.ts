@@ -554,7 +554,7 @@ export function registerArtDirectionTools(
     {
       title: 'Plan Composition',
       description:
-        '[Phase 0] Create a validated scene composition plan with computed camera math. Does NOT create Octane nodes — pure planning. Use positions/scales from analyze_mesh placement_suggestion. Call fit_camera AFTER to apply camera. Returns plan + validation for review before building.',
+        '[Phase 0] Create validated composition plan with camera math. Pure planning — no Octane nodes created. Returns plan + validation.',
       inputSchema: {
         name: z.string().describe('Unique name for this composition'),
         description: z.string().describe('Creative brief'),
@@ -689,16 +689,7 @@ export function registerArtDirectionTools(
 
       // Store calibration in artState for later critique_render calls
       if (calibResult.calibration) {
-        // Store on any spec that references this image
-        for (const spec of Object.values((artState as any).specs || {})) {
-          const s = spec as any;
-          if (s.referenceImagePath && path.resolve(s.referenceImagePath) === resolved) {
-            s.calibration = calibResult.calibration;
-          }
-        }
-        // Also store on artState directly for lookup
-        (artState as any)._lastCalibration = calibResult.calibration;
-        (artState as any)._lastCalibrationPath = resolved;
+        artState.setCalibration(resolved, calibResult.calibration);
       }
 
       if (visionResult && visionResult.backend !== 'self') {
@@ -764,7 +755,7 @@ export function registerArtDirectionTools(
     {
       title: 'Critique Render',
       description:
-        '[Phase 3] Save current render and score it. MANDATORY after every render. Framing score must be ≥3 before lighting/mood scores matter — if framing <3, fix camera FIRST (call fit_camera). Uses external VLM if available, otherwise returns self-critique prompt.',
+        '[Phase 3] Save and score current render via VLM. Framing must be ≥3 before lighting/mood scores matter.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to save render'),
         spec_name: z.string(),
@@ -1119,7 +1110,7 @@ export function registerArtDirectionTools(
       description:
         '[Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
       inputSchema: {
-        mesh_path: z.string().describe('Path to OBJ file (runs analyze_mesh if no sidecar exists)'),
+        mesh_path: z.string().describe('Path to OBJ file (runs analyze_geo if no sidecar exists)'),
         role: z
           .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
           .optional()
@@ -1182,7 +1173,7 @@ export function registerArtDirectionTools(
           relationship
         );
 
-        // Merge analyze_mesh rotation/scale if available
+        // Merge analyze_geo rotation/scale if available
         if (meshInfo) {
           suggestion.rotation = meshInfo.suggestedRotation;
           // Adjust Y for ground offset
@@ -1191,7 +1182,7 @@ export function registerArtDirectionTools(
           // Warn on low confidence orientation
           if (meshInfo.confidence === 'low') {
             suggestion.warnings.push(
-              `Low confidence orientation for "${meshInfo.category}" — verify visually after placement. Consider re-running analyze_mesh with force_reanalyze=true.`
+              `Low confidence orientation for "${meshInfo.category}" — verify visually after placement. Consider re-running analyze_geo with force_reanalyze=true.`
             );
           }
 
@@ -1270,19 +1261,19 @@ export function registerArtDirectionTools(
           .object({ x: z.number(), y: z.number(), z: z.number() })
           .optional()
           .describe(
-            'Object extents (from analyze_mesh). Assumes mesh centered at origin. If omitted, uses unit cube. For non-centered meshes, use bounds_min/bounds_max instead.'
+            'Object extents (from analyze_geo). Assumes mesh centered at origin. If omitted, uses unit cube. For non-centered meshes, use bounds_min/bounds_max instead.'
           ),
         bounds_min: z
           .object({ x: z.number(), y: z.number(), z: z.number() })
           .optional()
           .describe(
-            'Mesh-local min bounds (from analyze_mesh bboxMin). Use with bounds_max for non-centered meshes.'
+            'Mesh-local min bounds (from analyze_geo bboxMin). Use with bounds_max for non-centered meshes.'
           ),
         bounds_max: z
           .object({ x: z.number(), y: z.number(), z: z.number() })
           .optional()
           .describe(
-            'Mesh-local max bounds (from analyze_mesh bboxMax). Use with bounds_min for non-centered meshes.'
+            'Mesh-local max bounds (from analyze_geo bboxMax). Use with bounds_min for non-centered meshes.'
           ),
         mesh_info_path: z
           .string()

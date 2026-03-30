@@ -1,4 +1,4 @@
-## v2.4.5 (MCP_BUILD 70)
+## v2.4.6 (MCP_BUILD 71)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 
@@ -70,13 +70,15 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 
 These are hard constraints that apply regardless of which prompt you're following:
 
-1. **`analyze_mesh` before `place_mesh`** — always, no exceptions
-2. **`place_mesh` over manual `create_node` chains** — diagnose errors, don't work around
+1. **`analyze_geo` before `place_geo`** — always, no exceptions
+2. **`place_geo` over manual `create_node` chains** — diagnose errors, don't work around
 3. **`fit_camera(framing_mode:"subjects")`** — always pass this, never bare `fit_camera()`
 4. **`set_camera` is Phase 4 ONLY** — wrong framing = wrong geometry
 5. **Visual verify EVERY change** — `save_render` + `preview_screenshot`
-6. **Primitives for simple shapes** — ground planes, backdrops, pedestals → `NT_GEO_OBJECT` (Plane=15, Box=1, Sphere=20). Never run `analyze_mesh`/`place_mesh` on a flat quad.
+6. **Primitives via `place_geo`** — ground planes, backdrops, pedestals → `place_geo(type:"primitive", shape:"box")`. Never run `analyze_geo` on a flat quad.
 7. **MCP restart = `taskkill //F //IM node.exe`** — MCP is a Claude project-level server. Kill ALL node.exe, wait 3s, call any MCP tool → Claude auto-restarts with fresh tool discovery. Never start MCP manually.
+8. **HDRI from concept art** — any art scene with concept art → generate equirectangular HDRI via OTOY Studio, apply with sphere projection.
+9. **Orchestrator grade is MANDATORY** — at critique step C3, state your own A-F grade explicitly. Not optional.
 
 ## Build & Debug
 

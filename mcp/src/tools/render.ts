@@ -27,7 +27,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       title: 'Start Render',
       description:
-        '[All phases] Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera, geometry, kernel connected (query octane://constants for pin layout). If all white → missing geometry connection. If blurry → DOF aperture not 0.',
+        '[All phases] Start rendering. Auto-flushes pending changes. RT needs camera, geometry, kernel connected.',
       inputSchema: {
         render_target_handle: z
           .number()

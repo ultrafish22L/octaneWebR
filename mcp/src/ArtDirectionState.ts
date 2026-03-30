@@ -138,7 +138,7 @@ export type AdMode = 'active' | 'inactive';
 export const AD_STEPS = [
   // Phase 0 — Plan
   'analyze_reference',
-  'analyze_mesh',
+  'analyze_geo',
   'plan_composition',
   'validate_layout',
   // Phase 1 — Frame
@@ -159,7 +159,7 @@ export type AdStep = (typeof AD_STEPS)[number];
 
 const STEP_PHASE: Record<AdStep, number> = {
   analyze_reference: 0,
-  analyze_mesh: 0,
+  analyze_geo: 0,
   plan_composition: 0,
   validate_layout: 0,
   suggest_placement: 1,
@@ -184,7 +184,7 @@ const STEP_PHASE: Record<AdStep, number> = {
  * critique IS the gate. You can't skip it by just running fit_camera.
  */
 const STEP_PREREQS: Partial<Record<AdStep, AdStep[]>> = {
-  plan_composition: ['analyze_mesh'],
+  plan_composition: ['analyze_geo'],
   validate_layout: ['plan_composition'],
   suggest_placement: ['plan_composition'],
   fit_camera: [], // always allowed — Phase 1 entry
@@ -199,8 +199,8 @@ const STEP_PREREQS: Partial<Record<AdStep, AdStep[]>> = {
 
 /** What to call next after completing this step (when AD active). */
 const STEP_NEXT: Partial<Record<AdStep, { step: AdStep; reason: string }>> = {
-  analyze_reference: { step: 'analyze_mesh', reason: 'Analyze each mesh before planning layout' },
-  analyze_mesh: {
+  analyze_reference: { step: 'analyze_geo', reason: 'Analyze each mesh before planning layout' },
+  analyze_geo: {
     step: 'plan_composition',
     reason: 'Create composition plan from analyzed meshes',
   },
@@ -252,6 +252,8 @@ export class ArtDirectionState {
   private _mode: AdMode = 'inactive';
   private _completedSteps = new Set<AdStep>();
   private _stepNotes = new Map<AdStep, string>(); // quality/status annotations per step
+  private _lastCalibration: CachedCalibration | null = null;
+  private _lastCalibrationPath: string | null = null;
 
   // ── AD mode ───────────────────────────────────────────────────────
 
@@ -446,9 +448,40 @@ export class ArtDirectionState {
     return Object.fromEntries(this._handleMap);
   }
 
+  // ── Calibration ─────────────────────────────────────────────────
+
+  /** Store VLM calibration for a reference image (pass resolved absolute path). */
+  setCalibration(resolvedPath: string, calibration: CachedCalibration): void {
+    this._lastCalibration = calibration;
+    this._lastCalibrationPath = resolvedPath;
+  }
+
+  /** Get the last stored calibration. */
+  getCalibration(): { calibration: CachedCalibration; path: string } | null {
+    if (!this._lastCalibration || !this._lastCalibrationPath) return null;
+    return { calibration: this._lastCalibration, path: this._lastCalibrationPath };
+  }
+
+  /** Get all specs as an iterable (for external traversal without as-any). */
+  getSpecs(): IterableIterator<[string, CompositionSpec]> {
+    return this.specs.entries();
+  }
+
   // ── Lifecycle ───────────────────────────────────────────────────
 
-  /** Clear all state — called on crash, reset_project, load_project */
+  /** Clear scene-specific state but preserve planning data (specs, mode).
+   *  Called on reset_project / load_project — scene handles are invalid but
+   *  composition plans and artistic intent survive for the next build. */
+  clearScene(): void {
+    this.history.clear();
+    this._handleMap.clear();
+    this._completedSteps.clear();
+    this._stepNotes.clear();
+    // specs PRESERVED — they're planning data, not scene data
+    // mode PRESERVED — user toggles it explicitly
+  }
+
+  /** Full clear — only on explicit user request or new project */
   clear(): void {
     this.specs.clear();
     this.history.clear();

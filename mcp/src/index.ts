@@ -149,9 +149,9 @@ async function main() {
   // ScenePlacementState — shared between camera and art direction tools
   const placementState = new ScenePlacementState();
   client.onClear(() => {
-    artState.clear();
-    segaState.clear();
-    placementState.clear();
+    artState.clearScene(); // preserve composition specs + mode
+    segaState.clearScene(); // preserve global intent vector
+    placementState.clear(); // placement IS scene-specific — correct to clear
   });
 
   // Register all tool groups

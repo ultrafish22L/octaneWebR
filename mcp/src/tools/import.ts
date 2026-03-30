@@ -1,9 +1,10 @@
 /**
- * Import & Analysis Tools — import_geo, analyze_mesh
+ * Import & Analysis Tools — import_geo, analyze_geo, place_geo
  *
- * import_geo: Imports 3D geometry (OBJ, GLB/glTF) into Octane. OBJ loaded directly;
+ * import_geo: Low-level geometry import (OBJ, GLB/glTF). OBJ loaded directly;
  *             GLB/glTF converted to OBJ first via Python trimesh.
- * analyze_mesh: Analyzes an OBJ mesh file to suggest orientation, scale, and ground placement.
+ * analyze_geo: Analyzes a mesh file to suggest orientation, scale, and ground placement.
+ * place_geo: Unified placement for primitives and meshes — wires to geo group, registers in scene.
  *              Results cached in .mesh_info.json sidecar files next to the OBJ.
  *              v2: Includes visual mugshot analysis via VLM for reliable orientation detection.
  *
@@ -1535,11 +1536,11 @@ export function registerImportTools(
   placementState?: ScenePlacementState
 ) {
   server.registerTool(
-    'import_mesh',
+    'import_geo',
     {
-      title: 'Import Mesh',
+      title: 'Import Geometry',
       description:
-        '[Phase 1] Low-level mesh import. Creates mesh + placement + material nodes, returns handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Does NOT read .mesh_info.json sidecar, does NOT wire to geo group — caller must do both. PREFER place_mesh for normal workflow (handles sidecar + wiring automatically). Use import_mesh only when you need manual control over node creation.',
+        '[Phase 1] Low-level geometry import. Creates mesh + placement + material nodes, reads sidecar if available. Does NOT wire to geo group. PREFER place_geo for full placement.',
       inputSchema: {
         file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
         name: z
@@ -1564,353 +1565,363 @@ export function registerImportTools(
       annotations: { destructiveHint: true },
     },
     async ({ file_path, name: assetName, metallic, roughness }) => {
-      try {
-        // Validate input path
-        if (!fs.existsSync(file_path)) {
-          return errorResult(new Error(`File not found: ${file_path}`));
-        }
-        const ext = path.extname(file_path).toLowerCase();
-        const SUPPORTED = ['.obj', '.glb', '.gltf'];
-        if (!SUPPORTED.includes(ext)) {
-          return errorResult(
-            new Error(`Unsupported format "${ext}". Supported: ${SUPPORTED.join(', ')}`)
-          );
-        }
-
-        // Derive name from filename if not provided
-        const derivedName =
-          assetName ||
-          path
-            .basename(file_path, ext)
-            .replace(/[^a-zA-Z0-9_-]/g, '_')
-            .substring(0, 40);
-        const outDir = path.join(ASSETS_DIR, derivedName);
-
-        // Validate output path
-        const pathError = validateFilePath(outDir);
-        if (pathError) return errorResult(new Error(pathError));
-
-        // Phase 1: Get OBJ path — convert if GLB/glTF, use directly if OBJ
-        let objPath: string;
-        let texturePaths: string[] = [];
-        let vertices = 0;
-        let faces = 0;
-        let boundsMin: [number, number, number] = [0, 0, 0];
-        let boundsMax: [number, number, number] = [0, 0, 0];
-        let hasMtl = false;
-
-        if (ext === '.obj') {
-          // OBJ — load directly, no conversion needed
-          objPath = path.resolve(file_path);
-          mcpLog(`import_geo: loading OBJ directly: ${objPath}`, 'info');
-
-          // Check for .mtl companion — Octane reads it automatically
-          const objDir = path.dirname(objPath);
-          const mtlPath = objPath.replace(/\.obj$/i, '.mtl');
-          if (fs.existsSync(mtlPath)) {
-            hasMtl = true;
-            mcpLog(`import_geo: found .mtl companion — Octane will load textures from it`, 'info');
-            // Parse .mtl to find referenced texture maps
-            try {
-              const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
-              const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
-              for (const line of mapLines) {
-                const texFile = line.replace(/^map_\w+\s+/, '').trim();
-                const texFullPath = path.resolve(objDir, texFile);
-                if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
-                  texturePaths.push(texFullPath);
-                }
-              }
-              mcpLog(`import_geo: .mtl references ${texturePaths.length} texture(s)`, 'info');
-            } catch {
-              /* mtl parse is best-effort */
-            }
-          }
-          // Also pick up any loose texture files next to OBJ (exclude mugshots from analyze_mesh)
-          if (texturePaths.length === 0) {
-            const siblings = fs.readdirSync(objDir);
-            texturePaths = siblings
-              .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
-              .map(f => path.join(objDir, f));
-          }
-        } else {
-          // GLB/glTF — convert to OBJ
-          mcpLog(`import_geo: converting ${file_path} → ${outDir}/${derivedName}.obj`, 'info');
-          const conv = await convertGlbToObj(file_path, outDir, derivedName);
-          mcpLog(
-            `import_geo: converted ${conv.vertices} verts, ${conv.faces} faces, ${conv.texturePaths.length} textures`,
-            'info'
-          );
-          objPath = conv.objPath;
-          texturePaths = conv.texturePaths;
-          vertices = conv.vertices;
-          faces = conv.faces;
-          boundsMin = conv.boundsMin;
-          boundsMax = conv.boundsMax;
-        }
-
-        // Phase 2: Create NT_GEO_MESH and set filename
-        const rootGraph = await client.getRootNodeGraph();
-        const meshResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_GEO_MESH,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const meshHandle = extractHandle(meshResult) ?? 0;
-        if (!meshHandle) throw new Error('Failed to create NT_GEO_MESH node');
-
-        // Set OBJ filename — extended timeout for large mesh loads
-        await client.callMethod(
-          'ApiItem',
-          'setValueByAttrID',
-          {
-            objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
-            attribute_id: AttributeId.A_FILENAME,
-            string_value: objPath.replace(/\//g, '\\'),
-            evaluate: false,
-          },
-          120_000
-        );
-
-        // Reload mesh
-        await client.callMethod('ApiItem', 'setValueByAttrID', {
-          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
-          attribute_id: AttributeId.A_RELOAD,
-          bool_value: true,
-          evaluate: false,
-        });
-
-        client.sceneCache.addNode(meshHandle, 'Mesh', 'NT_GEO_MESH', 1);
-        notifyWebapp({ type: 'nodeAdded', handle: meshHandle });
-
-        // Phase 3: Create NT_GEO_PLACEMENT and connect mesh
-        const placementResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_GEO_PLACEMENT,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const placementHandle = extractHandle(placementResult) ?? 0;
-        if (!placementHandle) throw new Error('Failed to create NT_GEO_PLACEMENT node');
-
-        client.sceneCache.addNode(placementHandle, 'Placement', 'NT_GEO_PLACEMENT', 4);
-        notifyWebapp({ type: 'nodeAdded', handle: placementHandle });
-
-        // Connect mesh → placement pin "geometry" (pin index 1)
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
-          pinIdx: 1,
-          sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
-          evaluate: false,
-          doCycleCheck: true,
-        });
-
-        // Get placement transform handle (pin 0 = transform)
-        let transformHandle = 0;
-        try {
-          const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
-            objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
-            pinIx: 0,
-            enterWrapperNode: true,
-          });
-          transformHandle = extractHandle(connResult) ?? 0;
-          if (transformHandle) {
-            client.sceneCache.addNode(transformHandle, 'Transform', 'NT_TRANSFORM_VALUE', 0);
-          }
-        } catch (e: any) {
-          mcpLogLazy('verbose', () => `[import:geo:transform_child] ${e?.message ?? e}`);
-          /* no transform child */
-        }
-
-        // Phase 4: Create material with texture
-        const matResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_MAT_UNIVERSAL,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const matHandle = extractHandle(matResult) ?? 0;
-        if (!matHandle) throw new Error('Failed to create NT_MAT_UNIVERSAL node');
-
-        client.sceneCache.addNode(matHandle, 'Material', 'NT_MAT_UNIVERSAL', 130);
-        notifyWebapp({ type: 'nodeAdded', handle: matHandle });
-
-        // Connect material → mesh pin 0
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
-          pinIdx: 0,
-          sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
-          evaluate: false,
-          doCycleCheck: true,
-        });
-
-        let texHandle = 0;
-        // If OBJ has .mtl, Octane loads textures internally — don't override albedo.
-        // Only create explicit texture node for GLB conversions or loose textures without .mtl.
-        if (texturePaths.length > 0 && !hasMtl) {
-          const texResult = await client.callMethod('ApiNode', 'create', {
-            type: NodeTypeId.NT_TEX_IMAGE,
-            ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-            configurePins: true,
-          });
-          texHandle = extractHandle(texResult) ?? 0;
-
-          if (texHandle) {
-            client.sceneCache.addNode(texHandle, 'Texture', 'NT_TEX_IMAGE', 34);
-            notifyWebapp({ type: 'nodeAdded', handle: texHandle });
-
-            // Set texture filename — extended timeout for large textures
-            await client.callMethod(
-              'ApiItem',
-              'setValueByAttrID',
-              {
-                objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
-                attribute_id: AttributeId.A_FILENAME,
-                string_value: texturePaths[0].replace(/\//g, '\\'),
-                evaluate: false,
-              },
-              120_000
-            );
-
-            // Connect texture → material albedo (pin 2 on NT_MAT_UNIVERSAL)
-            await client.callMethod('ApiNode', 'connectToIx', {
-              objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-              pinIdx: 2, // albedo pin
-              sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
-              evaluate: false,
-              doCycleCheck: true,
-            });
-          }
-        }
-
-        // Set metallic and roughness on material child pins via shared helper
-        const matPins = await enumeratePins(client, matHandle);
-        let metallicHandle = 0;
-        let roughnessHandle = 0;
-        for (const pin of matPins) {
-          if (pin.name === 'metallic' && pin.connectedHandle) metallicHandle = pin.connectedHandle;
-          if (pin.name === 'roughness' && pin.connectedHandle)
-            roughnessHandle = pin.connectedHandle;
-          if (metallicHandle && roughnessHandle) break;
-        }
-
-        const metallicVal = metallic ?? 0.3;
-        const roughnessVal = roughness ?? 0.4;
-
-        if (metallicHandle) {
-          await client.callMethod('ApiItem', 'setValueByAttrID', {
-            objectPtr: { handle: String(metallicHandle), type: OBJ_API_ITEM },
-            attribute_id: AttributeId.A_VALUE,
-            float3_value: { x: metallicVal, y: metallicVal, z: metallicVal },
-            evaluate: false,
-          });
-        }
-        if (roughnessHandle) {
-          await client.callMethod('ApiItem', 'setValueByAttrID', {
-            objectPtr: { handle: String(roughnessHandle), type: OBJ_API_ITEM },
-            attribute_id: AttributeId.A_VALUE,
-            float3_value: { x: roughnessVal, y: roughnessVal, z: roughnessVal },
-            evaluate: false,
-          });
-        }
-
-        mcpLog(
-          `import_geo: complete — mesh=${meshHandle} placement=${placementHandle} material=${matHandle} tex=${texHandle || 'none'}`,
-          'info'
-        );
-
-        // Compute mesh extents for orientation help
-        const extents = [
-          boundsMax[0] - boundsMin[0],
-          boundsMax[1] - boundsMin[1],
-          boundsMax[2] - boundsMin[2],
-        ];
-
-        // Check for cached mesh_info sidecar (from prior analyze_mesh)
-        const sidecarPath = objPath.replace(/\.obj$/i, '.mesh_info.json');
-        let meshInfo: any = null;
-        const analyzeMeshWarnings: string[] = [];
-        if (fs.existsSync(sidecarPath)) {
-          try {
-            meshInfo = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'));
-            mcpLog(`import_geo: found cached mesh_info sidecar`, 'info');
-          } catch {
-            /* ignore parse errors */
-          }
-        }
-        if (!meshInfo) {
-          analyzeMeshWarnings.push(
-            `⛔ NO MESH ANALYSIS: analyze_mesh was NOT run on "${path.basename(objPath)}". You are guessing orientation and scale. STOP and run analyze_mesh("${objPath}") FIRST — it renders 6 mugshots (front/right/top × clay/textured) and caches the result. Then re-import with correct rotation/scale from the .mesh_info.json sidecar.`
-          );
-          mcpLog(`import_geo: ⛔ NO SIDECAR — analyze_mesh not run for ${objPath}`, 'warning');
-        }
-
-        return jsonResult({
-          success: true,
-          source_format: ext,
-          handles: {
-            mesh: meshHandle,
-            placement: placementHandle,
-            transform: transformHandle,
-            material: matHandle,
-            texture: texHandle || undefined,
-          },
-          obj_path: objPath,
-          textures: texturePaths,
-          vertices,
-          faces,
-          bounds: {
-            min: boundsMin,
-            max: boundsMax,
-            extents,
-          },
-          mesh_info: meshInfo
-            ? {
-                rotation_deg: meshInfo.final_suggestion?.rotation_deg,
-                scale_factor: meshInfo.final_suggestion?.scale_factor,
-                ground_offset_y: meshInfo.final_suggestion?.ground_offset_y,
-                category: meshInfo.semantic?.category,
-              }
-            : undefined,
-          has_mtl: hasMtl,
-          has_texture: texHandle > 0 || hasMtl,
-          texture_note: hasMtl
-            ? 'OBJ has .mtl — Octane loads textures internally. Do NOT override albedo. Only set roughness/metallic/specular/IOR on the material.'
-            : undefined,
-          next_steps: [
-            ...(meshInfo
-              ? []
-              : [
-                  `FIRST: call analyze_mesh on ${objPath} — generates mugshots for VLM orientation analysis`,
-                ]),
-            `Connect placement (${placementHandle}) to geo group via pin_index N`,
-            `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {rx, ry, rz})`,
-            `Set transform position: set_attribute(${transformHandle}, ${AttributeId.A_TRANSLATION}, 11, {x, y, z})`,
-            `Set transform scale: set_attribute(${transformHandle}, ${AttributeId.A_SCALE}, 11, {s, s, s})`,
-            ...(meshInfo
-              ? [
-                  `Apply cached suggestion: rotation=${JSON.stringify(meshInfo.final_suggestion?.rotation_deg)}, scale=${meshInfo.final_suggestion?.scale_factor}`,
-                ]
-              : []),
-          ],
-          warnings: analyzeMeshWarnings.length > 0 ? analyzeMeshWarnings : undefined,
-          instruction: meshInfo
-            ? 'Asset imported with cached mesh analysis. Apply suggested transforms, connect to geo group, then fit_camera + save_render to verify.'
-            : '⛔ Asset imported WITHOUT mesh analysis. Orientation is unknown — you are guessing. STOP: call analyze_mesh on the OBJ path NOW to generate mugshots and get VLM-verified orientation. Then apply the sidecar rotation/scale.',
-        });
-      } catch (error: any) {
-        mcpLog(`import_geo FAILED: ${error.message}`, 'error');
-        return errorResult(error);
-      }
+      return importGeoInternal(file_path, assetName, metallic, roughness);
     }
   );
 
-  // ── analyze_mesh ──────────────────────────────────────────────────
+  /** Core geometry import: creates mesh + placement + material + textures, reads sidecar.
+   *  Does NOT wire to geo group or register in placement state — that's place_geo's job. */
+  async function importGeoInternal(
+    file_path: string,
+    assetName?: string,
+    metallic?: number,
+    roughness?: number
+  ) {
+    try {
+      // Validate input path
+      if (!fs.existsSync(file_path)) {
+        return errorResult(new Error(`File not found: ${file_path}`));
+      }
+      const ext = path.extname(file_path).toLowerCase();
+      const SUPPORTED = ['.obj', '.glb', '.gltf'];
+      if (!SUPPORTED.includes(ext)) {
+        return errorResult(
+          new Error(`Unsupported format "${ext}". Supported: ${SUPPORTED.join(', ')}`)
+        );
+      }
+
+      // Derive name from filename if not provided
+      const derivedName =
+        assetName ||
+        path
+          .basename(file_path, ext)
+          .replace(/[^a-zA-Z0-9_-]/g, '_')
+          .substring(0, 40);
+      const outDir = path.join(ASSETS_DIR, derivedName);
+
+      // Validate output path
+      const pathError = validateFilePath(outDir);
+      if (pathError) return errorResult(new Error(pathError));
+
+      // Phase 1: Get OBJ path — convert if GLB/glTF, use directly if OBJ
+      let objPath: string;
+      let texturePaths: string[] = [];
+      let vertices = 0;
+      let faces = 0;
+      let boundsMin: [number, number, number] = [0, 0, 0];
+      let boundsMax: [number, number, number] = [0, 0, 0];
+      let hasMtl = false;
+
+      if (ext === '.obj') {
+        // OBJ — load directly, no conversion needed
+        objPath = path.resolve(file_path);
+        mcpLog(`import_geo: loading OBJ directly: ${objPath}`, 'info');
+
+        // Check for .mtl companion — Octane reads it automatically
+        const objDir = path.dirname(objPath);
+        const mtlPath = objPath.replace(/\.obj$/i, '.mtl');
+        if (fs.existsSync(mtlPath)) {
+          hasMtl = true;
+          mcpLog(`import_geo: found .mtl companion — Octane will load textures from it`, 'info');
+          // Parse .mtl to find referenced texture maps
+          try {
+            const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
+            const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
+            for (const line of mapLines) {
+              const texFile = line.replace(/^map_\w+\s+/, '').trim();
+              const texFullPath = path.resolve(objDir, texFile);
+              if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
+                texturePaths.push(texFullPath);
+              }
+            }
+            mcpLog(`import_geo: .mtl references ${texturePaths.length} texture(s)`, 'info');
+          } catch {
+            /* mtl parse is best-effort */
+          }
+        }
+        // Also pick up any loose texture files next to OBJ (exclude mugshots from analyze_geo)
+        if (texturePaths.length === 0) {
+          const siblings = fs.readdirSync(objDir);
+          texturePaths = siblings
+            .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
+            .map(f => path.join(objDir, f));
+        }
+      } else {
+        // GLB/glTF — convert to OBJ
+        mcpLog(`import_geo: converting ${file_path} → ${outDir}/${derivedName}.obj`, 'info');
+        const conv = await convertGlbToObj(file_path, outDir, derivedName);
+        mcpLog(
+          `import_geo: converted ${conv.vertices} verts, ${conv.faces} faces, ${conv.texturePaths.length} textures`,
+          'info'
+        );
+        objPath = conv.objPath;
+        texturePaths = conv.texturePaths;
+        vertices = conv.vertices;
+        faces = conv.faces;
+        boundsMin = conv.boundsMin;
+        boundsMax = conv.boundsMax;
+      }
+
+      // Phase 2: Create NT_GEO_MESH and set filename
+      const rootGraph = await client.getRootNodeGraph();
+      const meshResult = await client.callMethod('ApiNode', 'create', {
+        type: NodeTypeId.NT_GEO_MESH,
+        ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+        configurePins: true,
+      });
+      const meshHandle = extractHandle(meshResult) ?? 0;
+      if (!meshHandle) throw new Error('Failed to create NT_GEO_MESH node');
+
+      // Set OBJ filename — extended timeout for large mesh loads
+      await client.callMethod(
+        'ApiItem',
+        'setValueByAttrID',
+        {
+          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_FILENAME,
+          string_value: objPath.replace(/\//g, '\\'),
+          evaluate: false,
+        },
+        120_000
+      );
+
+      // Reload mesh
+      await client.callMethod('ApiItem', 'setValueByAttrID', {
+        objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
+        attribute_id: AttributeId.A_RELOAD,
+        bool_value: true,
+        evaluate: false,
+      });
+
+      client.sceneCache.addNode(meshHandle, 'Mesh', 'NT_GEO_MESH', 1);
+      notifyWebapp({ type: 'nodeAdded', handle: meshHandle });
+
+      // Phase 3: Create NT_GEO_PLACEMENT and connect mesh
+      const placementResult = await client.callMethod('ApiNode', 'create', {
+        type: NodeTypeId.NT_GEO_PLACEMENT,
+        ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+        configurePins: true,
+      });
+      const placementHandle = extractHandle(placementResult) ?? 0;
+      if (!placementHandle) throw new Error('Failed to create NT_GEO_PLACEMENT node');
+
+      client.sceneCache.addNode(placementHandle, 'Placement', 'NT_GEO_PLACEMENT', 4);
+      notifyWebapp({ type: 'nodeAdded', handle: placementHandle });
+
+      // Connect mesh → placement pin "geometry" (pin index 1)
+      await client.callMethod('ApiNode', 'connectToIx', {
+        objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
+        pinIdx: 1,
+        sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
+        evaluate: false,
+        doCycleCheck: true,
+      });
+
+      // Get placement transform handle (pin 0 = transform)
+      let transformHandle = 0;
+      try {
+        const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+          objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
+          pinIx: 0,
+          enterWrapperNode: true,
+        });
+        transformHandle = extractHandle(connResult) ?? 0;
+        if (transformHandle) {
+          client.sceneCache.addNode(transformHandle, 'Transform', 'NT_TRANSFORM_VALUE', 0);
+        }
+      } catch (e: any) {
+        mcpLogLazy('verbose', () => `[import:geo:transform_child] ${e?.message ?? e}`);
+        /* no transform child */
+      }
+
+      // Phase 4: Create material with texture
+      const matResult = await client.callMethod('ApiNode', 'create', {
+        type: NodeTypeId.NT_MAT_UNIVERSAL,
+        ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+        configurePins: true,
+      });
+      const matHandle = extractHandle(matResult) ?? 0;
+      if (!matHandle) throw new Error('Failed to create NT_MAT_UNIVERSAL node');
+
+      client.sceneCache.addNode(matHandle, 'Material', 'NT_MAT_UNIVERSAL', 130);
+      notifyWebapp({ type: 'nodeAdded', handle: matHandle });
+
+      // Connect material → mesh pin 0
+      await client.callMethod('ApiNode', 'connectToIx', {
+        objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
+        pinIdx: 0,
+        sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
+        evaluate: false,
+        doCycleCheck: true,
+      });
+
+      let texHandle = 0;
+      // If OBJ has .mtl, Octane loads textures internally — don't override albedo.
+      // Only create explicit texture node for GLB conversions or loose textures without .mtl.
+      if (texturePaths.length > 0 && !hasMtl) {
+        const texResult = await client.callMethod('ApiNode', 'create', {
+          type: NodeTypeId.NT_TEX_IMAGE,
+          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
+          configurePins: true,
+        });
+        texHandle = extractHandle(texResult) ?? 0;
+
+        if (texHandle) {
+          client.sceneCache.addNode(texHandle, 'Texture', 'NT_TEX_IMAGE', 34);
+          notifyWebapp({ type: 'nodeAdded', handle: texHandle });
+
+          // Set texture filename — extended timeout for large textures
+          await client.callMethod(
+            'ApiItem',
+            'setValueByAttrID',
+            {
+              objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
+              attribute_id: AttributeId.A_FILENAME,
+              string_value: texturePaths[0].replace(/\//g, '\\'),
+              evaluate: false,
+            },
+            120_000
+          );
+
+          // Connect texture → material albedo (pin 2 on NT_MAT_UNIVERSAL)
+          await client.callMethod('ApiNode', 'connectToIx', {
+            objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+            pinIdx: 2, // albedo pin
+            sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
+            evaluate: false,
+            doCycleCheck: true,
+          });
+        }
+      }
+
+      // Set metallic and roughness on material child pins via shared helper
+      const matPins = await enumeratePins(client, matHandle);
+      let metallicHandle = 0;
+      let roughnessHandle = 0;
+      for (const pin of matPins) {
+        if (pin.name === 'metallic' && pin.connectedHandle) metallicHandle = pin.connectedHandle;
+        if (pin.name === 'roughness' && pin.connectedHandle) roughnessHandle = pin.connectedHandle;
+        if (metallicHandle && roughnessHandle) break;
+      }
+
+      const metallicVal = metallic ?? 0.3;
+      const roughnessVal = roughness ?? 0.4;
+
+      if (metallicHandle) {
+        await client.callMethod('ApiItem', 'setValueByAttrID', {
+          objectPtr: { handle: String(metallicHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_VALUE,
+          float3_value: { x: metallicVal, y: metallicVal, z: metallicVal },
+          evaluate: false,
+        });
+      }
+      if (roughnessHandle) {
+        await client.callMethod('ApiItem', 'setValueByAttrID', {
+          objectPtr: { handle: String(roughnessHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_VALUE,
+          float3_value: { x: roughnessVal, y: roughnessVal, z: roughnessVal },
+          evaluate: false,
+        });
+      }
+
+      mcpLog(
+        `import_geo: complete — mesh=${meshHandle} placement=${placementHandle} material=${matHandle} tex=${texHandle || 'none'}`,
+        'info'
+      );
+
+      // Compute mesh extents for orientation help
+      const extents = [
+        boundsMax[0] - boundsMin[0],
+        boundsMax[1] - boundsMin[1],
+        boundsMax[2] - boundsMin[2],
+      ];
+
+      // Check for cached mesh_info sidecar (from prior analyze_geo)
+      const sidecarPath = objPath.replace(/\.obj$/i, '.mesh_info.json');
+      let meshInfo: any = null;
+      const analyzeMeshWarnings: string[] = [];
+      if (fs.existsSync(sidecarPath)) {
+        try {
+          meshInfo = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'));
+          mcpLog(`import_geo: found cached mesh_info sidecar`, 'info');
+        } catch {
+          /* ignore parse errors */
+        }
+      }
+      if (!meshInfo) {
+        analyzeMeshWarnings.push(
+          `⛔ NO MESH ANALYSIS: analyze_geo was NOT run on "${path.basename(objPath)}". You are guessing orientation and scale. STOP and run analyze_geo("${objPath}") FIRST — it renders 6 mugshots (front/right/top × clay/textured) and caches the result. Then re-import with correct rotation/scale from the .mesh_info.json sidecar.`
+        );
+        mcpLog(`import_geo: ⛔ NO SIDECAR — analyze_geo not run for ${objPath}`, 'warning');
+      }
+
+      return jsonResult({
+        success: true,
+        source_format: ext,
+        handles: {
+          mesh: meshHandle,
+          placement: placementHandle,
+          transform: transformHandle,
+          material: matHandle,
+          texture: texHandle || undefined,
+        },
+        obj_path: objPath,
+        textures: texturePaths,
+        vertices,
+        faces,
+        bounds: {
+          min: boundsMin,
+          max: boundsMax,
+          extents,
+        },
+        mesh_info: meshInfo
+          ? {
+              rotation_deg: meshInfo.final_suggestion?.rotation_deg,
+              scale_factor: meshInfo.final_suggestion?.scale_factor,
+              ground_offset_y: meshInfo.final_suggestion?.ground_offset_y,
+              category: meshInfo.semantic?.category,
+            }
+          : undefined,
+        has_mtl: hasMtl,
+        has_texture: texHandle > 0 || hasMtl,
+        texture_note: hasMtl
+          ? 'OBJ has .mtl — Octane loads textures internally. Do NOT override albedo. Only set roughness/metallic/specular/IOR on the material.'
+          : undefined,
+        next_steps: [
+          ...(meshInfo
+            ? []
+            : [
+                `FIRST: call analyze_geo on ${objPath} — generates mugshots for VLM orientation analysis`,
+              ]),
+          `Connect placement (${placementHandle}) to geo group via pin_index N`,
+          `Set transform rotation: set_attribute(${transformHandle}, ${AttributeId.A_ROTATION}, 11, {rx, ry, rz})`,
+          `Set transform position: set_attribute(${transformHandle}, ${AttributeId.A_TRANSLATION}, 11, {x, y, z})`,
+          `Set transform scale: set_attribute(${transformHandle}, ${AttributeId.A_SCALE}, 11, {s, s, s})`,
+          ...(meshInfo
+            ? [
+                `Apply cached suggestion: rotation=${JSON.stringify(meshInfo.final_suggestion?.rotation_deg)}, scale=${meshInfo.final_suggestion?.scale_factor}`,
+              ]
+            : []),
+        ],
+        warnings: analyzeMeshWarnings.length > 0 ? analyzeMeshWarnings : undefined,
+        instruction: meshInfo
+          ? 'Asset imported with cached mesh analysis. Apply suggested transforms, connect to geo group, then fit_camera + save_render to verify.'
+          : '⛔ Asset imported WITHOUT mesh analysis. Orientation is unknown — you are guessing. STOP: call analyze_geo on the OBJ path NOW to generate mugshots and get VLM-verified orientation. Then apply the sidecar rotation/scale.',
+      });
+    } catch (error: any) {
+      mcpLog(`import_geo FAILED: ${error.message}`, 'error');
+      return errorResult(error);
+    }
+  }
+
+  // ── analyze_geo ──────────────────────────────────────────────────
 
   server.registerTool(
-    'analyze_mesh',
+    'analyze_geo',
     {
       title: 'Analyze Mesh',
       description:
-        '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). Accepts OBJ, GLB, or glTF — GLB/glTF files are auto-converted to OBJ. MUST run on every mesh before placement.',
+        '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders mugshots, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Accepts OBJ, GLB, or glTF. MUST run on every mesh before placement.',
       inputSchema: {
         obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
         scene_context: z
@@ -1967,11 +1978,11 @@ export function registerImportTools(
         if (ext !== '.obj') {
           const outDir = path.join(path.dirname(resolved), path.basename(resolved, ext));
           const derivedName = path.basename(resolved, ext);
-          mcpLog(`analyze_mesh: converting ${resolved} → OBJ`, 'info');
+          mcpLog(`analyze_geo: converting ${resolved} → OBJ`, 'info');
           const conv = await convertGlbToObj(resolved, outDir, derivedName);
           resolved = path.resolve(conv.objPath);
           mcpLog(
-            `analyze_mesh: converted → ${resolved} (${conv.vertices} verts, ${conv.faces} faces)`,
+            `analyze_geo: converted → ${resolved} (${conv.vertices} verts, ${conv.faces} faces)`,
             'info'
           );
         }
@@ -1987,12 +1998,12 @@ export function registerImportTools(
               // If configuration mode requested but this wasn't a config run, don't use cache
               if (configuration && !cached.visual_check?.configuration_mode) {
                 mcpLog(
-                  `analyze_mesh: v4 cached but configuration mode requested — re-analyzing`,
+                  `analyze_geo: v4 cached but configuration mode requested — re-analyzing`,
                   'info'
                 );
               } else {
                 mcpLog(
-                  `analyze_mesh: returning v4 cached sidecar for ${path.basename(resolved)}`,
+                  `analyze_geo: returning v4 cached sidecar for ${path.basename(resolved)}`,
                   'info'
                 );
                 const cachedNote = cached.visual_check?.confidence
@@ -2004,14 +2015,14 @@ export function registerImportTools(
                   sidecar_path: sidecar,
                   instruction:
                     'Cached analysis returned (v4 with contact sheet + ground plane). Use final_suggestion for transform. Override if scene intent differs.',
-                  ...(artState ? adWorkflow(artState, 'analyze_mesh', cachedNote) : {}),
+                  ...(artState ? adWorkflow(artState, 'analyze_geo', cachedNote) : {}),
                 });
               }
             }
             // v3 sidecar (8-view mugshots, no contact sheet) — return with upgrade hint
             if (cached.version === 3 && cached.visual_check?.performed_at && !configuration) {
               mcpLog(
-                `analyze_mesh: returning v3 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
+                `analyze_geo: returning v3 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
                 'info'
               );
               const cachedNote = cached.visual_check?.confidence
@@ -2024,13 +2035,13 @@ export function registerImportTools(
                 sidecar_path: sidecar,
                 instruction:
                   'Cached v3 analysis (individual mugshots, no contact sheet). Still valid. Use force_reanalyze=true to upgrade to v4 (contact sheet + ground plane) for better orientation accuracy.',
-                ...(artState ? adWorkflow(artState, 'analyze_mesh', cachedNote) : {}),
+                ...(artState ? adWorkflow(artState, 'analyze_geo', cachedNote) : {}),
               });
             }
             // v2 sidecar (4-view) — still valid, return with upgrade hint
             if (cached.version === 2 && cached.visual_check?.performed_at && !configuration) {
               mcpLog(
-                `analyze_mesh: returning v2 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
+                `analyze_geo: returning v2 cached sidecar for ${path.basename(resolved)} (upgrade available with force_reanalyze)`,
                 'info'
               );
               const v2Note = cached.visual_check?.confidence
@@ -2043,18 +2054,18 @@ export function registerImportTools(
                 sidecar_path: sidecar,
                 instruction:
                   'Cached v2 analysis (4-view mugshots). Still valid. Use force_reanalyze=true to upgrade to v3 (8-view) for better orientation coverage.',
-                ...(artState ? adWorkflow(artState, 'analyze_mesh', v2Note) : {}),
+                ...(artState ? adWorkflow(artState, 'analyze_geo', v2Note) : {}),
               });
             }
             // v1 sidecar — run full analysis
-            mcpLog(`analyze_mesh: v1 sidecar found, upgrading to v4 with contact sheet`, 'info');
+            mcpLog(`analyze_geo: v1 sidecar found, upgrading to v4 with contact sheet`, 'info');
           } catch {
-            mcpLog(`analyze_mesh: corrupt sidecar, re-analyzing`, 'warn');
+            mcpLog(`analyze_geo: corrupt sidecar, re-analyzing`, 'warn');
           }
         }
 
         // Tier 1: Geometric analysis via trimesh
-        mcpLog(`analyze_mesh: Tier 1 — trimesh bounds on ${path.basename(resolved)}`, 'info');
+        mcpLog(`analyze_geo: Tier 1 — trimesh bounds on ${path.basename(resolved)}`, 'info');
         const geo = await getMeshBounds(resolved);
 
         const extents = {
@@ -2064,7 +2075,7 @@ export function registerImportTools(
         };
 
         // Tier 2: Semantic inference from filename
-        mcpLog(`analyze_mesh: Tier 2 — semantic inference`, 'info');
+        mcpLog(`analyze_geo: Tier 2 — semantic inference`, 'info');
         const assetDir = path.basename(path.dirname(resolved));
         const assetFile = path.basename(resolved, '.obj');
         const nameForInference = `${assetDir} ${assetFile}`;
@@ -2080,7 +2091,7 @@ export function registerImportTools(
           desiredHeight > 0 && currentHeight > 0 ? desiredHeight / currentHeight : 1;
 
         // Tier 3: Lean VLM orientation — diagnose / correct / verify / hero
-        mcpLog(`analyze_mesh: Tier 3 — lean VLM orientation`, 'info');
+        mcpLog(`analyze_geo: Tier 3 — lean VLM orientation`, 'info');
         const outputDir = path.dirname(resolved);
         const baseName = path.basename(resolved, '.obj');
         const rawMin = { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] };
@@ -2104,9 +2115,9 @@ export function registerImportTools(
               fs.unlinkSync(path.join(outputDir, f));
             }
             if (staleFiles.length > 0)
-              mcpLog(`analyze_mesh: cleaned ${staleFiles.length} stale render PNGs`, 'info');
+              mcpLog(`analyze_geo: cleaned ${staleFiles.length} stale render PNGs`, 'info');
           } catch (e: any) {
-            mcpLog(`analyze_mesh: stale file cleanup failed: ${e?.message}`, 'warn');
+            mcpLog(`analyze_geo: stale file cleanup failed: ${e?.message}`, 'warn');
           }
         }
 
@@ -2125,7 +2136,7 @@ export function registerImportTools(
           const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');
           const apiKey = getAnthropicKey();
           if (!apiKey) {
-            mcpLog(`analyze_mesh: no Anthropic API key, skipping VLM`, 'warn');
+            mcpLog(`analyze_geo: no Anthropic API key, skipping VLM`, 'warn');
             throw new Error('No Anthropic API key');
           }
 
@@ -2135,7 +2146,7 @@ export function registerImportTools(
           if (knownSource) {
             // === FAST PATH: Known source endpoint — apply deterministic rotation ===
             mcpLog(
-              `analyze_mesh: known source "${source_endpoint}" → applying ${knownSource.convention} correction (${knownSource.rotation.join(',')})°`,
+              `analyze_geo: known source "${source_endpoint}" → applying ${knownSource.convention} correction (${knownSource.rotation.join(',')})°`,
               'info'
             );
             finalRotation = {
@@ -2196,7 +2207,7 @@ export function registerImportTools(
             );
             heroPath = heroPaths[0] || '';
             visualCheck.hero_shot = path.basename(heroPath);
-            mcpLog(`analyze_mesh: hero shot → ${heroPath}`, 'info');
+            mcpLog(`analyze_geo: hero shot → ${heroPath}`, 'info');
           } else {
             // === PASS 1: Diagnosis — render 2-3 raw views, ask VLM what it sees ===
             const rawRotation = { x: 0, y: 0, z: 0 };
@@ -2258,7 +2269,7 @@ export function registerImportTools(
             if (!jsonMatch) throw new Error('Pass 1: no JSON in VLM response');
             diag = JSON.parse(jsonMatch[0]);
             mcpLog(
-              `analyze_mesh: Pass 1 diagnosis — ${diag.object_type}, upright=${diag.is_upright}, pose=${diag.pose}, front_in=${diag.front_visible_in}, confidence=${diag.confidence}`,
+              `analyze_geo: Pass 1 diagnosis — ${diag.object_type}, upright=${diag.is_upright}, pose=${diag.pose}, front_in=${diag.front_visible_in}, confidence=${diag.confidence}`,
               'info'
             );
 
@@ -2282,7 +2293,7 @@ export function registerImportTools(
               finalRotation = mapped.rotation;
               finalGroundOffset = mapped.groundOffset;
               mcpLog(
-                `analyze_mesh: diagnosis mapped → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°, groundOffset=${finalGroundOffset.toFixed(3)}`,
+                `analyze_geo: diagnosis mapped → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°, groundOffset=${finalGroundOffset.toFixed(3)}`,
                 'info'
               );
             } else {
@@ -2367,7 +2378,7 @@ export function registerImportTools(
             if (verifyMatch) {
               const vResult = JSON.parse(verifyMatch[0]);
               mcpLog(
-                `analyze_mesh: Pass 2 verify (attempt ${attempt + 1}) — correct=${vResult.is_correct}, issue=${vResult.issue}`,
+                `analyze_geo: Pass 2 verify (attempt ${attempt + 1}) — correct=${vResult.is_correct}, issue=${vResult.issue}`,
                 'info'
               );
               visualCheck[`pass2_attempt_${attempt + 1}`] = {
@@ -2397,7 +2408,7 @@ export function registerImportTools(
               else finalGroundOffset = Math.max(0, -geo.boundsMin[1]);
 
               mcpLog(
-                `analyze_mesh: adjusting → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°`,
+                `analyze_geo: adjusting → rotation=(${finalRotation.x},${finalRotation.y},${finalRotation.z})°`,
                 'info'
               );
             }
@@ -2423,14 +2434,14 @@ export function registerImportTools(
           );
           heroPath = heroPaths[0] || '';
           visualCheck.hero_shot = path.basename(heroPath);
-          mcpLog(`analyze_mesh: hero shot → ${heroPath}`, 'info');
+          mcpLog(`analyze_geo: hero shot → ${heroPath}`, 'info');
 
           if (diag?.orientation_matters === false) {
             visualCheck.orientation_matters = false;
           }
           visualCheck.confidence = finalConfidence;
         } catch (e: any) {
-          mcpLog(`analyze_mesh: VLM failed (non-fatal): ${e.message}`, 'warn');
+          mcpLog(`analyze_geo: VLM failed (non-fatal): ${e.message}`, 'warn');
           // Fall back to geometric+semantic only
         }
 
@@ -2518,9 +2529,9 @@ export function registerImportTools(
         // Write v4 sidecar cache
         try {
           fs.writeFileSync(sidecar, JSON.stringify(result, null, 2), 'utf8');
-          mcpLog(`analyze_mesh: wrote v4 sidecar ${sidecar}`, 'info');
+          mcpLog(`analyze_geo: wrote v4 sidecar ${sidecar}`, 'info');
         } catch (e: any) {
-          mcpLog(`analyze_mesh: failed to write sidecar: ${e.message}`, 'warn');
+          mcpLog(`analyze_geo: failed to write sidecar: ${e.message}`, 'warn');
         }
 
         const meshNote = visualCheck
@@ -2540,7 +2551,7 @@ export function registerImportTools(
                 ? ' HERO SHOT available — orientation UNVERIFIED. Show to human for manual review before proceeding.'
                 : ' HERO SHOT available as thumbnail/reference.'
               : ''),
-          ...(artState ? adWorkflow(artState, 'analyze_mesh', meshNote) : {}),
+          ...(artState ? adWorkflow(artState, 'analyze_geo', meshNote) : {}),
         };
         if (vlmTranscript.length > 0) {
           // Multi-content: VLM transcript blocks + final JSON result
@@ -2553,13 +2564,13 @@ export function registerImportTools(
         }
         return jsonResult(resultJson);
       } catch (error: any) {
-        mcpLog(`analyze_mesh FAILED: ${error.message}`, 'error');
+        mcpLog(`analyze_geo FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }
   );
 
-  // ── score_mugshot_models ──────────────────────────────────────────
+  // ── benchmark_vlm_models ──────────────────────────────────────────
 
   server.registerTool(
     'benchmark_vlm_models',
@@ -2687,382 +2698,410 @@ export function registerImportTools(
           total_runs: sb.runs.length,
         });
       } catch (error: any) {
-        mcpLog(`score_mugshot_models FAILED: ${error.message}`, 'error');
+        mcpLog(`benchmark_vlm_models FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }
   );
 
-  // ── attach_mesh ──────────────────────────────────────────────────
-  // One-call mesh placement: import (if needed) → apply sidecar transforms → wire to RT → flush.
+  // ── place_geo helpers ──────────────────────────────────────────────
+  // ── Shared helpers for place_geo ──────────────────────────────────
+
+  const PRIMITIVE_SHAPES: Record<string, number> = {
+    box: 1,
+    capsule: 2,
+    cone: 3,
+    cylinder: 4,
+    disc: 6,
+    plane: 15,
+    sphere: 20,
+    torus: 22,
+  };
+
+  const MAT_PIN = { ALBEDO: 2, ROUGHNESS: 4, METALLIC: 9 } as const;
+
+  /** Find or create a geo group on the active RT. */
+  async function findOrCreateGeoGroup(
+    geoGroupOverride?: number
+  ): Promise<{ geoGroup: number; rtHandle: number }> {
+    if (geoGroupOverride) return { geoGroup: geoGroupOverride, rtHandle: 0 };
+
+    const activeRt = await client.callMethod('ApiRenderEngine', 'getRenderTargetNode', {});
+    const activeRtHandle = extractHandle(activeRt);
+    if (activeRtHandle) {
+      const pins = await enumeratePins(client, activeRtHandle);
+      const geoPin = pins.find(p => p.index === 3);
+      if (geoPin?.connectedHandle) {
+        return { geoGroup: geoPin.connectedHandle, rtHandle: activeRtHandle };
+      }
+      const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
+      await connectRaw(client, activeRtHandle, geoGroup, 3);
+      mcpLog(`place_geo: created geo group ${geoGroup} on existing RT ${activeRtHandle}`, 'info');
+      return { geoGroup, rtHandle: activeRtHandle };
+    }
+
+    const rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
+    client.sceneCache.addNode(rtHandle, 'Render target', 'NT_RENDERTARGET', 56);
+    const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
+    const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_PT);
+    const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
+    const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
+    await connectRaw(client, rtHandle, cam, 0);
+    await connectRaw(client, rtHandle, env, 1);
+    await connectRaw(client, rtHandle, geoGroup, 3);
+    await connectRaw(client, rtHandle, kern, 6);
+    const aperture = await getConnectedChild(client, cam, 14);
+    if (aperture) await setAttrRaw(client, aperture, AttributeId.A_VALUE, 9, 0);
+    await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
+      targetNode: { handle: String(rtHandle), type: OBJ_API_NODE },
+    });
+    mcpLog(`place_geo: created new RT ${rtHandle} with geo group ${geoGroup}`, 'info');
+    return { geoGroup, rtHandle };
+  }
+
+  /** Wire a node to geo group, flush, continue rendering. */
+  async function wireToGeoGroup(nodeHandle: number, geoGroup: number): Promise<number> {
+    const actualPin = await ensureDynamicPin(client, geoGroup);
+    await connectRaw(client, geoGroup, nodeHandle, actualPin);
+    await client.callMethod('ApiChangeManager', 'update', {});
+    await client.callMethod('ApiRenderEngine', 'continueRendering', {});
+    return actualPin;
+  }
+
+  // ── place_geo — unified placement ────────────────────────────────
+  // Primitives: creates NT_GEO_OBJECT directly.
+  // Meshes: calls importGeoInternal() then applies sidecar transforms + wiring.
 
   server.registerTool(
-    'place_mesh',
+    'place_geo',
     {
-      title: 'Place Mesh',
+      title: 'Place Geometry',
       description:
-        '[Phase 1] PREFERRED mesh import. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, auto-registers in scene placement state, flushes scene. Requires analyze_mesh to have been run first (creates sidecar). If no RT exists, creates one with daylight + PT kernel. Returns: placement_handle, mesh_handle, material_handle, position, bounds.',
+        '[Phase 1] Unified geometry placement for primitives and meshes. Sets shape/transform, wires to geo group on active RT, auto-registers. Primitives need no analyze_geo.',
       inputSchema: {
-        obj_path: z.string().describe('Absolute path to OBJ file'),
+        type: z
+          .enum(['primitive', 'mesh'])
+          .describe('Geometry type: "primitive" for NT_GEO_OBJECT shapes, "mesh" for mesh files'),
+        shape: z
+          .union([z.string(), z.number()])
+          .optional()
+          .describe(
+            'Primitive shape: name ("box","plane","sphere","cone","cylinder","disc","torus","capsule") or enum value (1-23). Required for type="primitive".'
+          ),
+        obj_path: z
+          .string()
+          .optional()
+          .describe('Path to mesh file. Required for type="mesh". Reads .mesh_info.json sidecar.'),
+        name: z.string().optional().describe('Display name (default: auto)'),
+        position: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .default({ x: 0, y: 0, z: 0 })
+          .describe('World position'),
+        rotation: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .default({ x: 0, y: 0, z: 0 })
+          .describe('Rotation in degrees'),
+        scale: z
+          .union([z.number(), z.object({ x: z.number(), y: z.number(), z: z.number() })])
+          .default(1)
+          .describe('Scale: uniform number or per-axis {x,y,z}'),
         role: z
           .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
-          .default('hero')
-          .describe('Role in composition (for scene awareness)'),
-        position: z
+          .default('prop')
+          .describe('Role in composition'),
+        material: z
           .object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
+            albedo: z.object({ x: z.number(), y: z.number(), z: z.number() }).optional(),
+            roughness: z.number().min(0).max(1).optional(),
+            metallic: z.number().min(0).max(1).optional(),
           })
           .optional()
-          .describe('Override world position (default: auto from sidecar y_offset)'),
-        rotation_override: z
-          .object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
-          })
-          .optional()
-          .describe('Override rotation in degrees (default: from sidecar)'),
-        scale_override: z
-          .number()
-          .optional()
-          .describe('Override uniform scale (default: from sidecar)'),
+          .describe('Optional inline material properties'),
         geo_group_handle: z
           .number()
           .int()
           .nonnegative()
           .optional()
           .describe(
-            'Existing geo group handle to attach to. If omitted, finds or creates one on the active RT.'
+            'Existing geo group handle. If omitted, finds or creates one on the active RT.'
           ),
-        pin_index: z
-          .number()
-          .int()
-          .nonnegative()
-          .optional()
-          .describe('Pin index on geo group (default: auto-append)'),
       },
       annotations: { destructiveHint: true },
     },
     async ({
+      type,
+      shape,
       obj_path,
-      role,
+      name,
       position,
-      rotation_override,
-      scale_override,
+      rotation,
+      scale,
+      role,
+      material,
       geo_group_handle,
-      pin_index,
     }) => {
       try {
-        const resolved = path.resolve(obj_path);
-        if (!fs.existsSync(resolved)) {
-          return errorResult(new Error(`File not found: ${resolved}`));
+        // ── Mesh path: import via importGeoInternal, read sidecar, wire, register ──
+        if (type === 'mesh') {
+          if (!obj_path) return errorResult(new Error('obj_path is required for type="mesh"'));
+          const resolved = path.resolve(obj_path);
+          if (!fs.existsSync(resolved))
+            return errorResult(new Error(`File not found: ${resolved}`));
+
+          // Read sidecar for transforms
+          const sidecarPath = resolved.replace(/\.obj$/i, '.mesh_info.json');
+          if (!fs.existsSync(sidecarPath)) {
+            return errorResult(
+              new Error(`No .mesh_info.json sidecar. Run analyze_geo("${resolved}") first.`)
+            );
+          }
+          const meshInfo = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'));
+          const suggestion = meshInfo.final_suggestion || meshInfo.placement_suggestion;
+          if (!suggestion)
+            return errorResult(
+              new Error('Sidecar has no placement suggestion. Re-run analyze_geo.')
+            );
+
+          // Extract transforms from sidecar (with overrides from params)
+          const rotOverride =
+            rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0 ? rotation : undefined;
+          const rot =
+            rotOverride ||
+            (() => {
+              const r = suggestion.rotation_deg || suggestion.rotation;
+              if (Array.isArray(r)) return { x: r[0], y: r[1], z: r[2] };
+              return r || { x: 0, y: 0, z: 0 };
+            })();
+          const scaleOverride = typeof scale === 'number' && scale !== 1 ? scale : undefined;
+          const scaleFactor = scaleOverride ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+          const posOverride =
+            position.x !== 0 || position.y !== 0 || position.z !== 0 ? position : undefined;
+          const yOffset = posOverride?.y ?? suggestion.ground_offset_y ?? suggestion.y_offset ?? 0;
+          const pos = posOverride || { x: 0, y: yOffset, z: 0 };
+
+          mcpLog(
+            `place_geo(mesh): ${path.basename(resolved)} rot=(${rot.x},${rot.y},${rot.z}) scale=${scaleFactor} pos=(${pos.x},${pos.y},${pos.z})`,
+            'info'
+          );
+
+          // Import via importGeoInternal (creates mesh + placement + material + textures)
+          const importResult = await importGeoInternal(resolved, name);
+          if (
+            !importResult ||
+            (importResult as any).content?.[0]?.text?.includes('"success":false')
+          ) {
+            return importResult; // propagate error
+          }
+          // Extract handles from importGeoInternal result
+          const resultData = JSON.parse((importResult as any).content[0].text);
+          if (!resultData.success) return importResult;
+
+          const handles = resultData.handles;
+          const derivedName =
+            name ||
+            path
+              .basename(resolved, path.extname(resolved))
+              .replace(/[^a-zA-Z0-9_-]/g, '_')
+              .substring(0, 40);
+
+          // Apply sidecar transforms to placement's transform child
+          if (handles.transform) {
+            await setAttrRaw(client, handles.transform, AttributeId.A_ROTATION, 11, rot);
+            await setAttrRaw(client, handles.transform, AttributeId.A_SCALE, 11, {
+              x: scaleFactor,
+              y: scaleFactor,
+              z: scaleFactor,
+            });
+            await setAttrRaw(client, handles.transform, AttributeId.A_TRANSLATION, 11, pos);
+          }
+
+          // Wire to geo group
+          const { geoGroup, rtHandle } = await findOrCreateGeoGroup(geo_group_handle);
+          const actualPin = await wireToGeoGroup(handles.placement, geoGroup);
+
+          mcpLog(`place_geo(mesh): ${derivedName} attached at geo group pin ${actualPin}`, 'info');
+
+          // Register in placement state
+          if (placementState) {
+            try {
+              const geoBounds = meshInfo.geometry;
+              const localMin = geoBounds?.bounds_min
+                ? {
+                    x: geoBounds.bounds_min[0],
+                    y: geoBounds.bounds_min[1],
+                    z: geoBounds.bounds_min[2],
+                  }
+                : { x: -0.5, y: -0.5, z: -0.5 };
+              const localMax = geoBounds?.bounds_max
+                ? {
+                    x: geoBounds.bounds_max[0],
+                    y: geoBounds.bounds_max[1],
+                    z: geoBounds.bounds_max[2],
+                  }
+                : { x: 0.5, y: 0.5, z: 0.5 };
+              const scaleVec = { x: scaleFactor, y: scaleFactor, z: scaleFactor };
+              placementState.addEntry({
+                handle: handles.placement,
+                name: derivedName,
+                role: (role as any) || 'hero',
+                position: pos,
+                rotation: rot,
+                scale: scaleVec,
+                boundsWorld: computeWorldAABB(localMin, localMax, pos, rot, scaleVec),
+              });
+              mcpLog(`place_geo(mesh): registered "${derivedName}" as ${role}`, 'info');
+            } catch (regErr: any) {
+              mcpLog(`place_geo(mesh): register warning: ${regErr.message}`, 'warn');
+            }
+          }
+
+          return jsonResult({
+            success: true,
+            mesh: derivedName,
+            handles: { ...handles, geo_group: geoGroup, render_target: rtHandle || undefined },
+            applied_transform: { rotation: rot, scale: scaleFactor, position: pos },
+            geo_group_pin: actualPin,
+            sidecar_source: sidecarPath,
+            category: meshInfo.semantic?.category,
+            has_mtl: resultData.has_mtl,
+            has_texture: resultData.has_texture,
+            texture_count: resultData.textures?.length || 0,
+            auto_registered: !!placementState,
+            instruction:
+              'Placed. Use fit_camera(framing_mode:"subjects") then save_render to verify.',
+          });
         }
 
-        // 1. Read sidecar
-        const sidecar = resolved.replace(/\.obj$/i, '.mesh_info.json');
-        if (!fs.existsSync(sidecar)) {
+        // ── Primitive path ──
+        if (!shape) return errorResult(new Error('shape is required for type="primitive"'));
+
+        const shapeVal =
+          typeof shape === 'number'
+            ? shape
+            : (PRIMITIVE_SHAPES[shape.toLowerCase()] ?? parseInt(shape, 10));
+        if (!shapeVal || shapeVal < 1 || shapeVal > 23) {
           return errorResult(
-            new Error(`No .mesh_info.json sidecar found. Run analyze_mesh("${resolved}") first.`)
-          );
-        }
-        const meshInfo = JSON.parse(fs.readFileSync(sidecar, 'utf-8'));
-        const suggestion = meshInfo.final_suggestion || meshInfo.placement_suggestion;
-        if (!suggestion) {
-          return errorResult(
-            new Error('Sidecar has no placement suggestion. Re-run analyze_mesh.')
+            new Error(
+              `Invalid shape "${shape}". Use: ${Object.keys(PRIMITIVE_SHAPES).join(', ')} or enum 1-23.`
+            )
           );
         }
 
-        // Extract transforms from sidecar
-        const rot =
-          rotation_override ||
-          (() => {
-            const r = suggestion.rotation_deg || suggestion.rotation;
-            if (Array.isArray(r)) return { x: r[0], y: r[1], z: r[2] };
-            return r || { x: 0, y: 0, z: 0 };
-          })();
-        const scaleFactor = scale_override ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
-        const yOffset = position?.y ?? suggestion.ground_offset_y ?? suggestion.y_offset ?? 0;
-        const pos = position || { x: 0, y: yOffset, z: 0 };
+        const displayName =
+          name ||
+          (typeof shape === 'string'
+            ? shape.charAt(0).toUpperCase() + shape.slice(1)
+            : `Primitive_${shapeVal}`);
+        const scaleVec = typeof scale === 'number' ? { x: scale, y: scale, z: scale } : scale;
 
         mcpLog(
-          `attach_mesh: ${path.basename(resolved)} rot=(${rot.x},${rot.y},${rot.z}) scale=${scaleFactor} pos=(${pos.x},${pos.y},${pos.z})`,
+          `place_geo: ${displayName} shape=${shapeVal} pos=(${position.x},${position.y},${position.z}) scale=(${scaleVec.x},${scaleVec.y},${scaleVec.z})`,
           'info'
         );
 
-        // 2. Import the mesh (reuse import_geo internals)
-        const ext = path.extname(resolved).toLowerCase();
-        const derivedName = path
-          .basename(resolved, ext)
-          .replace(/[^a-zA-Z0-9_-]/g, '_')
-          .substring(0, 40);
-
-        const rootGraph = await client.getRootNodeGraph();
-
-        // Create mesh node
-        const meshResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_GEO_MESH,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const meshHandle = extractHandle(meshResult) ?? 0;
-        if (!meshHandle) throw new Error('Failed to create mesh node');
-        client.sceneCache.addNode(meshHandle, derivedName, 'NT_GEO_MESH', 1);
-
-        // Load OBJ
-        await client.callMethod(
-          'ApiItem',
-          'setValueByAttrID',
-          {
-            objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
-            attribute_id: AttributeId.A_FILENAME,
-            string_value: resolved.replace(/\//g, '\\'),
-            evaluate: false,
-          },
-          120_000
-        );
-        await client.callMethod('ApiItem', 'setValueByAttrID', {
-          objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
-          attribute_id: AttributeId.A_RELOAD,
-          bool_value: true,
-          evaluate: false,
-        });
-
-        // Create placement + connect mesh
-        const placementResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_GEO_PLACEMENT,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const placementHandle = extractHandle(placementResult) ?? 0;
-        if (!placementHandle) throw new Error('Failed to create placement node');
+        // 1. Create NT_GEO_OBJECT + set primitive type
+        const geoHandle = await createNodeRaw(client, MUGSHOT_TYPES.GEO_OBJECT);
         client.sceneCache.addNode(
-          placementHandle,
-          `${derivedName}_placement`,
-          'NT_GEO_PLACEMENT',
-          4
+          geoHandle,
+          displayName,
+          'NT_GEO_OBJECT',
+          MUGSHOT_TYPES.GEO_OBJECT
         );
+        const enumChild = await getConnectedChild(client, geoHandle, 0);
+        if (enumChild) await setAttrRaw(client, enumChild, AttributeId.A_VALUE, 3, shapeVal);
 
-        await client.callMethod('ApiNode', 'connectToIx', {
-          objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
-          pinIdx: 1,
-          sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
-          evaluate: false,
-          doCycleCheck: true,
-        });
-
-        // Create material + handle textures
-        const objDir = path.dirname(resolved);
-        const mtlPath = resolved.replace(/\.obj$/i, '.mtl');
-        const hasMtl = fs.existsSync(mtlPath);
-        let texturePaths: string[] = [];
-
-        if (hasMtl) {
-          // Parse .mtl to find referenced texture maps
-          try {
-            const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
-            const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
-            for (const line of mapLines) {
-              const texFile = line.replace(/^map_\w+\s+/, '').trim();
-              const texFullPath = path.resolve(objDir, texFile);
-              if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
-                texturePaths.push(texFullPath);
-              }
-            }
-          } catch {
-            /* best-effort */
-          }
-          mcpLog(
-            `attach_mesh: .mtl found with ${texturePaths.length} texture(s) — Octane loads internally`,
-            'info'
-          );
+        // 2. Set transform (pin 3 child)
+        const xformHandle = await getConnectedChild(client, geoHandle, 3);
+        if (!xformHandle) {
+          mcpLog(`place_geo: WARNING — no transform child on pin 3`, 'warn');
         } else {
-          // Pick up loose texture files next to OBJ (exclude mugshots)
-          try {
-            const siblings = fs.readdirSync(objDir);
-            texturePaths = siblings
-              .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
-              .map(f => path.join(objDir, f));
-          } catch {
-            /* best-effort */
+          await setAttrRaw(client, xformHandle, AttributeId.A_TRANSLATION, 11, position);
+          await setAttrRaw(client, xformHandle, AttributeId.A_SCALE, 11, scaleVec);
+          if (rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0) {
+            await setAttrRaw(client, xformHandle, AttributeId.A_ROTATION, 11, rotation);
           }
         }
 
-        const matResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_MAT_UNIVERSAL,
-          ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-          configurePins: true,
-        });
-        const matHandle = extractHandle(matResult) ?? 0;
-        let texHandle = 0;
-        if (matHandle) {
-          client.sceneCache.addNode(matHandle, `${derivedName}_mat`, 'NT_MAT_UNIVERSAL', 130);
-          await client.callMethod('ApiNode', 'connectToIx', {
-            objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
-            pinIdx: 0,
-            sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
-            evaluate: false,
-            doCycleCheck: true,
-          });
-
-          // If no .mtl but has loose textures, create explicit texture node on albedo
-          if (texturePaths.length > 0 && !hasMtl) {
-            const texResult = await client.callMethod('ApiNode', 'create', {
-              type: MUGSHOT_TYPES.TEX_IMAGE,
-              ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
-              configurePins: true,
-            });
-            texHandle = extractHandle(texResult) ?? 0;
-            if (texHandle) {
-              client.sceneCache.addNode(texHandle, `${derivedName}_tex`, 'NT_TEX_IMAGE', 34);
-              await client.callMethod(
-                'ApiItem',
-                'setValueByAttrID',
-                {
-                  objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
-                  attribute_id: AttributeId.A_FILENAME,
-                  string_value: texturePaths[0].replace(/\//g, '\\'),
-                  evaluate: false,
+        // 3. Material (optional)
+        let matHandle = 0;
+        if (material) {
+          matHandle =
+            extractHandle(
+              await client.callMethod('ApiNode', 'create', {
+                type: NodeTypeId.NT_MAT_UNIVERSAL,
+                ownerGraph: {
+                  handle: String(await client.getRootNodeGraph()),
+                  type: OBJ_API_NODE_GRAPH,
                 },
-                120_000
-              );
-              // Connect texture → material albedo (pin 2)
-              await client.callMethod('ApiNode', 'connectToIx', {
-                objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-                pinIdx: 2,
-                sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
-                evaluate: false,
-                doCycleCheck: true,
-              });
+                configurePins: true,
+              })
+            ) ?? 0;
+          if (matHandle) {
+            client.sceneCache.addNode(matHandle, `${displayName}_mat`, 'NT_MAT_UNIVERSAL', 130);
+            if (material.albedo) {
+              const c = await getConnectedChild(client, matHandle, MAT_PIN.ALBEDO);
+              if (c) await setAttrRaw(client, c, AttributeId.A_VALUE, 11, material.albedo);
             }
+            if (material.roughness !== undefined) {
+              const c = await getConnectedChild(client, matHandle, MAT_PIN.ROUGHNESS);
+              if (c) await setAttrRaw(client, c, AttributeId.A_VALUE, 9, material.roughness);
+            }
+            if (material.metallic !== undefined) {
+              const c = await getConnectedChild(client, matHandle, MAT_PIN.METALLIC);
+              if (c) await setAttrRaw(client, c, AttributeId.A_VALUE, 9, material.metallic);
+            }
+            await connectRaw(client, geoHandle, matHandle, 1);
           }
         }
 
-        // 3. Apply transform from sidecar
-        const transformHandle = await getConnectedChild(client, placementHandle, 0);
-        if (transformHandle) {
-          await setAttrRaw(client, transformHandle, AttributeId.A_ROTATION, 11, rot);
-          await setAttrRaw(client, transformHandle, AttributeId.A_SCALE, 11, {
-            x: scaleFactor,
-            y: scaleFactor,
-            z: scaleFactor,
-          });
-          await setAttrRaw(client, transformHandle, AttributeId.A_TRANSLATION, 11, pos);
-        }
+        // 4. Wire to geo group
+        const { geoGroup, rtHandle } = await findOrCreateGeoGroup(geo_group_handle);
+        const actualPin = await wireToGeoGroup(geoHandle, geoGroup);
 
-        // 4. Find or create geo group on RT
-        let geoGroup = geo_group_handle || 0;
-        let rtHandle = 0;
+        mcpLog(`place_geo: ${displayName} attached at geo group pin ${actualPin}`, 'info');
 
-        if (!geoGroup) {
-          {
-            rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
-            client.sceneCache.addNode(rtHandle, 'Render target', 'NT_RENDERTARGET', 56);
-            const cam = await createNodeRaw(client, MUGSHOT_TYPES.CAM);
-            const kern = await createNodeRaw(client, MUGSHOT_TYPES.KERN_PT);
-            const env = await createNodeRaw(client, MUGSHOT_TYPES.ENV_DAYLIGHT);
-            geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
-
-            await connectRaw(client, rtHandle, cam, 0);
-            await connectRaw(client, rtHandle, env, 1);
-            await connectRaw(client, rtHandle, geoGroup, 3);
-            await connectRaw(client, rtHandle, kern, 6);
-
-            // Disable DOF
-            const aperture = await getConnectedChild(client, cam, 14);
-            if (aperture) await setAttrRaw(client, aperture, AttributeId.A_VALUE, 9, 0);
-
-            // Set as active RT
-            await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
-              targetNode: { handle: String(rtHandle), type: OBJ_API_NODE },
-            });
-            mcpLog(`attach_mesh: created new RT ${rtHandle} with geo group ${geoGroup}`, 'info');
-          }
-        } // end if (!geoGroup)
-
-        // 5. Connect placement to geo group (shared helper handles pin expansion)
-        const actualPin = await ensureDynamicPin(client, geoGroup, pin_index);
-        await connectRaw(client, geoGroup, placementHandle, actualPin);
-
-        // 6. Flush
-        await client.callMethod('ApiChangeManager', 'update', {});
-        await client.callMethod('ApiRenderEngine', 'continueRendering', {});
-
-        mcpLog(`attach_mesh: ${derivedName} attached at geo group pin ${actualPin}`, 'info');
-
-        // Auto-register in ScenePlacementState so fit_camera knows about this object
+        // 5. Register in placement state
         if (placementState) {
           try {
-            // Read local AABB from sidecar (geometry.bounds_min/max arrays)
-            const geoBounds = meshInfo.geometry;
-            const localMin = geoBounds?.bounds_min
-              ? {
-                  x: geoBounds.bounds_min[0],
-                  y: geoBounds.bounds_min[1],
-                  z: geoBounds.bounds_min[2],
-                }
-              : { x: -0.5, y: -0.5, z: -0.5 };
-            const localMax = geoBounds?.bounds_max
-              ? {
-                  x: geoBounds.bounds_max[0],
-                  y: geoBounds.bounds_max[1],
-                  z: geoBounds.bounds_max[2],
-                }
-              : { x: 0.5, y: 0.5, z: 0.5 };
-
-            // Compute world AABB with full rotation support
-            const scaleVec = { x: scaleFactor, y: scaleFactor, z: scaleFactor };
-            const boundsWorld = computeWorldAABB(localMin, localMax, pos, rot, scaleVec);
-
             placementState.addEntry({
-              handle: placementHandle,
-              name: derivedName,
-              role: (role as any) || 'hero',
-              position: pos,
-              rotation: rot,
+              handle: geoHandle,
+              name: displayName,
+              role: (role as any) || 'prop',
+              position,
+              rotation,
               scale: scaleVec,
-              boundsWorld,
+              boundsWorld: computeWorldAABB(
+                { x: -0.5, y: -0.5, z: -0.5 },
+                { x: 0.5, y: 0.5, z: 0.5 },
+                position,
+                rotation,
+                scaleVec
+              ),
             });
-            mcpLog(
-              `place_mesh: auto-registered "${derivedName}" as ${role || 'hero'} in placement state`,
-              'info'
-            );
+            mcpLog(`place_geo: registered "${displayName}" as ${role}`, 'info');
           } catch (regErr: any) {
-            mcpLog(`place_mesh: auto-register warning: ${regErr.message}`, 'warn');
+            mcpLog(`place_geo: register warning: ${regErr.message}`, 'warn');
           }
         }
 
         return jsonResult({
           success: true,
-          mesh: derivedName,
+          name: displayName,
           handles: {
-            mesh: meshHandle,
-            placement: placementHandle,
-            transform: transformHandle,
-            material: matHandle,
-            texture: texHandle || undefined,
+            geo: geoHandle,
+            transform: xformHandle || undefined,
+            material: matHandle || undefined,
             geo_group: geoGroup,
             render_target: rtHandle || undefined,
           },
-          applied_transform: {
-            rotation: rot,
-            scale: scaleFactor,
-            position: pos,
-          },
+          shape: shapeVal,
+          applied_transform: { position, rotation, scale: scaleVec },
           geo_group_pin: actualPin,
-          sidecar_source: sidecar,
-          category: meshInfo.semantic?.category,
-          has_mtl: hasMtl,
-          has_texture: texHandle > 0 || hasMtl,
-          texture_count: texturePaths.length,
           auto_registered: !!placementState,
-          instruction:
-            'Mesh placed and rendering. Use fit_camera to frame it, then save_render to verify.',
+          instruction: `"${displayName}" placed. Use fit_camera(framing_mode:"subjects") then save_render to verify.`,
         });
       } catch (error: any) {
-        mcpLog(`attach_mesh FAILED: ${error.message}`, 'error');
+        mcpLog(`place_geo FAILED: ${error.message}`, 'error');
         return errorResult(error);
       }
     }
