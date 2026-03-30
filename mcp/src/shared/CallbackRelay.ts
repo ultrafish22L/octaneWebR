@@ -183,6 +183,8 @@ export class CallbackRelay {
       header.userData = event.userData ?? event.user_data ?? 0;
     }
 
+    // TODO: Buffer.alloc + Buffer.from + Buffer.concat per broadcast creates GC pressure
+    // at high frame rates. Consider a pre-allocated frame buffer pool.
     // Pack: [4B headerLen] [headerJSON] [pixelPayload?]
     const headerBuf = Buffer.from(JSON.stringify(header), 'utf8');
     const lenBuf = Buffer.alloc(4);

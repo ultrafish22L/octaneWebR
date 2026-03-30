@@ -37,7 +37,7 @@ enum LogLevel {
   DEBUG = 4,
 }
 
-const LOG_LEVEL = LogLevel.DEBUG;
+const LOG_LEVEL = LogLevel.INFO;
 
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
@@ -630,13 +630,16 @@ class GrpcClient {
     if (this.ssCleanupTimer) return;
     this.ssCleanupTimer = setInterval(() => {
       const now = Date.now();
+      // Collect stale entries first — don't mutate ssInflight during iteration
+      const stale: Array<[number, string]> = [];
       for (const [handleVal, entry] of this.ssInflight) {
         if (now - entry.timestamp > GrpcClient.SS_STALE_TIMEOUT) {
-          log.warn(
-            `[dxSS] Stale handle ${handleVal} (frame ${entry.frameId}, ${now - entry.timestamp}ms old) — force releasing`
-          );
-          this.releaseSsHandle(handleVal, entry.frameId);
+          stale.push([handleVal, entry.frameId]);
         }
+      }
+      for (const [handleVal, frameId] of stale) {
+        log.warn(`[dxSS] Stale handle ${handleVal} (frame ${frameId}) — force releasing`);
+        this.releaseSsHandle(handleVal, frameId);
       }
     }, GrpcClient.SS_CLEANUP_INTERVAL);
   }
@@ -678,7 +681,9 @@ class GrpcClient {
     if (result?.result && result.renderImages?.data?.length > 0) {
       const img = result.renderImages.data[0];
       if (!img?.buffer?.data || img.buffer.data.length === 0) {
-        log.warn('[grabPixelFrame] Image has no pixel data — shared surface mode may be active');
+        if (!this.ssEnabled) {
+          log.warn('[grabPixelFrame] Image has no pixel data');
+        }
         return;
       }
       this.notifyCallbacks({

@@ -239,9 +239,12 @@ export class CallbackStreamManager {
         this.log('Stream ended (deadline or server close)', 'debug');
         this.active = false;
         this.stream = null;
-        // Reconnect if still running
-        if (this.running) {
+        // Reconnect if still running — use scheduleReconnect to avoid tight loops
+        // when both 'error' and 'end' fire in quick succession.
+        if (this.running && !this.disconnected) {
           this.openStream();
+        } else if (this.running) {
+          this.scheduleReconnect();
         }
       });
 

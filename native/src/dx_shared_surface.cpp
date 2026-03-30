@@ -350,7 +350,8 @@ Napi::Value MapSurface(const Napi::CallbackInfo& info) {
     uint32_t rowBytes = texDesc.Width * bpp;
     uint32_t totalBytes = rowBytes * texDesc.Height;
 
-    // Fast path: if mapped row pitch matches expected row bytes, single memcpy
+    // TODO: Pre-allocate a reusable buffer to reduce GC pressure at high frame rates.
+    // Currently allocates a new V8 Buffer every frame (~2MB for 1024x512 RGBA).
     Napi::Buffer<uint8_t> outBuf = Napi::Buffer<uint8_t>::New(env, totalBytes);
     uint8_t* dst = outBuf.Data();
 
