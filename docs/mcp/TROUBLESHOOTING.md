@@ -130,24 +130,26 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 | `info`    | Mutating + lifecycle only (create/set/connect/render/camera/save)                                                                      | Tool calls with args only                         |
 | `warn`+   | Errors only                                                                                                                            | Health failures, gate rejections, disconnections  |
 
-| File             | Source                             | Notes                                                                                 |
-| ---------------- | ---------------------------------- | ------------------------------------------------------------------------------------- |
-| `log_grpc.log`   | OctaneGrpcClientBase + Vite plugin | gRPC calls + proxy errors. `GRPC_DEBUG_LOG=0` to disable. Cleared on dev server start |
-| `log_mcp.log`    | MCP server                         | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start                         |
-| `log_client.log` | Browser Logger (via `/api/log`)    | Client-side JS errors batched to server. Cleared on dev server start                  |
+| File             | Source                             | Notes                                                                              |
+| ---------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `log_serv.log`   | octaneServGrpc (C++ gRPC server)   | Server-side RPCs. In `build/Release/` next to exe. `--log-level=debug` (default)   |
+| `log_grpc.log`   | OctaneGrpcClientBase + Vite plugin | Client-side gRPC calls. `GRPC_DEBUG_LOG=0` to disable. Cleared on dev server start |
+| `log_mcp.log`    | MCP server                         | `MCP_LOG_LEVEL` overrides global. Cleared on MCP server start                      |
+| `log_client.log` | Browser Logger (via `/api/log`)    | Client-side JS errors batched to server. Cleared on dev server start               |
 
 ### On Error — FULL STOP Protocol
 
 1. STOP — do not continue current task
-2. Read ALL 3 log files — every one, every time, no exceptions:
-   - **`log_client.log`** — client JS errors, failed API calls (batched from browser)
-   - **`log_grpc.log`** — Vite gRPC proxy errors, raw gRPC call failures, SDK errors
+2. Read ALL 4 log files — every one, every time, no exceptions:
+   - **`log_serv.log`** — server-side SDK call results, handle lookup failures, exception traces
+   - **`log_grpc.log`** — client-side gRPC proxy errors, raw gRPC call failures
    - **`log_mcp.log`** — MCP tool errors, gate rejections
+   - **`log_client.log`** — browser JS errors, failed API calls (batched from browser)
 3. Read the error message carefully — the answer is usually in the text
 4. Trace to root cause — don't chase symptoms
-5. One fix → verify all 3 logs + render → repeat until resolved
+5. One fix → verify all 4 logs + render → repeat until resolved
 
-**Why all 3?** Errors originate at different layers: client JS, gRPC proxy, or MCP tools. The same failure appears differently in each log — the FIX depends on which layer caused it. All logs go to files, no console-only gaps.
+**Why all 4?** Errors originate at different layers: C++ SDK server, gRPC proxy, MCP tools, or browser JS. The same failure appears differently in each log — the FIX depends on which layer caused it. `log_serv.log` and `log_grpc.log` use the same format and can be diffed side-by-side.
 
 ### Key Rules
 
