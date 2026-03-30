@@ -213,15 +213,17 @@ If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't 
 
 ### Phase 2: Materials & Lighting (ONLY after Phase 1 critique passes)
 
-| Step | Action                                                  | Notes                                                 |
-| ---- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 5    | `set_clay_mode(0)` — turn off clay                      | Materials become visible                              |
-| 6    | `suggest_lighting(mood)` → apply lighting setup         | Use SEGA-driven suggestions, not manual sundir poking |
-| 7    | `suggest_material(surface_type)` → apply PBR properties | Respect .mtl textures — don't override albedo         |
-| 8    | Tune environment (sunset hour, turbidity, etc.)         | Mood change visible immediately                       |
-| 9    | Render + save                                           | Checkpoint                                            |
+| Step | Action                                                                | Notes                                                     |
+| ---- | --------------------------------------------------------------------- | --------------------------------------------------------- |
+| 5    | `set_clay_mode(0)` — turn off clay                                    | Materials become visible                                  |
+| 6    | `setup_lighting(mood)` — full 3-point + env dim in ONE call           | Reads SEGA intent for temps/ratios. Creates key+fill+rim. |
+| 7    | `suggest_material(surface_type)` → apply PBR properties               | Respect .mtl textures — don't override albedo             |
+| 8    | Fine-tune: `set_daylight(power, turbidity)` or individual light attrs | Use `create_light` for additional accent/practical lights |
+| 9    | Render + save                                                         | Checkpoint                                                |
 
-**Use `suggest_lighting` and `suggest_material`** — they take SEGA intent into account. Don't manually poke at sundir children, turbidity values, or material pin floats unless the suggest tools don't cover your case.
+**Use `setup_lighting` for the full 3-point rig** — it reads SEGA intent, computes positions from subject bounds, creates emissive planes, and dims the environment automatically. Use `create_light` for individual lights (accents, practicals, glowing objects). Use `set_daylight` to adjust environment without pin-chasing. Use `suggest_lighting` only if you need the recipe without creating nodes.
+
+**Ground planes and simple shapes** — use `NT_GEO_OBJECT` primitives (Plane=15, Box=1, Sphere=20), not `place_mesh` with OBJ files. Never analyze_mesh on a flat quad.
 
 ### Phase 3: Assembly
 

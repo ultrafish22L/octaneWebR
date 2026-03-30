@@ -1,0 +1,79 @@
+{
+  "version": 5,
+  "obj_file": "floor.obj",
+  "analyzed_at": "2026-03-30T07:17:28.241Z",
+  "geometry": {
+    "bounds_min": [-1, 0, -1],
+    "bounds_max": [1, 0, 1],
+    "extents": [2, 0, 2],
+    "vertices": 4,
+    "faces": 2,
+    "tallest_axis": "X",
+    "native_up": "X"
+  },
+  "semantic": {
+    "category": "unknown",
+    "subcategory": "floor",
+    "natural_height_m": 1,
+    "orientation_matters": false,
+    "confidence": "low"
+  },
+  "visual_check": {
+    "performed_at": "2026-03-30T07:16:57.750Z",
+    "protocol": "lean_2pass",
+    "vlm_model": "claude-sonnet-4-20250514",
+    "pass1_diagnosis": {
+      "object_type": "flat floor or ground plane",
+      "is_upright": true,
+      "orientation_matters": false,
+      "pose": "upright",
+      "front_visible_in": "1",
+      "confidence": "high",
+      "estimated_height_m": 0,
+      "notes": "This appears to be a completely flat rectangular floor or ground plane with zero height. All views show the same flat surface from different angles. The object has no vertical dimension (0.000 height) and appears as a thin line or invisible from side views (2, 4). Views 1, 3, 5, 6, 7, 8 show the flat plane surface, while views 2 and 4 show it edge-on where it's barely visible as a thin line. Since it's a floor plane, orientation doesn't matter functionally."
+    },
+    "pass1_views": ["floor.diag_front.png", "floor.diag_side.png", "floor.diag_top.png"],
+    "pass2_attempt_1": {
+      "views": ["floor.check_front.png", "floor.check_side.png"],
+      "result": {
+        "is_correct": false,
+        "issue": "other",
+        "notes": "No 3D mesh object is visible in any of the 8 viewpoints - all images show only a blue-to-white gradient background"
+      }
+    },
+    "pass2_attempt_2": {
+      "views": ["floor.check_front.png", "floor.check_side.png"],
+      "result": {
+        "is_correct": false,
+        "issue": "other",
+        "notes": "No visible 3D mesh object in any view - only seeing blue to gray gradient background. Cannot verify orientation without visible geometry."
+      }
+    },
+    "pass2_attempt_3": {
+      "views": ["floor.check_front.png", "floor.check_side.png"],
+      "result": {
+        "is_correct": false,
+        "issue": "other",
+        "notes": "The images appear to be blank or extremely faded gradients from blue to light gray/white. No 3D mesh object is visible in any of the 8 views, making it impossible to verify the orientation or determine if any correction was successful."
+      }
+    },
+    "pass2_attempt_4": {
+      "views": ["floor.check_front.png", "floor.check_side.png"],
+      "result": {
+        "is_correct": false,
+        "issue": "other",
+        "notes": "The images appear to be blank or contain only gradient backgrounds with no visible 3D mesh object to evaluate orientation"
+      }
+    },
+    "verified": false,
+    "hero_shot": "floor.hero.png",
+    "orientation_matters": false,
+    "confidence": "high"
+  },
+  "final_suggestion": {
+    "rotation_deg": [0, 0, 0],
+    "ground_offset_y": 0,
+    "scale_factor": 0.5,
+    "notes": "VLM unverified: upright, no rotation needed. unknown."
+  }
+}

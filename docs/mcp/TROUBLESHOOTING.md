@@ -77,6 +77,16 @@ All known problems and workarounds. For values, see `REFERENCE.md`. For build wo
 
 ## §6 MCP-Specific
 
+**MCP is a Claude project-level server.** It auto-starts when Claude Code opens this project. To restart after code changes or stale state:
+
+```bash
+taskkill //F //IM node.exe   # kill ALL node processes (MCP relay + vite + everything)
+sleep 3                       # wait for ports to release
+# Call any MCP tool → Claude auto-restarts MCP with fresh tool discovery
+```
+
+Never start MCP manually (`node dist/index.js`). Never start a second instance. New tools added mid-session require this restart to appear in Claude's tool list.
+
 | Problem                                    | Fix                                                                                                                                                                                                      |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | NT_GEO_MESH has no transform               | Wrap in NT_GEO_PLACEMENT.                                                                                                                                                                                |

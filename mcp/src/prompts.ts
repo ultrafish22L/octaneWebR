@@ -349,16 +349,21 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 
 ## Phase 2 — DRESS (materials + lighting)
 14. set_clay_mode(0) → materials visible
-15. suggest_lighting(mood, bounds, camera) → returns light positions/temps/power
-    **YOU MUST BUILD THE LIGHTS FROM THE RECIPE:**
-    - For EACH light in recipe.lights[]: create_node("NT_GEO_OBJECT") → set primitive to Plane(15) → create emissive material → set blackbody temperature + power from recipe → **emission efficiency = 1.0**
-    - Wire each light through placement → geo group → RT
-    - See getPrompt("setup-lighting") for full steps
+15. setup_lighting(mood) → creates full 3-point rig (key+fill+rim) + dims env in ONE call
+    - Reads SEGA intent automatically for temperatures and ratios
+    - Subject bounds auto-read from placement state
+    - For additional lights (accents, practicals, glowing objects): use create_light()
+    - For env adjustments: use set_daylight(power, turbidity, ...)
 16. suggest_material(type) per surface → returns roughness/metallic/specular/ior/albedo
     **YOU MUST APPLY THE VALUES:**
     - For EACH material: read_pin_value to get child handles → set_attribute with recipe values
     - Do NOT override albedo if mesh has .mtl textures
 17. Second creative review: "Does the lighting tell a story?"
+
+### Phase 2 Rules:
+- **Ground planes = primitives.** Use NT_GEO_OBJECT (Plane=15), not place_mesh with OBJ files. Never analyze_mesh on a flat quad.
+- **setup_lighting for the 3-point rig.** Don't manually create emissive planes — that's what the tool does internally.
+- **create_light for individual lights.** Glowing mushrooms, neon signs, accent lights — pass material_handle to add emission to existing objects.
 
 ## Phase 3 — CRITIQUE LOOP
 18. critique_render(render_path, spec_name, reference_image_path) → Sonnet grade

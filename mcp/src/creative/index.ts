@@ -30,8 +30,9 @@ export function registerCreativeTools(
       description:
         '[Phase 2] Camera must be positioned first (fit_camera). Get a computed lighting recipe from mood + scene bounds. ' +
         'Returns light positions, colors (Kelvin), power, key:fill:rim ratios. ' +
-        'NEXT: You MUST build the lights — create emissive plane primitives at each recipe position, set blackbody temperature + power, emission efficiency = 1.0. ' +
-        'See getPrompt("setup-lighting") for full steps. Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
+        'PREFER setup_lighting() instead — it calls this internally AND creates all lights automatically. ' +
+        'Use suggest_lighting only when you need the recipe without creating nodes. ' +
+        'Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
       inputSchema: {
         mood: z
           .string()
