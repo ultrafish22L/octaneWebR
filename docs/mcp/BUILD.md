@@ -121,7 +121,7 @@ Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-p
 | Pass 2 — Verify   | 2 (front, side) with correction applied, loop up to 4× | Color clay (mode 2)               | VLM confirms correction or requests adjustment                               |
 | Hero              | 1 (yaw 22°, elevation 25°)                             | Textured (clay off), tight margin | Reference thumbnail for human review                                         |
 
-- **Known source fast path:** When `source_endpoint` matches `ENDPOINT_AXIS_MAP` (e.g. "huynan" → X+90°), Pass 1 is skipped — deterministic correction applied directly, then Pass 2 verifies.
+- **⚠️ Never skip mugshots.** Every mesh runs the full 2-pass VLM protocol — no exceptions. The `source_endpoint` parameter is deprecated and ignored.
 - **Configuration mode:** `analyze_geo(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Use `benchmark_vlm_models` to rank accuracy.
 - **Sidecar:** `.mesh_info.json` v5 — geometry, semantic, source, visual_check (pass1 + pass2 arrays), final_suggestion.
 - **Autonomous:** Proceeds without human input. Flags `verified: false` only if Pass 2 fails after 4 attempts.
@@ -179,7 +179,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 **Hard rules for Phase 1:**
 
 - **Clay mode stays ON** until `critique_render` passes. `critique_render` warns if clay is off during early iterations.
-- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. Sonnet grades A-F; grade C or better = pass. Only then can you call `set_clay_mode(0)`.
+- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. **Clay uses a composition-only scale:** Sonnet is told it's a clay render and grades framing/composition only (ignoring materials, lighting, mood). Pass = `composition_match >= 3`. When passed, `framing_verified` is set automatically and the response tells you to proceed to Phase 2. **This gate is enforced mechanically** — you cannot rationalize past a failing composition score.
 - **Only `fit_camera`** — NEVER `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry (position, scale, floor plane size). `set_camera` is for Phase 4 hero shots only.
 - **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
 - **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
@@ -387,14 +387,21 @@ Generated meshes have unknown orientation. **Never guess — use `analyze_geo`**
 
 ## §7 Scene Clear (FRESH)
 
-`reset_project` clears the scene safely (`suppressUI` prevents any blocking dialog). Just call it directly:
+Two separate clear operations — Octane scene vs AD state:
 
-1. `reset_project()` — clears scene, invalidates all handles
-2. Verify: `get_scene_tree` → count: 0
+1. `reset_ad(confirm: true)` — clears all AD state: specs, SEGA vector, scores, placement DB. Does NOT touch Octane.
+2. `reset_project()` — clears the Octane scene, invalidates all handles. Does NOT touch AD state.
+3. Verify: `get_scene_tree` → count: 0, `get_art_direction_state` → specs: []
+
+**For a new scene build, call both:** `reset_ad` first (clear stale AD from previous scene), then `reset_project` (clear Octane scene). Order matters — `reset_project` triggers `clearScene()` which preserves AD specs/SEGA, so calling `reset_ad` after would be needed anyway.
+
+**⚠️ `reset_project` preserves AD state intentionally** — specs and SEGA vector survive so you can rebuild the same scene. If you want a completely fresh start for a different scene, you MUST call `reset_ad` explicitly.
+
+**⚠️ MCP restart wipes all in-memory state** — killing node.exe destroys AD state, SEGA vector, placement DB. After MCP restart, all AD state starts empty. This is expected — `reset_ad` is for clearing stale state within a running session.
 
 **FRESH vs SCRATCH vs MINIS:**
 
-- **FRESH** — `reset_project` clears the scene. Every test starts with FRESH.
+- **FRESH** — `reset_ad` + `reset_project` clears everything. Every new scene starts with FRESH.
 - **SCRATCH** — Kill all processes, restart everything. Required after MCP restart or infra changes.
 - **MINIS** — `load_project("ORBX/smoketest.orbx")` loads a pre-built smoke test scene. Quick validation that Octane + MCP are working without building from scratch.
 
@@ -420,7 +427,7 @@ Response: `request_id` + `status_url` + `response_url`. Poll `status_url` until 
 
 **Load in Octane:**
 
-1. `analyze_geo(obj_path, source_endpoint:"huynan")` — mandatory, uses known-source fast path for Hunyuan meshes
+1. `analyze_geo(obj_path)` — mandatory, full VLM mugshot verification. Do NOT pass `source_endpoint`.
 2. `place_geo(obj_path, position, role)` — preferred, reads sidecar, applies transforms, wires to geo group + RT in one call
 3. `fit_camera` after each placement
 

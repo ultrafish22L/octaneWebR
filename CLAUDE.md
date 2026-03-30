@@ -1,4 +1,4 @@
-## v2.4.6 (MCP_BUILD 71)
+## v2.4.6 (MCP_BUILD 72)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 
@@ -16,21 +16,22 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 1. `octaneServGrpc/build/Release/octaneServGrpc.exe` (wait ~6s, port 51022)
 2. Verify single instance: `tasklist | grep octaneServGrpc` → exactly 1 row
 3. `preview_start("octaneWebR")`
-4. `get_octane_version()` — verify mcp_build 70
+4. `get_octane_version()` — verify mcp_build 72
 
 ## What to call
 
 ### Scene building (read the prompt, it has the full workflow)
 
-| Task                  | Action                                        | If stuck, read                    |
-| --------------------- | --------------------------------------------- | --------------------------------- |
-| **Build a scene**     | `getPrompt("dress-workflow")`                 | `BUILD.md` §3 (DRESS phases)      |
-| **Import a mesh**     | `getPrompt("mesh-pipeline")`                  | `BUILD.md` Pre-Phase + §5         |
-| **Set up lighting**   | `setup_lighting(mood)` — ONE call, SEGA-aware | `CREATIVE.md` §1 (temps, ratios)  |
-| **Create one light**  | `create_light(type, position, temp, power)`   | `REFERENCE.md` §7 (emission pins) |
-| **Adjust daylight**   | `set_daylight(power, turbidity, ...)`         | `REFERENCE.md` §7b (presets)      |
-| **Before critique**   | `getPrompt("scene-checklist")`                | `CREATIVE.md` §5 (anti-CG)        |
-| **Run critique loop** | `getPrompt("critique-loop")`                  | `BUILD.md` Critique Loop section  |
+| Task                  | Action                                          | If stuck, read                    |
+| --------------------- | ----------------------------------------------- | --------------------------------- |
+| **New scene build**   | `reset_ad(confirm:true)` then `reset_project()` | Clears AD state + Octane scene    |
+| **Build a scene**     | `getPrompt("dress-workflow")`                   | `BUILD.md` §3 (DRESS phases)      |
+| **Import a mesh**     | `getPrompt("mesh-pipeline")`                    | `BUILD.md` Pre-Phase + §5         |
+| **Set up lighting**   | `setup_lighting(mood)` — ONE call, SEGA-aware   | `CREATIVE.md` §1 (temps, ratios)  |
+| **Create one light**  | `create_light(type, position, temp, power)`     | `REFERENCE.md` §7 (emission pins) |
+| **Adjust daylight**   | `set_daylight(power, turbidity, ...)`           | `REFERENCE.md` §7b (presets)      |
+| **Before critique**   | `getPrompt("scene-checklist")`                  | `CREATIVE.md` §5 (anti-CG)        |
+| **Run critique loop** | `getPrompt("critique-loop")`                    | `BUILD.md` Critique Loop section  |
 
 ### Debugging (read ONLY the targeted section, not the whole file)
 
@@ -70,7 +71,7 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 
 These are hard constraints that apply regardless of which prompt you're following:
 
-1. **`analyze_geo` before `place_geo`** — always, no exceptions
+1. **`analyze_geo` before `place_geo`** — always, no exceptions. Never skip mugshot VLM verification. Do NOT pass `source_endpoint`.
 2. **`place_geo` over manual `create_node` chains** — diagnose errors, don't work around
 3. **`fit_camera(framing_mode:"subjects")`** — always pass this, never bare `fit_camera()`
 4. **`set_camera` is Phase 4 ONLY** — wrong framing = wrong geometry

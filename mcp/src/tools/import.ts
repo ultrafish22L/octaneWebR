@@ -385,9 +385,70 @@ async function connectRaw(
     objectPtr: { handle: String(targetHandle), type: OBJ_API_NODE },
     pinIdx,
     sourceNode: { handle: String(sourceHandle), type: OBJ_API_NODE },
-    evaluate: true,
+    evaluate: false,
     doCycleCheck: true,
   });
+}
+
+/**
+ * Helper: create mesh + placement, connect them, and return transform handle.
+ * Matches the exact pattern from import_geo that works with serv build 5.
+ */
+async function createMeshPlacement(
+  client: OctaneMcpClient,
+  objPath: string
+): Promise<{ mesh: number; placement: number; transform: number }> {
+  const rootHandle = await client.getRootNodeGraph();
+
+  // Create mesh
+  const meshResult = await client.callMethod('ApiNode', 'create', {
+    type: 1, // NT_GEO_MESH
+    ownerGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+    configurePins: true,
+  });
+  const mesh = extractHandle(meshResult) ?? 0;
+  if (!mesh) throw new Error('Failed to create NT_GEO_MESH');
+
+  // Set filename
+  await client.callMethod('ApiItem', 'setValueByAttrID', {
+    objectPtr: { handle: String(mesh), type: OBJ_API_ITEM },
+    attribute_id: AttributeId.A_FILENAME,
+    string_value: objPath,
+    evaluate: false,
+  });
+
+  // Create placement
+  const placementResult = await client.callMethod('ApiNode', 'create', {
+    type: 4, // NT_GEO_PLACEMENT
+    ownerGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
+    configurePins: true,
+  });
+  const placement = extractHandle(placementResult) ?? 0;
+  if (!placement) throw new Error('Failed to create NT_GEO_PLACEMENT');
+
+  // Connect mesh → placement pin 1
+  await client.callMethod('ApiNode', 'connectToIx', {
+    objectPtr: { handle: String(placement), type: OBJ_API_NODE },
+    pinIdx: 1,
+    sourceNode: { handle: String(mesh), type: OBJ_API_NODE },
+    evaluate: false,
+    doCycleCheck: true,
+  });
+
+  // Get transform child (pin 0) — same pattern as import_geo
+  let transform = 0;
+  try {
+    const connResult = await client.callMethod('ApiNode', 'connectedNodeIx', {
+      objectPtr: { handle: String(placement), type: OBJ_API_NODE },
+      pinIx: 0,
+      enterWrapperNode: true,
+    });
+    transform = extractHandle(connResult) ?? 0;
+  } catch {
+    mcpLog('createMeshPlacement: no transform child on placement pin 0', 'warn');
+  }
+
+  return { mesh, placement, transform };
 }
 
 /** Helper: get the child node connected to a pin. */
@@ -909,14 +970,10 @@ async function renderViews(
   const hasGround = !pancake && views.some(v => v.ground);
   await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, hasGround ? 2 : 1);
 
-  // Load mesh + placement
-  const mesh = await createNodeRaw(client, MUGSHOT_TYPES.GEO_MESH);
-  const placement = await createNodeRaw(client, MUGSHOT_TYPES.GEO_PLACEMENT);
-  await setAttrRaw(client, mesh, AttributeId.A_FILENAME, 14, objPath);
-  await connectRaw(client, placement, mesh, 1);
+  // Load mesh + placement using shared helper (same pattern as import_geo)
+  const { mesh, placement, transform: xform } = await createMeshPlacement(client, objPath);
 
   // Apply rotation + ground offset
-  const xform = await getConnectedChild(client, placement, 0);
   if (xform) {
     await setAttrRaw(client, xform, AttributeId.A_ROTATION, 11, rotation);
     await setAttrRaw(client, xform, AttributeId.A_TRANSLATION, 11, {
@@ -925,7 +982,12 @@ async function renderViews(
       z: 0,
     });
   }
+  mcpLog(
+    `mugshot: xform=${xform}, connecting placement ${placement} to geoGroup ${geoGroup} pin 0`,
+    'debug'
+  );
   await connectRaw(client, geoGroup, placement, 0);
+  mcpLog(`mugshot: placement connected to geoGroup OK`, 'debug');
 
   // Ground plane
   let groundPlacement = 0;
@@ -940,9 +1002,14 @@ async function renderViews(
     groundPlaneObjPath = writePlaneOBJ(outputDir, baseName, footprint);
     await setAttrRaw(client, groundMesh, AttributeId.A_FILENAME, 14, groundPlaneObjPath);
     await connectRaw(client, gp, groundMesh, 1);
-    const diffColor = await getConnectedChild(client, groundMat, 0);
-    if (diffColor)
-      await setAttrRaw(client, diffColor, AttributeId.A_VALUE, 11, { x: 0.5, y: 0.5, z: 0.5 });
+    // Set ground color — wrap in try/catch since new serv may not auto-create pin children
+    try {
+      const diffColor = await getConnectedChild(client, groundMat, 0);
+      if (diffColor)
+        await setAttrRaw(client, diffColor, AttributeId.A_VALUE, 11, { x: 0.5, y: 0.5, z: 0.5 });
+    } catch {
+      /* ground color is cosmetic — skip if pin not available */
+    }
     await connectRaw(client, gp, groundMat, 0);
     await connectRaw(client, geoGroup, gp, 1);
     groundPlacement = gp;
@@ -955,7 +1022,12 @@ async function renderViews(
   });
 
   // Max samples for mugshot renders
-  const maxSamples = await getConnectedChild(client, kern, 0);
+  let maxSamples = 0;
+  try {
+    maxSamples = await getConnectedChild(client, kern, 0);
+  } catch {
+    /* skip */
+  }
   if (maxSamples) await setAttrRaw(client, maxSamples, AttributeId.A_VALUE, 3, MUGSHOT_SAMPLES);
 
   fs.mkdirSync(outputDir, { recursive: true });
@@ -1948,7 +2020,7 @@ export function registerImportTools(
           .string()
           .optional()
           .describe(
-            'Origin endpoint (e.g. "huynan"). If known, skips VLM diagnosis and applies deterministic axis correction. Pass 2 VLM verification still runs.'
+            'DEPRECATED — ignored. All meshes run full VLM mugshot verification. Do not pass this parameter.'
           ),
       },
       annotations: { destructiveHint: true, openWorldHint: true },
@@ -2129,8 +2201,8 @@ export function registerImportTools(
         // VLM transparency: accumulate all prompts + responses for tool output
         const vlmTranscript: Array<{ type: 'text'; text: string }> = [];
 
-        // Check for known source endpoint — skip Pass 1 if axis convention is known
-        const knownSource = source_endpoint ? ENDPOINT_AXIS_MAP[source_endpoint] : null;
+        // Known source hint — DISABLED: always run full VLM mugshot verification.
+        const knownSource = null; // source_endpoint ? ENDPOINT_AXIS_MAP[source_endpoint] : null;
 
         try {
           const { callAnthropicVision, getAnthropicKey } = await import('../vision/anthropic');

@@ -13,9 +13,15 @@ All notable changes to octaneWebR.
 - **`clearScene()` on ArtDirectionState and SemanticState** — composition specs and SEGA intent survive `reset_project`. Only scene-specific state (handles, critique history) is cleared.
 - **Public API on ArtDirectionState** — `setCalibration()`, `getCalibration()`, `getSpecs()` replace `as any` private field access.
 
+- **`reset_ad` tool** — clears all AD state (specs, SEGA vector, scores, placement DB) without touching Octane scene. Use before `reset_project` when starting a new scene.
+- **Clay critique gate** — `critique_render` in clay mode uses composition-only grading scale (composition_match >= 3 = pass). Sonnet is told it's clay and ignores materials/lighting. `framing_verified` set automatically on pass. Mechanically enforced — no orchestrator rationalization.
+- **Mugshot VLM always runs** — `source_endpoint` parameter deprecated and ignored. All meshes run full 2-pass VLM mugshot verification. Known-source fast path disabled.
+- **Mugshot serv compatibility** — `renderViews` uses shared `createMeshPlacement` helper matching `import_geo` pattern. Fixes `pinCount is 0` errors with serv build 5.
+- **`ANTHOPIC_CLAUDE_KEY`** → `ANTHROPIC_CLAUDE_KEY` — fixed env var typo in vision/anthropic.ts.
+
 ### Changed
 
-- **MCP_BUILD** — bumped to 71
+- **MCP_BUILD** — bumped to 72
 - **Tool renames** — `analyze_mesh` → `analyze_geo`, `import_mesh` → `import_geo`. `place_mesh` removed (use `place_geo`).
 - **Tool description compression** — top 15 tool descriptions reduced ~58% (3,100 chars cut). Phase tags and critical gotchas preserved.
 - **Vision MIME detection** — sniffs file header bytes instead of extension. Fixes JPEG-in-PNG from OTOY Studio.

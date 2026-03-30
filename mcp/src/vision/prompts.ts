@@ -114,6 +114,14 @@ Scale by ${scaleHint} to get world-space coordinates.`;
  * Keep it short — Sonnet has both images, it can see what's wrong.
  */
 export function buildComparisonCritiquePrompt(_spec: CompositionSpec, _phase?: number): string {
+  if (_phase === 1) {
+    // Clay mode — grade composition/framing ONLY, ignore materials/lighting/mood
+    return `Image 1 is the concept art. Image 2 is a CLAY MODE 3D render (no materials, no lighting — flat shading only).
+Grade the render's COMPOSITION AND FRAMING only. Ignore colors, materials, lighting, mood, and surface detail — those are intentionally absent in clay mode.
+Focus on: object placement, camera angle, silhouette match, spatial layout, scale relationships, and whether the key elements are present and correctly positioned.
+Answer as JSON: { "grade": "C+", "mood_match": 3, "density_match": 3, "composition_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }
+IMPORTANT: mood_match and density_match should be scored leniently (3 = acceptable) since clay mode has no materials or lighting. composition_match is the primary score.`;
+  }
   return `Image 1 is the concept art. Image 2 is the 3D render.
 Compare them and grade the render A-F.
 Answer as JSON: { "grade": "C+", "mood_match": 3, "density_match": 3, "composition_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }`;

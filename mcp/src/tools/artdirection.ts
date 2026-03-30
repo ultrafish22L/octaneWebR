@@ -544,7 +544,8 @@ export function registerArtDirectionTools(
   server: McpServer,
   client: OctaneMcpClient,
   artState: ArtDirectionState,
-  placementState?: ScenePlacementState
+  placementState?: ScenePlacementState,
+  segaState?: { clear(): void; clearScene(): void }
 ) {
   const placement = placementState ?? new ScenePlacementState();
   // ── 1. plan_composition ──────────────────────────────────────────
@@ -797,9 +798,11 @@ export function registerArtDirectionTools(
         // Clay mode check — Phase 1 composition MUST be validated in clay
         // Check on ALL iterations when framing_verified hasn't been completed
         const framingVerified = artState.isStepDone('framing_verified');
+        let isClayMode = false;
         try {
           const clayResult = await client.callMethod('ApiRenderEngine', 'clayMode', {});
           const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
+          isClayMode = clayMode !== 0;
           if (clayMode === 0 && !framingVerified) {
             warnings.push(
               '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
@@ -821,7 +824,9 @@ export function registerArtDirectionTools(
         let comparisonResult: import('../vision/index').ComparisonCritiqueResult | null = null;
         if (conceptPath && fs.existsSync(path.resolve(conceptPath))) {
           const currentPhase = artState.isActive ? artState.getWorkflowStatus().phase : undefined;
-          const comparisonPrompt = buildComparisonCritiquePrompt(spec, currentPhase);
+          // Clay mode overrides phase for prompt — tell Sonnet it's clay regardless of AD mode
+          const promptPhase = isClayMode ? 1 : currentPhase;
+          const comparisonPrompt = buildComparisonCritiquePrompt(spec, promptPhase);
           try {
             comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
           } catch (visError: any) {
@@ -843,7 +848,20 @@ export function registerArtDirectionTools(
             F: 1,
           };
           const overallScore = gradeToScore[grade] ?? 3;
-          const passed = grade === 'A' || grade === 'B';
+
+          // Clay mode uses composition_match as the gate (>= 3 = pass).
+          // Full renders use overall grade (A or B = pass).
+          const clayPass = isClayMode && comparisonResult.composition_match >= 3;
+          const fullPass = !isClayMode && (grade === 'A' || grade === 'B');
+          const passed = clayPass || fullPass;
+
+          // Mechanical gate: clay critique passes → mark framing_verified
+          if (isClayMode && clayPass && !framingVerified) {
+            artState.completeStep(
+              'framing_verified',
+              `Clay critique passed: composition_match=${comparisonResult.composition_match}, grade=${comparisonResult.grade}`
+            );
+          }
 
           // Record critique
           const record: CritiqueRecord = {
@@ -924,11 +942,20 @@ export function registerArtDirectionTools(
                 warnings,
                 stagnating: artState.isStagnating(params.spec_name),
                 exhausted: artState.isExhausted(params.spec_name),
+                is_clay: isClayMode,
+                clay_gate: isClayMode
+                  ? `composition_match=${comparisonResult.composition_match} (need ≥3 to pass)`
+                  : undefined,
+                framing_verified: artState.isStepDone('framing_verified'),
                 instruction: passed
-                  ? 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
-                  : artState.isActive
-                    ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
-                    : `Sonnet graded ${comparisonResult.grade}. Apply corrections and re-render.`,
+                  ? isClayMode
+                    ? `CLAY GATE PASSED (composition_match=${comparisonResult.composition_match}). Framing verified. Call set_clay_mode(0) and proceed to Phase 2 (materials & lighting).`
+                    : 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
+                  : isClayMode
+                    ? `CLAY GATE FAILED (composition_match=${comparisonResult.composition_match}, need ≥3). Fix geometry/framing, re-render IN CLAY, and critique again. Do NOT turn off clay mode.`
+                    : artState.isActive
+                      ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
+                      : `Sonnet graded ${comparisonResult.grade}. Apply corrections and re-render.`,
                 ...adWorkflow(artState, 'critique_render'),
               },
               null,
@@ -1100,6 +1127,44 @@ export function registerArtDirectionTools(
   );
 
   // set_art_direction_mode REMOVED — folded into get_art_direction_state(set_mode)
+
+  // ── 6b. reset_ad ───────────────────────────────────────────────────
+
+  server.registerTool(
+    'reset_ad',
+    {
+      title: 'Reset Art Direction',
+      description:
+        'Clear all AD state (specs, SEGA vector, scores, placement DB) for a fresh build. ' +
+        'Does NOT touch the Octane scene — use reset_project for that. ' +
+        'Call this when starting a new scene build to clear stale AD state from a previous build.',
+      inputSchema: {
+        confirm: z.boolean().describe('Must be true to confirm reset'),
+      },
+      annotations: { destructiveHint: true },
+    },
+    async ({ confirm }) => {
+      if (!confirm) {
+        return jsonResult({
+          error: 'Pass confirm: true to reset all AD state.',
+        });
+      }
+      artState.clear();
+      if (segaState) segaState.clear();
+      placement.clear();
+      return jsonResult({
+        success: true,
+        message:
+          'AD state cleared: specs, SEGA vector, scores, placement DB all reset. Ready for a fresh build.',
+        cleared: {
+          specs: true,
+          sega_vector: !!segaState,
+          scores: true,
+          placement: true,
+        },
+      });
+    }
+  );
 
   // ── 7. suggest_placement ──────────────────────────────────────────
 

@@ -380,9 +380,13 @@ export function registerCameraTools(
         };
 
         if (framingSource === 'scene_bounds_fallback') {
+          const entryCount = placementState ? placementState.getEntries().length : 0;
           result.warning =
-            'Placement state is empty — using full scene bounds (includes ground planes, lights). ' +
-            'Framing may be inaccurate. Use register_scene_object or place_geo to register objects for correct subject framing.';
+            entryCount === 0
+              ? 'Placement state is empty — using full scene bounds (includes ground planes, lights). ' +
+                'Framing may be inaccurate. Use register_scene_object or place_geo to register objects for correct subject framing.'
+              : `Placement state has ${entryCount} entries but all are ground/light roles — no frameable subjects. ` +
+                'Using full scene bounds. Place a hero/secondary/accent/prop object for correct subject framing.';
         }
 
         return jsonResult(result);

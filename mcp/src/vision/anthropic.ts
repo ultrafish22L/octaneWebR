@@ -1,6 +1,6 @@
 /**
  * Anthropic Vision Client — calls Claude's Messages API with base64 images.
- * Uses ANTHOPIC_CLAUDE_KEY env var. Zero npm dependencies (built-in fetch).
+ * Uses ANTHROPIC_CLAUDE_KEY env var. Zero npm dependencies (built-in fetch).
  */
 
 import { mcpLog } from '../OctaneMcpClient';
@@ -100,5 +100,5 @@ export async function callAnthropicVision(
  * Check if the Anthropic API key is available and valid.
  */
 export function getAnthropicKey(): string | null {
-  return process.env.ANTHOPIC_CLAUDE_KEY || process.env.ANTHROPIC_API_KEY || null;
+  return process.env.ANTHROPIC_CLAUDE_KEY || process.env.ANTHROPIC_API_KEY || null;
 }

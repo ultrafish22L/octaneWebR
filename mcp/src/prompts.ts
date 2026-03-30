@@ -310,6 +310,10 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
             type: 'text' as const,
             text: `DRESS Workflow — Complete scene build from concept to beauty render.
 
+## Pre-Phase — CLEAR (start fresh)
+0. reset_ad(confirm: true) → clear stale AD state from any previous scene
+0b. reset_project() → clear Octane scene (if rebuilding)
+
 ## Phase 0 — PLAN (no Octane calls yet)
 1. analyze_reference(concept_art_path) → extract composition data
 2. set_artistic_intent(preset or vector) → initialize SEGA mood
@@ -318,9 +322,10 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
    **GATE: validate_layout passes with 0 errors. Do NOT create nodes until this passes.**
 
 ## Phase 0.5 — ASSETS
-5. analyze_geo(obj_path, source_endpoint:"huynan") for EVERY mesh
+5. analyze_geo(obj_path) for EVERY mesh — NEVER skip mugshot verification
    - Creates .mesh_info.json sidecar with orientation/scale/offset
    - MUST run before place_geo. No exceptions.
+   - Do NOT pass source_endpoint — always run full VLM mugshot verification.
    - While meshes generate (~3 min), build scene infrastructure (RT, kernel, env)
 5b. Generate HDRI via OTOY Studio: flux-pro/new with equirectangular panorama prompt
    - Save to aigenerated/{scene}/assets/hdri_{scene}.png
@@ -341,10 +346,13 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
     - "Is there depth?" Foreground/mid/background layers.
     Add 1-3 supporting elements based on answers.
 13. critique_render(render_path, spec_name, reference_image_path=concept_art)
-    **GATE: Sonnet grade >= C. Do NOT proceed if < C.**
+    **CLAY GATE (enforced mechanically): composition_match >= 3 = pass.**
+    Sonnet knows it's clay — grades composition/framing only, ignores materials/lighting.
+    When passed, framing_verified is set automatically. Response tells you to proceed.
+    If failed: fix geometry/framing, re-render IN CLAY, critique again. Do NOT turn off clay.
 
 ### Phase 1 Hard Rules:
-- Clay mode stays ON until critique passes
+- Clay mode stays ON until clay critique passes (composition_match >= 3)
 - ONLY fit_camera — NEVER set_camera to fix framing (fix geometry instead)
 - Generate HDRI from concept art via OTOY Studio (equirectangular panorama)
 - Apply HDRI to NT_ENV_TEXTURE with NT_TEX_IMAGE using SPHERE PROJECTION
@@ -388,7 +396,7 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 25. save_render(path) → beauty render
 26. save_project(path) → persist scene
 27. Check 3 log files (log_mcp, log_grpc, log_client) — 0 errors
-28. reset_project() → clean for next scene
+28. reset_ad(confirm:true) + reset_project() → clean AD state + Octane scene for next scene
 
 ## HARD RULES:
 - fit_camera only in Phases 1-3. set_camera Phase 4 only.
@@ -413,13 +421,9 @@ Query octane://sega/presets for available SEGA presets.`,
         'Import a mesh with correct orientation: analyze → place → fit_camera. The standard mesh import workflow.',
       argsSchema: {
         obj_path: z.string().optional().describe('Path to OBJ/GLB/glTF file'),
-        source_endpoint: z
-          .string()
-          .optional()
-          .describe('Origin endpoint (e.g. "huynan") for analyze_geo'),
       },
     },
-    async ({ obj_path, source_endpoint }) => ({
+    async ({ obj_path }) => ({
       messages: [
         {
           role: 'user' as const,
@@ -427,11 +431,11 @@ Query octane://sega/presets for available SEGA presets.`,
             type: 'text' as const,
             text: `Import a mesh into the scene with correct orientation and placement.
 
-1. **analyze_geo(obj_path, source_endpoint:"huynan")**
-   - Renders 8 mugshots, VLM verifies orientation
+1. **analyze_geo(obj_path)** — NEVER skip mugshot verification
+   - Renders diagnostic mugshots, VLM verifies orientation via 2-pass protocol
    - Creates .mesh_info.json sidecar with rotation/scale/offset
    - MUST run before place_geo. No exceptions.
-   - For Hunyuan-generated meshes, pass source_endpoint:"huynan" to skip VLM and apply known correction
+   - Do NOT pass source_endpoint — always run full VLM verification
    - Pass target_height to override auto-estimated scale
 
 2. **place_geo(obj_path, role:"hero|secondary|accent|prop|ground")**
