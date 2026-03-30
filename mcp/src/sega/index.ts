@@ -65,44 +65,49 @@ export function registerSegaTools(
 ) {
   // ── set_artistic_intent ───────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'set_artistic_intent',
-    '[Phase 0b / Phase 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
-      'Phase 0b: Initialize mood before geometry (drives suggest_lighting/suggest_material values). ' +
-      'Phase 2: Refine mood after framing is confirmed. ' +
-      'Returns: semantic vector, resolved parameter recipes (lighting, material, camera), Berlyne warnings. ' +
-      'Query octane://sega/presets for available presets. Query octane://sega/dimensions for dimension names. ' +
-      'Call with preset:"list" to see all presets.',
     {
-      preset: z
-        .string()
-        .optional()
-        .describe('Preset name (e.g. "dramatic", "vermeer"). Use "list" to see all.'),
-      vector: z
-        .record(z.string(), z.number().min(-1).max(1))
-        .optional()
-        .describe(
-          'Raw semantic vector: { dimension: value }. Values in [-1, +1]. ' +
-            'Dimensions: pleasure, arousal, dominance, warmth, contrast, complexity, ' +
-            'atmosphere, surface_detail, saturation, shot_scale, camera_angle, ' +
-            'depth_spread, key_direction, groundedness, intimacy.'
-        ),
-      natural_language: z
-        .string()
-        .optional()
-        .describe(
-          'Natural language description (e.g. "warm and moody", "Vermeer lighting", "make it more dramatic"). ' +
-            'Returns an NL parse prompt — the AI parses it and calls back with the parsed vector.'
-        ),
-      mode: z
-        .enum(['absolute', 'relative'])
-        .optional()
-        .default('absolute')
-        .describe('absolute = replace vector, relative = add delta to current'),
-      object_id: z
-        .string()
-        .optional()
-        .describe('If set, applies as per-object override instead of global'),
+      title: 'Set Artistic Intent',
+      description:
+        '[Phase 0b / Phase 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
+        'Phase 0b: Initialize mood before geometry (drives suggest_lighting/suggest_material values). ' +
+        'Phase 2: Refine mood after framing is confirmed. ' +
+        'Returns: semantic vector, resolved parameter recipes (lighting, material, camera), Berlyne warnings. ' +
+        'Query octane://sega/presets for available presets. Query octane://sega/dimensions for dimension names. ' +
+        'Call with preset:"list" to see all presets.',
+      inputSchema: {
+        preset: z
+          .string()
+          .optional()
+          .describe('Preset name (e.g. "dramatic", "vermeer"). Use "list" to see all.'),
+        vector: z
+          .record(z.string(), z.number().min(-1).max(1))
+          .optional()
+          .describe(
+            'Raw semantic vector: { dimension: value }. Values in [-1, +1]. ' +
+              'Dimensions: pleasure, arousal, dominance, warmth, contrast, complexity, ' +
+              'atmosphere, surface_detail, saturation, shot_scale, camera_angle, ' +
+              'depth_spread, key_direction, groundedness, intimacy.'
+          ),
+        natural_language: z
+          .string()
+          .optional()
+          .describe(
+            'Natural language description (e.g. "warm and moody", "Vermeer lighting", "make it more dramatic"). ' +
+              'Returns an NL parse prompt — the AI parses it and calls back with the parsed vector.'
+          ),
+        mode: z
+          .enum(['absolute', 'relative'])
+          .optional()
+          .default('absolute')
+          .describe('absolute = replace vector, relative = add delta to current'),
+        object_id: z
+          .string()
+          .optional()
+          .describe('If set, applies as per-object override instead of global'),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       try {
@@ -217,15 +222,20 @@ export function registerSegaTools(
 
   // ── get_artistic_intent ───────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_artistic_intent',
-    'Read current scene artistic intent: semantic vector, resolved parameters, ' +
-      'active dimensions, per-object overrides, Berlyne warnings, and undo depth.',
     {
-      object_id: z
-        .string()
-        .optional()
-        .describe('Get effective vector for a specific object (global + override)'),
+      title: 'Get Artistic Intent',
+      description:
+        'Read current scene artistic intent: semantic vector, resolved parameters, ' +
+        'active dimensions, per-object overrides, Berlyne warnings, and undo depth.',
+      inputSchema: {
+        object_id: z
+          .string()
+          .optional()
+          .describe('Get effective vector for a specific object (global + override)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async params => {
       try {
@@ -251,31 +261,36 @@ export function registerSegaTools(
 
   // ── adjust_artistic_intent ────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'adjust_artistic_intent',
-    '[Phase 2] Fine-tune a single semantic dimension. Only use after framing is confirmed (Phase 1 complete). ' +
-      'Supports absolute (set to value) or relative (delta from current). Per-object override if object_id provided. ' +
-      'Returns updated vector + resolved parameters + warnings.',
     {
-      dimension: z
-        .string()
-        .describe(
-          'Dimension name (e.g. "warmth", "contrast"). ' +
-            'Available: pleasure, arousal, dominance, warmth, contrast, complexity, ' +
-            'atmosphere, surface_detail, saturation, shot_scale, camera_angle, ' +
-            'depth_spread, key_direction, groundedness, intimacy.'
-        ),
-      value: z.number().min(-1).max(1).describe('Target value or delta, in [-1, +1]'),
-      mode: z
-        .enum(['absolute', 'relative'])
-        .optional()
-        .default('relative')
-        .describe('absolute = set dimension to value, relative = add value to current'),
-      object_id: z.string().optional().describe('Apply as per-object override instead of global'),
-      undo: z
-        .boolean()
-        .optional()
-        .describe('If true, undo last change instead of applying new one'),
+      title: 'Adjust Artistic Intent',
+      description:
+        '[Phase 2] Fine-tune a single semantic dimension. Only use after framing is confirmed (Phase 1 complete). ' +
+        'Supports absolute (set to value) or relative (delta from current). Per-object override if object_id provided. ' +
+        'Returns updated vector + resolved parameters + warnings.',
+      inputSchema: {
+        dimension: z
+          .string()
+          .describe(
+            'Dimension name (e.g. "warmth", "contrast"). ' +
+              'Available: pleasure, arousal, dominance, warmth, contrast, complexity, ' +
+              'atmosphere, surface_detail, saturation, shot_scale, camera_angle, ' +
+              'depth_spread, key_direction, groundedness, intimacy.'
+          ),
+        value: z.number().min(-1).max(1).describe('Target value or delta, in [-1, +1]'),
+        mode: z
+          .enum(['absolute', 'relative'])
+          .optional()
+          .default('relative')
+          .describe('absolute = set dimension to value, relative = add value to current'),
+        object_id: z.string().optional().describe('Apply as per-object override instead of global'),
+        undo: z
+          .boolean()
+          .optional()
+          .describe('If true, undo last change instead of applying new one'),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       try {
@@ -353,23 +368,28 @@ export function registerSegaTools(
 
   // ── semantic_critique ─────────────────────────────────────────────
 
-  server.tool(
-    'semantic_critique',
-    '[Phase 3] Evaluates mood/style gaps — only useful AFTER framing is correct. ' +
-      'Measures how well a render matches the target artistic intent. ' +
-      'Analyzes pixel data (contrast, warmth, saturation, atmosphere) and computes ' +
-      'a semantic gap vector showing exactly what dimensions need adjustment. ' +
-      'Returns gap vector, convergence status, and correction suggestions.',
+  server.registerTool(
+    'evaluate_semantics',
     {
-      render_path: z.string().describe('Absolute path to the rendered image (PNG)'),
-      vlm_measurements: z
-        .record(z.string(), z.number().min(-1).max(1))
-        .optional()
-        .describe(
-          'Optional VLM-estimated measurements for non-pixel dimensions ' +
-            '(pleasure, arousal, dominance, complexity, etc.). ' +
-            'Get the estimation prompt from get_vlm_estimation_prompt first.'
-        ),
+      title: 'Evaluate Semantics',
+      description:
+        '[Phase 3] Evaluates mood/style gaps — only useful AFTER framing is correct. ' +
+        'Measures how well a render matches the target artistic intent. ' +
+        'Analyzes pixel data (contrast, warmth, saturation, atmosphere) and computes ' +
+        'a semantic gap vector showing exactly what dimensions need adjustment. ' +
+        'Returns gap vector, convergence status, and correction suggestions.',
+      inputSchema: {
+        render_path: z.string().describe('Absolute path to the rendered image (PNG)'),
+        vlm_measurements: z
+          .record(z.string(), z.number().min(-1).max(1))
+          .optional()
+          .describe(
+            'Optional VLM-estimated measurements for non-pixel dimensions ' +
+              '(pleasure, arousal, dominance, complexity, etc.). ' +
+              'Get the estimation prompt from get_vlm_estimation_prompt first.'
+          ),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async params => {
       try {
@@ -412,12 +432,16 @@ export function registerSegaTools(
 
   // ── get_vlm_estimation_prompt ─────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_vlm_estimation_prompt',
-    'Get a prompt for VLM (vision model) to estimate perceptual semantic dimensions ' +
-      'from a render image. Use this prompt with the vision critic, then pass results ' +
-      'to semantic_critique as vlm_measurements.',
-    {},
+    {
+      title: 'VLM Estimation Prompt',
+      description:
+        'Get a prompt for VLM (vision model) to estimate perceptual semantic dimensions ' +
+        'from a render image. Use this prompt with the vision critic, then pass results ' +
+        'to semantic_critique as vlm_measurements.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const target = segaState.getGlobal();
@@ -457,14 +481,19 @@ export function registerSegaTools(
 
   // ── save_user_preset ──────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'save_sega_preset',
-    'Save the current SEGA semantic vector as a named preset for reuse. ' +
-      'Presets are stored in session memory (not persisted to disk). Query octane://sega/presets for built-in presets.',
     {
-      name: z.string().describe('Preset name (e.g. "my_moody_setup")'),
-      description: z.string().optional().describe('Short description of this preset'),
-      tags: z.array(z.string()).optional().describe('Search tags for this preset'),
+      title: 'Save SEGA Preset',
+      description:
+        'Save the current SEGA semantic vector as a named preset for reuse. ' +
+        'Presets are stored in session memory (not persisted to disk). Query octane://sega/presets for built-in presets.',
+      inputSchema: {
+        name: z.string().describe('Preset name (e.g. "my_moody_setup")'),
+        description: z.string().optional().describe('Short description of this preset'),
+        tags: z.array(z.string()).optional().describe('Search tags for this preset'),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       try {

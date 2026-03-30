@@ -21,7 +21,7 @@ import {
   OBJ_API_ITEM_ARRAY,
 } from './utils';
 import { PIN_TYPE_NAMES, AttributeId } from '../shared/OctaneConstants';
-import { enumeratePins } from './pin-utils';
+import { enumeratePins, ensureDynamicPin } from './pin-utils';
 // Re-export for scene.ts which imports PIN_TYPE_NAMES from './node'
 export { PIN_TYPE_NAMES };
 
@@ -52,19 +52,24 @@ export function registerNodeTools(
   client: OctaneMcpClient,
   cache: ApiCache | null
 ) {
-  server.tool(
+  server.registerTool(
     'create_node',
-    '[Phase 1] Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 23 types supported), NT_TEX_IMAGE (image texture), NT_RENDERTARGET (RT). Use list_node_types for full catalog.',
     {
-      node_type: z
-        .string()
-        .describe(
-          'Node type key from NodeType constants (e.g. "NT_MAT_UNIVERSAL", "NT_TEX_IMAGE")'
-        ),
-      node_type_id: z
-        .number()
-        .optional()
-        .describe('Numeric type ID. If provided, overrides node_type lookup.'),
+      title: 'Create Node',
+      description:
+        '[Phase 1] Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 23 types supported), NT_TEX_IMAGE (image texture), NT_RENDERTARGET (RT). Use list_node_types for full catalog.',
+      inputSchema: {
+        node_type: z
+          .string()
+          .describe(
+            'Node type key from NodeType constants (e.g. "NT_MAT_UNIVERSAL", "NT_TEX_IMAGE")'
+          ),
+        node_type_id: z
+          .number()
+          .optional()
+          .describe('Numeric type ID. If provided, overrides node_type lookup.'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ node_type, node_type_id }) => {
       try {
@@ -254,10 +259,15 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'delete_node',
-    'Delete a node from the scene. Connected nodes are auto-disconnected by the SDK. Clears node from scene cache.',
-    { handle: z.number().int().nonnegative().describe('Node handle to delete') },
+    {
+      title: 'Delete Node',
+      description:
+        'Delete a node from the scene. Connected nodes are auto-disconnected by the SDK. Clears node from scene cache.',
+      inputSchema: { handle: z.number().int().nonnegative().describe('Node handle to delete') },
+      annotations: { destructiveHint: true },
+    },
     async ({ handle }) => {
       try {
         await client.callMethod('ApiItem', 'destroy', {
@@ -272,32 +282,37 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'connect_nodes',
-    "[All phases] Connect source node to a target node's input pin. " +
-      'Use pin_name (preferred, e.g. "diffuse", "geometry", "camera") or pin_index (for dynamic/movable pins). ' +
-      'Query octane://pin-layout/{typeName} for available pins. Query octane://constants for RT pin layout. ' +
-      'Connection is auto-verified after wiring. ' +
-      'Gotcha: Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
     {
-      target_handle: z
-        .number()
-        .int()
-        .nonnegative()
-        .describe('Target node handle (the node receiving the connection)'),
-      pin_name: z
-        .string()
-        .optional()
-        .describe('Pin name (preferred). E.g. "camera", "geometry", "diffuse", "emission"'),
-      pin_index: z
-        .number()
-        .optional()
-        .describe('Pin index (fallback for dynamic/movable pins). E.g. 0, 1, 3'),
-      source_handle: z
-        .number()
-        .int()
-        .nonnegative()
-        .describe('Source node handle (the node being connected)'),
+      title: 'Connect Nodes',
+      description:
+        "[All phases] Connect source node to a target node's input pin. " +
+        'Use pin_name (preferred, e.g. "diffuse", "geometry", "camera") or pin_index (for dynamic/movable pins). ' +
+        'Query octane://pin-layout/{typeName} for available pins. Query octane://constants for RT pin layout. ' +
+        'Connection is auto-verified after wiring. ' +
+        'Gotcha: Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
+      inputSchema: {
+        target_handle: z
+          .number()
+          .int()
+          .nonnegative()
+          .describe('Target node handle (the node receiving the connection)'),
+        pin_name: z
+          .string()
+          .optional()
+          .describe('Pin name (preferred). E.g. "camera", "geometry", "diffuse", "emission"'),
+        pin_index: z
+          .number()
+          .optional()
+          .describe('Pin index (fallback for dynamic/movable pins). E.g. 0, 1, 3'),
+        source_handle: z
+          .number()
+          .int()
+          .nonnegative()
+          .describe('Source node handle (the node being connected)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ target_handle, pin_index: pin_index_in, pin_name, source_handle }) => {
       let pin_index = pin_index_in; // mutable — auto-slot may override
@@ -307,85 +322,25 @@ export function registerNodeTools(
         const targetTypeName = client.sceneCache.getTypeName(target_handle);
 
         // --- Auto-slot for movable-input nodes (e.g. NT_GEO_GROUP) ---
-        // These nodes have dynamic pins. If caller didn't specify a pin,
-        // find the first empty slot. If all full, expand by 1.
-        // Caller should never need to think about A_PIN_COUNT.
-        const MAX_DYNAMIC_PINS = 32;
-        if (targetTypeName && cache && pin_index === undefined && pin_name === undefined) {
+        // Dynamic-pin nodes need pin expansion before connection.
+        // Shared logic in ensureDynamicPin (pin-utils.ts) prevents code drift.
+        if (targetTypeName && cache) {
           const targetInfo = cache.getNodeType(targetTypeName);
           if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
-            try {
-              const curResult = await client.callMethod('ApiNode', 'pinCount', {
-                objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-              });
-              const curCount = Number(extractValue(curResult) ?? 0);
-
-              // Find first empty pin — scan from end (last pin most likely empty
-              // for append-only geo groups, turning N calls into typically 1-2)
-              let freePin = -1;
-              for (let i = curCount - 1; i >= 0; i--) {
-                const conn = await client.callMethod('ApiNode', 'connectedNodeIx', {
-                  objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-                  pinIx: i,
-                  enterWrapperNode: false,
-                });
-                const connHandle = extractHandle(conn) ?? 0;
-                if (connHandle === 0) {
-                  freePin = i;
-                } else {
-                  break; // Hit occupied pin — all before it are likely full
-                }
+            if (pin_index === undefined && pin_name === undefined) {
+              // No pin specified — auto-find/expand
+              try {
+                pin_index = await ensureDynamicPin(client, target_handle);
+              } catch (e: any) {
+                return errorResult(e.message);
               }
-
-              if (freePin >= 0) {
-                // Use the free slot
-                pin_index = freePin;
-              } else if (curCount < MAX_DYNAMIC_PINS) {
-                // All full — expand by 1
-                const newCount = curCount + 1;
-                await client.callMethod('ApiItem', 'setValueByAttrID', {
-                  objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
-                  attribute_id: AttributeId.A_PIN_COUNT,
-                  int_value: newCount,
-                  evaluate: false,
-                });
-                await client.callMethod('ApiChangeManager', 'update', {});
-                pin_index = curCount; // new slot is at the end
-              } else {
-                return errorResult(
-                  `Geo group ${target_handle} already has ${curCount} children (max ${MAX_DYNAMIC_PINS}).`
-                );
+            } else if (pin_index !== undefined) {
+              // Pin specified — expand if needed
+              try {
+                pin_index = await ensureDynamicPin(client, target_handle, pin_index);
+              } catch (e: any) {
+                return errorResult(e.message);
               }
-            } catch (e: any) {
-              mcpLogLazy('debug', () => `[node:connect_nodes:auto_slot] ${e?.message ?? e}`);
-            }
-          }
-        }
-        // If caller specified pin_index on a dynamic node, ensure enough pins exist (capped)
-        if (targetTypeName && cache && pin_index !== undefined) {
-          const targetInfo = cache.getNodeType(targetTypeName);
-          if (targetInfo && targetInfo.movableInputPinCount > 0 && targetInfo.pins.length === 0) {
-            if (pin_index >= MAX_DYNAMIC_PINS) {
-              return errorResult(
-                `pin_index ${pin_index} exceeds max dynamic pins (${MAX_DYNAMIC_PINS}).`
-              );
-            }
-            try {
-              const curResult = await client.callMethod('ApiNode', 'pinCount', {
-                objectPtr: { handle: String(target_handle), type: OBJ_API_NODE },
-              });
-              const curCount = Number(extractValue(curResult) ?? 0);
-              if (curCount <= pin_index) {
-                await client.callMethod('ApiItem', 'setValueByAttrID', {
-                  objectPtr: { handle: String(target_handle), type: OBJ_API_ITEM },
-                  attribute_id: AttributeId.A_PIN_COUNT,
-                  int_value: pin_index + 1,
-                  evaluate: false,
-                });
-                await client.callMethod('ApiChangeManager', 'update', {});
-              }
-            } catch (e: any) {
-              mcpLogLazy('debug', () => `[node:connect_nodes:expand_pins] ${e?.message ?? e}`);
             }
           }
         }
@@ -542,12 +497,16 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'disconnect_pin',
-    'Disconnect a pin on a node (sets connection to null). Updates scene cache.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      pin_index: z.number().describe('Pin index to disconnect'),
+      title: 'Disconnect Pin',
+      description: 'Disconnect a pin on a node (sets connection to null). Updates scene cache.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        pin_index: z.number().describe('Pin index to disconnect'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ handle, pin_index }) => {
       try {
@@ -569,13 +528,18 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'create_connected',
-    'Create a node and connect it to a target pin in one call. Saves round-trips for the most common pattern (e.g. create material + connect to mesh pin 0). Auto-verifies the connection. If connect fails, returns the created handle so you can retry or clean up.',
     {
-      node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
-      target_handle: z.number().int().nonnegative().describe('Target node to connect to'),
-      pin_index: z.number().int().nonnegative().describe('Pin index on target node'),
+      title: 'Create Connected',
+      description:
+        'Create a node and connect it to a target pin in one call. Saves round-trips for the most common pattern (e.g. create material + connect to mesh pin 0). Auto-verifies the connection. If connect fails, returns the created handle so you can retry or clean up.',
+      inputSchema: {
+        node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
+        target_handle: z.number().int().nonnegative().describe('Target node to connect to'),
+        pin_index: z.number().int().nonnegative().describe('Pin index on target node'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ node_type, target_handle, pin_index }) => {
       try {
@@ -668,12 +632,16 @@ export function registerNodeTools(
 
   // ── Tier 1D: Node Management ─────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'rename_node',
-    'Set the display name of a node. Does not affect connections or behavior.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      name: z.string().min(1).describe('New display name'),
+      title: 'Rename Node',
+      description: 'Set the display name of a node. Does not affect connections or behavior.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        name: z.string().min(1).describe('New display name'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ handle, name }) => {
       try {
@@ -691,21 +659,26 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'find_nodes',
-    'Search the scene graph for nodes by type ID or by name. Returns matching handles. Useful for working with loaded scenes where handles are unknown.',
     {
-      type_id: z
-        .number()
-        .int()
-        .optional()
-        .describe('Node type ID to search for (e.g. 130 for NT_MAT_UNIVERSAL)'),
-      name: z.string().optional().describe('Node name to search for (exact match)'),
-      recurse: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Search recursively into subgraphs (default true)'),
+      title: 'Find Nodes',
+      description:
+        'Search the scene graph for nodes by type ID or by name. Returns matching handles. Useful for working with loaded scenes where handles are unknown.',
+      inputSchema: {
+        type_id: z
+          .number()
+          .int()
+          .optional()
+          .describe('Node type ID to search for (e.g. 130 for NT_MAT_UNIVERSAL)'),
+        name: z.string().optional().describe('Node name to search for (exact match)'),
+        recurse: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Search recursively into subgraphs (default true)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ type_id, name, recurse }) => {
       try {
@@ -874,11 +847,16 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
-    'duplicate_node',
-    'Deep-copy a node (and its subtree) within the scene. Returns the new root handle. All new handles are tracked in SceneCache.',
+  server.registerTool(
+    'clone_node',
     {
-      handle: z.number().int().nonnegative().describe('Handle of the node to duplicate'),
+      title: 'Clone Node',
+      description:
+        'Deep-copy a node (and its subtree) within the scene. Returns the new root handle. All new handles are tracked in SceneCache.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Handle of the node to duplicate'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ handle }) => {
       try {
@@ -912,10 +890,14 @@ export function registerNodeTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'cleanup_orphans',
-    'Delete all orphaned/unconnected nodes in the scene. Refreshes SceneCache after cleanup. Use with caution — may remove nodes you intended to connect later.',
-    {},
+    {
+      title: 'Cleanup Orphans',
+      description:
+        'Delete all orphaned/unconnected nodes in the scene. Refreshes SceneCache after cleanup. Use with caution — may remove nodes you intended to connect later.',
+      annotations: { destructiveHint: true },
+    },
     async () => {
       try {
         const rootHandle = await client.getRootNodeGraph();

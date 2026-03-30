@@ -15,10 +15,14 @@ import { enumeratePins } from './pin-utils';
 const OBJ_API_ROOT_NODE_GRAPH = 18;
 
 export function registerAnimationTools(server: McpServer, client: OctaneMcpClient) {
-  server.tool(
+  server.registerTool(
     'get_animation_range',
-    'Get the total time span for all animations in the scene. Returns start/end times in seconds. Useful for knowing the animation duration before rendering frames.',
-    {},
+    {
+      title: 'Animation Range',
+      description:
+        'Get the total time span for all animations in the scene. Returns start/end times in seconds. Useful for knowing the animation duration before rendering frames.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const rootHandle = await client.getRootNodeGraph();
@@ -36,13 +40,20 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_animation_data',
-    'Read animation values for an attribute. Returns time samples and value arrays. The attribute must have an animator attached (check with is_animated first).',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      attribute_id: z.number().describe('Attribute ID to read animation from'),
-      expected_type: z.number().describe('AttrType enum value (1=bool, 3=int, 9=float, 11=float3)'),
+      title: 'Animation Data',
+      description:
+        'Read animation values for an attribute. Returns time samples and value arrays. The attribute must have an animator attached (check with is_animated first).',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        attribute_id: z.number().describe('Attribute ID to read animation from'),
+        expected_type: z
+          .number()
+          .describe('AttrType enum value (1=bool, 3=int, 9=float, 11=float3)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ handle, attribute_id, expected_type }) => {
       try {
@@ -87,11 +98,16 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     }
   );
 
-  server.tool(
+  server.registerTool(
     'list_animated_attributes',
-    'Check which attributes on a node are animated. Returns a list of animated attribute IDs. Bulk check — iterates all attributes and tests each for animation.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
+      title: 'List Animated Attributes',
+      description:
+        'Check which attributes on a node are animated. Returns a list of animated attribute IDs. Bulk check — iterates all attributes and tests each for animation.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ handle }) => {
       try {
@@ -148,26 +164,31 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     }
   );
 
-  server.tool(
+  server.registerTool(
     'set_animation_data',
-    'Write animation values for an attribute. Provide time pattern + value arrays. Animation type: 0=LOOPING, 1=PING_PONG, 2=SINGLE_SHOT.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      attribute_id: z.number().describe('Attribute ID to animate'),
-      expected_type: z.number().describe('AttrType (9=float, 11=float3)'),
-      pattern: z.array(z.number()).describe('Time values in seconds (e.g. [0, 0.5, 1.0])'),
-      values: z
-        .array(z.union([z.number(), z.object({ x: z.number(), y: z.number(), z: z.number() })]))
-        .describe('Values at each time point (same length as pattern)'),
-      period: z.number().optional().default(1.0).describe('Period in seconds (default 1.0)'),
-      animation_type: z
-        .number()
-        .int()
-        .min(0)
-        .max(2)
-        .optional()
-        .default(0)
-        .describe('0=LOOPING, 1=PING_PONG, 2=SINGLE_SHOT'),
+      title: 'Set Animation Data',
+      description:
+        'Write animation values for an attribute. Provide time pattern + value arrays. Animation type: 0=LOOPING, 1=PING_PONG, 2=SINGLE_SHOT.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        attribute_id: z.number().describe('Attribute ID to animate'),
+        expected_type: z.number().describe('AttrType (9=float, 11=float3)'),
+        pattern: z.array(z.number()).describe('Time values in seconds (e.g. [0, 0.5, 1.0])'),
+        values: z
+          .array(z.union([z.number(), z.object({ x: z.number(), y: z.number(), z: z.number() })]))
+          .describe('Values at each time point (same length as pattern)'),
+        period: z.number().optional().default(1.0).describe('Period in seconds (default 1.0)'),
+        animation_type: z
+          .number()
+          .int()
+          .min(0)
+          .max(2)
+          .optional()
+          .default(0)
+          .describe('0=LOOPING, 1=PING_PONG, 2=SINGLE_SHOT'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ handle, attribute_id, expected_type, pattern, values, period, animation_type }) => {
       try {
@@ -229,12 +250,16 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
     }
   );
 
-  server.tool(
+  server.registerTool(
     'clear_animation',
-    'Remove animation from an attribute. The attribute reverts to its static value.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      attribute_id: z.number().describe('Attribute ID to clear animation from'),
+      title: 'Clear Animation',
+      description: 'Remove animation from an attribute. The attribute reverts to its static value.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        attribute_id: z.number().describe('Attribute ID to clear animation from'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ handle, attribute_id }) => {
       try {

@@ -34,10 +34,13 @@ export function registerInfoTools(
   client: OctaneMcpClient,
   cache: ApiCache | null
 ) {
-  server.tool(
+  server.registerTool(
     'get_octane_version',
-    'Get the Octane version, license information, and octaneWebR version',
-    {},
+    {
+      title: 'Octane Version',
+      description: 'Get the Octane version, license information, and octaneWebR version',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const info = await client.getSessionInfo();
@@ -69,10 +72,14 @@ export function registerInfoTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_device_info',
-    'Get GPU device information including name and memory usage',
-    { device_index: z.number().default(0).describe('GPU device index (default 0)') },
+    {
+      title: 'Device Info',
+      description: 'Get GPU device information including name and memory usage',
+      inputSchema: { device_index: z.number().default(0).describe('GPU device index (default 0)') },
+      annotations: { readOnlyHint: true },
+    },
     async ({ device_index }) => {
       try {
         const count = await client.getDeviceCount();
@@ -92,14 +99,19 @@ export function registerInfoTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'list_node_types',
-    'List available Octane node types, attribute types, and attribute IDs. Use category to filter node types by prefix (e.g. "CAM" for cameras, "MAT" for materials, "TEX" for textures, "GEO" for geometry, "LIGHT" for lights, "ENV" for environments, "KERN" for kernels).',
     {
-      category: z
-        .string()
-        .optional()
-        .describe('Filter node types by prefix, e.g. "CAM", "MAT", "TEX", "GEO", "LIGHT"'),
+      title: 'List Node Types',
+      description:
+        'List available Octane node types, attribute types, and attribute IDs. Use category to filter node types by prefix (e.g. "CAM" for cameras, "MAT" for materials, "TEX" for textures, "GEO" for geometry, "LIGHT" for lights, "ENV" for environments, "KERN" for kernels).',
+      inputSchema: {
+        category: z
+          .string()
+          .optional()
+          .describe('Filter node types by prefix, e.g. "CAM", "MAT", "TEX", "GEO", "LIGHT"'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ category }) => {
       try {
@@ -137,30 +149,43 @@ export function registerInfoTools(
 
   // ── Profiling tools ──────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'profile_start',
-    'Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
-    { label: z.string().describe('Name for this profile span') },
+    {
+      title: 'Profile Start',
+      description:
+        'Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
+      inputSchema: { label: z.string().describe('Name for this profile span') },
+      annotations: { destructiveHint: true },
+    },
     async ({ label }) => {
       profileStart(label);
       return jsonResult({ started: label });
     }
   );
 
-  server.tool(
+  server.registerTool(
     'profile_end',
-    'End a named profile span started with profile_start.',
-    { label: z.string().describe('Name of the span to end') },
+    {
+      title: 'Profile End',
+      description: 'End a named profile span started with profile_start.',
+      inputSchema: { label: z.string().describe('Name of the span to end') },
+      annotations: { destructiveHint: true },
+    },
     async ({ label }) => {
       const ms = profileEnd(label);
       return jsonResult({ ended: label, durationMs: Math.round(ms) });
     }
   );
 
-  server.tool(
+  server.registerTool(
     'profile_report',
-    'Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
-    {},
+    {
+      title: 'Profile Report',
+      description:
+        'Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       const report = profileReport();
       // Format a human-readable summary too
@@ -188,20 +213,27 @@ export function registerInfoTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'profile_reset',
-    'Reset all profiling data. Call before starting a timed build run.',
-    {},
+    {
+      title: 'Profile Reset',
+      description: 'Reset all profiling data. Call before starting a timed build run.',
+      annotations: { destructiveHint: true, idempotentHint: true },
+    },
     async () => {
       profileReset();
       return jsonResult({ reset: true });
     }
   );
 
-  server.tool(
+  server.registerTool(
     'clear_log',
-    'Clear the log_mcp.log file to start with a fresh log. Returns the line count of the old log.',
-    {},
+    {
+      title: 'Clear Log',
+      description:
+        'Clear the log_mcp.log file to start with a fresh log. Returns the line count of the old log.',
+      annotations: { destructiveHint: true },
+    },
     async () => {
       try {
         let oldLines = 0;

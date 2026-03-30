@@ -19,10 +19,15 @@ export function registerProjectTools(
   client: OctaneMcpClient,
   cache: ApiCache | null
 ) {
-  server.tool(
+  server.registerTool(
     'load_project',
-    'Load an Octane project file (.orbx or .ocs). Scene takes ~2s to populate after call returns. Clears all cached handles — previous node handles become invalid.',
-    { path: z.string().describe('Absolute path to .orbx or .ocs file') },
+    {
+      title: 'Load Project',
+      description:
+        'Load an Octane project file (.orbx or .ocs). Scene takes ~2s to populate after call returns. Clears all cached handles — previous node handles become invalid.',
+      inputSchema: { path: z.string().describe('Absolute path to .orbx or .ocs file') },
+      annotations: { destructiveHint: true },
+    },
     async ({ path }) => {
       try {
         const pathError = validateFilePath(path);
@@ -99,14 +104,19 @@ export function registerProjectTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'save_project',
-    'Save the current Octane project. If path is omitted, saves to the current location.',
     {
-      path: z
-        .string()
-        .optional()
-        .describe('Absolute path to save to. Omit to save to current path.'),
+      title: 'Save Project',
+      description:
+        'Save the current Octane project. If path is omitted, saves to the current location.',
+      inputSchema: {
+        path: z
+          .string()
+          .optional()
+          .describe('Absolute path to save to. Omit to save to current path.'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ path }) => {
       try {
@@ -124,15 +134,19 @@ export function registerProjectTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'reset_project',
-    'Clear scene to blank. Invalidates ALL handles. Can take up to 120s.',
     {
-      clear_log: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Clear log_mcp.log for a clean debugging session (default: true)'),
+      title: 'Reset Project',
+      description: 'Clear scene to blank. Invalidates ALL handles. Can take up to 120s.',
+      inputSchema: {
+        clear_log: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Clear log_mcp.log for a clean debugging session (default: true)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ clear_log }) => {
       try {

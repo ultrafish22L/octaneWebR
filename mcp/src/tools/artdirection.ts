@@ -49,6 +49,7 @@ import {
   buildComparisonCritiquePrompt,
 } from '../vision/prompts';
 import { appendCritiqueStats } from '../vision/stats';
+import { computeWorldAABB } from './pin-utils';
 
 // ── Vector math helpers ──────────────────────────────────────────────
 
@@ -548,19 +549,24 @@ export function registerArtDirectionTools(
   const placement = placementState ?? new ScenePlacementState();
   // ── 1. plan_composition ──────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'plan_composition',
-    '[Phase 0] Create a validated scene composition plan with computed camera math. Does NOT create Octane nodes — pure planning. Use positions/scales from analyze_mesh placement_suggestion. Call fit_camera AFTER to apply camera. Returns plan + validation for review before building.',
     {
-      name: z.string().describe('Unique name for this composition'),
-      description: z.string().describe('Creative brief'),
-      objects: z.array(ObjectPlacementSchema).min(1),
-      camera: CameraSpecSchema.optional().describe(
-        'Camera override. If omitted, computed from layout.'
-      ),
-      focal_point: z.string().describe('id of the hero object'),
-      lighting_mood: z.string().default('natural'),
-      reference_image_path: z.string().optional(),
+      title: 'Plan Composition',
+      description:
+        '[Phase 0] Create a validated scene composition plan with computed camera math. Does NOT create Octane nodes — pure planning. Use positions/scales from analyze_mesh placement_suggestion. Call fit_camera AFTER to apply camera. Returns plan + validation for review before building.',
+      inputSchema: {
+        name: z.string().describe('Unique name for this composition'),
+        description: z.string().describe('Creative brief'),
+        objects: z.array(ObjectPlacementSchema).min(1),
+        camera: CameraSpecSchema.optional().describe(
+          'Camera override. If omitted, computed from layout.'
+        ),
+        focal_point: z.string().describe('id of the hero object'),
+        lighting_mood: z.string().default('natural'),
+        reference_image_path: z.string().optional(),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       try {
@@ -626,10 +632,15 @@ export function registerArtDirectionTools(
 
   // ── 2. validate_layout ───────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'validate_layout',
-    '[Phase 0] Run geometric validation on a planned composition BEFORE building scene nodes. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
-    { spec_name: z.string() },
+    {
+      title: 'Validate Layout',
+      description:
+        '[Phase 0] Run geometric validation on a planned composition BEFORE building scene nodes. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
+      inputSchema: { spec_name: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ spec_name }) => {
       const spec = artState.getSpec(spec_name);
       if (!spec)
@@ -645,13 +656,18 @@ export function registerArtDirectionTools(
 
   // ── 3. analyze_reference ─────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'analyze_reference',
-    '[Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
     {
-      image_path: z.string().describe('Absolute path to reference image'),
-      scene_description: z.string(),
-      scale_hint: z.number().default(10).describe('World-space width of scene (default 10)'),
+      title: 'Analyze Reference',
+      description:
+        '[Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
+      inputSchema: {
+        image_path: z.string().describe('Absolute path to reference image'),
+        scene_description: z.string(),
+        scale_hint: z.number().default(10).describe('World-space width of scene (default 10)'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async params => {
       const resolved = path.resolve(params.image_path);
@@ -743,16 +759,21 @@ export function registerArtDirectionTools(
 
   // ── 4. critique_render ───────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'critique_render',
-    '[Phase 3] Save current render and score it. MANDATORY after every render. Framing score must be ≥3 before lighting/mood scores matter — if framing <3, fix camera FIRST (call fit_camera). Uses external VLM if available, otherwise returns self-critique prompt.',
     {
-      render_path: z.string().describe('Absolute path to save render'),
-      spec_name: z.string(),
-      reference_image_path: z
-        .string()
-        .optional()
-        .describe('Path to reference image for side-by-side comparison'),
+      title: 'Critique Render',
+      description:
+        '[Phase 3] Save current render and score it. MANDATORY after every render. Framing score must be ≥3 before lighting/mood scores matter — if framing <3, fix camera FIRST (call fit_camera). Uses external VLM if available, otherwise returns self-critique prompt.',
+      inputSchema: {
+        render_path: z.string().describe('Absolute path to save render'),
+        spec_name: z.string(),
+        reference_image_path: z
+          .string()
+          .optional()
+          .describe('Path to reference image for side-by-side comparison'),
+      },
+      annotations: { destructiveHint: true, openWorldHint: true },
     },
     async params => {
       const spec = artState.getSpec(params.spec_name);
@@ -946,23 +967,28 @@ export function registerArtDirectionTools(
 
   // ── 5. apply_corrections ─────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'apply_corrections',
-    '[Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
     {
-      spec_name: z.string(),
-      iteration: z.number().int(),
-      overall_score: z.number().min(1).max(5),
-      passed: z.boolean(),
-      scores: z.object({
-        framing: z.number().min(1).max(5),
-        depth: z.number().min(1).max(5),
-        composition: z.number().min(1).max(5),
-        lighting: z.number().min(1).max(5),
-        placement: z.number().min(1).max(5),
-      }),
-      corrections: z.array(CorrectionSchema).default([]),
-      render_path: z.string().optional(),
+      title: 'Apply Corrections',
+      description:
+        '[Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
+      inputSchema: {
+        spec_name: z.string(),
+        iteration: z.number().int(),
+        overall_score: z.number().min(1).max(5),
+        passed: z.boolean(),
+        scores: z.object({
+          framing: z.number().min(1).max(5),
+          depth: z.number().min(1).max(5),
+          composition: z.number().min(1).max(5),
+          lighting: z.number().min(1).max(5),
+          placement: z.number().min(1).max(5),
+        }),
+        corrections: z.array(CorrectionSchema).default([]),
+        render_path: z.string().optional(),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       const spec = artState.getSpec(params.spec_name);
@@ -1043,14 +1069,19 @@ export function registerArtDirectionTools(
 
   // ── 6. get_art_direction_state ───────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_art_direction_state',
-    'Get current art direction state: specs, scores, iteration history, stagnation status. Pass set_mode to toggle AD workflow on/off.',
     {
-      set_mode: z
-        .enum(['active', 'inactive'])
-        .optional()
-        .describe('If provided, toggles AD enforcement mode before returning state'),
+      title: 'Art Direction State',
+      description:
+        'Get current art direction state: specs, scores, iteration history, stagnation status. Pass set_mode to toggle AD workflow on/off.',
+      inputSchema: {
+        set_mode: z
+          .enum(['active', 'inactive'])
+          .optional()
+          .describe('If provided, toggles AD enforcement mode before returning state'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ set_mode }) => {
       if (set_mode) {
@@ -1081,27 +1112,32 @@ export function registerArtDirectionTools(
 
   // ── 7. suggest_placement ──────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'suggest_placement',
-    '[Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
     {
-      mesh_path: z.string().describe('Path to OBJ file (runs analyze_mesh if no sidecar exists)'),
-      role: z
-        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
-        .optional()
-        .default('prop')
-        .describe('Role in the composition'),
-      relationship: z
-        .string()
-        .optional()
-        .describe(
-          'Spatial relationship (e.g. "next to fairy", "behind flowers", "left of dragon")'
-        ),
-      min_clearance: z
-        .number()
-        .optional()
-        .default(0.5)
-        .describe('Minimum distance from other objects (default 0.5)'),
+      title: 'Suggest Placement',
+      description:
+        '[Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
+      inputSchema: {
+        mesh_path: z.string().describe('Path to OBJ file (runs analyze_mesh if no sidecar exists)'),
+        role: z
+          .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+          .optional()
+          .default('prop')
+          .describe('Role in the composition'),
+        relationship: z
+          .string()
+          .optional()
+          .describe(
+            'Spatial relationship (e.g. "next to fairy", "behind flowers", "left of dragon")'
+          ),
+        min_clearance: z
+          .number()
+          .optional()
+          .default(0.5)
+          .describe('Minimum distance from other objects (default 0.5)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ mesh_path, role, relationship, min_clearance }) => {
       try {
@@ -1207,48 +1243,53 @@ export function registerArtDirectionTools(
 
   // ── 8. register_scene_object ──────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'register_scene_object',
-    '[Phase 1] Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
     {
-      handle: z.number().int().min(0).describe('Node handle of the placed object'),
-      name: z.string().describe('Display name (e.g. "Fairy", "Crystal Sphere")'),
-      role: z
-        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
-        .describe('Role in the composition'),
-      position: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .describe('World position'),
-      rotation: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .optional()
-        .default({ x: 0, y: 0, z: 0 }),
-      scale: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .optional()
-        .default({ x: 1, y: 1, z: 1 }),
-      bounds_size: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .optional()
-        .describe(
-          'Object extents (from analyze_mesh). Assumes mesh centered at origin. If omitted, uses unit cube. For non-centered meshes, use bounds_min/bounds_max instead.'
-        ),
-      bounds_min: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .optional()
-        .describe(
-          'Mesh-local min bounds (from analyze_mesh bboxMin). Use with bounds_max for non-centered meshes.'
-        ),
-      bounds_max: z
-        .object({ x: z.number(), y: z.number(), z: z.number() })
-        .optional()
-        .describe(
-          'Mesh-local max bounds (from analyze_mesh bboxMax). Use with bounds_min for non-centered meshes.'
-        ),
-      mesh_info_path: z
-        .string()
-        .optional()
-        .describe('Path to .mesh_info.json sidecar for mesh analysis data'),
+      title: 'Register Scene Object',
+      description:
+        '[Phase 1] Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
+      inputSchema: {
+        handle: z.number().int().min(0).describe('Node handle of the placed object'),
+        name: z.string().describe('Display name (e.g. "Fairy", "Crystal Sphere")'),
+        role: z
+          .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+          .describe('Role in the composition'),
+        position: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .describe('World position'),
+        rotation: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .default({ x: 0, y: 0, z: 0 }),
+        scale: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .default({ x: 1, y: 1, z: 1 }),
+        bounds_size: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .describe(
+            'Object extents (from analyze_mesh). Assumes mesh centered at origin. If omitted, uses unit cube. For non-centered meshes, use bounds_min/bounds_max instead.'
+          ),
+        bounds_min: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .describe(
+            'Mesh-local min bounds (from analyze_mesh bboxMin). Use with bounds_max for non-centered meshes.'
+          ),
+        bounds_max: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .describe(
+            'Mesh-local max bounds (from analyze_mesh bboxMax). Use with bounds_min for non-centered meshes.'
+          ),
+        mesh_info_path: z
+          .string()
+          .optional()
+          .describe('Path to .mesh_info.json sidecar for mesh analysis data'),
+      },
+      annotations: { destructiveHint: true },
     },
     async params => {
       try {
@@ -1279,71 +1320,14 @@ export function registerArtDirectionTools(
           localMax = { x: 0.5, y: 0.5, z: 0.5 };
         }
 
-        // Step 2: Apply scale
-        const sMin = {
-          x: localMin.x * params.scale.x,
-          y: localMin.y * params.scale.y,
-          z: localMin.z * params.scale.z,
-        };
-        const sMax = {
-          x: localMax.x * params.scale.x,
-          y: localMax.y * params.scale.y,
-          z: localMax.z * params.scale.z,
-        };
-
-        // Step 3: Build rotation matrix from Euler XYZ (degrees)
-        const rx = (params.rotation.x * Math.PI) / 180;
-        const ry = (params.rotation.y * Math.PI) / 180;
-        const rz = (params.rotation.z * Math.PI) / 180;
-        const cx = Math.cos(rx),
-          sx = Math.sin(rx);
-        const cy = Math.cos(ry),
-          sy = Math.sin(ry);
-        const cz = Math.cos(rz),
-          sz = Math.sin(rz);
-        // R = Rz * Ry * Rx (standard Euler XYZ)
-        const R = [
-          [cy * cz, sx * sy * cz - cx * sz, cx * sy * cz + sx * sz],
-          [cy * sz, sx * sy * sz + cx * cz, cx * sy * sz - sx * cz],
-          [-sy, sx * cy, cx * cy],
-        ];
-
-        // Step 4: Compute AABB of rotated box using abs-matrix method.
-        // For each axis, the new half-extent = sum of |R[row][col]| * half_extent[col]
-        const corners = [
-          { x: sMin.x, y: sMin.y, z: sMin.z },
-          { x: sMax.x, y: sMin.y, z: sMin.z },
-          { x: sMin.x, y: sMax.y, z: sMin.z },
-          { x: sMax.x, y: sMax.y, z: sMin.z },
-          { x: sMin.x, y: sMin.y, z: sMax.z },
-          { x: sMax.x, y: sMin.y, z: sMax.z },
-          { x: sMin.x, y: sMax.y, z: sMax.z },
-          { x: sMax.x, y: sMax.y, z: sMax.z },
-        ];
-
-        let rMin = { x: Infinity, y: Infinity, z: Infinity };
-        let rMax = { x: -Infinity, y: -Infinity, z: -Infinity };
-        for (const c of corners) {
-          const rx2 = R[0][0] * c.x + R[0][1] * c.y + R[0][2] * c.z;
-          const ry2 = R[1][0] * c.x + R[1][1] * c.y + R[1][2] * c.z;
-          const rz2 = R[2][0] * c.x + R[2][1] * c.y + R[2][2] * c.z;
-          rMin = { x: Math.min(rMin.x, rx2), y: Math.min(rMin.y, ry2), z: Math.min(rMin.z, rz2) };
-          rMax = { x: Math.max(rMax.x, rx2), y: Math.max(rMax.y, ry2), z: Math.max(rMax.z, rz2) };
-        }
-
-        // Step 5: Translate to world position
-        const boundsWorld: AABB = {
-          min: {
-            x: params.position.x + rMin.x,
-            y: params.position.y + rMin.y,
-            z: params.position.z + rMin.z,
-          },
-          max: {
-            x: params.position.x + rMax.x,
-            y: params.position.y + rMax.y,
-            z: params.position.z + rMax.z,
-          },
-        };
+        // Compute world-space AABB (shared utility handles scale + rotation + translation)
+        const boundsWorld = computeWorldAABB(
+          localMin,
+          localMax,
+          params.position,
+          params.rotation,
+          params.scale
+        ) as AABB;
 
         // Read mesh info from sidecar if provided
         let meshInfo: ScenePlacementEntry['meshInfo'];
@@ -1443,10 +1427,14 @@ export function registerArtDirectionTools(
 
   // ── 9. get_scene_placement_state ──────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_scene_placement_state',
-    'Get the current scene placement database: all registered objects, positions, bounds, roles, and warnings.',
-    {},
+    {
+      title: 'Scene Placement State',
+      description:
+        'Get the current scene placement database: all registered objects, positions, bounds, roles, and warnings.',
+      annotations: { readOnlyHint: true },
+    },
     async () => jsonResult(placement.snapshot())
   );
 }

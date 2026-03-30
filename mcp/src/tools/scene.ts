@@ -197,17 +197,22 @@ export function registerSceneTools(
   client: OctaneMcpClient,
   cache: ApiCache | null
 ) {
-  server.tool(
+  server.registerTool(
     'get_scene_tree',
-    '[All phases] Get full scene hierarchy. Returns handle, name, type, isGraph, children for all nodes. Populates internal scene cache for faster subsequent lookups. Use max_depth to limit traversal for large scenes (700+ nodes possible).',
     {
-      max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)'),
-      compact: z
-        .boolean()
-        .default(false)
-        .describe(
-          'If true, returns minimal [handle, name, typeName] tuples instead of full objects'
-        ),
+      title: 'Scene Tree',
+      description:
+        '[All phases] Get full scene hierarchy. Returns handle, name, type, isGraph, children for all nodes. Populates internal scene cache for faster subsequent lookups. Use max_depth to limit traversal for large scenes (700+ nodes possible).',
+      inputSchema: {
+        max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)'),
+        compact: z
+          .boolean()
+          .default(false)
+          .describe(
+            'If true, returns minimal [handle, name, typeName] tuples instead of full objects'
+          ),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ max_depth, compact }) => {
       try {
@@ -239,15 +244,20 @@ export function registerSceneTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_node_info',
-    'Get node details: name, type, all pins with connection status. Returns pin index, name, type, and connected_handle for each pin. Updates scene cache with discovered connections.',
     {
-      handle: z.number().int().nonnegative().describe('Node handle'),
-      connected_only: z
-        .boolean()
-        .default(false)
-        .describe('If true, only return pins with connections (non-zero connected_handle)'),
+      title: 'Node Info',
+      description:
+        'Get node details: name, type, all pins with connection status. Returns pin index, name, type, and connected_handle for each pin. Updates scene cache with discovered connections.',
+      inputSchema: {
+        handle: z.number().int().nonnegative().describe('Node handle'),
+        connected_only: z
+          .boolean()
+          .default(false)
+          .describe('If true, only return pins with connections (non-zero connected_handle)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ handle, connected_only }) => {
       try {

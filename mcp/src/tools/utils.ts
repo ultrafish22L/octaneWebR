@@ -35,7 +35,12 @@ export function validateFilePath(filePath: string): string | null {
   if (roots.length === 1 && roots[0] === path.resolve('*')) return null;
 
   const resolved = path.resolve(filePath);
-  const allowed = roots.some(root => resolved.startsWith(root + path.sep) || resolved === root);
+  // Windows paths are case-insensitive — normalize for comparison
+  const isWin = process.platform === 'win32';
+  const norm = (p: string) => (isWin ? p.toLowerCase() : p);
+  const allowed = roots.some(
+    root => norm(resolved).startsWith(norm(root) + path.sep) || norm(resolved) === norm(root)
+  );
   if (!allowed) {
     return `Path "${filePath}" is outside allowed roots (${roots.join(', ')}). Set OCTANE_FILE_ROOTS env var to allow.`;
   }

@@ -22,14 +22,19 @@ const OBJ_OCIO_CONFIG = 41; // from common.proto ObjectType enum
 export function registerColorMaterialXTools(server: McpServer, client: OctaneMcpClient) {
   // ── OCIO Color Management ───────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_ocio_config',
-    'Load and query the current OCIO config. Returns all color spaces, displays, views, looks, and roles. Pass a config file path or omit to use the OCIO environment variable default.',
     {
-      config_path: z
-        .string()
-        .optional()
-        .describe('Path to OCIO config file. Omit to use OCIO env variable default.'),
+      title: 'OCIO Config',
+      description:
+        'Load and query the current OCIO config. Returns all color spaces, displays, views, looks, and roles. Pass a config file path or omit to use the OCIO environment variable default.',
+      inputSchema: {
+        config_path: z
+          .string()
+          .optional()
+          .describe('Path to OCIO config file. Omit to use OCIO env variable default.'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ config_path }) => {
       try {
@@ -187,11 +192,16 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
     }
   );
 
-  server.tool(
+  server.registerTool(
     'list_color_spaces',
-    'List all available OCIO color spaces from the current config. Shortcut that returns just the color space names.',
     {
-      config_path: z.string().optional().describe('OCIO config path (omit for default)'),
+      title: 'List Color Spaces',
+      description:
+        'List all available OCIO color spaces from the current config. Shortcut that returns just the color space names.',
+      inputSchema: {
+        config_path: z.string().optional().describe('OCIO config path (omit for default)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ config_path }) => {
       try {
@@ -241,16 +251,21 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
 
   // ── MaterialX ───────────────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'import_materialx',
-    'Import a MaterialX (.mtlx) file into the scene. Creates all material nodes defined in the file. Returns the output node handle.',
     {
-      file_path: z.string().describe('Absolute path to .mtlx file'),
-      use_native_nodes: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Use native MaterialX nodes (default true). False = convert to Octane nodes.'),
+      title: 'Import MaterialX',
+      description:
+        'Import a MaterialX (.mtlx) file into the scene. Creates all material nodes defined in the file. Returns the output node handle.',
+      inputSchema: {
+        file_path: z.string().describe('Absolute path to .mtlx file'),
+        use_native_nodes: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Use native MaterialX nodes (default true). False = convert to Octane nodes.'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ file_path, use_native_nodes }) => {
       try {
@@ -282,10 +297,14 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
     }
   );
 
-  server.tool(
+  server.registerTool(
     'list_materialx_nodes',
-    'List all available MaterialX node categories supported by Octane. Returns category names like "standard_surface", "noise2d", etc.',
-    {},
+    {
+      title: 'List MaterialX Nodes',
+      description:
+        'List all available MaterialX node categories supported by Octane. Returns category names like "standard_surface", "noise2d", etc.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('ApiMaterialXGlobal', 'getAllMxNodeCategories', {});

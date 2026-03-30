@@ -11,10 +11,14 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
   // Fix 4: Track previous triCount for drop detection
   let prevTriCount = -1;
 
-  server.tool(
+  server.registerTool(
     'get_geometry_stats',
-    'Get scene geometry statistics: triangle count, instance count, voxel count, hair segment count, Gaussian splat count, etc. Useful for understanding scene complexity.',
-    {},
+    {
+      title: 'Geometry Stats',
+      description:
+        'Get scene geometry statistics: triangle count, instance count, voxel count, hair segment count, Gaussian splat count, etc. Useful for understanding scene complexity.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getGeometryStatistics', {});
@@ -42,10 +46,14 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_texture_stats',
-    'Get VRAM breakdown by texture type (RGBA32, RGBA64, Y8, Y16, virtual textures, etc.). Shows how much GPU memory textures consume.',
-    {},
+    {
+      title: 'Texture Stats',
+      description:
+        'Get VRAM breakdown by texture type (RGBA32, RGBA64, Y8, Y16, virtual textures, etc.). Shows how much GPU memory textures consume.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getTexturesStatistics', {});
@@ -56,17 +64,22 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_resource_stats',
-    'Get device resource breakdown: runtime, film, geometry, node system, images, compositor, denoiser memory usage. Specify device_index for multi-GPU setups.',
     {
-      device_index: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .default(0)
-        .describe('GPU device index (default 0)'),
+      title: 'Resource Stats',
+      description:
+        'Get device resource breakdown: runtime, film, geometry, node system, images, compositor, denoiser memory usage. Specify device_index for multi-GPU setups.',
+      inputSchema: {
+        device_index: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .default(0)
+          .describe('GPU device index (default 0)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ device_index }) => {
       try {
@@ -81,10 +94,14 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_scene_bounds',
-    'Get the world-space axis-aligned bounding box of the entire scene. Returns bboxMin and bboxMax as {x,y,z}. Essential for computing camera positions and object placement. Returns result=false if scene is empty.',
-    {},
+    {
+      title: 'Scene Bounds',
+      description:
+        'Get the world-space axis-aligned bounding box of the entire scene. Returns bboxMin and bboxMax as {x,y,z}. Essential for computing camera positions and object placement. Returns result=false if scene is empty.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getSceneBounds', {});
@@ -107,10 +124,14 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     'get_render_state',
-    'Get comprehensive render pipeline state: is compiling shaders, compressing textures, has pending data, is paused, has failure. Useful for troubleshooting render issues.',
-    {},
+    {
+      title: 'Render State',
+      description:
+        'Get comprehensive render pipeline state: is compiling shaders, compressing textures, has pending data, is paused, has failure. Useful for troubleshooting render issues.',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         // Query multiple render state flags in sequence (serialized by mutex)

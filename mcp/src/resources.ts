@@ -447,7 +447,7 @@ export function registerResources(
                   phase: '3',
                   name: 'Critique',
                   description: 'Dual-critic evaluation loop (Sonnet + orchestrator)',
-                  tools: ['critique_render', 'semantic_critique', 'apply_corrections'],
+                  tools: ['critique_render', 'evaluate_semantics', 'apply_corrections'],
                   gate: 'Sonnet grade B+ or stagnation detected',
                   rules: [
                     'reference_image_path is MANDATORY for critique',

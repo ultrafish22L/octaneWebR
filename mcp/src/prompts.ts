@@ -27,13 +27,18 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
 export function registerPrompts(server: McpServer) {
   // ── Original Prompts (updated for renames + resource refs) ────────
 
-  server.prompt(
+  server.registerPrompt(
     'setup-scene',
-    'Create a basic Octane scene from scratch. Covers RT creation, DOF disable, camera setup, geometry wiring, and first render.',
+    {
+      title: 'Setup Scene',
+      description:
+        'Create a basic Octane scene from scratch. Covers RT creation, DOF disable, camera setup, geometry wiring, and first render.',
+    },
     async () => ({
       messages: [
         {
@@ -84,10 +89,19 @@ KEY VALUES — query octane://constants for full reference:
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'add-material',
-    'Add a PBR material to an existing mesh with texture connections.',
-    async () => ({
+    {
+      title: 'Add Material',
+      description: 'Add a PBR material to an existing mesh with texture connections.',
+      argsSchema: {
+        surface_type: z
+          .string()
+          .optional()
+          .describe('Surface type for suggest_material (e.g. "gold", "glass", "wood")'),
+      },
+    },
+    async ({ surface_type }) => ({
       messages: [
         {
           role: 'user' as const,
@@ -129,9 +143,12 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'build-lit-object',
-    'Create a complete object with geometry, material, placement, and lighting.',
+    {
+      title: 'Build Lit Object',
+      description: 'Create a complete object with geometry, material, placement, and lighting.',
+    },
     async () => ({
       messages: [
         {
@@ -188,9 +205,13 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 
   // ── troubleshoot-scene (expanded from troubleshoot-render) ────────
 
-  server.prompt(
+  server.registerPrompt(
     'troubleshoot-scene',
-    'Diagnose and fix common Octane render and workflow issues: white render, blurry, too dark, no geometry, crashes, phase problems.',
+    {
+      title: 'Troubleshoot Scene',
+      description:
+        'Diagnose and fix common Octane render and workflow issues: white render, blurry, too dark, no geometry, crashes, phase problems.',
+    },
     async () => ({
       messages: [
         {
@@ -270,10 +291,18 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 
   // ── NEW PROMPTS ───────────────────────────────────────────────────
 
-  server.prompt(
+  server.registerPrompt(
     'dress-workflow',
-    'Complete DRESS scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules.',
-    async () => ({
+    {
+      title: 'DRESS Workflow',
+      description:
+        'Complete DRESS scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules.',
+      argsSchema: {
+        concept_image_path: z.string().optional().describe('Path to concept art PNG'),
+        spec_name: z.string().optional().describe('Composition spec name'),
+      },
+    },
+    async ({ concept_image_path, spec_name }) => ({
       messages: [
         {
           role: 'user' as const,
@@ -297,10 +326,11 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 ## Phase 1 — FRAME (clay mode)
 6. set_clay_mode(2) → color clay ON
 7. create_node("NT_RENDERTARGET") → RT (auto-creates camera + kernel)
-8. place_mesh(obj_path, role:"hero") → imports, orients, wires, registers
-9. fit_camera() → frame scene bounds. MANDATORY after every geo add.
+8. place_mesh(obj_path, role:"hero") → imports, orients, wires, auto-registers in placement state
+   If using primitives (not place_mesh): call register_scene_object(handle, name, role, position, bounds) manually
+9. fit_camera(framing_mode:"subjects") → frames hero+secondary, EXCLUDES ground. MANDATORY after every geo add.
 10. start_render() → FIRST VISUAL
-11. Add remaining objects one at a time: place_mesh → fit_camera → render after EACH
+11. Add remaining objects: place_mesh (or create + register_scene_object) → fit_camera(framing_mode:"subjects") → render after EACH
 12. **Creative review** (MANDATORY before critique):
     - "What else does this scene need?" Walls? Backdrop? Environment?
     - "Is anything floating?" Objects must be grounded.
@@ -319,10 +349,16 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 
 ## Phase 2 — DRESS (materials + lighting)
 14. set_clay_mode(0) → materials visible
-15. suggest_lighting(mood, bounds_min, bounds_max, camera_pos) → apply key/fill/rim
-16. suggest_material(surface_type) per surface → apply PBR values
-    - Respect .mtl textures — don't override albedo on textured meshes
-17. Second creative review: "Does the lighting tell a story? Is there depth?"
+15. suggest_lighting(mood, bounds, camera) → returns light positions/temps/power
+    **YOU MUST BUILD THE LIGHTS FROM THE RECIPE:**
+    - For EACH light in recipe.lights[]: create_node("NT_GEO_OBJECT") → set primitive to Plane(15) → create emissive material → set blackbody temperature + power from recipe → **emission efficiency = 1.0**
+    - Wire each light through placement → geo group → RT
+    - See getPrompt("setup-lighting") for full steps
+16. suggest_material(type) per surface → returns roughness/metallic/specular/ior/albedo
+    **YOU MUST APPLY THE VALUES:**
+    - For EACH material: read_pin_value to get child handles → set_attribute with recipe values
+    - Do NOT override albedo if mesh has .mtl textures
+17. Second creative review: "Does the lighting tell a story?"
 
 ## Phase 3 — CRITIQUE LOOP
 18. critique_render(render_path, spec_name, reference_image_path) → Sonnet grade
@@ -359,10 +395,21 @@ Query octane://sega/presets for available SEGA presets.`,
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'mesh-pipeline',
-    'Import a mesh with correct orientation: analyze → place → fit_camera. The standard mesh import workflow.',
-    async () => ({
+    {
+      title: 'Mesh Pipeline',
+      description:
+        'Import a mesh with correct orientation: analyze → place → fit_camera. The standard mesh import workflow.',
+      argsSchema: {
+        obj_path: z.string().optional().describe('Path to OBJ/GLB/glTF file'),
+        source_endpoint: z
+          .string()
+          .optional()
+          .describe('Origin endpoint (e.g. "huynan") for analyze_mesh'),
+      },
+    },
+    async ({ obj_path, source_endpoint }) => ({
       messages: [
         {
           role: 'user' as const,
@@ -384,11 +431,10 @@ Query octane://sega/presets for available SEGA presets.`,
    - Optional: position override, rotation_override, scale_override
    - Optional: geo_group_handle to attach to specific geo group
 
-3. **fit_camera()**
+3. **fit_camera(framing_mode:"subjects")**
    - MANDATORY after every place_mesh call
-   - Auto-frames scene bounds
+   - Always pass framing_mode:"subjects" — excludes ground plane from framing
    - Params: elevation (default 20°), yaw (default 0°), margin (default 0.3)
-   - framing_mode: "subjects" (hero+secondary+accent+prop), "hero" (hero only), "scene" (all)
 
 4. **start_render() → save_render(path) → verify**
    - Object should be visible, correctly oriented, grounded
@@ -408,9 +454,13 @@ Query octane://sega/presets for available SEGA presets.`,
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'setup-lighting',
-    'Set up scene lighting with HDRI environment and 3-point key/fill/rim from SEGA mood.',
+    {
+      title: 'Setup Lighting',
+      description:
+        'Set up scene lighting with HDRI environment and 3-point key/fill/rim from SEGA mood.',
+    },
     async () => ({
       messages: [
         {
@@ -467,10 +517,18 @@ Query octane://sega/presets for available SEGA presets.`,
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'critique-loop',
-    'Run the dual-critic evaluation loop (C1-C7): Sonnet + orchestrator grades, SEGA gap, corrections.',
-    async () => ({
+    {
+      title: 'Critique Loop',
+      description:
+        'Run the dual-critic evaluation loop (C1-C7): Sonnet + orchestrator grades, SEGA gap, corrections.',
+      argsSchema: {
+        render_path: z.string().optional().describe('Path to rendered image'),
+        reference_image_path: z.string().optional().describe('Path to concept art for comparison'),
+      },
+    },
+    async ({ render_path, reference_image_path }) => ({
       messages: [
         {
           role: 'user' as const,
@@ -527,9 +585,13 @@ Query octane://sega/presets for available SEGA presets.`,
     })
   );
 
-  server.prompt(
+  server.registerPrompt(
     'scene-checklist',
-    'Pre-critique quality checklist. Run BEFORE calling critique_render to avoid wasting Sonnet calls on obviously broken scenes.',
+    {
+      title: 'Scene Checklist',
+      description:
+        'Pre-critique quality checklist. Run BEFORE calling critique_render to avoid wasting Sonnet calls on obviously broken scenes.',
+    },
     async () => ({
       messages: [
         {

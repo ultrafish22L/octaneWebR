@@ -31,7 +31,7 @@ import {
 } from './utils';
 import { notifyWebapp } from './webapp';
 import { AttributeId, NodeTypeId } from '../shared/OctaneConstants';
-import { enumeratePins } from './pin-utils';
+import { enumeratePins, ensureDynamicPin, computeWorldAABB } from './pin-utils';
 import { analyzeReference } from '../vision/index';
 
 import zlib from 'zlib';
@@ -1534,29 +1534,34 @@ export function registerImportTools(
   artState?: ArtDirectionState,
   placementState?: ScenePlacementState
 ) {
-  server.tool(
+  server.registerTool(
     'import_mesh',
-    '[Phase 1] Low-level mesh import. Creates mesh + placement + material nodes, returns handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Does NOT read .mesh_info.json sidecar, does NOT wire to geo group — caller must do both. PREFER place_mesh for normal workflow (handles sidecar + wiring automatically). Use import_mesh only when you need manual control over node creation.',
     {
-      file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
-      name: z
-        .string()
-        .optional()
-        .describe(
-          'Asset name for output folder/files (default: derived from filename). Used as subfolder under assets/.'
-        ),
-      metallic: z
-        .number()
-        .min(0)
-        .max(1)
-        .optional()
-        .describe('Metallic value 0-1 for material (default: 0.3)'),
-      roughness: z
-        .number()
-        .min(0)
-        .max(1)
-        .optional()
-        .describe('Roughness value 0-1 for material (default: 0.4)'),
+      title: 'Import Mesh',
+      description:
+        '[Phase 1] Low-level mesh import. Creates mesh + placement + material nodes, returns handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Does NOT read .mesh_info.json sidecar, does NOT wire to geo group — caller must do both. PREFER place_mesh for normal workflow (handles sidecar + wiring automatically). Use import_mesh only when you need manual control over node creation.',
+      inputSchema: {
+        file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
+        name: z
+          .string()
+          .optional()
+          .describe(
+            'Asset name for output folder/files (default: derived from filename). Used as subfolder under assets/.'
+          ),
+        metallic: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe('Metallic value 0-1 for material (default: 0.3)'),
+        roughness: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe('Roughness value 0-1 for material (default: 0.4)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ file_path, name: assetName, metallic, roughness }) => {
       try {
@@ -1900,37 +1905,42 @@ export function registerImportTools(
 
   // ── analyze_mesh ──────────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'analyze_mesh',
-    '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). Accepts OBJ, GLB, or glTF — GLB/glTF files are auto-converted to OBJ. MUST run on every mesh before placement.',
     {
-      obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
-      scene_context: z
-        .string()
-        .optional()
-        .describe('Scene description for better inference (e.g. "forest floor scene")'),
-      target_height: z
-        .number()
-        .optional()
-        .describe('Desired height in scene units (overrides auto-estimate)'),
-      force_reanalyze: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Ignore cached sidecar, re-run analysis'),
-      configuration: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe(
-          'Configuration mode: run ALL available VLM models, save results to scoreboard for comparison. Use on several meshes, then score to find best model.'
-        ),
-      source_endpoint: z
-        .string()
-        .optional()
-        .describe(
-          'Origin endpoint (e.g. "huynan"). If known, skips VLM diagnosis and applies deterministic axis correction. Pass 2 VLM verification still runs.'
-        ),
+      title: 'Analyze Mesh',
+      description:
+        '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders 8 mugshots (color clay, with ground plane), composes contact sheet, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Use configuration=true to benchmark ALL VLM models on the same mesh (saves to scoreboard). Accepts OBJ, GLB, or glTF — GLB/glTF files are auto-converted to OBJ. MUST run on every mesh before placement.',
+      inputSchema: {
+        obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
+        scene_context: z
+          .string()
+          .optional()
+          .describe('Scene description for better inference (e.g. "forest floor scene")'),
+        target_height: z
+          .number()
+          .optional()
+          .describe('Desired height in scene units (overrides auto-estimate)'),
+        force_reanalyze: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Ignore cached sidecar, re-run analysis'),
+        configuration: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            'Configuration mode: run ALL available VLM models, save results to scoreboard for comparison. Use on several meshes, then score to find best model.'
+          ),
+        source_endpoint: z
+          .string()
+          .optional()
+          .describe(
+            'Origin endpoint (e.g. "huynan"). If known, skips VLM diagnosis and applies deterministic axis correction. Pass 2 VLM verification still runs.'
+          ),
+      },
+      annotations: { destructiveHint: true, openWorldHint: true },
     },
     async ({
       obj_path,
@@ -2551,21 +2561,26 @@ export function registerImportTools(
 
   // ── score_mugshot_models ──────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'benchmark_vlm_models',
-    'Score VLM models from configuration mode runs. Set ground_truth on scoreboard entries first, then call this to compute accuracy per model and set the preferred model.',
     {
-      set_ground_truth: z
-        .array(
-          z.object({
-            mesh: z.string().describe('Mesh name (matches scoreboard run)'),
-            is_upright: z.boolean(),
-            front_direction: z.string().describe('toward_camera | away | left | right'),
-            correction: z.array(z.number()).length(3).describe('[x, y, z] degrees'),
-          })
-        )
-        .optional()
-        .describe('Set ground truth for meshes before scoring'),
+      title: 'Benchmark VLM Models',
+      description:
+        'Score VLM models from configuration mode runs. Set ground_truth on scoreboard entries first, then call this to compute accuracy per model and set the preferred model.',
+      inputSchema: {
+        set_ground_truth: z
+          .array(
+            z.object({
+              mesh: z.string().describe('Mesh name (matches scoreboard run)'),
+              is_upright: z.boolean(),
+              front_direction: z.string().describe('toward_camera | away | left | right'),
+              correction: z.array(z.number()).length(3).describe('[x, y, z] degrees'),
+            })
+          )
+          .optional()
+          .describe('Set ground truth for meshes before scoring'),
+      },
+      annotations: { destructiveHint: true, openWorldHint: true },
     },
     async ({ set_ground_truth }) => {
       try {
@@ -2681,49 +2696,54 @@ export function registerImportTools(
   // ── attach_mesh ──────────────────────────────────────────────────
   // One-call mesh placement: import (if needed) → apply sidecar transforms → wire to RT → flush.
 
-  server.tool(
+  server.registerTool(
     'place_mesh',
-    '[Phase 1] PREFERRED mesh import. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, auto-registers in scene placement state, flushes scene. Requires analyze_mesh to have been run first (creates sidecar). If no RT exists, creates one with daylight + PT kernel. Returns: placement_handle, mesh_handle, material_handle, position, bounds.',
     {
-      obj_path: z.string().describe('Absolute path to OBJ file'),
-      role: z
-        .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
-        .default('hero')
-        .describe('Role in composition (for scene awareness)'),
-      position: z
-        .object({
-          x: z.number(),
-          y: z.number(),
-          z: z.number(),
-        })
-        .optional()
-        .describe('Override world position (default: auto from sidecar y_offset)'),
-      rotation_override: z
-        .object({
-          x: z.number(),
-          y: z.number(),
-          z: z.number(),
-        })
-        .optional()
-        .describe('Override rotation in degrees (default: from sidecar)'),
-      scale_override: z
-        .number()
-        .optional()
-        .describe('Override uniform scale (default: from sidecar)'),
-      geo_group_handle: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe(
-          'Existing geo group handle to attach to. If omitted, finds or creates one on the active RT.'
-        ),
-      pin_index: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe('Pin index on geo group (default: auto-append)'),
+      title: 'Place Mesh',
+      description:
+        '[Phase 1] PREFERRED mesh import. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, auto-registers in scene placement state, flushes scene. Requires analyze_mesh to have been run first (creates sidecar). If no RT exists, creates one with daylight + PT kernel. Returns: placement_handle, mesh_handle, material_handle, position, bounds.',
+      inputSchema: {
+        obj_path: z.string().describe('Absolute path to OBJ file'),
+        role: z
+          .enum(['hero', 'secondary', 'accent', 'ground', 'light', 'prop'])
+          .default('hero')
+          .describe('Role in composition (for scene awareness)'),
+        position: z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            z: z.number(),
+          })
+          .optional()
+          .describe('Override world position (default: auto from sidecar y_offset)'),
+        rotation_override: z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            z: z.number(),
+          })
+          .optional()
+          .describe('Override rotation in degrees (default: from sidecar)'),
+        scale_override: z
+          .number()
+          .optional()
+          .describe('Override uniform scale (default: from sidecar)'),
+        geo_group_handle: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe(
+            'Existing geo group handle to attach to. If omitted, finds or creates one on the active RT.'
+          ),
+        pin_index: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe('Pin index on geo group (default: auto-append)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({
       obj_path,
@@ -2962,21 +2982,8 @@ export function registerImportTools(
           }
         } // end if (!geoGroup)
 
-        // 5. Connect placement to geo group
-        // Find next available pin (auto-expand)
-        const actualPin =
-          pin_index ??
-          (await (async () => {
-            // Count current connections on geo group
-            for (let i = 0; i < 64; i++) {
-              const child = await getConnectedChild(client, geoGroup, i);
-              if (!child) return i;
-            }
-            return 0;
-          })());
-
-        // Ensure geo group has enough pins
-        await setAttrRaw(client, geoGroup, AttributeId.A_PIN_COUNT, 3, actualPin + 1);
+        // 5. Connect placement to geo group (shared helper handles pin expansion)
+        const actualPin = await ensureDynamicPin(client, geoGroup, pin_index);
         await connectRaw(client, geoGroup, placementHandle, actualPin);
 
         // 6. Flush
@@ -2988,27 +2995,34 @@ export function registerImportTools(
         // Auto-register in ScenePlacementState so fit_camera knows about this object
         if (placementState) {
           try {
-            // Compute world-space AABB from mesh bbox + applied transforms
-            const halfX = meshInfo.bbox
-              ? (((meshInfo.bbox.max?.x ?? 0.5) - (meshInfo.bbox.min?.x ?? -0.5)) * scaleFactor) / 2
-              : 0.5;
-            const halfY = meshInfo.bbox
-              ? (((meshInfo.bbox.max?.y ?? 0.5) - (meshInfo.bbox.min?.y ?? -0.5)) * scaleFactor) / 2
-              : 0.5;
-            const halfZ = meshInfo.bbox
-              ? (((meshInfo.bbox.max?.z ?? 0.5) - (meshInfo.bbox.min?.z ?? -0.5)) * scaleFactor) / 2
-              : 0.5;
-            const boundsWorld = {
-              min: { x: pos.x - halfX, y: pos.y - halfY, z: pos.z - halfZ },
-              max: { x: pos.x + halfX, y: pos.y + halfY, z: pos.z + halfZ },
-            };
+            // Read local AABB from sidecar (geometry.bounds_min/max arrays)
+            const geoBounds = meshInfo.geometry;
+            const localMin = geoBounds?.bounds_min
+              ? {
+                  x: geoBounds.bounds_min[0],
+                  y: geoBounds.bounds_min[1],
+                  z: geoBounds.bounds_min[2],
+                }
+              : { x: -0.5, y: -0.5, z: -0.5 };
+            const localMax = geoBounds?.bounds_max
+              ? {
+                  x: geoBounds.bounds_max[0],
+                  y: geoBounds.bounds_max[1],
+                  z: geoBounds.bounds_max[2],
+                }
+              : { x: 0.5, y: 0.5, z: 0.5 };
+
+            // Compute world AABB with full rotation support
+            const scaleVec = { x: scaleFactor, y: scaleFactor, z: scaleFactor };
+            const boundsWorld = computeWorldAABB(localMin, localMax, pos, rot, scaleVec);
+
             placementState.addEntry({
               handle: placementHandle,
               name: derivedName,
               role: (role as any) || 'hero',
               position: pos,
               rotation: rot,
-              scale: { x: scaleFactor, y: scaleFactor, z: scaleFactor },
+              scale: scaleVec,
               boundsWorld,
             });
             mcpLog(

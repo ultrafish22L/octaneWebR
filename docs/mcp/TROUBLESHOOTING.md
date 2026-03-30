@@ -151,17 +151,30 @@ All log files are controlled by the global `LOG_LEVEL` env var (default: `debug`
 
 **Clients die first, octaneServGrpc dies last.** Killing the gRPC server while clients are connected causes hangs.
 
+### Pre-flight: Kill Duplicates
+
+**On every new session**, check for duplicate servers BEFORE doing anything else:
+
+```bash
+tasklist | grep octaneServGrpc          # Must be 0 or 1 instance
+netstat -ano | grep -E "51022|51023"    # Must be 0 or 1 listener per port
+```
+
+If >1 `octaneServGrpc.exe` is running: **kill ALL**, verify ports free, then start fresh. A stale second instance holds ~1 GB RAM and can cause port conflicts or MCP routing to the wrong server.
+
 ### Shutdown
 
 1. `preview_stop` — FIRST
-2. Kill octaneServGrpc — `cmd /c "taskkill /F /IM octaneServGrpc.exe"`
+2. Kill octaneServGrpc — `taskkill //F //IM octaneServGrpc.exe`
 3. Verify: `tasklist | grep -i octaneServGrpc` → nothing
+4. Verify ports: `netstat -ano | grep -E "51022|51023"` → nothing
 
 ### Startup
 
-4. Launch octaneServGrpc: `octaneServGrpc/build/Release/octaneServGrpc.exe &`
-5. Wait ~5s. Verify: `powershell -Command "Get-NetTCPConnection -LocalPort 51022 -ErrorAction SilentlyContinue"`
-6. `preview_start` — LAST (after gRPC is listening)
+5. Launch octaneServGrpc: `octaneServGrpc/build/Release/octaneServGrpc.exe &`
+6. Wait ~5s. Verify: `netstat -ano | grep 51022` → single LISTENING entry
+7. Verify single instance: `tasklist | grep octaneServGrpc` → exactly 1 row
+8. `preview_start` — LAST (after gRPC is listening)
 
 ---
 

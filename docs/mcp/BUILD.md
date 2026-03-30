@@ -77,7 +77,7 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 | **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
 | **G2** | Every mesh ran through `analyze_mesh` before `import_mesh`           | Orientation will be wrong — wasted iterations                                       |
 | **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
-| **G4** | `semantic_critique` ran at least once per scene                      | No SEGA gap measurement — you can't know what's wrong                               |
+| **G4** | `evaluate_semantics` ran at least once per scene                     | No SEGA gap measurement — you can't know what's wrong                               |
 | **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
 | **G6** | `fit_camera` called after every geometry add                         | Camera may not frame all objects                                                    |
 | **G7** | Logs checked (all 3 files) after each phase                          | Silent errors accumulate                                                            |
@@ -248,7 +248,7 @@ Hero camera, fine-tune lighting, final beauty pass `save_render`.
 | Step | Action                                                                       | Result                                          |
 | ---- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
 | C1   | `critique_render(render_path, spec_name, reference_image_path?)`             | Sonnet concept-vs-render comparison (A-F grade) |
-| C2   | `semantic_critique(render_path)`                                             | Pixel-level intent gap analysis vs SEGA vector  |
+| C2   | `evaluate_semantics(render_path)`                                            | Pixel-level intent gap analysis vs SEGA vector  |
 | C3   | Read the saved render image + concept art (Read tool)                        | Orchestrator visual review — your own A-F grade |
 | C4   | Compare both assessments: Sonnet + orchestrator                              | Dual-assessment synthesis                       |
 | C5   | `apply_corrections(spec_name, scores, corrections)`                          | Records score, detects stagnation               |

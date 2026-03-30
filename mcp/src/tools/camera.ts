@@ -138,10 +138,13 @@ export function registerCameraTools(
   placementState?: ScenePlacementState,
   artState?: ArtDirectionState
 ) {
-  server.tool(
+  server.registerTool(
     'get_camera',
-    'Get the current camera position, target, and up vector in world coordinates',
-    {},
+    {
+      title: 'Get Camera',
+      description: 'Get the current camera position, target, and up vector in world coordinates',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('LiveLink', 'GetCamera', {});
@@ -152,15 +155,20 @@ export function registerCameraTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'set_camera',
-    '[Phase 4 ONLY] Set camera position and/or target in world coordinates. ⛔ Do NOT use in Phase 1 — use fit_camera instead. set_camera is for Phase 4 hero shots only. If framing is wrong, fix geometry (position/scale/floor size), not the camera. Using set_camera to work around bad framing masks geometry problems.',
     {
-      position: Vec3Schema.optional().describe('Camera position in world coordinates'),
-      target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
-      up: Vec3Schema.optional().describe(
-        'Camera up vector (default: {0,1,0}). Set to maintain roll orientation.'
-      ),
+      title: 'Set Camera (Phase 4)',
+      description:
+        '[Phase 4 ONLY] Set camera position and/or target in world coordinates. ⛔ Do NOT use in Phase 1 — use fit_camera instead. set_camera is for Phase 4 hero shots only. If framing is wrong, fix geometry (position/scale/floor size), not the camera.',
+      inputSchema: {
+        position: Vec3Schema.optional().describe('Camera position in world coordinates'),
+        target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
+        up: Vec3Schema.optional().describe(
+          'Camera up vector (default: {0,1,0}). Set to maintain roll orientation.'
+        ),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ position, target, up }) => {
       if (!position && !target) {
@@ -194,38 +202,43 @@ export function registerCameraTools(
     }
   );
 
-  server.tool(
+  server.registerTool(
     'fit_camera',
-    '[Phase 1] MANDATORY after every geo placement. Compute and set camera to frame a bounding box. Must pass before any lighting/mood work (Phase 2). Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
     {
-      bbox_min: Vec3Schema.optional().describe(
-        'Min corner of bounding box. Omit to auto-query scene bounds.'
-      ),
-      bbox_max: Vec3Schema.optional().describe(
-        'Max corner of bounding box. Omit to auto-query scene bounds.'
-      ),
-      margin: z
-        .number()
-        .optional()
-        .default(0.3)
-        .describe('Margin as fraction (default 0.3 = 30% padding, 0 = exact fit)'),
-      elevation: z
-        .number()
-        .optional()
-        .default(20)
-        .describe('Camera elevation in degrees above horizon (default 20)'),
-      yaw: z
-        .number()
-        .optional()
-        .default(0)
-        .describe('Camera yaw/orbit in degrees (default 0 = front view, 45 = 3/4 view)'),
-      framing_mode: z
-        .enum(['scene', 'hero', 'subjects'])
-        .optional()
-        .default('subjects')
-        .describe(
-          'What to frame: "subjects" = hero+secondary+accent+prop (excludes ground/light, default), "hero" = hero object only, "scene" = all objects (legacy)'
+      title: 'Fit Camera (Phase 1)',
+      description:
+        '[Phase 1] MANDATORY after every geo placement. Compute and set camera to frame a bounding box. Must pass before any lighting/mood work (Phase 2). Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
+      inputSchema: {
+        bbox_min: Vec3Schema.optional().describe(
+          'Min corner of bounding box. Omit to auto-query scene bounds.'
         ),
+        bbox_max: Vec3Schema.optional().describe(
+          'Max corner of bounding box. Omit to auto-query scene bounds.'
+        ),
+        margin: z
+          .number()
+          .optional()
+          .default(0.3)
+          .describe('Margin as fraction (default 0.3 = 30% padding, 0 = exact fit)'),
+        elevation: z
+          .number()
+          .optional()
+          .default(20)
+          .describe('Camera elevation in degrees above horizon (default 20)'),
+        yaw: z
+          .number()
+          .optional()
+          .default(0)
+          .describe('Camera yaw/orbit in degrees (default 0 = front view, 45 = 3/4 view)'),
+        framing_mode: z
+          .enum(['scene', 'hero', 'subjects'])
+          .optional()
+          .default('subjects')
+          .describe(
+            'What to frame: "subjects" = hero+secondary+accent+prop (excludes ground/light, default), "hero" = hero object only, "scene" = all objects (legacy)'
+          ),
+      },
+      annotations: { idempotentHint: true },
     },
     async ({ bbox_min, bbox_max, margin, elevation, yaw, framing_mode }) => {
       try {
@@ -297,7 +310,7 @@ export function registerCameraTools(
             }
             bMin = br?.bboxMin ?? br?.bbox_min;
             bMax = br?.bboxMax ?? br?.bbox_max;
-            framingSource = 'scene_bounds';
+            framingSource = 'scene_bounds_fallback';
             if (!bMin || !bMax) {
               return errorResult('Could not read scene bounds. Pass bbox_min/bbox_max explicitly.');
             }
@@ -350,7 +363,7 @@ export function registerCameraTools(
           up: { x: 0, y: 1, z: 0 },
         });
 
-        return jsonResult({
+        const result: Record<string, any> = {
           success: true,
           position,
           target,
@@ -364,7 +377,15 @@ export function registerCameraTools(
           framing_mode,
           framing_source: framingSource,
           ...(artState ? adWorkflow(artState, 'fit_camera') : {}),
-        });
+        };
+
+        if (framingSource === 'scene_bounds_fallback') {
+          result.warning =
+            'Placement state is empty — using full scene bounds (includes ground planes, lights). ' +
+            'Framing may be inaccurate. Use register_scene_object or place_mesh to register objects for correct subject framing.';
+        }
+
+        return jsonResult(result);
       } catch (error: any) {
         return errorResult(error);
       }

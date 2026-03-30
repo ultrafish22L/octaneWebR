@@ -23,18 +23,28 @@ export function registerCreativeTools(
 ) {
   // ── suggest_lighting ────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'suggest_lighting',
-    '[Phase 2] Camera must be positioned first (fit_camera). Get a computed lighting recipe from mood + scene bounds. Lighting recipe depends on camera-subject geometry. Returns light positions, colors, power, key:fill:rim ratios. Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
     {
-      mood: z
-        .string()
-        .describe('Lighting mood: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit'),
-      subject_bounds_min: Vec3Schema.describe('Min corner of subject bounding box'),
-      subject_bounds_max: Vec3Schema.describe('Max corner of subject bounding box'),
-      camera_position: Vec3Schema.optional().describe(
-        'Camera position (for light angle computation)'
-      ),
+      title: 'Suggest Lighting',
+      description:
+        '[Phase 2] Camera must be positioned first (fit_camera). Get a computed lighting recipe from mood + scene bounds. ' +
+        'Returns light positions, colors (Kelvin), power, key:fill:rim ratios. ' +
+        'NEXT: You MUST build the lights — create emissive plane primitives at each recipe position, set blackbody temperature + power, emission efficiency = 1.0. ' +
+        'See getPrompt("setup-lighting") for full steps. Moods: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit.',
+      inputSchema: {
+        mood: z
+          .string()
+          .describe(
+            'Lighting mood: ethereal, dramatic, natural, studio, noir, golden_hour, moonlit'
+          ),
+        subject_bounds_min: Vec3Schema.describe('Min corner of subject bounding box'),
+        subject_bounds_max: Vec3Schema.describe('Max corner of subject bounding box'),
+        camera_position: Vec3Schema.optional().describe(
+          'Camera position (for light angle computation)'
+        ),
+      },
+      annotations: { idempotentHint: true },
     },
     async params => {
       try {
@@ -57,15 +67,23 @@ export function registerCreativeTools(
 
   // ── suggest_material ────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'suggest_material',
-    '[Phase 2] Apply after geometry is placed and framed. Get PBR attribute values for a surface type (roughness, metallic, specular, IOR, albedo) for NT_MAT_UNIVERSAL. 30+ types. IMPORTANT: If the mesh was loaded from OBJ with an .mtl file, it already has textures — do NOT override albedo. Only apply roughness/metallic/specular/IOR to the existing material. The albedo values here are FALLBACKS for untextured meshes only.',
     {
-      surface_type: z
-        .string()
-        .describe(
-          'Surface type name (e.g., "moss", "gold", "mushroom_cap", "glass"). Call with "list" to see all types.'
-        ),
+      title: 'Suggest Material',
+      description:
+        '[Phase 2] Get PBR values for a surface type. Returns roughness, metallic, specular, IOR, albedo. ' +
+        'NEXT: You MUST apply these values — use read_pin_value to get child handles, then set_attribute on each. ' +
+        'If mesh has .mtl textures, do NOT override albedo — apply only roughness/metallic/specular/IOR. ' +
+        'Call with surface_type:"list" to see all 30+ types.',
+      inputSchema: {
+        surface_type: z
+          .string()
+          .describe(
+            'Surface type name (e.g., "moss", "gold", "mushroom_cap", "glass"). Call with "list" to see all types.'
+          ),
+      },
+      annotations: { idempotentHint: true },
     },
     async ({ surface_type }) => {
       if (surface_type === 'list') {

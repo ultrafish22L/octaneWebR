@@ -27,6 +27,7 @@ import { registerStatsTools } from './tools/stats';
 // import { registerMaterialDbTools } from './tools/materials-db';
 import { registerAnimationTools } from './tools/animation';
 import { registerColorMaterialXTools } from './tools/color-materialx';
+import { registerLightingTools } from './tools/lighting';
 import { registerArtDirectionTools } from './tools/artdirection';
 import { ArtDirectionState } from './ArtDirectionState';
 import { ScenePlacementState } from './ScenePlacementState';
@@ -101,6 +102,33 @@ async function main() {
     return (origTool as any)(...args);
   } as any;
 
+  // Wrap server.registerTool for the same auto-logging.
+  // registerTool(name, config, cb) — cb is always args[2]
+  const origRegisterTool = server.registerTool.bind(server);
+  server.registerTool = function (...args: any[]) {
+    const toolName = args[0] as string;
+    const origCallback = args[2] as (...a: any[]) => any;
+    args[2] = async (...handlerArgs: any[]) => {
+      const toolArgs = handlerArgs[0];
+      const hasArgs = toolArgs && Object.keys(toolArgs).length > 0;
+      if (hasArgs) {
+        mcpLog(`TOOL ${toolName} ${JSON.stringify(toolArgs).substring(0, 300)}`, 'info');
+      } else {
+        mcpLog(`TOOL ${toolName}`, 'info');
+      }
+      const startMs = Date.now();
+      try {
+        const result = await origCallback(...handlerArgs);
+        mcpLog(`TOOL ${toolName} done ${Date.now() - startMs}ms`, 'debug');
+        return result;
+      } catch (err: any) {
+        mcpLog(`TOOL ${toolName} FAILED ${Date.now() - startMs}ms: ${err.message}`, 'error');
+        throw err;
+      }
+    };
+    return (origRegisterTool as any)(...args);
+  } as any;
+
   // Load static API cache (graceful fallback if missing)
   const cache = ApiCache.load();
   if (cache) {
@@ -147,6 +175,9 @@ async function main() {
 
   // Register Creative tools (lighting, materials knowledge)
   registerCreativeTools(server, client, artState);
+
+  // Register Lighting tools (create_light, setup_lighting, set_daylight)
+  registerLightingTools(server, client, cache, artState, placementState, segaState);
 
   // Register SEGA tools (semantic artistic guidance — intent vectors, presets, parameter mapping)
   registerSegaTools(server, segaState, artState);

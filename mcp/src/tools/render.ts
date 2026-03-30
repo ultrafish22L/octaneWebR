@@ -22,16 +22,21 @@ const FORMAT_MAP: Record<string, number> = {
 };
 
 export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
-  server.tool(
+  server.registerTool(
     'start_render',
-    '[All phases] Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera, geometry, kernel connected (query octane://constants for pin layout). If all white → missing geometry connection. If blurry → DOF aperture not 0.',
     {
-      render_target_handle: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe('Handle of the RenderTarget node to select for rendering'),
+      title: 'Start Render',
+      description:
+        '[All phases] Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera, geometry, kernel connected (query octane://constants for pin layout). If all white → missing geometry connection. If blurry → DOF aperture not 0.',
+      inputSchema: {
+        render_target_handle: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe('Handle of the RenderTarget node to select for rendering'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ render_target_handle }) => {
       try {
@@ -50,21 +55,33 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   );
 
-  server.tool('stop_render', 'Stop the current render', {}, async () => {
-    try {
-      await client.callMethod('ApiRenderEngine', 'stopRendering', {});
-      return jsonResult({ success: true });
-    } catch (error: any) {
-      return errorResult(error);
+  server.registerTool(
+    'stop_render',
+    {
+      title: 'Stop Render',
+      description: 'Stop the current render',
+      annotations: { destructiveHint: true },
+    },
+    async () => {
+      try {
+        await client.callMethod('ApiRenderEngine', 'stopRendering', {});
+        return jsonResult({ success: true });
+      } catch (error: any) {
+        return errorResult(error);
+      }
     }
-  });
+  );
 
   // restart_render removed — it crashes Octane (ECONNRESET). Use start_render instead.
 
-  server.tool(
+  server.registerTool(
     'get_render_status',
-    'Get current render statistics including sample count, render time, and progress',
-    {},
+    {
+      title: 'Render Status',
+      description:
+        'Get current render statistics including sample count, render time, and progress',
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         const result = await client.callMethod('ApiRenderEngine', 'getRenderStatistics', {});
@@ -84,16 +101,21 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   );
 
-  server.tool(
+  server.registerTool(
     'save_render',
-    '[All phases] Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
     {
-      path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
-      format: z
-        .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
-        .default('PNG')
-        .describe('Image format'),
-      render_pass_id: z.number().default(0).describe('Render pass ID (0 = beauty pass)'),
+      title: 'Save Render',
+      description:
+        '[All phases] Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
+      inputSchema: {
+        path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
+        format: z
+          .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
+          .default('PNG')
+          .describe('Image format'),
+        render_pass_id: z.number().default(0).describe('Render pass ID (0 = beauty pass)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ path: savePath, format, render_pass_id }) => {
       try {
@@ -137,16 +159,21 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
 
   // ── Render Passes ────────────────────────────────────────────────
 
-  server.tool(
+  server.registerTool(
     'get_enabled_aovs',
-    'Get the list of enabled AOV/render pass IDs on the current render target. Common IDs: 0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth.',
     {
-      render_target_handle: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe('RT handle (uses current RT if omitted)'),
+      title: 'Enabled AOVs',
+      description:
+        'Get the list of enabled AOV/render pass IDs on the current render target. Common IDs: 0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth.',
+      inputSchema: {
+        render_target_handle: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe('RT handle (uses current RT if omitted)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ render_target_handle }) => {
       try {
@@ -162,20 +189,25 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   );
 
-  server.tool(
+  server.registerTool(
     'save_render_passes',
-    'Save all enabled render passes to a directory. Each pass is saved as a separate file. Use get_enabled_aovs first to see which passes are active.',
     {
-      output_directory: z.string().describe('Absolute path to output directory'),
-      format: z
-        .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
-        .default('EXR')
-        .describe('Image format (default EXR for passes)'),
-      use_half: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Use half-float precision for EXR (default true)'),
+      title: 'Save Render Passes',
+      description:
+        'Save all enabled render passes to a directory. Each pass is saved as a separate file. Use get_enabled_aovs first to see which passes are active.',
+      inputSchema: {
+        output_directory: z.string().describe('Absolute path to output directory'),
+        format: z
+          .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
+          .default('EXR')
+          .describe('Image format (default EXR for passes)'),
+        use_half: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Use half-float precision for EXR (default true)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ output_directory, format, use_half }) => {
       try {
@@ -214,30 +246,35 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     }
   );
 
-  server.tool(
+  server.registerTool(
     'save_render_passes_exr',
-    'Save all enabled render passes as a single multi-layer EXR file. Production standard output for compositing.',
     {
-      path: z
-        .string()
-        .describe(
-          'Absolute file path for the multi-layer EXR (e.g. C:\\renders\\scene_passes.exr)'
-        ),
-      use_half: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Use half-float precision (default true)'),
-      preserve_layer_names: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Preserve layer names in EXR (default true)'),
-      premultiply_alpha: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('Premultiply alpha (default false)'),
+      title: 'Save Render Passes EXR',
+      description:
+        'Save all enabled render passes as a single multi-layer EXR file. Production standard output for compositing.',
+      inputSchema: {
+        path: z
+          .string()
+          .describe(
+            'Absolute file path for the multi-layer EXR (e.g. C:\\renders\\scene_passes.exr)'
+          ),
+        use_half: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Use half-float precision (default true)'),
+        preserve_layer_names: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Preserve layer names in EXR (default true)'),
+        premultiply_alpha: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Premultiply alpha (default false)'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ path: savePath, use_half, preserve_layer_names, premultiply_alpha }) => {
       try {
