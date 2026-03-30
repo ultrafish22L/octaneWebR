@@ -93,17 +93,16 @@ Two recipe tools work with or without AD: `suggest_lighting` (3-point setup for 
 
 End-to-end from idea to rendered scene:
 
-1. **Concept art** — `generate_image_pro` (OTOY Studio) from text description
+1. **Concept art** — `generate_image_pro` (OTOY Studio MCP) from text description
 2. **Reference analysis** — `analyze_reference` extracts composition into structured recipe
-3. **3D mesh generation** — OTOY Studio image-to-3D → GLB files
-4. **Format conversion** — trimesh: GLB → OBJ + textures
-5. **Mesh analysis** — `analyze_mesh` mugshot protocol for orientation/scale
-6. **Scene build** — Import, apply materials/lighting from SEGA intent, collision-free placement
-7. **Critique and iterate** — Vision critique loop until render matches intent
+3. **3D mesh generation** — `que.otoy.studio` API (Hunyuan-3D v3.1 Pro) → OBJ + PBR textures
+4. **Mesh analysis** — `analyze_mesh` mugshot protocol for orientation/scale
+5. **Scene build** — Import, apply materials/lighting from SEGA intent, collision-free placement
+6. **Critique and iterate** — Vision critique loop until render matches intent
 
 Each step is optional. You can skip AI generation and import your own meshes, skip SEGA and light manually. Every piece works standalone.
 
-**In DRESS mode, steps 1-7 are NOT optional.** Skip steps only when the input doesn't exist (e.g., no concept art = skip step 2). For autonomous runs, every available step must execute — cutting corners produces primitive-heavy scenes with no artistic direction.
+**In DRESS mode, steps 1-6 are NOT optional.** Skip steps only when the input doesn't exist (e.g., no concept art = skip step 2). For autonomous runs, every available step must execute — cutting corners produces primitive-heavy scenes with no artistic direction.
 
 > **Details:** [BUILD.md §8](mcp/BUILD.md#8-3d-asset-pipeline)
 

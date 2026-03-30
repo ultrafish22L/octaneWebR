@@ -32,23 +32,24 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 
 ---
 
-## Docs (read only what you need)
+## Docs — read ONLY what your task needs
 
-| Task                | Read                                                     |
-| ------------------- | -------------------------------------------------------- |
-| Art run (scene)     | `docs/mcp/BUILD.md`                                      |
-| Art run (lighting)  | `docs/mcp/CREATIVE.md`                                   |
-| Art run (mood/SEGA) | `docs/project/SEGA_SYSTEM_DESIGN.md`                     |
-| AD overview         | `docs/ADSYSTEM.md`                                       |
-| Values / pin layout | `docs/mcp/REFERENCE.md`                                  |
-| MCP server dev      | `docs/project/ARCHITECTURE.md` + `docs/mcp/REFERENCE.md` |
-| Debugging           | `docs/mcp/TROUBLESHOOTING.md`                            |
-| Testing (MCP tools) | `docs/mcp/TEST_PLAN.md`                                  |
-| Testing (UI)        | `docs/project/TEST_PLAN.md`                              |
-| UI changes          | `docs/ui/UI_IMPLEMENTATION.md`                           |
-| Render pipeline     | `docs/RENDER_PIPE.md`                                    |
-| Alpha 5 compat      | `docs/mcp/ALPHA5_COMPAT.md`                              |
-| gRPC C++ API        | `octaneServGrpc/docs/REFERENCE.md`                       |
+**⚠️ Token budget matters.** Don't read all docs upfront. Pick ONE row based on your task.
+
+| Task                  | Read FIRST                                                        | Read IF NEEDED                                                             |
+| --------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **AD scene build**    | `docs/mcp/BUILD.md` §3 (DRESS protocol)                           | `docs/mcp/OTOY_STUDIO.md` (REST API), `docs/mcp/REFERENCE.md` (pin layout) |
+| **Quick test / SHOP** | `docs/mcp/BUILD.md` §1-§2 only                                    | `docs/mcp/REFERENCE.md`                                                    |
+| **Debug / fix**       | `docs/mcp/TROUBLESHOOTING.md`                                     | `docs/mcp/BUILD.md` §7 (log check)                                         |
+| **MCP server dev**    | `docs/project/ARCHITECTURE.md`                                    | `docs/mcp/REFERENCE.md`                                                    |
+| **UI changes**        | `docs/ui/UI_IMPLEMENTATION.md`                                    | —                                                                          |
+| **AD system design**  | `docs/ADSYSTEM.md`                                                | `docs/project/SEGA_SYSTEM_DESIGN.md`                                       |
+| **Testing**           | `docs/mcp/TEST_PLAN.md` (MCP) or `docs/project/TEST_PLAN.md` (UI) | —                                                                          |
+| **Render pipeline**   | `docs/RENDER_PIPE.md`                                             | —                                                                          |
+| Art lighting/mood     | `docs/mcp/CREATIVE.md`                                            | `docs/project/SEGA_SYSTEM_DESIGN.md`                                       |
+| OTOY Studio API       | `docs/mcp/OTOY_STUDIO.md`                                         |
+| SSO JWT auth          | `docs/mcp/SSO_JWT.md`                                             |
+| gRPC C++ API          | `octaneServGrpc/docs/REFERENCE.md`                                |
 
 ---
 
@@ -61,13 +62,18 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 ## Cardinal Rules
 
 1. **`analyze_mesh` before `import_geo`** — always, no exceptions. Mugshots reveal orientation.
-2. **Color clay (mode 2) for Phase 1** → `critique_render` gate ≥ 3 before `set_clay_mode(0)`. No lighting/materials in clay.
-3. **`fit_camera` only** — never `set_camera` to fix framing. Wrong framing = wrong geometry. `set_camera` is Phase 4 only.
-4. **Visual verify EVERY mutation** — `save_render` + `preview_screenshot`, compare both.
-5. **Critique loop iterates** — `critique_render` → `apply_corrections` → fix → re-render → loop until `passed=true` or `exhausted=true`.
-6. **Sonnet is the critic, not you** — `critique_render` with `reference_image_path` = Sonnet grades. Without it = self-critique fallback. Self-grading is unreliable. Always pass concept art path.
-7. **Hero meshes from image-to-3D** — DRESS scenes use generated 3D meshes (Chrome → otoy.studio image-to-3D → GLB → trimesh → OBJ). Primitives are for floors, props, tests — not hero subjects.
-8. **Use suggest_lighting / suggest_material** — they read SEGA intent. Don't manually guess sundir, temperature, or PBR values.
+2. **`attach_mesh` is preferred** over manual node wiring. If it errors, diagnose — don't fall back to manual `create_node` chains.
+3. **Color clay (mode 2) for Phase 1** → `critique_render` gate ≥ C before `set_clay_mode(0)`. No lighting/materials in clay.
+4. **`fit_camera` only** — never `set_camera` to fix framing. Wrong framing = wrong geometry. `set_camera` is Phase 4 only.
+5. **Visual verify EVERY mutation** — `save_render` + `preview_screenshot`, compare both.
+6. **Creative review before critique** — ALWAYS ask "what else does this scene need?" before calling `critique_render`. Walls, textures, HDRI, depth. 3 objects on a floor = automatic fail.
+7. **Framing is #1 failure mode** — verify framing visually before critique. Objects grounded, hero visible, camera distance sane.
+8. **Sonnet is the critic, not you** — `critique_render` with `reference_image_path` = Sonnet grades. Without it = self-critique fallback. Be HARSH in your orchestrator C3 review.
+9. **Concept art must match scope** — product shot concept for product shot scene. Full room concept for full room scene. Mismatch = guaranteed F.
+10. **Hero meshes from image-to-3D** — REST API: `que.otoy.studio/r2/otoy-studio/hunyuan-3d/v3.1/pro/image-to-3d`. See `docs/mcp/OTOY_STUDIO.md`.
+11. **HDRI environment is standard** for art scenes. Daylight/flat color only for testing.
+12. **Parallel work** — use mesh generation wait time (~3 min) to build scene infrastructure.
+13. **Use suggest_lighting / suggest_material** — they read SEGA intent. Don't manually guess values.
 
 Full workflow, phases, and hard rules: `docs/mcp/BUILD.md`
 

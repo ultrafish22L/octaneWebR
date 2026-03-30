@@ -58,11 +58,11 @@ npm run build            # Compiles to mcp/dist/index.js
 
 The project includes `.mcp.json` at the root, which Claude Code reads automatically. It registers three MCP servers:
 
-| Server        | Purpose                                              |
-| ------------- | ---------------------------------------------------- |
-| `octane`      | Scene control — create nodes, set attributes, render |
-| `octane-docs` | Octane Lua API documentation and examples            |
-| `otoy-studio` | MCP server for AI images/3D/video/music/vision       |
+| Server        | Purpose                                                |
+| ------------- | ------------------------------------------------------ |
+| `octane`      | Scene control — create nodes, set attributes, render   |
+| `octane-docs` | Octane Lua API documentation and examples              |
+| `otoy-studio` | MCP server for AI images/video/vision/music (20 tools) |
 
 If you're using a different MCP client, point it to `node mcp/dist/index.js` with stdio transport.
 
@@ -244,7 +244,7 @@ See [REFERENCE.md §11](./REFERENCE.md) for the full resource table. Key resourc
 
 ## Companion MCP Servers
 
-`.mcp.json` registers two companions: **octane-docs** (Octane Lua API search, module browsing, code examples) and **otoy-studio** (AI image/3D/video/music generation — use `generate_image_pro` for concept art, image-to-3D for meshes).
+`.mcp.json` registers two companions: **octane-docs** (Octane Lua API search, module browsing, code examples) and **otoy-studio** (AI image/video/vision/music — 20 MCP tools). For image-to-3D and 1099 other endpoints, use the `que.otoy.studio` queue API directly (`OTOY_API_KEY` required). See `OTOY_STUDIO.md` for full reference.
 
 ---
 
