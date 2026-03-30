@@ -115,7 +115,7 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
 3. Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated)
 4. Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → OBJ + textures
 5. analyze_mesh (Octane MCP) → orientation check
-6. attach_mesh (Octane MCP) → place in scene
+6. place_mesh (Octane MCP) → place in scene
 ```
 
 **Parallel work:** Steps 3-4 take ~3 min. During that time, build scene infrastructure in Octane (RT, kernel, environment, floor).

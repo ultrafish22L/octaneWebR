@@ -241,7 +241,7 @@ export function registerNodeTools(
         // Fix 2: Type-specific verification instructions
         if (node_type === 'NT_GEO_MESH') {
           response.instruction =
-            `Handle ${newHandle} created (NT_GEO_MESH). NEXT: set_attribute(A_FILENAME=34) + set_attribute(A_RELOAD=124, true) + update_scene(). ` +
+            `Handle ${newHandle} created (NT_GEO_MESH). NEXT: set_attribute(A_FILENAME=34) + set_attribute(A_RELOAD=124, true) + flush_changes(). ` +
             `Then MUST call get_geometry_stats() and confirm triCount increased. Do NOT proceed if triCount is unchanged.`;
         } else if (node_type === 'NT_GEO_OBJECT') {
           response.instruction = `Handle ${newHandle} created (NT_GEO_OBJECT). After connecting to RT: call fit_camera() + save_render to VERIFY this object is visible before adding the next object.`;
@@ -274,7 +274,11 @@ export function registerNodeTools(
 
   server.tool(
     'connect_nodes',
-    'Connect source node to target node input pin. Connection is auto-verified. Use pin_name (most readable) — e.g. "camera", "geometry", "diffuse". Use pin_index as fallback for dynamic/movable pins. Query octane://pin-layout/{typeName} to discover pin names. RT pins: camera(0), environment(1), geometry(3), film(4), kernel(6). Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
+    "[All phases] Connect source node to a target node's input pin. " +
+      'Use pin_name (preferred, e.g. "diffuse", "geometry", "camera") or pin_index (for dynamic/movable pins). ' +
+      'Query octane://pin-layout/{typeName} for available pins. Query octane://constants for RT pin layout. ' +
+      'Connection is auto-verified after wiring. ' +
+      'Gotcha: Cannot connect to auto-created internal children — create standalone node + connect to parent pin.',
     {
       target_handle: z
         .number()
@@ -566,7 +570,7 @@ export function registerNodeTools(
   );
 
   server.tool(
-    'create_and_connect',
+    'create_connected',
     'Create a node and connect it to a target pin in one call. Saves round-trips for the most common pattern (e.g. create material + connect to mesh pin 0). Auto-verifies the connection. If connect fails, returns the created handle so you can retry or clean up.',
     {
       node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
@@ -909,7 +913,7 @@ export function registerNodeTools(
   );
 
   server.tool(
-    'delete_unconnected',
+    'cleanup_orphans',
     'Delete all orphaned/unconnected nodes in the scene. Refreshes SceneCache after cleanup. Use with caution — may remove nodes you intended to connect later.',
     {},
     async () => {

@@ -158,7 +158,8 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'get_attribute',
-    'Get a node attribute value by attribute ID. Use list_node_types to find attribute IDs and types. Common: A_VALUE=185, A_FILENAME=34. Types: AT_BOOL=1, AT_INT=3, AT_INT4=6, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_FLOAT4=12, AT_STRING=14. NOTE: Octane float/int value nodes use AT_FLOAT4/AT_INT4 internally. If you pass AT_FLOAT for an AT_FLOAT4 attribute, the .x component is auto-extracted.',
+    '[All phases] Get a node attribute value by ID. Query octane://constants for attribute IDs and type codes. ' +
+      'Note: Octane float/int value nodes use AT_FLOAT4/AT_INT4 internally — if you pass AT_FLOAT for an AT_FLOAT4 attribute, the .x component is auto-extracted.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID (e.g. 185 for A_VALUE, 34 for A_FILENAME)'),
@@ -192,7 +193,12 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
 
   server.tool(
     'set_attribute',
-    'Set a node attribute value. Common: A_VALUE=185, A_FILENAME=34, A_TRANSLATION=172, A_ROTATION=137 (degrees!), A_SCALE=139. Types: AT_BOOL=1, AT_INT=3, AT_INT4=6, AT_FLOAT=9, AT_FLOAT2=90, AT_FLOAT3=11, AT_FLOAT4=12, AT_STRING=14. NOTE: Octane float/int value nodes use AT_FLOAT4/AT_INT4 — pass a scalar number and it auto-wraps to {x:val,y:0,z:0,w:0}. IMPORTANT: Transform attributes (A_TRANSLATION, A_ROTATION, A_SCALE) must be set on the TRANSFORM CHILD handle (pin 3 connected_handle on NT_GEO_OBJECT), NOT on the geo object itself — setting on the geo object silently does nothing. DOF is ON by default (aperture=0.893) — set to 0. Emission efficiency defaults to 0.025 — set to 1.0 or lights will be 40x dim. A_FILENAME validates path exists (bad paths hang gRPC 30s).',
+    '[All phases] Set a node attribute value by ID. Supports bool, int, float, float3, float4, string. ' +
+      'Query octane://constants for attribute IDs and type codes. ' +
+      'Gotchas: (1) Transform attrs must be set on TRANSFORM CHILD (pin 3 connected_handle), NOT the geo object — silently does nothing otherwise. ' +
+      '(2) Rotation is in DEGREES. (3) Scalar auto-wraps to float4 {x:val,y:0,z:0,w:0}. ' +
+      '(4) A_FILENAME validates path — bad paths hang gRPC 30s. ' +
+      '(5) Emission efficiency defaults to 0.025 — set to 1.0 or lights are 40x dim.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -217,7 +223,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .optional()
         .default(false)
         .describe(
-          'If true, skip ApiChangeManager.update() after setting. Caller must call update_scene manually. Use for batching multiple attribute changes.'
+          'If true, skip ApiChangeManager.update() after setting. Caller must call flush_changes manually. Use for batching multiple attribute changes.'
         ),
     },
     async ({ handle, attribute_id, expected_type, value, skip_evaluate }) => {
@@ -263,7 +269,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
   );
 
   server.tool(
-    'update_scene',
+    'flush_changes',
     'Flush pending attribute changes by calling ApiChangeManager.update(). Required after set_attribute calls made with skip_evaluate:true.',
     {},
     async () => {
@@ -284,7 +290,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
   // ── Tier 2A: Attribute Introspection ──────────────────────────────────
 
   server.tool(
-    'get_all_attributes',
+    'list_attributes',
     'Enumerate all attributes on a node. Returns list of {id, name, type} for every attribute. Essential for discovering what properties a node supports.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
@@ -339,8 +345,8 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
   );
 
   server.tool(
-    'get_attribute_info',
-    'Get metadata for a specific attribute by ID: name, type, isArray, defaults, description. Use after get_all_attributes to dig into a specific attribute.',
+    'describe_attribute',
+    'Get metadata for a specific attribute by ID: name, type, isArray, defaults, description. Use after list_attributes to dig into a specific attribute.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
       attribute_id: z.number().describe('Attribute ID'),
@@ -372,7 +378,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
   );
 
   server.tool(
-    'get_pin_value',
+    'read_pin_value',
     "Get the value of a pin's connected node attribute in one call. Shortcut for: get_node_info → find connected_handle → get_attribute. Returns the A_VALUE (185) of the connected node. Auto-detects attribute type if not specified.",
     {
       handle: z.number().int().nonnegative().describe('Node handle'),
@@ -386,7 +392,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         .number()
         .optional()
         .describe(
-          'AttrType. If omitted, auto-detects via get_all_attributes on the connected node. Common: AT_FLOAT4=12 (value nodes), AT_FLOAT3=11 (color), AT_STRING=14.'
+          'AttrType. If omitted, auto-detects via list_attributes on the connected node. Common: AT_FLOAT4=12 (value nodes), AT_FLOAT3=11 (color), AT_STRING=14.'
         ),
     },
     async ({ handle, pin_index, attribute_id, expected_type }) => {

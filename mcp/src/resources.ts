@@ -11,6 +11,9 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { OctaneMcpClient } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
+import { AttributeId, AttrType, RT_PINS, RenderPassId } from './shared/OctaneConstants';
+import { PRESETS } from './sega/presets';
+import { DIMENSIONS } from './sega/registry';
 
 export function registerResources(
   server: McpServer,
@@ -260,5 +263,214 @@ export function registerResources(
         contents: [{ uri: 'octane://scene', text: JSON.stringify(snapshot, null, 2) }],
       };
     }
+  );
+
+  // ── Constants Resource (replaces inline tables in tool descriptions) ─
+
+  server.resource(
+    'constants',
+    'octane://constants',
+    {
+      description:
+        'Attribute IDs, type codes, RT pin layout, render pass IDs, and image formats. Reference for set_attribute/get_attribute/connect_nodes calls. Replaces inline constant tables in tool descriptions.',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'octane://constants',
+          text: JSON.stringify(
+            {
+              attribute_ids: AttributeId,
+              attr_types: AttrType,
+              rt_pins: RT_PINS,
+              render_pass_ids: {
+                BEAUTY: RenderPassId.BEAUTY,
+                DIFFUSE: RenderPassId.DIFFUSE,
+                REFLECTION: RenderPassId.REFLECTION,
+                Z_DEPTH: RenderPassId.Z_DEPTH,
+                GEOMETRIC_NORMAL: RenderPassId.GEOMETRIC_NORMAL,
+                POSITION: RenderPassId.POSITION,
+                MATERIAL_ID: RenderPassId.MATERIAL_ID,
+                AMBIENT_OCCLUSION: RenderPassId.AMBIENT_OCCLUSION,
+              },
+              notes: {
+                rotation: 'A_ROTATION values are in DEGREES (not radians)',
+                transforms:
+                  'A_TRANSLATION/A_ROTATION/A_SCALE must be set on the TRANSFORM CHILD (pin 3 connected_handle on NT_GEO_PLACEMENT), NOT on the geo object itself',
+                float4_wrapping:
+                  'Scalar numbers auto-wrap to {x:val,y:0,z:0,w:0} for float4/int4 types',
+                filename: 'A_FILENAME validates path exists — bad paths hang gRPC for 30s',
+                dof: 'DOF aperture defaults to 0.893 on old RTs — set to 0 to disable',
+                emission:
+                  'Emission efficiency defaults to 0.025 (40x dim) — set to 1.0 for correct brightness',
+              },
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  // ── SEGA Presets Resource ─────────────────────────────────────────
+
+  server.resource(
+    'sega-presets',
+    'octane://sega/presets',
+    {
+      description:
+        'All 25 SEGA presets with name, category, description, and full semantic vector. Use with set_artistic_intent(preset:"name"). Categories: mood, artist, film, genre.',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'octane://sega/presets',
+          text: JSON.stringify(
+            PRESETS.map(p => ({
+              name: p.name,
+              category: p.category,
+              description: p.description,
+              vector: p.vector,
+              tags: p.tags,
+            })),
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  // ── SEGA Dimensions Resource ──────────────────────────────────────
+
+  server.resource(
+    'sega-dimensions',
+    'octane://sega/dimensions',
+    {
+      description:
+        'All 15 SEGA semantic dimensions with name, description, range [-1,+1], positive/negative labels, and NL aliases. Use with set_artistic_intent(vector:{dimension:value}) or adjust_artistic_intent(dimension, value).',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'octane://sega/dimensions',
+          text: JSON.stringify(
+            DIMENSIONS.map(d => ({
+              name: d.name,
+              source: d.source,
+              description: d.description,
+              positiveLabel: d.positiveLabel,
+              negativeLabel: d.negativeLabel,
+              aliases: d.aliases.slice(0, 4),
+              negativeAliases: d.negativeAliases.slice(0, 4),
+            })),
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  // ── Workflow Phases Resource ───────────────────────────────────────
+
+  server.resource(
+    'workflow-phases',
+    'octane://workflow/phases',
+    {
+      description:
+        'DRESS workflow phases (0 → 4) with required tools, gates, and progression rules. Query to understand phase order and which tools belong to which phase.',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'octane://workflow/phases',
+          text: JSON.stringify(
+            {
+              workflow: 'DRESS',
+              phases: [
+                {
+                  phase: '0',
+                  name: 'Plan',
+                  description: 'Composition planning before any Octane node creation',
+                  tools: [
+                    'analyze_reference',
+                    'plan_composition',
+                    'validate_layout',
+                    'analyze_mesh',
+                  ],
+                  gate: 'validate_layout passes with 0 errors',
+                },
+                {
+                  phase: '0b',
+                  name: 'Intent',
+                  description:
+                    'Set SEGA mood before geometry — drives suggest_lighting/suggest_material values',
+                  tools: ['set_artistic_intent', 'get_artistic_intent'],
+                  gate: 'SEGA vector initialized',
+                },
+                {
+                  phase: '1',
+                  name: 'Frame',
+                  description: 'Clay mode ON. Import geometry, frame camera, verify composition',
+                  tools: [
+                    'set_clay_mode',
+                    'place_mesh',
+                    'fit_camera',
+                    'register_scene_object',
+                    'start_render',
+                    'save_render',
+                    'critique_render',
+                  ],
+                  gate: 'critique_render grade >= C in clay mode',
+                  rules: [
+                    'Clay mode stays ON until critique passes',
+                    'fit_camera after EVERY geo add — no exceptions',
+                    'NEVER use set_camera to fix framing — fix geometry instead',
+                    'Creative review before critique: "What else does this scene need?"',
+                  ],
+                },
+                {
+                  phase: '2',
+                  name: 'Dress',
+                  description: 'Materials + lighting. Clay mode OFF.',
+                  tools: [
+                    'set_clay_mode',
+                    'suggest_lighting',
+                    'suggest_material',
+                    'set_artistic_intent',
+                  ],
+                  gate: 'Materials and lighting applied to all surfaces',
+                },
+                {
+                  phase: '3',
+                  name: 'Critique',
+                  description: 'Dual-critic evaluation loop (Sonnet + orchestrator)',
+                  tools: ['critique_render', 'semantic_critique', 'apply_corrections'],
+                  gate: 'Sonnet grade B+ or stagnation detected',
+                  rules: [
+                    'reference_image_path is MANDATORY for critique',
+                    'framing >= 3 required BEFORE lighting/mood scores matter',
+                    'If stagnating (2 iterations < 0.3 improvement): redesign, do not tweak',
+                  ],
+                },
+                {
+                  phase: '4',
+                  name: 'Beauty',
+                  description: 'Hero camera, final beauty render, save and cleanup',
+                  tools: ['set_camera', 'save_render', 'save_project', 'reset_project'],
+                  gate: 'Hero render saved, 0 errors in all 3 log files',
+                },
+              ],
+              utility_tools:
+                'These tools are used across all phases: create_node, connect_nodes, set_attribute, get_attribute, get_node_info, get_scene_tree, delete_node',
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    })
   );
 }

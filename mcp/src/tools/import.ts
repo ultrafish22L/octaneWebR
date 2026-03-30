@@ -1525,16 +1525,18 @@ async function analyzeMugshotsWithVLM(
 }
 
 import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
+import { ScenePlacementState } from '../ScenePlacementState';
 
 export function registerImportTools(
   server: McpServer,
   client: OctaneMcpClient,
   cache: ApiCache | null,
-  artState?: ArtDirectionState
+  artState?: ArtDirectionState,
+  placementState?: ScenePlacementState
 ) {
   server.tool(
-    'import_geo',
-    '[Phase 1] Import a 3D model (OBJ, GLB, glTF) into the Octane scene. Creates mesh + placement + material, returns all handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Placement is NOT connected to a geo group — caller must do that. Apply rotation/scale from analyze_mesh sidecar (.mesh_info.json) before connecting to geo group.',
+    'import_mesh',
+    '[Phase 1] Low-level mesh import. Creates mesh + placement + material nodes, returns handles. OBJ loaded directly; GLB/glTF converted to OBJ first. Does NOT read .mesh_info.json sidecar, does NOT wire to geo group — caller must do both. PREFER place_mesh for normal workflow (handles sidecar + wiring automatically). Use import_mesh only when you need manual control over node creation.',
     {
       file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
       name: z
@@ -2550,7 +2552,7 @@ export function registerImportTools(
   // ── score_mugshot_models ──────────────────────────────────────────
 
   server.tool(
-    'score_mugshot_models',
+    'benchmark_vlm_models',
     'Score VLM models from configuration mode runs. Set ground_truth on scoreboard entries first, then call this to compute accuracy per model and set the preferred model.',
     {
       set_ground_truth: z
@@ -2680,8 +2682,8 @@ export function registerImportTools(
   // One-call mesh placement: import (if needed) → apply sidecar transforms → wire to RT → flush.
 
   server.tool(
-    'attach_mesh',
-    '[Phase 1] Import + place a mesh in one call. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, flushes scene. Requires analyze_mesh to have been run first. If no RT exists, creates one with daylight + PT kernel.',
+    'place_mesh',
+    '[Phase 1] PREFERRED mesh import. Reads .mesh_info.json sidecar, applies orientation/scale/offset, wires placement→geo group→RT, auto-registers in scene placement state, flushes scene. Requires analyze_mesh to have been run first (creates sidecar). If no RT exists, creates one with daylight + PT kernel. Returns: placement_handle, mesh_handle, material_handle, position, bounds.',
     {
       obj_path: z.string().describe('Absolute path to OBJ file'),
       role: z
@@ -2983,6 +2985,41 @@ export function registerImportTools(
 
         mcpLog(`attach_mesh: ${derivedName} attached at geo group pin ${actualPin}`, 'info');
 
+        // Auto-register in ScenePlacementState so fit_camera knows about this object
+        if (placementState) {
+          try {
+            // Compute world-space AABB from mesh bbox + applied transforms
+            const halfX = meshInfo.bbox
+              ? (((meshInfo.bbox.max?.x ?? 0.5) - (meshInfo.bbox.min?.x ?? -0.5)) * scaleFactor) / 2
+              : 0.5;
+            const halfY = meshInfo.bbox
+              ? (((meshInfo.bbox.max?.y ?? 0.5) - (meshInfo.bbox.min?.y ?? -0.5)) * scaleFactor) / 2
+              : 0.5;
+            const halfZ = meshInfo.bbox
+              ? (((meshInfo.bbox.max?.z ?? 0.5) - (meshInfo.bbox.min?.z ?? -0.5)) * scaleFactor) / 2
+              : 0.5;
+            const boundsWorld = {
+              min: { x: pos.x - halfX, y: pos.y - halfY, z: pos.z - halfZ },
+              max: { x: pos.x + halfX, y: pos.y + halfY, z: pos.z + halfZ },
+            };
+            placementState.addEntry({
+              handle: placementHandle,
+              name: derivedName,
+              role: (role as any) || 'hero',
+              position: pos,
+              rotation: rot,
+              scale: { x: scaleFactor, y: scaleFactor, z: scaleFactor },
+              boundsWorld,
+            });
+            mcpLog(
+              `place_mesh: auto-registered "${derivedName}" as ${role || 'hero'} in placement state`,
+              'info'
+            );
+          } catch (regErr: any) {
+            mcpLog(`place_mesh: auto-register warning: ${regErr.message}`, 'warn');
+          }
+        }
+
         return jsonResult({
           success: true,
           mesh: derivedName,
@@ -3006,8 +3043,9 @@ export function registerImportTools(
           has_mtl: hasMtl,
           has_texture: texHandle > 0 || hasMtl,
           texture_count: texturePaths.length,
+          auto_registered: !!placementState,
           instruction:
-            'Mesh is attached and rendering. Use fit_camera to frame it, then save_render to verify.',
+            'Mesh placed and rendering. Use fit_camera to frame it, then save_render to verify.',
         });
       } catch (error: any) {
         mcpLog(`attach_mesh FAILED: ${error.message}`, 'error');

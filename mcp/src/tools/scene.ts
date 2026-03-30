@@ -199,7 +199,7 @@ export function registerSceneTools(
 ) {
   server.tool(
     'get_scene_tree',
-    'Get full scene hierarchy. Returns handle, name, type, isGraph, children for all nodes. Populates internal scene cache for faster subsequent lookups. Use max_depth to limit traversal for large scenes.',
+    '[All phases] Get full scene hierarchy. Returns handle, name, type, isGraph, children for all nodes. Populates internal scene cache for faster subsequent lookups. Use max_depth to limit traversal for large scenes (700+ nodes possible).',
     {
       max_depth: z.number().default(3).describe('Maximum traversal depth (default 3)'),
       compact: z

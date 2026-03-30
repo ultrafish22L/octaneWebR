@@ -61,8 +61,8 @@ Known issues: Connection LED false-green when offline, LiveDB disabled.
 
 ## Cardinal Rules
 
-1. **`analyze_mesh` before `import_geo`** — always, no exceptions. Mugshots reveal orientation.
-2. **`attach_mesh` is preferred** over manual node wiring. If it errors, diagnose — don't fall back to manual `create_node` chains.
+1. **`analyze_mesh` before `import_mesh`** — always, no exceptions. Mugshots reveal orientation.
+2. **`place_mesh` is preferred** over manual node wiring. If it errors, diagnose — don't fall back to manual `create_node` chains.
 3. **Color clay (mode 2) for Phase 1** → `critique_render` gate ≥ C before `set_clay_mode(0)`. No lighting/materials in clay.
 4. **`fit_camera` only** — never `set_camera` to fix framing. Wrong framing = wrong geometry. `set_camera` is Phase 4 only.
 5. **Visual verify EVERY mutation** — `save_render` + `preview_screenshot`, compare both.

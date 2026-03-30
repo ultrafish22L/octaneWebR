@@ -135,7 +135,7 @@ async function main() {
   registerNodeTools(server, client, cache);
   registerAttributeTools(server, client);
   registerWebappTools(server);
-  registerImportTools(server, client, cache, artState);
+  registerImportTools(server, client, cache, artState, placementState);
   registerRenderControlTools(server, client);
   registerStatsTools(server, client);
   // registerMaterialDbTools(server, client); // disabled — Octane API bug

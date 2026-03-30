@@ -75,7 +75,7 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 | ------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **G0** | `analyze_reference` was called on concept art                        | Scene has no composition data — layout will be random                               |
 | **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
-| **G2** | Every mesh ran through `analyze_mesh` before `import_geo`            | Orientation will be wrong — wasted iterations                                       |
+| **G2** | Every mesh ran through `analyze_mesh` before `import_mesh`           | Orientation will be wrong — wasted iterations                                       |
 | **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
 | **G4** | `semantic_critique` ran at least once per scene                      | No SEGA gap measurement — you can't know what's wrong                               |
 | **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
@@ -93,13 +93,13 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 - Optimizing scene count over quality → every scene suffers
 - **Skipping creative review** → 3 objects on a floor is never a finished scene. Walls, textures, HDRI = mandatory
 - **Concept/scope mismatch** → generating a full-room interior concept then building a product shot. Match concept art to buildable scope.
-- **Falling back to manual node wiring** when `attach_mesh` errors → diagnose the error, don't work around it
+- **Falling back to manual node wiring** when `place_mesh` errors → diagnose the error, don't work around it
 - **Soft orchestrator self-critique** → grading your own render D when it's clearly F. Be harsh on framing.
 - **No parallel work** → waiting idle during 3-min mesh generation instead of building scene infrastructure
 
 ### Pre-Phase: analyze_mesh (BLOCKING — before ANY placement)
 
-> **⛔ HARD GATE: Do NOT call `import_geo` on any mesh until `analyze_mesh` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
+> **⛔ HARD GATE: Do NOT call `import_mesh` on any mesh until `analyze_mesh` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
 
 Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls in the scene yet.
 
@@ -118,12 +118,12 @@ Run `analyze_mesh` on every mesh asset BEFORE building the scene. This is a pre-
 
 **Related tools:**
 
-- `attach_mesh` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
+- `place_mesh` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
 - `score_mugshot_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
 
 ```
-❌ import_geo("gargoyle.obj") → guess rotation → wrong → waste iterations
-✅ analyze_mesh("gargoyle.obj") → read sidecar → attach_mesh or import_geo with correction → correct first try
+❌ import_mesh("gargoyle.obj") → guess rotation → wrong → waste iterations
+✅ analyze_mesh("gargoyle.obj") → read sidecar → place_mesh or import_mesh with correction → correct first try
 ```
 
 ---
@@ -161,7 +161,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(2)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
-| 2    | Import mesh via `import_geo(file_path)` → placement → geo group → RT `pin_index:3`                                                        | **Object exists**. `import_geo` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                     |
+| 2    | Import mesh via `import_mesh(file_path)` → placement → geo group → RT `pin_index:3`                                                       | **Object exists**. `import_mesh` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                    |
 | 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
 | 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |
 | 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `critique_render` must pass composition before Phase 2.**                                                                                                                                                                |
@@ -203,10 +203,10 @@ If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't 
 
 ```
 ❌ WRONG Phase 1:
-  import_geo → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → dress
+  import_mesh → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → dress
 
 ✅ RIGHT Phase 1:
-  import_geo → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
+  import_mesh → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
   → Sonnet grade C+? → YES → set_clay_mode(0) → Phase 2
   → Sonnet grade D/F? → fix geometry → fit_camera() → critique_render again
 ```
@@ -338,7 +338,7 @@ Primitive shapes — no .obj file needed. Key differences from NT_GEO_MESH:
 - **Auto-wrapping:** Connecting to RT pin 3 auto-creates placement chain. No manual group needed for single objects.
 - **Multi-object:** Create NT_GEO_GROUP, connect each geo to group pins (0, 1, 2...), connect group to RT pin_index:3.
 - **Primitive type changes work** — all 23 types tested (values 1-23). NT_GEO_MESH with .obj files is still recommended for production quality geometry.
-- **connect/disconnect auto-flush** — `connect_nodes` and `disconnect_pin` auto-flush `ApiChangeManager::update()`. No manual `update_scene` needed between connection changes.
+- **connect/disconnect auto-flush** — `connect_nodes` and `disconnect_pin` auto-flush `ApiChangeManager::update()`. No manual `flush_changes` needed between connection changes.
 
 Primitive values: see `REFERENCE.md` §7a.
 
@@ -394,13 +394,13 @@ Response: `request_id` + `status_url` + `response_url`. Poll `status_url` until 
 **Load in Octane:**
 
 1. `analyze_mesh(obj_path, source_endpoint:"huynan")` — mandatory, uses known-source fast path for Hunyuan meshes
-2. `attach_mesh(obj_path, position, role)` — preferred, reads sidecar, applies transforms, wires to geo group + RT in one call
+2. `place_mesh(obj_path, position, role)` — preferred, reads sidecar, applies transforms, wires to geo group + RT in one call
 3. `fit_camera` after each placement
 
-**⚠️ `attach_mesh` troubleshooting:**
+**⚠️ `place_mesh` troubleshooting:**
 
-- **"pin index 0 out of range (pinCount is 0)"** — geo group exists but has no pins. Ensure RT is created first and geo group is connected to RT pin 3 BEFORE calling `attach_mesh`. The tool needs an existing RT+geo group chain.
-- **If `attach_mesh` fails, diagnose the error.** Don't fall back to manual `create_node(NT_GEO_MESH)` + `set_attribute(A_FILENAME)` + `create_node(NT_GEO_PLACEMENT)` + manual transform + manual connections. That path skips sidecar transforms and is error-prone.
+- **"pin index 0 out of range (pinCount is 0)"** — geo group exists but has no pins. Ensure RT is created first and geo group is connected to RT pin 3 BEFORE calling `place_mesh`. The tool needs an existing RT+geo group chain.
+- **If `place_mesh` fails, diagnose the error.** Don't fall back to manual `create_node(NT_GEO_MESH)` + `set_attribute(A_FILENAME)` + `create_node(NT_GEO_PLACEMENT)` + manual transform + manual connections. That path skips sidecar transforms and is error-prone.
 
 **Parallel work during mesh generation (~3 min):**
 While image-to-3D jobs are processing, build scene infrastructure:

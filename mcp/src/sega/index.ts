@@ -67,13 +67,11 @@ export function registerSegaTools(
 
   server.tool(
     'set_artistic_intent',
-    '[Phase 2] Set AFTER camera framing is confirmed (fit_camera done, framing verified). ' +
-      'Set scene artistic intent via preset name, raw semantic vector, or natural language description. ' +
-      'Returns the current semantic vector, resolved parameter recipes (lighting, material, camera), ' +
-      'and Berlyne warnings. Presets: dramatic, ethereal, natural, studio, noir, golden_hour, moonlit, ' +
-      'vermeer, caravaggio, hopper, kubrick, villeneuve, fincher, blade_runner, moonlight_film, ' +
-      'grand_budapest, mad_max, her_film, product_clean, product_luxury, landscape_epic, ' +
-      'portrait_editorial, still_life_dutch, architectural_modern, macro_nature. ' +
+    '[Phase 0b / Phase 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
+      'Phase 0b: Initialize mood before geometry (drives suggest_lighting/suggest_material values). ' +
+      'Phase 2: Refine mood after framing is confirmed. ' +
+      'Returns: semantic vector, resolved parameter recipes (lighting, material, camera), Berlyne warnings. ' +
+      'Query octane://sega/presets for available presets. Query octane://sega/dimensions for dimension names. ' +
       'Call with preset:"list" to see all presets.',
     {
       preset: z
@@ -460,9 +458,9 @@ export function registerSegaTools(
   // ── save_user_preset ──────────────────────────────────────────────
 
   server.tool(
-    'save_user_preset',
-    'Save the current semantic vector as a named user preset for reuse. ' +
-      'User presets are stored in session memory (not persisted to disk).',
+    'save_sega_preset',
+    'Save the current SEGA semantic vector as a named preset for reuse. ' +
+      'Presets are stored in session memory (not persisted to disk). Query octane://sega/presets for built-in presets.',
     {
       name: z.string().describe('Preset name (e.g. "my_moody_setup")'),
       description: z.string().optional().describe('Short description of this preset'),

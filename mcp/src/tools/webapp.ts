@@ -50,7 +50,7 @@ export function isLiveSyncEnabled(): boolean {
 
 export function registerWebappTools(server: McpServer) {
   server.tool(
-    'refresh_webapp',
+    'refresh_ui',
     'Force octaneWebR to refresh its scene tree. Auto-sync happens after MCP changes, but use this if the web UI gets out of sync.',
     {},
     async () => {

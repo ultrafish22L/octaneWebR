@@ -88,7 +88,7 @@ export function registerAnimationTools(server: McpServer, client: OctaneMcpClien
   );
 
   server.tool(
-    'is_node_animated',
+    'list_animated_attributes',
     'Check which attributes on a node are animated. Returns a list of animated attribute IDs. Bulk check — iterates all attributes and tests each for animation.',
     {
       handle: z.number().int().nonnegative().describe('Node handle'),

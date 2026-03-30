@@ -1077,34 +1077,7 @@ export function registerArtDirectionTools(
     }
   );
 
-  // ── 6b. set_art_direction_mode ──────────────────────────────────
-
-  server.tool(
-    'set_art_direction_mode',
-    'Toggle AD workflow enforcement on/off. When ACTIVE: tool responses include phase gates, next-step chaining, and workflow audit. When INACTIVE: all tools work freely with no phase enforcement. Individual tools are always callable regardless of mode.',
-    {
-      mode: z.enum(['active', 'inactive']).describe('AD enforcement mode'),
-    },
-    async ({ mode }) => {
-      artState.setMode(mode);
-      if (mode === 'active') {
-        artState.resetWorkflow();
-      }
-      return jsonResult({
-        ad_mode: mode,
-        ...(mode === 'active'
-          ? {
-              workflow: artState.getWorkflowStatus(),
-              instruction:
-                'AD workflow ACTIVE. Workflow checklist started. Every tool response will include your progress and next step. Follow the checklist.',
-            }
-          : {
-              instruction:
-                'AD workflow INACTIVE. All tools available freely — no phase enforcement.',
-            }),
-      });
-    }
-  );
+  // set_art_direction_mode REMOVED — folded into get_art_direction_state(set_mode)
 
   // ── 7. suggest_placement ──────────────────────────────────────────
 

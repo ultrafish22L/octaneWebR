@@ -24,7 +24,7 @@ const FORMAT_MAP: Record<string, number> = {
 export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
   server.tool(
     'start_render',
-    'Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera (pin 0), geometry (pin 3), kernel (pin 6). If render is all white, check connections. If blurry, disable DOF (aperture→0).',
+    '[All phases] Start rendering. Automatically flushes pending scene changes before starting. Ensure RT has: camera, geometry, kernel connected (query octane://constants for pin layout). If all white → missing geometry connection. If blurry → DOF aperture not 0.',
     {
       render_target_handle: z
         .number()
@@ -86,7 +86,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
 
   server.tool(
     'save_render',
-    'Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
+    '[All phases] Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
     {
       path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
       format: z
