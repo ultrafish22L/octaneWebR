@@ -13,7 +13,17 @@ Vite Plugin (gRPC proxy + WebSocket + file browser)     MCP Server (78 tools, st
     +------- Shared: OctaneGrpcClientBase.ts ----------------+
                             |
                             v
-                    Octane Render Studio (gRPC)
+                    Octane Render Studio (gRPC, port 51022)
+
+Electron Dist Build (v2.4.5):
+    React Client (Electron renderer)
+        |
+        v
+    GrpcProxyServer (Node.js HTTP + WS, port 43930)
+        |── dxSS: native addon (dx_shared_surface.node) → GPU DMA shared surface
+        |── pixel fallback: grabRenderResult (same as Vite)
+        v
+    Octane Render Studio (gRPC, port 51022)
 ```
 
 **Vite plugin** (`vite-plugin-octane-grpc.ts`) handles everything server-side: gRPC proxying, WebSocket callback streaming, REST endpoints for health and file operations. No separate Express server.
@@ -46,6 +56,11 @@ octaneWebR/
 │   ├── src/types/        Typed interfaces (GrpcClientTypes.ts)
 │   ├── src/__tests__/    Tests (281 tests via Vitest)
 │   └── data/             API cache (octane-api-cache.json)
+├── electron/             Electron main + preload (standalone build)
+│   ├── main.ts           Main process — addon loading, GrpcProxyServer startup
+│   └── preload.ts        Context bridge (hasNativeAddon, platform)
+├── native/               D3D11 shared surface native addon (node-addon-api)
+│   └── src/              dx_shared_surface.cpp/.h — mapSurface hot path
 ├── ORBX/assets_test/          3D meshes (.obj) and textures
 ├── temp/renders/         Render output
 ├── api-version.config.js API version detection + compat mode switch

@@ -13,7 +13,7 @@ const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
 
 // Build number — increment on every code change to verify running code matches build.
 // Check with get_octane_version() → mcp_build field.
-const MCP_BUILD = 69;
+const MCP_BUILD = 70;
 import {
   OctaneMcpClient,
   MCP_LOG_PATH,

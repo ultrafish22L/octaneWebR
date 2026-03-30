@@ -1,6 +1,17 @@
-## v2.4.4
+## v2.4.5
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
+
+### v2.4.5 changes (MCP_BUILD 70)
+
+- **Electron dist build with dxSS shared surface rendering** — full DirectX 11 shared surface pipeline for the standalone Electron app. Octane renders to a DXGI shared texture, `octaneServGrpc` clones and `DuplicateHandle`s it to the Electron process, the native addon (`dx_shared_surface.node`) maps it to CPU via GPU DMA, and pixels stream over WebSocket to the canvas. Zero protobuf serialization on the hot path.
+- **Native addon** (`native/src/dx_shared_surface.cpp`) — D3D11 device creation matched to Octane's GPU adapter (LUID), cached staging texture, `mapSurface` hot path with optional keyed mutex
+- **GrpcProxyServer dxSS integration** — `enableSharedSurface()` 3-step init (device check, async tonemap passes, SS output type), `grabSharedFrame()` RPC with 0x0 frame guard, in-flight handle tracking with 10s stale cleanup, `destroySsDevice()` on shutdown
+- **octaneServGrpc `SharedSurfaceFrameService`** — `grabSharedFrame` falls back to render statistics for frame dimensions when `ApiRenderImage.mSize` is `{0,0}` (SS mode), 30s TTL purge for orphaned cloned surfaces
+- **Callback conflict fix** — GrpcProxyServer no longer overwrites MCP's callback registration; uses own gRPC stream instead of MCP relay to avoid dead-stream masking by heartbeats
+- **Vite SS cleanup** — dev mode explicitly disables shared surface output (`setSharedSurfaceOutputType(0)`) on startup; removed dead `extractSharedSurfaceMetadata` async code
+- **CallbackStreamManager reconnect fix** — `end` handler uses `scheduleReconnect` when disconnected to prevent tight reconnect loops after serv restart
+- **Electron build** — `api-version.config.js` reads `OCTANE_PROTO_DIR` env var for packaged builds; proto field name fix (`realtime` → `realTime`)
 
 ### v2.4.4 changes (MCP_BUILD 69)
 

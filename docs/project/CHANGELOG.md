@@ -4,6 +4,34 @@ All notable changes to octaneWebR.
 
 ---
 
+## [2.4.5] - 2026-03-29
+
+### Added
+
+- **dxSS shared surface rendering** (Electron dist) — DirectX 11 GPU DMA pipeline bypasses protobuf serialization. Native addon (`dx_shared_surface.node`) maps shared textures via `OpenSharedResource1` → `CopyResource` → `Map`. ~2ms total vs ~10ms for pixel path.
+- **`GrpcProxyServer` dxSS integration** — 3-step `enableSharedSurface()` init, `grabSharedFrame()` RPC with 0x0 frame guard, in-flight handle tracking with stale cleanup timer (10s), `destroySsDevice()` on shutdown
+- **`SharedSurfaceFrameService`** in octaneServGrpc — `grabSharedFrame` clones surfaces and `DuplicateHandle`s into client process; falls back to render statistics for dimensions when `ApiRenderImage.mSize` is zero in SS mode; 30s TTL purge for orphaned clones
+- **Electron packaging** — `api-version.config.js` reads `OCTANE_PROTO_DIR` env var for packaged builds; `electron/main.ts` sets proto dir before loading server module
+
+### Changed
+
+- **MCP_BUILD** — Bumped to 70
+- Vite dev mode explicitly disables shared surface output on startup (`setSharedSurfaceOutputType(0)`)
+
+### Fixed
+
+- **Callback conflict** — GrpcProxyServer no longer overwrites MCP's gRPC callback registration; uses own callback stream instead of MCP relay
+- **Proto field name** — `realtime` → `realTime` in `setSharedSurfaceOutputType` call (matches proto definition)
+- **Vite `close()` missing `stopRelayProbe()`** — relay probe timer could fire after close
+- **CallbackStreamManager reconnect loop** — `end` handler uses `scheduleReconnect` when disconnected instead of immediate `openStream`, preventing tight loops after serv restart
+- **Stale handle cleanup** — stale SS handle sweep collects entries before iterating to avoid map mutation during iteration
+
+### Removed
+
+- Dead `extractSharedSurfaceMetadata` in Vite plugin — async mutation of already-sent payload, SS disabled in Vite mode
+
+---
+
 ## [2.4.4] - 2026-03-29
 
 ### Added

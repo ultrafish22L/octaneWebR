@@ -1,6 +1,6 @@
 {
   "name": "octaneweb-react",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "description": "OctaneWeb ported to React TypeScript with Node.js gRPC",
   "main": "dist/electron/main.js",
   "scripts": {

@@ -3,9 +3,15 @@
 ## Pipeline Overview
 
 ```
-Octane GPU ──► octaneServGrpc (gRPC) ──► Vite Plugin (WS relay) ──► Browser (Canvas 2D)
-   render        protobuf stream          binary WebSocket           RAF + putImageData
-   ~100ms           ~5ms                     ~5ms                       ~0.3ms
+Standard (Vite / Electron dev):
+  Octane GPU ──► octaneServGrpc (gRPC) ──► Vite Plugin (WS relay) ──► Browser (Canvas 2D)
+     render        protobuf stream          binary WebSocket           RAF + putImageData
+     ~100ms           ~5ms                     ~5ms                       ~0.3ms
+
+dxSS (Electron dist — v2.4.5):
+  Octane GPU ──► octaneServGrpc ──► GrpcProxyServer ──► Browser (Canvas 2D)
+     render      DuplicateHandle    native addon DMA     binary WebSocket
+     ~100ms          ~1ms               ~0ms                ~1ms
 ```
 
 **Current performance** (1024x512, measured):
@@ -143,6 +149,7 @@ The 33ms drag throttle was also disabled — with 37ms render time, the throttle
 | 2        | **Binary WebSocket relay** | Zero-copy pipeline | **DONE** (v2.4.0) — replaced JSON encoding          |
 | 3        | **Drag throttle removal**  | 12fps → 27fps      | **DONE** (v2.4.1) — throttle was the bottleneck     |
 | —        | Predictive CSS transform   | Perceived 60fps    | Not needed — 27fps is smooth enough for interaction |
+| 4        | **dxSS shared surface**    | ~10ms → ~2ms       | **DONE** (v2.4.5) — Electron dist, GPU DMA bypass   |
 | —        | WebGL texture upload       | Marginal (<0.3ms)  | Not needed — putImageData is 0.3ms                  |
 | —        | OffscreenCanvas worker     | Main thread = 0ms  | Not needed — client pipeline already ~0.3ms         |
 
@@ -160,3 +167,59 @@ The 33ms drag throttle was also disabled — with 37ms render time, the throttle
 | WS backpressure drop         | >10 MB buffered                | `vite-plugin-octane-grpc.ts` MAX_WS_BUFFER               |
 | Status bar updates           | 2/sec (500ms)                  | `useCanvasRenderer.ts` STATUS_UPDATE_INTERVAL            |
 | Server log (mutations)       | Per-call                       | `vite-plugin-octane-grpc.ts` (SetCamera/update excluded) |
+
+---
+
+## dxSS Shared Surface Pipeline (v2.4.5, Electron dist only)
+
+Eliminates protobuf serialization by sharing the GPU render texture directly between Octane and the Electron process via DXGI shared handles.
+
+### Flow
+
+```
+Octane GPU render
+  ↓ mSharedSurface on ApiRenderImage (D3D11 texture, keyed mutex)
+octaneServGrpc: grabSharedFrame RPC
+  ↓ clone() → DuplicateHandle into Electron process PID
+  ↓ returns SharedSurfaceFrame { handle, luid, width, height, pitch, format, frameId }
+GrpcProxyServer (Node.js, Electron main process)
+  ↓ dxAddon.initDevice(luid) — once, creates D3D11 device on same GPU adapter
+  ↓ dxAddon.mapSurface(handle) — OpenSharedResource1 → CopyResource → Map → memcpy to Buffer
+  ↓ dxAddon.closeSurface(handle) + releaseSharedFrame(frameId)
+  ↓ sends pixel Buffer over WebSocket (same binary frame format as standard path)
+Browser canvas2d (same as standard path)
+```
+
+### Key files
+
+| File                                            | Role                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| `native/src/dx_shared_surface.cpp`              | D3D11 device, staging texture, mapSurface hot path                |
+| `server/src/grpc/GrpcProxyServer.ts`            | enableSharedSurface, grabSharedFrame, handle lifecycle            |
+| `octaneServGrpc/src/grpc_server.cpp`            | SharedSurfaceFrameServiceImpl (clone, DuplicateHandle, TTL purge) |
+| `octaneServGrpc/proto/sharedsurfaceframe.proto` | RPC + message definitions                                         |
+| `electron/main.ts`                              | Addon loading, passes dxAddon to GrpcProxyServer                  |
+| `electron/preload.ts`                           | Exposes hasNativeAddon to renderer via contextBridge              |
+
+### Performance
+
+At 1024x512 LDR RGBA (2 MB/frame):
+
+- `grabSharedFrame` RPC: ~1ms (handle duplication, no pixel copy)
+- `mapSurface`: ~0ms (GPU DMA copy + CPU map, sub-millisecond)
+- WS send: ~1ms
+- **Total: ~2ms** vs ~10ms for protobuf serialize+deserialize
+
+### Handle lifecycle
+
+1. Server clones `ApiSharedSurface` and tracks in `sClonedSurfaces[frameId]`
+2. Client maps the texture, sends pixels, then calls `closeSurface(handle)` + `releaseSharedFrame(frameId)`
+3. Stale handles (>10s) force-released by client-side cleanup timer
+4. Orphaned server clones (>30s) purged by TTL sweep in `grabSharedFrame`
+
+### When dxSS is NOT used
+
+- Vite dev mode: explicitly disabled (`setSharedSurfaceOutputType(0)`)
+- Electron dev mode: Vite handles gRPC, no GrpcProxyServer
+- Non-Windows: native addon returns `isAvailable() = false`
+- No GPU: D3D11 device creation fails, falls back to pixel path
