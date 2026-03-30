@@ -18,7 +18,7 @@ export function registerRenderControlTools(server: McpServer, client: OctaneMcpC
     {
       title: 'Set Clay Mode',
       description:
-        '[Phase 1 entry/exit] Toggle clay rendering for scene layout verification. Mode 2 (color clay) ON for Phase 1, OFF (mode 0) at Phase 2 start. Modes: 0=none (normal), 1=grey clay, 2=color clay.',
+        'Toggle clay rendering for scene layout verification. When AD is active: mode 2 ON for Phase 1, OFF at Phase 2 start. Modes: 0=none (normal), 1=grey clay, 2=color clay.',
       inputSchema: {
         mode: z.number().int().min(0).max(2).describe('Clay mode: 0=none, 1=grey, 2=color'),
       },

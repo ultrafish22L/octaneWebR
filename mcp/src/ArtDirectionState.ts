@@ -131,6 +131,14 @@ export const PASS_THRESHOLD = 3.5;
 export const MIN_DIMENSION_SCORE = 2;
 
 export type AdMode = 'active' | 'inactive';
+export type BuildMode = 'shop' | 'dress' | 'show' | null;
+
+/** AD flag defaults per build mode */
+const BUILD_MODE_AD_DEFAULTS: Record<string, AdMode> = {
+  shop: 'inactive',
+  dress: 'active',
+  show: 'active',
+};
 
 // ── Workflow checklist ────────────────────────────────────────────
 
@@ -250,6 +258,7 @@ export class ArtDirectionState {
   private history = new Map<string, CritiqueRecord[]>();
   private _handleMap = new Map<string, number>(); // objectId → Octane handle
   private _mode: AdMode = 'inactive';
+  private _buildMode: BuildMode = null;
   private _completedSteps = new Set<AdStep>();
   private _stepNotes = new Map<AdStep, string>(); // quality/status annotations per step
   private _lastCalibration: CachedCalibration | null = null;
@@ -270,6 +279,23 @@ export class ArtDirectionState {
 
   get isActive(): boolean {
     return this._mode === 'active';
+  }
+
+  // ── Build mode ──────────────────────────────────────────────────
+
+  get buildMode(): BuildMode {
+    return this._buildMode;
+  }
+
+  /** Set build mode and auto-set AD flag per defaults (SHOP→off, DRESS/SHOW→on).
+   *  Pass null to clear build mode. AD flag can still be overridden with setMode(). */
+  setBuildMode(mode: BuildMode): void {
+    this._buildMode = mode;
+    if (mode) {
+      this._mode = BUILD_MODE_AD_DEFAULTS[mode] ?? 'inactive';
+    } else {
+      this._mode = 'inactive';
+    }
   }
 
   // ── Workflow checklist ────────────────────────────────────────────
@@ -488,11 +514,14 @@ export class ArtDirectionState {
     this._handleMap.clear();
     this._completedSteps.clear();
     this._stepNotes.clear();
+    this._buildMode = null;
     // mode persists across clear — user toggles it explicitly
   }
 
   /** Summary for get_art_direction_state tool */
   getSummary(): {
+    build_mode: BuildMode;
+    ad_active: boolean;
     specs: string[];
     scores: Record<
       string,
@@ -513,6 +542,8 @@ export class ArtDirectionState {
       };
     }
     return {
+      build_mode: this._buildMode,
+      ad_active: this.isActive,
       ad_mode: this._mode,
       workflow: this._mode === 'active' ? this.getWorkflowStatus() : undefined,
       specs: this.listSpecs(),

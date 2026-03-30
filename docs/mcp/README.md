@@ -220,11 +220,11 @@ Beyond basic node manipulation, the MCP server includes several high-level syste
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | **Project**         | `load_project`, `save_project`, `reset_project`                                                                                                                    | Open/save/clear scenes                                                                                                         |
 | **Camera**          | `get_camera`, `set_camera`, `fit_camera`                                                                                                                           | Read/set camera, auto-frame scene (elevation/yaw/margin)                                                                       |
-| **Render**          | `start_render`, `stop_render`, `get_render_status`, `save_render`, `save_render_passes`, `save_render_passes_exr`                                                  | Control rendering, export images and AOV passes                                                                                |
+| **Render**          | `start_render`, `stop_render`, `get_render_status`, `save_render`, `save_render_passes`                                                                            | Control rendering, export images and AOV passes                                                                                |
 | **Scene**           | `get_scene_tree`, `list_node_types`, `flush_changes`                                                                                                               | Query hierarchy, 755+ node types, flush pending changes                                                                        |
 | **Nodes**           | `create_node`, `delete_node`, `get_node_info`, `connect_nodes`, `disconnect_pin`, `create_connected`, `find_nodes`, `clone_node`, `rename_node`, `cleanup_orphans` | Build and manage the node graph                                                                                                |
 | **Attributes**      | `set_attribute`, `get_attribute`, `list_attributes`, `describe_attribute`, `read_pin_value`, `check_animated`, `list_animated_attributes`                          | Read/write node properties and metadata                                                                                        |
-| **Import**          | `import_geo`, `place_geo`, `import_materialx`                                                                                                                      | OBJ/GLB/glTF → Octane nodes + wiring. `place_geo` preferred (reads sidecar, auto-wires)                                        |
+| **Import**          | `analyze_geo`, `place_geo`, `import_materialx`                                                                                                                     | OBJ/GLB/glTF → Octane nodes + wiring. `place_geo` handles full pipeline (sidecar, wiring, registration)                        |
 | **Mesh Placement**  | `analyze_geo`, `suggest_placement`, `register_scene_object`, `get_scene_placement_state`                                                                           | Pre-build mesh analysis, collision-free placement                                                                              |
 | **AD Composition**  | `plan_composition`, `validate_layout`, `analyze_reference`, `critique_render`, `apply_corrections`, `evaluate_semantics`, `get_art_direction_state`                | Spatial layout, camera math, vision critique loop. See [AD System](../ADSYSTEM.md)                                             |
 | **SEGA**            | `set_artistic_intent`, `adjust_artistic_intent`, `get_artistic_intent`                                                                                             | Mood via preset, vector, or natural language (15 dimensions). See [AD System](../ADSYSTEM.md#sega--semantic-artistic-guidance) |
@@ -239,7 +239,7 @@ Beyond basic node manipulation, the MCP server includes several high-level syste
 
 ### MCP Resources (9 read-only)
 
-See [REFERENCE.md §11](./REFERENCE.md) for the full resource table. Key resources: `octane://pin-layout/{typeName}` (resolves pin_index vs pin_id confusion), `octane://scene` (current scene snapshot).
+See [REFERENCE.md §8](./REFERENCE.md) for the full resource table. Key resources: `octane://pin-layout/{typeName}` (resolves pin_index vs pin_id confusion), `octane://scene` (current scene snapshot).
 
 ---
 
@@ -251,7 +251,7 @@ See [REFERENCE.md §11](./REFERENCE.md) for the full resource table. Key resourc
 
 ## Scene Building
 
-For build workflow and phases: [BUILD.md](./BUILD.md). For pin layouts and attribute IDs: [REFERENCE.md](./REFERENCE.md). For pitfalls: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+For build workflow and phases: [BUILD.md](./BUILD.md). For pin layouts and attribute IDs: [REFERENCE.md](./REFERENCE.md).
 
 Environment variables: `OCTANE_HOST` (default `127.0.0.1`), `OCTANE_PORT` (default `51022`).
 
@@ -262,4 +262,3 @@ Environment variables: `OCTANE_HOST` (default `127.0.0.1`), `OCTANE_PORT` (defau
 - [REFERENCE.md](./REFERENCE.md) — Pin layouts, node type IDs, attribute enums, material presets
 - [BUILD.md](./BUILD.md) — Build protocols — DRESS (rehearsal) and SHOW (performance)
 - [CREATIVE.md](./CREATIVE.md) — Lighting, materials, composition, OTOY Studio pipeline
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — All known problems and workarounds

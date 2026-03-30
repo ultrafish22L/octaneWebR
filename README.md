@@ -1,4 +1,4 @@
-# OctaneWebR v2.4.5
+# OctaneWebR v2.4.6
 
 A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 
@@ -123,10 +123,10 @@ octaneWebR/
 ├── temp/                        # Renders, test output, scratch (not committed)
 └── docs/
     ├── ADSYSTEM.md              # Art Direction system explainer (start here for AD/SEGA)
+    ├── CHANGELOG.md             # Version history
     ├── mcp/                     # MCP docs: user guide, reference, build protocols, creative
-    ├── project/                 # Architecture, changelog, SEGA design spec
-    ├── ui/                      # UI implementation notes
-    └── recipes/                 # Scene recipes (creative briefs)
+    ├── recipes/                 # Scene recipes (creative briefs)
+    └── archive/                 # Historical docs (SEGA spec, UI implementation, etc.)
 ```
 
 ## Environment Variables
@@ -153,17 +153,16 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 ## Documentation
 
-| Doc                                                            | What's In It                                                                   |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [QUICKSTART.md](./QUICKSTART.md)                               | Full setup guide — running in 5 minutes                                        |
-| [docs/mcp/README.md](./docs/mcp/README.md)                     | Complete MCP user guide — all 78 tools, tips, pitfalls                         |
-| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)               | Lookup tables — pin layouts, node types, attribute IDs, presets                |
-| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                       | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                  |
-| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                 | Creative guide — lighting, materials, composition                              |
-| [docs/ADSYSTEM.md](./docs/ADSYSTEM.md)                         | Art Direction system — composition, SEGA mood, vision critique, asset pipeline |
-| [docs/mcp/TROUBLESHOOTING.md](./docs/mcp/TROUBLESHOOTING.md)   | Known issues and workarounds                                                   |
-| [docs/project/ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) | Architecture and design patterns                                               |
-| [docs/project/CHANGELOG.md](./docs/project/CHANGELOG.md)       | Version history                                                                |
+| Doc                                                           | What's In It                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [QUICKSTART.md](./QUICKSTART.md)                              | Full setup guide — running in 5 minutes                                        |
+| [docs/mcp/README.md](./docs/mcp/README.md)                    | Complete MCP user guide — all 78 tools, tips, pitfalls                         |
+| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)              | Lookup tables — pin layouts, node types, attribute IDs, presets                |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                      | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                  |
+| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                | Creative guide — lighting, materials, composition                              |
+| [docs/ADSYSTEM.md](./docs/ADSYSTEM.md)                        | Art Direction system — composition, SEGA mood, vision critique, asset pipeline |
+| [octaneServGrpc/docs/TODO.md](../octaneServGrpc/docs/TODO.md) | Unimplemented RPCs, SDK limitations, open items                                |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                      | Version history                                                                |
 
 ### External Resources
 

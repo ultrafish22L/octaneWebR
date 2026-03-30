@@ -11,14 +11,89 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { OctaneMcpClient } from './OctaneMcpClient';
 import { ApiCache } from './ApiCache';
+import { ArtDirectionState } from './ArtDirectionState';
 import { AttributeId, AttrType, RT_PINS, RenderPassId } from './shared/OctaneConstants';
 import { PRESETS } from './sega/presets';
 import { DIMENSIONS } from './sega/registry';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// ── Doc section parser ──────────────────────────────────────────────
+
+interface DocSection {
+  number: string; // "1", "2", "0b", etc.
+  title: string;
+  content: string;
+}
+
+/** Parse `## §N Title` sections from a markdown file. Returns map of section number → content. */
+function parseDocSections(filePath: string): Map<string, DocSection> {
+  const sections = new Map<string, DocSection>();
+  try {
+    const text = fs.readFileSync(filePath, 'utf-8');
+    const lines = text.split('\n');
+    const sectionRegex = /^## §(\S+)\s+(.+)$/;
+
+    let current: { number: string; title: string; startLine: number } | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(sectionRegex);
+      if (match) {
+        // Close previous section
+        if (current) {
+          sections.set(current.number, {
+            number: current.number,
+            title: current.title,
+            content: lines.slice(current.startLine, i).join('\n').trim(),
+          });
+        }
+        current = { number: match[1], title: match[2], startLine: i };
+      }
+    }
+    // Close final section
+    if (current) {
+      sections.set(current.number, {
+        number: current.number,
+        title: current.title,
+        content: lines.slice(current.startLine).join('\n').trim(),
+      });
+    }
+  } catch {
+    // File not found — return empty map
+  }
+  return sections;
+}
+
+// Resolve docs path relative to this file's location (mcp/src/ → ../../docs/mcp/)
+const DOCS_DIR = path.resolve(__dirname, '..', '..', 'docs', 'mcp');
+
+/** Known doc files with their short aliases */
+const DOC_FILES: Record<string, string> = {
+  build: path.join(DOCS_DIR, 'BUILD.md'),
+  reference: path.join(DOCS_DIR, 'REFERENCE.md'),
+  creative: path.join(DOCS_DIR, 'CREATIVE.md'),
+  testing: path.join(DOCS_DIR, 'TESTING.md'),
+  compat: path.join(DOCS_DIR, 'ALPHA5_COMPAT.md'),
+};
+
+/** Lazy-loaded section cache */
+let docCache: Map<string, Map<string, DocSection>> | null = null;
+
+function getDocCache(): Map<string, Map<string, DocSection>> {
+  if (!docCache) {
+    docCache = new Map();
+    for (const [alias, filePath] of Object.entries(DOC_FILES)) {
+      docCache.set(alias, parseDocSections(filePath));
+    }
+  }
+  return docCache;
+}
 
 export function registerResources(
   server: McpServer,
   client: OctaneMcpClient,
-  cache: ApiCache | null
+  cache: ApiCache | null,
+  artState?: ArtDirectionState
 ) {
   // ── Static Resources (Tier 1 — ApiCache) ──────────────────────────
 
@@ -475,5 +550,118 @@ export function registerResources(
         },
       ],
     })
+  );
+
+  // ── AD Mode Resource ─────────────────────────────────────────────
+
+  server.resource(
+    'ad-mode',
+    'octane://ad/mode',
+    {
+      description:
+        'Current AD (Art Direction) state: build mode (SHOP/DRESS/SHOW), AD flag (on/off), and mode descriptions. Read to check if structured build is active.',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'octane://ad/mode',
+          text: JSON.stringify(
+            {
+              build_mode: artState?.buildMode ?? null,
+              ad_active: artState?.isActive ?? false,
+              description: artState?.isActive
+                ? `${(artState.buildMode ?? 'custom').toUpperCase()} — AD active. Phases enforced, critique loop active.`
+                : artState?.buildMode
+                  ? `${artState.buildMode.toUpperCase()} — AD inactive. Tools work freely.`
+                  : 'No build mode set. Freeform — all tools available without phase enforcement.',
+              modes: {
+                shop: { purpose: 'Workshop / quick test', ad_default: false },
+                dress: { purpose: 'Rehearsal / dev build', ad_default: true },
+                show: { purpose: 'Live demo', ad_default: true },
+              },
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  // ── Documentation Section Resources ──────────────────────────────
+
+  server.resource(
+    'docs-index',
+    'octane://docs',
+    {
+      description:
+        'Index of all documentation sections. Lists available files (build, reference, creative, testing, compat) and their § sections. Use octane://docs/{file}/{section} to read a specific section.',
+    },
+    async () => {
+      const cache = getDocCache();
+      const index: Record<string, { sections: Array<{ number: string; title: string }> }> = {};
+      for (const [alias, sections] of cache) {
+        index[alias] = {
+          sections: Array.from(sections.values()).map(s => ({
+            number: s.number,
+            title: s.title,
+          })),
+        };
+      }
+      return {
+        contents: [{ uri: 'octane://docs', text: JSON.stringify(index, null, 2) }],
+      };
+    }
+  );
+
+  server.resource(
+    'docs-section',
+    new ResourceTemplate('octane://docs/{file}/{section}', { list: undefined }),
+    {
+      description:
+        'Read a specific § section from MCP docs. Files: build, reference, creative, testing, compat. Example: octane://docs/reference/6 → §6 Coordinate System.',
+    },
+    async (uri, variables) => {
+      const file = String(variables.file).toLowerCase();
+      const sectionNum = String(variables.section);
+      const uriStr = uri.toString();
+      const cache = getDocCache();
+      const fileSections = cache.get(file);
+
+      if (!fileSections) {
+        const available = Array.from(cache.keys()).join(', ');
+        return {
+          contents: [
+            {
+              uri: uriStr,
+              text: JSON.stringify({
+                error: `Unknown doc file: "${file}". Available: ${available}`,
+              }),
+            },
+          ],
+        };
+      }
+
+      const section = fileSections.get(sectionNum);
+      if (!section) {
+        const available = Array.from(fileSections.values())
+          .map(s => `§${s.number} ${s.title}`)
+          .join(', ');
+        return {
+          contents: [
+            {
+              uri: uriStr,
+              text: JSON.stringify({
+                error: `No §${sectionNum} in ${file}. Available: ${available}`,
+              }),
+            },
+          ],
+        };
+      }
+
+      return {
+        contents: [{ uri: uriStr, text: section.content }],
+      };
+    }
   );
 }

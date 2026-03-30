@@ -158,9 +158,9 @@ export function registerCameraTools(
   server.registerTool(
     'set_camera',
     {
-      title: 'Set Camera (Phase 4)',
+      title: 'Set Camera',
       description:
-        '[Phase 4 ONLY] Set camera position and/or target in world coordinates. ⛔ Do NOT use in Phase 1 — use fit_camera instead. set_camera is for Phase 4 hero shots only. If framing is wrong, fix geometry (position/scale/floor size), not the camera.',
+        'Set camera position and/or target in world coordinates. ⛔ When AD is active, Phase 4 ONLY — use fit_camera for framing. If framing is wrong, fix geometry (position/scale/floor size), not the camera.',
       inputSchema: {
         position: Vec3Schema.optional().describe('Camera position in world coordinates'),
         target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
@@ -205,9 +205,9 @@ export function registerCameraTools(
   server.registerTool(
     'fit_camera',
     {
-      title: 'Fit Camera (Phase 1)',
+      title: 'Fit Camera',
       description:
-        '[Phase 1] MANDATORY after every geo placement. Compute and set camera to frame a bounding box. Must pass before any lighting/mood work (Phase 2). Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
+        'Compute and set camera to frame a bounding box. Call after every geo placement. Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
       inputSchema: {
         bbox_min: Vec3Schema.optional().describe(
           'Min corner of bounding box. Omit to auto-query scene bounds.'

@@ -555,7 +555,7 @@ export function registerArtDirectionTools(
     {
       title: 'Plan Composition',
       description:
-        '[Phase 0] Create validated composition plan with camera math. Pure planning — no Octane nodes created. Returns plan + validation.',
+        '[AD Phase 0] Create validated composition plan with camera math. Pure planning — no Octane nodes created. Returns plan + validation.',
       inputSchema: {
         name: z.string().describe('Unique name for this composition'),
         description: z.string().describe('Creative brief'),
@@ -638,7 +638,7 @@ export function registerArtDirectionTools(
     {
       title: 'Validate Layout',
       description:
-        '[Phase 0] Run geometric validation on a planned composition BEFORE building scene nodes. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
+        '[AD Phase 0] Run geometric validation on a planned composition BEFORE building scene nodes. Checks frustum, depth separation, proximity, composition grid, lighting angles.',
       inputSchema: { spec_name: z.string() },
       annotations: { readOnlyHint: true },
     },
@@ -662,7 +662,7 @@ export function registerArtDirectionTools(
     {
       title: 'Analyze Reference',
       description:
-        '[Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
+        '[AD Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
       inputSchema: {
         image_path: z.string().describe('Absolute path to reference image'),
         scene_description: z.string(),
@@ -756,7 +756,7 @@ export function registerArtDirectionTools(
     {
       title: 'Critique Render',
       description:
-        '[Phase 3] Save and score current render via VLM. Framing must be ≥3 before lighting/mood scores matter.',
+        '[AD Phase 3] Save and score current render via VLM. Framing must be ≥3 before lighting/mood scores matter.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to save render'),
         spec_name: z.string(),
@@ -764,6 +764,13 @@ export function registerArtDirectionTools(
           .string()
           .optional()
           .describe('Path to reference image for side-by-side comparison'),
+        verbose: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            'Include raw Sonnet prompt and response in output (default false). Use for debugging critique results.'
+          ),
       },
       annotations: { destructiveHint: true, openWorldHint: true },
     },
@@ -902,21 +909,23 @@ export function registerArtDirectionTools(
             comparison: comparisonResult,
           });
 
-          // Build multi-content response with labeled transparency blocks
+          // Build multi-content response — verbose blocks only when requested
           const content: Array<{ type: 'text'; text: string }> = [];
 
-          content.push({
-            type: 'text',
-            text: `--- SONNET CRITIQUE PROMPT ---\n${comparisonResult.promptSent}\n--- END PROMPT ---`,
-          });
-          content.push({
-            type: 'text',
-            text: `--- SONNET CRITIQUE IMAGES ---\nconcept: ${path.resolve(conceptPath!)}\nrender: ${resolved}\n--- END IMAGES ---`,
-          });
-          content.push({
-            type: 'text',
-            text: `--- SONNET CRITIQUE RESPONSE ---\n${comparisonResult.vlmRawResponse}\n--- END RESPONSE ---`,
-          });
+          if (params.verbose) {
+            content.push({
+              type: 'text',
+              text: `--- SONNET CRITIQUE PROMPT ---\n${comparisonResult.promptSent}\n--- END PROMPT ---`,
+            });
+            content.push({
+              type: 'text',
+              text: `--- SONNET CRITIQUE IMAGES ---\nconcept: ${path.resolve(conceptPath!)}\nrender: ${resolved}\n--- END IMAGES ---`,
+            });
+            content.push({
+              type: 'text',
+              text: `--- SONNET CRITIQUE RESPONSE ---\n${comparisonResult.vlmRawResponse}\n--- END RESPONSE ---`,
+            });
+          }
 
           // ── Final JSON result ──
           content.push({
@@ -933,9 +942,9 @@ export function registerArtDirectionTools(
                 mood_match: comparisonResult.mood_match,
                 density_match: comparisonResult.density_match,
                 composition_match: comparisonResult.composition_match,
-                missing_elements: comparisonResult.missing_elements,
-                top_fixes: comparisonResult.top_fixes,
-                notes: comparisonResult.notes,
+                missing_elements: comparisonResult.missing_elements?.slice(0, 5),
+                top_fixes: comparisonResult.top_fixes?.slice(0, 3),
+                notes: comparisonResult.notes?.slice(0, 200),
                 // Verdict
                 overall: overallScore,
                 passed,
@@ -990,7 +999,7 @@ export function registerArtDirectionTools(
     {
       title: 'Apply Corrections',
       description:
-        '[Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
+        '[AD Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
       inputSchema: {
         spec_name: z.string(),
         iteration: z.number().int(),
@@ -1092,16 +1101,32 @@ export function registerArtDirectionTools(
     {
       title: 'Art Direction State',
       description:
-        'Get current art direction state: specs, scores, iteration history, stagnation status. Pass set_mode to toggle AD workflow on/off.',
+        'Get or set AD (Art Direction) state. Build modes: SHOP (fast, AD off), DRESS (full pipeline, AD on), SHOW (live demo, AD on). ' +
+        'Pass build_mode to set mode — AD flag auto-set per defaults. Pass set_mode to manually override AD on/off. ' +
+        'Returns: build mode, AD flag, specs, scores, iteration history.',
       inputSchema: {
+        build_mode: z
+          .enum(['shop', 'dress', 'show'])
+          .optional()
+          .describe(
+            'Set build mode. SHOP=fast/AD off, DRESS=full pipeline/AD on, SHOW=live demo/AD on. AD flag auto-set per defaults.'
+          ),
         set_mode: z
           .enum(['active', 'inactive'])
           .optional()
-          .describe('If provided, toggles AD enforcement mode before returning state'),
+          .describe(
+            'Manual AD override — "active" or "inactive". Use for "no AD" or "use AD" flags.'
+          ),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ set_mode }) => {
+    async ({ build_mode, set_mode }) => {
+      // build_mode sets both mode and AD flag per defaults
+      if (build_mode) {
+        artState.setBuildMode(build_mode);
+        artState.resetWorkflow();
+      }
+      // set_mode overrides AD flag (e.g. "no AD" on a DRESS build)
       if (set_mode) {
         artState.setMode(set_mode);
         if (set_mode === 'active') {
@@ -1109,19 +1134,16 @@ export function registerArtDirectionTools(
         }
       }
       const summary = artState.getSummary();
+      const adActive = summary.ad_active;
       return jsonResult({
         ...summary,
-        ...(set_mode === 'active'
+        ...(build_mode || set_mode
           ? {
-              instruction:
-                'AD workflow ACTIVE. Workflow checklist started. Every tool response will include your progress and next step. Follow the checklist.',
+              instruction: adActive
+                ? `AD workflow ACTIVE (${summary.build_mode ?? 'custom'}). Phases enforced, critique loop active. Follow the workflow checklist.`
+                : `AD workflow INACTIVE (${summary.build_mode ?? 'freeform'}). All tools work freely with no phase enforcement.`,
             }
-          : set_mode === 'inactive'
-            ? {
-                instruction:
-                  'AD workflow INACTIVE. All tools work freely with no phase enforcement.',
-              }
-            : {}),
+          : {}),
       });
     }
   );
@@ -1173,7 +1195,7 @@ export function registerArtDirectionTools(
     {
       title: 'Suggest Placement',
       description:
-        '[Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
+        '[AD Phase 1] Given existing scene objects and a new mesh to add, suggest position/rotation/scale that avoids collisions, maintains spacing, and respects composition. Call fit_camera after placing each object. Advisory only — override if scene intent differs.',
       inputSchema: {
         mesh_path: z.string().describe('Path to OBJ file (runs analyze_geo if no sidecar exists)'),
         role: z
@@ -1304,7 +1326,7 @@ export function registerArtDirectionTools(
     {
       title: 'Register Scene Object',
       description:
-        '[Phase 1] Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
+        '[AD Phase 1] Register a placed object in the scene awareness database. Call after placing each mesh/primitive so suggest_placement knows what exists. Also used by validate_layout for physical checks.',
       inputSchema: {
         handle: z.number().int().min(0).describe('Node handle of the placed object'),
         name: z.string().describe('Display name (e.g. "Fairy", "Crystal Sphere")'),

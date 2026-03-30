@@ -2,7 +2,9 @@
 
 Lookup tables for MCP scene building. Don't read front-to-back — find what you need.
 
-**Live type system discovery**: Use MCP resources instead of memorizing values (§11).
+**Prefer high-level tools** (`place_geo`, `setup_lighting`, `create_light`, `suggest_material`) over manual wiring. These tables are for understanding what those tools do and for edge cases they don't cover.
+
+**Live type system discovery**: Use MCP resources instead of memorizing values (§8).
 
 Hardcoded protocol constants (AttrType, AttributeId, PIN_TYPE_NAMES, RT_PINS) live in `shared/OctaneConstants.ts`.
 
@@ -32,8 +34,6 @@ get_geometry_stats()                                    # VERIFY — triCount mu
 **Without flush_changes():** A_RELOAD may report success without actually loading the mesh. Always flush after reload.
 
 Image textures don't need A_RELOAD — they load on connect.
-
-For compat-mode quirks (mesh unloading, etc.) see `ALPHA5_COMPAT.md`.
 
 ---
 
@@ -77,17 +77,13 @@ For compat-mode quirks (mesh unloading, etc.) see `ALPHA5_COMPAT.md`.
 
 ## §3 RT Pin Layout
 
-| Pin | Name        | Type            | Notes                                            |
-| --- | ----------- | --------------- | ------------------------------------------------ |
-| 0   | camera      | PT_CAMERA       | Auto-created (Thin lens)                         |
-| 1   | environment | PT_ENVIRONMENT  | Auto-created. Connect via `pin_id:43`            |
-| 3   | **mesh**    | **PT_GEOMETRY** | **pin_index:3 ONLY** (pin_id:59 silently fails!) |
-| 4   | film        | PT_FILM         | Auto-created, resolution on grandchild           |
-| 6   | kernel      | PT_KERNEL       | Auto-created (DL). Connect via `pin_id:89`       |
-
-**DOF off:** Auto-disabled on new RTs (`create_node(NT_RENDERTARGET)` sets aperture to 0). To re-enable: RT→pin0→camera→pin14→aperture child→`set_attribute(child, 185, 9, 0.893)`.
-
-**Film resolution:** `get_node_info(film)`→pin0→child→`set_attribute(child, 185, AT_INT2=4, {1024,576})`
+| Pin | Name        | Type            | Notes                                  |
+| --- | ----------- | --------------- | -------------------------------------- |
+| 0   | camera      | PT_CAMERA       | Auto-created (Thin lens)               |
+| 1   | environment | PT_ENVIRONMENT  | Auto-created                           |
+| 3   | **mesh**    | **PT_GEOMETRY** | **pin_index:3 ONLY**                   |
+| 4   | film        | PT_FILM         | Auto-created, resolution on grandchild |
+| 6   | kernel      | PT_KERNEL       | Auto-created (DL)                      |
 
 ---
 
@@ -126,86 +122,9 @@ For compat-mode quirks (mesh unloading, etc.) see `ALPHA5_COMPAT.md`.
 
 ---
 
-## NT_GEO_OBJECT Pin Layout
+## §5 Material Presets
 
-| Pin   | Name      | Child Type | Notes                                                                                     |
-| ----- | --------- | ---------- | ----------------------------------------------------------------------------------------- |
-| 0     | primitive | Enum       | `set_attribute(child, 185, 3, N)` — Box(1) default. All 23 types supported (values 1-23). |
-| 1     | material  | Diffuse    | Auto-created. Color: `get_node_info(mat)`→pin0→RGB child                                  |
-| 3     | transform | Transform  | A_TRANSLATION/ROTATION/SCALE on **child handle, NOT parent**                              |
-| 4/5/6 | W/H/D     | Float      | `set_attribute(child, 185, 9, value)`                                                     |
-
-## NT_GEO_PLACEMENT Pin Layout
-
-| Pin | Name      | Notes                                                             |
-| --- | --------- | ----------------------------------------------------------------- |
-| 0   | transform | A_TRANSLATION=172, A_ROTATION=137, A_SCALE=139 (all AT_FLOAT3=11) |
-| 1   | geometry  | Connect mesh via `pin_name: "geometry"`                           |
-
----
-
-## §5 Connection Patterns
-
-### Wiring Chain
-
-```
-material → NT_GEO_MESH (pin_index: 0) or NT_GEO_OBJECT (pin_index: 1)
-mesh → placement (pin_name: "geometry")
-placement → geo group (pin_index: N, 0-based)
-geo group → RT (pin_index: 3)
-```
-
-### What Works vs What Fails
-
-| Target            | Works                             | Silently fails                       |
-| ----------------- | --------------------------------- | ------------------------------------ |
-| RT geometry       | `pin_index: 3`                    | `pin_id: 59`                         |
-| Mesh material     | `pin_index: 0`                    | `pin_id: 30`                         |
-| Geo group inputs  | `pin_index: N` (0-based)          | `pin_name: "Input N"`                |
-| RT kernel         | `pin_id: 89`                      | —                                    |
-| RT environment    | `pin_id: 43` OR `pin_index: 1`    | — (both work, prefer `pin_id: 43`)   |
-| Geo group (fresh) | `connect_nodes` auto-expands pins | Finds first empty slot automatically |
-
-### Verified Connections
-
-```
-RGB/Image texture → material diffuse pin_id: 30
-Blackbody emission → material pin_id: 41 (P_EMISSION)
-Geometry → geo group pin_index: N
-Geo group → RT pin_index: 3
-Geo object → RT pin_index: 3 (auto-creates group)
-PT kernel → RT pin_id: 89
-Environment → RT pin_id: 43
-```
-
-### Image Texture on Material
-
-```
-create_node(NT_TEX_IMAGE) → TEX
-set_attribute(TEX, A_FILENAME=34, AT_STRING=14, "/absolute/path/image.jpg")
-connect_nodes(TEX → material, pin_index: 0)   # replaces auto-created RGB child
-```
-
-No A_RELOAD needed for textures.
-
-### Sphere Light Wiring
-
-```
-NT_EMIS_BLACKBODY → NT_MAT_DIFFUSE via pin_id: 41
-NT_MAT_DIFFUSE → NT_LIGHT_SPHERE pin_index: 1
-```
-
-Transform uses `A_TRANSLATION=172`, NOT `A_VALUE=185`.
-
-### Emission Workaround
-
-Auto-created materials on NT_GEO_OBJECT reject emission. Create standalone NT_MAT_DIFFUSE, connect emission via `pin_name: "emission"`, then connect to geo pin 1.
-
----
-
-## §6 Material Presets
-
-All use `get_node_info` to find child handles, then `set_attribute(child, 185, type, value)`.
+All use `suggest_material(surface_type)` for recommended values. These tables are for manual overrides.
 
 ### Universal Material (NT_MAT_UNIVERSAL)
 
@@ -216,106 +135,17 @@ All use `get_node_info` to find child handles, then `set_attribute(child, 185, t
 | **Plastic** | any color         | 0                | 0.2               |
 | **Fabric**  | any color         | 0                | 0.9               |
 
-### Glossy Material (NT_MAT_GLOSSY) — set IOR to 100 for metallic Fresnel
-
-| Material | Diffuse (pin 0) | Specular | Roughness | IOR (pin 12) |
-| -------- | --------------- | -------- | --------- | ------------ |
-| **Gold** | {1, 0.84, 0}    | 1.0      | 0.15      | 100          |
-
-### Specular Material (NT_MAT_SPECULAR) — glass
-
-| Property          | Pin                 | Value                             |
-| ----------------- | ------------------- | --------------------------------- |
-| Transmission type | pin 1 child         | 1 (specular)                      |
-| IOR               | pin 7 (index) child | 1.5                               |
-| Albedo            | pin 0 child         | {0.85, 0.95, 1.0} light blue tint |
-
-### Quick Color Recipes (auto-created diffuse)
+### Quick Color Recipes
 
 RGB child on pin 0: `set_attribute(child, 185, 11, {r,g,b})`
 
-White={0.9, 0.9, 0.9}, Red={0.65, 0.05, 0.05}, Green={0.12, 0.45, 0.15}, Loud Red={1.0, 0.1, 0.05}
+White={0.9, 0.9, 0.9}, Red={0.65, 0.05, 0.05}, Green={0.12, 0.45, 0.15}
 
 Roughness scale: 0.01=mirror, 0.1=polished, 0.2=brushed, 0.3=satin, 0.5+=rough
 
 ---
 
-## §7 Emission
-
-| Pin | Name        | Type  | Notes                                          |
-| --- | ----------- | ----- | ---------------------------------------------- |
-| 0   | efficiency  | Float | **MUST set to 1.0** (defaults 0.025 = 40x dim) |
-| 1   | power       | Float | 200 for close-up, 4000+ for rooms              |
-| 5   | temperature | Float | Kelvin (see CREATIVE.md for temps)             |
-
----
-
-## §7a Primitive Types
-
-| Val | Shape         | Val | Shape          |
-| --- | ------------- | --- | -------------- |
-| 1   | Box (default) | 13  | Icosahedron    |
-| 2   | Capsule       | 14  | Octahedron     |
-| 3   | Cone          | 20  | Sphere         |
-| 4   | Cylinder      | 22  | Torus          |
-| 6   | Disc          | 23  | Truncated cone |
-
-All types 1-23 work on SDK server. Full list: 1-23 (alphabetical).
-
-Primitive type changes work on SDK server — all 23 types tested (values 1-23).
-
----
-
-## §7b Daylight Presets
-
-### Sunset
-
-env→pin0(sundir)→pin4(hour)→child: `16.5`. env→pin1(turbidity)→child: `6.0`. sundir→pin0(latitude)→child: `40.0`.
-
-Setting A_VALUE on sundir directly does NOT work. Must navigate to hour child.
-
-### Noon
-
-Hour: `12.0`. Turbidity: `2.4` (default).
-
----
-
-## §7c Camera Presets
-
-| Scenario        | Position       | Target       |
-| --------------- | -------------- | ------------ |
-| Hero 3-object   | {1.25, 1.5, 8} | {1.25, 0, 0} |
-| Single object   | {0, 0.5, 4}    | {0, 0, 0}    |
-| Pull-back debug | {0, 5, 20}     | {0, 0, 0}    |
-
-Up vector: pin 22, defaults (0,1,0). `set_camera` resets to (0,1,0). NEVER set to (0,0,0).
-
----
-
-## §7d Render Pipeline
-
-See `BUILD.md` Phase 1 for the full setup sequence. Key points:
-
-- Use `fit_camera(elevation, yaw, margin)` AFTER geometry — auto-frames from bounds.
-- `get_art_direction_state` — inspect SEGA vector + critique history mid-build.
-- `start_render` auto-flushes `ApiChangeManager::update()`.
-- NT_GEO_OBJECT works on SDK server.
-
----
-
-## §7e Assets
-
-Path prefix: `ORBX/assets_test/`
-
-**Available meshes:** `sphere_hd.obj`, `floor.obj`
-
-**Also in directory:** `standard_surface_gold.mtlx` (caution: may return error on import), mugshot sidecars for sphere_hd.
-
-Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PLANE.
-
----
-
-## §8 Coordinate System
+## §6 Coordinate System
 
 +X=right, -X=left, +Y=up, -Y=down, +Z=toward camera, -Z=into scene.
 
@@ -323,7 +153,7 @@ Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PL
 
 ---
 
-## §9 Procedural Textures
+## §7 Procedural Textures
 
 ### NT_TEX_MIX (blend workhorse)
 
@@ -343,18 +173,7 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ---
 
-## §10 ApiInfo Methods
-
-| Method                                    | Returns                                 |
-| ----------------------------------------- | --------------------------------------- |
-| `getNodeTypes()`                          | All node types (755+)                   |
-| `nodeInfo(type)`                          | Pins, attributes, category, description |
-| `getCompatibleTypes(pinType)`             | What nodes can connect to a pin type    |
-| `getAttributeId(name)` / `getPinId(name)` | Name → ID reverse lookups               |
-
----
-
-## §11 MCP Resources
+## §8 MCP Resources
 
 9 read-only resources for live type system discovery. Use these instead of hardcoded values when exploring unfamiliar node types.
 
@@ -384,8 +203,10 @@ Pin 2=octaves (6-12), pin 3=omega (0.35-0.65), pin 4=transform (stretch for dire
 
 ---
 
-## §12 GLB Pipeline
+## §9 Assets
 
-OTOY Studio GLBs are Z-up → rotate +90° on X. Use `analyze_geo` for reliable orientation.
+Path prefix: `ORBX/assets_test/`
 
-Full GLB→OBJ conversion, texture extraction, and Octane loading workflow: see `BUILD.md` §8.
+**Available meshes:** `sphere_hd.obj`, `floor.obj`
+
+Only these two .obj files exist. For other shapes use NT_GEO_OBJECT or NT_GEO_PLANE.

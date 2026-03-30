@@ -28,7 +28,7 @@ export function registerCreativeTools(
     {
       title: 'Suggest Lighting',
       description:
-        '[Phase 2] Get lighting recipe from mood + scene bounds. Returns positions, colors (K), power, ratios. ' +
+        '[AD Phase 2] Get lighting recipe from mood + scene bounds. Returns positions, colors (K), power, ratios. ' +
         'PREFER setup_lighting() — creates lights automatically. This returns recipe only.',
       inputSchema: {
         mood: z
@@ -70,7 +70,7 @@ export function registerCreativeTools(
     {
       title: 'Suggest Material',
       description:
-        '[Phase 2] Get PBR values for a surface type. Returns roughness, metallic, specular, IOR, albedo. ' +
+        '[AD Phase 2] Get PBR values for a surface type. Returns roughness, metallic, specular, IOR, albedo. ' +
         "Apply via read_pin_value + set_attribute. Don't override albedo if mesh has .mtl textures. " +
         'Call with surface_type:"list" to see all types.',
       inputSchema: {
@@ -103,9 +103,9 @@ export function registerCreativeTools(
       return jsonResult({
         recipe,
         instruction:
-          'If mesh has .mtl textures: do NOT override albedo — apply ONLY roughness (pin 8), metallic (pin 4), specular (pin 6), IOR to the existing material. ' +
-          'If untextured: create NT_MAT_UNIVERSAL with albedo RGB (pin 2), roughness (pin 8), metallic (pin 4), specular (pin 6). ' +
-          'Emission: connect NT_EMIS_BLACKBODY to pin 44.',
+          'Apply with apply_material(material_handle, ...recipe values). ' +
+          'If mesh has .mtl textures: pass skip_albedo:true. ' +
+          'Emission: connect NT_EMIS_BLACKBODY to pin 44 separately.',
         ...(artState ? adWorkflow(artState, 'suggest_material') : {}),
       });
     }

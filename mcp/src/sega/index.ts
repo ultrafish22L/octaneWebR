@@ -70,7 +70,7 @@ export function registerSegaTools(
     {
       title: 'Set Artistic Intent',
       description:
-        '[Phase 0b / Phase 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
+        '[AD Phase 0b / 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
         'Drives suggest_lighting/suggest_material values. Returns resolved parameters + Berlyne warnings. ' +
         'Call with preset:"list" to see all presets.',
       inputSchema: {
@@ -263,7 +263,7 @@ export function registerSegaTools(
     {
       title: 'Adjust Artistic Intent',
       description:
-        '[Phase 2] Fine-tune a single semantic dimension. Absolute (set to value) or relative (delta from current). ' +
+        '[AD Phase 2] Fine-tune a single semantic dimension. Absolute (set to value) or relative (delta from current). ' +
         'Returns updated vector + resolved parameters + warnings.',
       inputSchema: {
         dimension: z
@@ -369,7 +369,7 @@ export function registerSegaTools(
     {
       title: 'Evaluate Semantics',
       description:
-        '[Phase 3] Measure mood/style gap between render and SEGA target. Returns gap vector + correction suggestions. Only useful after framing is correct.',
+        '[AD Phase 3] Measure mood/style gap between render and SEGA target. Returns gap vector + correction suggestions. Only useful after framing is correct.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to the rendered image (PNG)'),
         vlm_measurements: z

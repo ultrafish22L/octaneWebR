@@ -159,7 +159,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'Get Attribute',
       description:
-        '[All phases] Get a node attribute value by ID. Float/int value nodes use AT_FLOAT4/AT_INT4 internally — AT_FLOAT auto-extracts .x component.',
+        'Get a node attribute value by ID. Float/int value nodes use AT_FLOAT4/AT_INT4 internally — AT_FLOAT auto-extracts .x component.',
       inputSchema: {
         handle: z.number().int().nonnegative().describe('Node handle'),
         attribute_id: z.number().describe('Attribute ID (e.g. 185 for A_VALUE, 34 for A_FILENAME)'),
@@ -198,10 +198,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'Set Attribute',
       description:
-        '[All phases] Set a node attribute value by ID. Supports bool, int, float, float3, float4, string. ' +
-        'Gotchas: (1) Transform attrs → set on TRANSFORM CHILD (pin 3), NOT geo object. ' +
-        '(2) Rotation in DEGREES. (3) Scalar auto-wraps to float4. ' +
-        '(4) A_FILENAME bad path hangs 30s. (5) Emission efficiency: set to 1.0 (default 0.025 = 40x dim).',
+        'Set a node attribute value by ID. Supports bool, int, float, float3, float4, string. ' +
+        'Key gotcha: transform attrs (translation/rotation/scale) must be set on the TRANSFORM CHILD (pin 3), not the geo object itself. ' +
+        'See octane://constants for attribute IDs and type codes.',
       inputSchema: {
         handle: z.number().int().nonnegative().describe('Node handle'),
         attribute_id: z.number().describe('Attribute ID'),

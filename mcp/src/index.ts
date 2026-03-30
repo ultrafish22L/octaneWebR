@@ -183,7 +183,7 @@ async function main() {
   registerSegaTools(server, segaState, artState);
 
   // Register MCP Resources (read-only type system + scene state)
-  registerResources(server, client, cache);
+  registerResources(server, client, cache, artState);
 
   // Register MCP Prompts (workflow knowledge templates)
   registerPrompts(server);

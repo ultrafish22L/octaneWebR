@@ -1,6 +1,6 @@
 # Octane Build Guide
 
-How to construct scenes via MCP. For values, see `REFERENCE.md`. For problems, see `TROUBLESHOOTING.md`.
+How to construct scenes via MCP. For values, see `REFERENCE.md`.
 
 ## Who This Doc Is For
 
@@ -31,7 +31,36 @@ Each phase has hard gates — you don't move forward until the current phase pas
 
 ## §2 Build Modes
 
-**SCRATCH (Clean Start):** Kill all processes → restart serv (port 51022) → restart MCP (port 51023) → `preview_start` → `get_octane_version`. Required before any clean test run. **Full 12-step protocol:** `TROUBLESHOOTING.md` §SCRATCH.
+**SCRATCH (Clean Start):** Required before any clean test run, after MCP restart, or infra changes.
+
+1. Kill all processes (`taskkill //F //IM octane.exe`, `taskkill //F //IM octaneServGrpc.exe`)
+2. Stop preview server (`preview_stop`)
+3. Reset MCP (must fully kill, not just disconnect):
+   - `taskkill //F //IM node.exe` — kill ALL node processes
+   - Wait 3 seconds for ports to release
+   - Verify port 51023 is free: `powershell Get-NetTCPConnection -LocalPort 51023` — must return empty
+   - Trigger MCP restart: call any MCP tool (e.g. `get_octane_version`). Claude auto-restarts the MCP process.
+   - Check port 51023 — **must be listening now**
+   - **Race condition warning:** If you only kill the PID on 51023 (not all node processes), the port may not release fast enough. The new MCP starts, sees 51023 still in use, skips the relay, and the viewport stays dead forever (relay check only runs once at startup).
+4. Verify port 51022 AND 51023 both free
+5. Start octaneServGrpc, wait for port 51022
+6. Check `log_serv.log` for startup
+7. Wait a few seconds for the project MCP to auto-restart and connect to the new server
+8. Start dev server + preview (`preview_start`)
+9. `get_octane_version` — verify version + API detection
+10. Check `log_mcp.log` — must show `API version:` line AND `Callback streaming started` AND NO `Port 51023 in use`
+11. Check `log_grpc.log` — clean startup, no errors
+12. Preview screenshot — verify viewport is live (not grey/blank)
+
+Only after all 12 steps pass: proceed to DRESS or SHOW.
+
+### Build Gotchas
+
+| Problem                              | Fix                                                                              |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| `tsc -p mcp/tsconfig.json` OOMs      | **NEVER use tsc for MCP builds.** Use `cd mcp && npm run build` (esbuild, 10ms). |
+| MCP server running stale code        | `cd mcp && npm run build`, then `taskkill //F //IM node.exe` + restart           |
+| GrpcProxyServer changes not compiled | Always use `npm run build` (full build includes `build:grpc-server` step)        |
 
 ### Build Modes (after SCRATCH completes)
 
@@ -75,7 +104,7 @@ For pipeline tests, always use Standard complexity scenes.
 
 Every step produces a visible change. The human should see a render update within the first 4-5 MCP calls.
 
-**On failure: FULL STOP.** Follow the error protocol in `TROUBLESHOOTING.md` §8. Do not push forward. Do not try "one more thing." Fix → verify → then resume. Stopping is the point — DRESS is where you catch and fix problems.
+**On failure: FULL STOP.** Read the server error message — it tells you exactly what's wrong. Read all 4 log files (`log_serv.log`, `log_grpc.log`, `log_mcp.log`, `log_client.log`). Do not push forward. Fix → verify → then resume.
 
 ### ⛔ Autonomous Mode — Mandatory Phase Gates
 
@@ -85,7 +114,7 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 | ------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **G0** | `analyze_reference` was called on concept art                        | Scene has no composition data — layout will be random                               |
 | **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
-| **G2** | Every mesh ran through `analyze_geo` before `import_geo`             | Orientation will be wrong — wasted iterations                                       |
+| **G2** | Every mesh ran through `analyze_geo` before `place_geo`              | Orientation will be wrong — wasted iterations                                       |
 | **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
 | **G4** | `evaluate_semantics` ran at least once per scene                     | No SEGA gap measurement — you can't know what's wrong                               |
 | **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
@@ -444,8 +473,6 @@ While image-to-3D jobs are processing, build scene infrastructure:
 - Create and position ground plane with material
 - Set up `preview_screenshot` so user sees progress
 - Set artistic intent (if not done)
-
-**Do NOT use Chrome/browser for image-to-3D.** REST API replaces that. See `docs/mcp/OTOY_STUDIO.md`.
 
 ### Texture Prompt Templates
 

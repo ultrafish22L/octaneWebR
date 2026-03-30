@@ -34,10 +34,6 @@
 4. `load_project` from last checkpoint
 5. Resume from where you left off
 
-### Known Error Triggers
-
-- `import_materialx` — returns gRPC error on certain .mtlx files (standard_surface_gold.mtlx confirmed).
-
 ---
 
 ## §2 Test Categories
@@ -110,7 +106,7 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 | 4   | `save_render` (PNG)                             | File written, read confirms image   | Yes                 |
 | 5   | `save_render` (EXR)                             | File written without error          | —                   |
 | 6   | `get_enabled_aovs`                              | Returns pass ID list (may be empty) | —                   |
-| 7   | `save_render_passes` / `save_render_passes_exr` | success: true                       | —                   |
+| 7   | `save_render_passes` (multi_layer:false + true) | success: true                       | —                   |
 
 ### F. Render Control (6 tools)
 
@@ -163,12 +159,12 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### K. Color & MaterialX (4 tools)
 
-| #   | Test                   | Pass Criteria                                               |
-| --- | ---------------------- | ----------------------------------------------------------- |
-| 1   | `get_ocio_config`      | Returns config data or "no config" error                    |
-| 2   | `list_color_spaces`    | Returns color space list or "no config" error               |
-| 3   | `list_materialx_nodes` | Returns 100+ categories                                     |
-| 4   | `import_materialx`     | CAUTION — may return error on some files. Save scene first. |
+| #   | Test                   | Pass Criteria                                                           |
+| --- | ---------------------- | ----------------------------------------------------------------------- |
+| 1   | `get_ocio_config`      | Returns config data or "no config" error                                |
+| 2   | `list_color_spaces`    | Returns color space list or "no config" error                           |
+| 3   | `list_materialx_nodes` | Returns 100+ categories                                                 |
+| 4   | `import_materialx`     | Not implemented in octaneServGrpc (returns UNIMPLEMENTED). See TODO.md. |
 
 ### L. Project (3 tools)
 
@@ -218,7 +214,7 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 | Tool                 | Issue                                                | Severity |
 | -------------------- | ---------------------------------------------------- | -------- |
-| `import_materialx`   | Returns gRPC error on certain .mtlx files            | HIGH     |
+| `import_materialx`   | RPC not implemented in octaneServGrpc                | HIGH     |
 | `get_subsample_mode` | Returns stale value after set                        | LOW      |
 | `list_color_spaces`  | Fails without loaded OCIO config                     | EXPECTED |
 | `reset_project`      | `suppressUI` prevents blocking dialog — not an issue | N/A      |

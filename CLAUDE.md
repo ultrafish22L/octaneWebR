@@ -33,16 +33,17 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 | **Before critique**   | `getPrompt("scene-checklist")`                  | `CREATIVE.md` §5 (anti-CG)        |
 | **Run critique loop** | `getPrompt("critique-loop")`                    | `BUILD.md` Critique Loop section  |
 
-### Debugging (read ONLY the targeted section, not the whole file)
+### Debugging
 
-| Symptom                        | Read                          |
-| ------------------------------ | ----------------------------- |
-| All white / black / blurry     | `TROUBLESHOOTING.md` §5       |
-| Connection wired but invisible | `TROUBLESHOOTING.md` §4       |
-| MCP tool error                 | `TROUBLESHOOTING.md` §6       |
-| Build / compile error          | `TROUBLESHOOTING.md` §2       |
-| Full restart needed            | `TROUBLESHOOTING.md` §SCRATCH |
-| Octane API returns error       | `TROUBLESHOOTING.md` §7       |
+The server validates all inputs and returns descriptive gRPC errors. Read the error message — it tells you exactly what's wrong.
+
+| Symptom                     | Action                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| gRPC error with description | Read the error — it includes the fix (e.g. "pin 3 has no geometry connected") |
+| Build / compile error       | `BUILD.md` § Build Gotchas                                                    |
+| Full restart needed         | `BUILD.md` § SCRATCH                                                          |
+| SDK limitation              | `octaneServGrpc/docs/TODO.md` § SDK Limitations                               |
+| Log files                   | `octaneServGrpc/docs/BUILD.md` § Logging                                      |
 
 ### Reference lookup (MCP resources — no file reads needed)
 
@@ -92,4 +93,4 @@ These are hard constraints that apply regardless of which prompt you're followin
 
 - **Version bump:** `MCP_BUILD` in `mcp/src/tools/info.ts` → rebuild → kill node.exe → verify
 - **MCP log:** `log_mcp.log` — use `clear_log` before test runs
-- **SCRATCH:** Full restart → `TROUBLESHOOTING.md` §SCRATCH
+- **SCRATCH:** Full restart → `BUILD.md` §2 SCRATCH

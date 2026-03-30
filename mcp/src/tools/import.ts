@@ -1607,39 +1607,8 @@ export function registerImportTools(
   artState?: ArtDirectionState,
   placementState?: ScenePlacementState
 ) {
-  server.registerTool(
-    'import_geo',
-    {
-      title: 'Import Geometry',
-      description:
-        '[Phase 1] Low-level geometry import. Creates mesh + placement + material nodes, reads sidecar if available. Does NOT wire to geo group. PREFER place_geo for full placement.',
-      inputSchema: {
-        file_path: z.string().describe('Absolute path to geometry file (.obj, .glb, or .gltf)'),
-        name: z
-          .string()
-          .optional()
-          .describe(
-            'Asset name for output folder/files (default: derived from filename). Used as subfolder under assets/.'
-          ),
-        metallic: z
-          .number()
-          .min(0)
-          .max(1)
-          .optional()
-          .describe('Metallic value 0-1 for material (default: 0.3)'),
-        roughness: z
-          .number()
-          .min(0)
-          .max(1)
-          .optional()
-          .describe('Roughness value 0-1 for material (default: 0.4)'),
-      },
-      annotations: { destructiveHint: true },
-    },
-    async ({ file_path, name: assetName, metallic, roughness }) => {
-      return importGeoInternal(file_path, assetName, metallic, roughness);
-    }
-  );
+  // import_geo demoted — internal only. Use place_geo for all geometry placement.
+  // importGeoInternal() below is still called by place_geo.
 
   /** Core geometry import: creates mesh + placement + material + textures, reads sidecar.
    *  Does NOT wire to geo group or register in placement state — that's place_geo's job. */
@@ -1993,7 +1962,7 @@ export function registerImportTools(
     {
       title: 'Analyze Mesh',
       description:
-        '[Phase 0 — BLOCKING] Analyze mesh orientation and scale BEFORE placement. Renders mugshots, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Accepts OBJ, GLB, or glTF. MUST run on every mesh before placement.',
+        'Analyze mesh orientation and scale BEFORE placement. Renders mugshots, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Accepts OBJ, GLB, or glTF. MUST run on every mesh before placement.',
       inputSchema: {
         obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
         scene_context: z
@@ -2790,7 +2759,20 @@ export function registerImportTools(
     torus: 22,
   };
 
-  const MAT_PIN = { ALBEDO: 2, ROUGHNESS: 4, METALLIC: 9 } as const;
+  // NT_MAT_UNIVERSAL pin layout (from octane://pin-layout/NT_MAT_UNIVERSAL)
+  const MAT_PIN = {
+    TRANSMISSION: 0,
+    ALBEDO: 2,
+    METALLIC: 4,
+    SPECULAR: 6,
+    ROUGHNESS: 8,
+    IOR: 12, // Dielectric IOR (PT_FLOAT)
+    COATING: 19,
+    COATING_ROUGHNESS: 20,
+    SHEEN: 26,
+    OPACITY: 33,
+    EMISSION: 44,
+  } as const;
 
   /** Find or create a geo group on the active RT. */
   async function findOrCreateGeoGroup(
@@ -2849,7 +2831,7 @@ export function registerImportTools(
     {
       title: 'Place Geometry',
       description:
-        '[Phase 1] Unified geometry placement for primitives and meshes. Sets shape/transform, wires to geo group on active RT, auto-registers. Primitives need no analyze_geo.',
+        'Unified geometry placement for primitives and meshes. Sets shape/transform, wires to geo group on active RT, auto-registers. Primitives need no analyze_geo.',
       inputSchema: {
         type: z
           .enum(['primitive', 'mesh'])
@@ -3174,6 +3156,88 @@ export function registerImportTools(
         });
       } catch (error: any) {
         mcpLog(`place_geo FAILED: ${error.message}`, 'error');
+        return errorResult(error);
+      }
+    }
+  );
+
+  // ── apply_material ──────────────────────────────────────────────
+
+  server.registerTool(
+    'apply_material',
+    {
+      title: 'Apply Material',
+      description:
+        '[AD Phase 2] Apply a PBR material recipe to an existing material node in one call. ' +
+        'Pass values from suggest_material. Set skip_albedo:true if mesh has .mtl textures.',
+      inputSchema: {
+        material_handle: z.number().int().nonnegative().describe('Handle of NT_MAT_UNIVERSAL node'),
+        albedo: z
+          .object({ x: z.number(), y: z.number(), z: z.number() })
+          .optional()
+          .describe('Albedo RGB (0-1). Skipped if skip_albedo is true.'),
+        roughness: z.number().min(0).max(1).optional().describe('Roughness 0-1'),
+        metallic: z.number().min(0).max(1).optional().describe('Metallic 0-1'),
+        specular: z.number().min(0).max(1).optional().describe('Specular 0-1'),
+        ior: z.number().optional().describe('Dielectric IOR (e.g. 1.5 for glass)'),
+        skip_albedo: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Skip albedo (true when mesh has .mtl textures)'),
+      },
+      annotations: { destructiveHint: true },
+    },
+    async ({ material_handle, albedo, roughness, metallic, specular, ior, skip_albedo }) => {
+      try {
+        const applied: string[] = [];
+        const failed: string[] = [];
+
+        async function applyPin(
+          pinIdx: number,
+          name: string,
+          attrType: number,
+          value: any
+        ): Promise<void> {
+          try {
+            const child = await getConnectedChild(client, material_handle, pinIdx);
+            if (!child) {
+              failed.push(`${name}: no child node at pin ${pinIdx}`);
+              return;
+            }
+            await setAttrRaw(client, child, AttributeId.A_VALUE, attrType, value);
+            applied.push(name);
+          } catch (e: any) {
+            failed.push(`${name}: ${e.message}`);
+          }
+        }
+
+        if (albedo && !skip_albedo) {
+          await applyPin(MAT_PIN.ALBEDO, 'albedo', 11, albedo); // AT_FLOAT3
+        }
+        if (roughness !== undefined) {
+          await applyPin(MAT_PIN.ROUGHNESS, 'roughness', 9, roughness); // AT_FLOAT
+        }
+        if (metallic !== undefined) {
+          await applyPin(MAT_PIN.METALLIC, 'metallic', 9, metallic);
+        }
+        if (specular !== undefined) {
+          await applyPin(MAT_PIN.SPECULAR, 'specular', 9, specular);
+        }
+        if (ior !== undefined) {
+          await applyPin(MAT_PIN.IOR, 'ior', 9, ior);
+        }
+
+        // Flush all changes at once
+        await client.callMethod('ApiChangeManager', 'update', {});
+
+        return jsonResult({
+          success: failed.length === 0,
+          material_handle,
+          applied,
+          failed: failed.length > 0 ? failed : undefined,
+        });
+      } catch (error: any) {
         return errorResult(error);
       }
     }

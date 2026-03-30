@@ -310,6 +310,9 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
             type: 'text' as const,
             text: `DRESS Workflow — Complete scene build from concept to beauty render.
 
+## Activate
+Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
+
 ## Pre-Phase — CLEAR (start fresh)
 0. reset_ad(confirm: true) → clear stale AD state from any previous scene
 0b. reset_project() → clear Octane scene (if rebuilding)
@@ -379,7 +382,7 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
 
 ## Phase 3 — CRITIQUE LOOP
 18. critique_render(render_path, spec_name, reference_image_path) → Sonnet grade
-19. evaluate_semantics(render_path) → SEGA gap measurement
+19. evaluate_semantics(render_path) → SEGA gap measurement. **Skip on iteration 1** — gross issues dominate, mood fine-tuning is premature. Run from iteration 2 onward.
 20. Read render + concept art yourself → orchestrator grade (be HARSH on framing)
     **MANDATORY: State your own A-F grade explicitly.** Format: "Orchestrator grade: C+. [reason]." Not optional.
 21. apply_corrections(spec_name, iteration, overall_score, passed, scores)

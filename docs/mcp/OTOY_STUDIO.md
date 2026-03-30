@@ -123,5 +123,3 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
 ```
 
 **Parallel work:** Steps 3-4 take ~3 min. During that time, build scene infrastructure in Octane (RT, kernel, environment, floor).
-
-**Do NOT use Chrome/browser for image-to-3D.** REST API replaces that workflow.

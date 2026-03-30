@@ -15,10 +15,15 @@ const OBJ_DB_CATEGORY_ARRAY = 55;
 const OBJ_DB_MATERIAL_ARRAY = 56;
 
 export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClient) {
-  server.tool(
+  server.registerTool(
     'browse_material_db',
-    'List all categories in the OTOY LiveDB material library. Returns category id, name, parentID, typeID. Use category id with search_materials to list materials.',
-    {},
+    {
+      title: 'Browse Material DB',
+      description:
+        'List all categories in the OTOY LiveDB material library. Returns category id, name, parentID, typeID. Use category id with search_materials to list materials.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       try {
         // Step 1: getCategories returns a handle to a DBCategoryArray
@@ -68,11 +73,16 @@ export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClie
     }
   );
 
-  server.tool(
+  server.registerTool(
     'search_materials',
-    'List materials in a LiveDB category. Returns material id, name, nickname, copyright. Use the id with download_material to add it to the scene.',
     {
-      category_id: z.number().int().describe('Category ID from browse_material_db'),
+      title: 'Search Materials',
+      description:
+        'List materials in a LiveDB category. Returns material id, name, nickname, copyright. Use the id with download_material to add it to the scene.',
+      inputSchema: {
+        category_id: z.number().int().describe('Category ID from browse_material_db'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ category_id }) => {
       try {
@@ -126,17 +136,22 @@ export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClie
     }
   );
 
-  server.tool(
+  server.registerTool(
     'preview_material',
-    'Get a preview image of a LiveDB material rendered on a material ball. Returns raw image buffer data.',
     {
-      material_id: z.number().int().describe('Material ID from search_materials'),
-      size: z
-        .number()
-        .int()
-        .optional()
-        .default(256)
-        .describe('Requested image size in pixels (default 256)'),
+      title: 'Preview Material',
+      description:
+        'Get a preview image of a LiveDB material rendered on a material ball. Returns raw image buffer data.',
+      inputSchema: {
+        material_id: z.number().int().describe('Material ID from search_materials'),
+        size: z
+          .number()
+          .int()
+          .optional()
+          .default(256)
+          .describe('Requested image size in pixels (default 256)'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ material_id, size }) => {
       try {
@@ -160,11 +175,16 @@ export function registerMaterialDbTools(server: McpServer, client: OctaneMcpClie
     }
   );
 
-  server.tool(
+  server.registerTool(
     'download_material',
-    'Download a material from the OTOY LiveDB into the current scene. Creates all necessary nodes (material, textures, etc.) in the scene graph.',
     {
-      material_id: z.number().int().describe('Material ID from search_materials'),
+      title: 'Download Material',
+      description:
+        '[AD Phase 2] Download a material from the OTOY LiveDB into the current scene. Creates all necessary nodes (material, textures, etc.) in the scene graph.',
+      inputSchema: {
+        material_id: z.number().int().describe('Material ID from search_materials'),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ material_id }) => {
       try {

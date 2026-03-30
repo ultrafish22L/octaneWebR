@@ -332,7 +332,7 @@ export function registerLightingTools(
     {
       title: 'Create Light',
       description:
-        '[Phase 2] Create a light in one call. Emissive primitives, native lights (quad/sphere/spot), or emission on existing material. Auto-wires with efficiency=1.0.',
+        '[AD Phase 2] Create a light in one call. Emissive primitives, native lights (quad/sphere/spot), or emission on existing material. Auto-wires with efficiency=1.0.',
       inputSchema: {
         type: z
           .enum(['emissive', 'quad', 'sphere', 'spot'])
@@ -546,7 +546,7 @@ export function registerLightingTools(
     {
       title: 'Setup Lighting',
       description:
-        '[Phase 2] Create full 3-point lighting (key + fill + rim) in one call. ' +
+        '[AD Phase 2] Create full 3-point lighting (key + fill + rim) in one call. ' +
         'Uses SEGA artistic intent by default for temperatures and ratios, or falls back to mood-based recipes. ' +
         'Also dims the environment to match. Replaces 30+ manual tool calls.',
       inputSchema: {
@@ -728,7 +728,7 @@ export function registerLightingTools(
     {
       title: 'Set Daylight',
       description:
-        '[All phases] Configure daylight environment attributes without pin-chasing. ' +
+        'Configure daylight environment attributes without pin-chasing. ' +
         'Finds the daylight env on the active RT and sets any provided parameters.',
       inputSchema: {
         power: z

@@ -48,7 +48,7 @@ A 15-dimension mixing board where each slider (-1.0 to +1.0) captures a perceptu
 
 25 named presets (mood, artist, film, genre) provide starting points. Natural language parsing handles absolute ("make it warm"), relative ("warmer"), and compound ("moody and warm") instructions.
 
-> **Details:** [SEGA System Design](project/SEGA_SYSTEM_DESIGN.md) — full spec with dimension registry, mapping engine, convergence math, presets, per-object overrides.
+> **Details:** [SEGA System Design](archive/SEGA_SYSTEM_DESIGN.md) — full spec with dimension registry, mapping engine, convergence math, presets, per-object overrides.
 
 ---
 
@@ -169,7 +169,7 @@ diag_front.png, diag_side.png, diag_top.png
 | Document                                            | What's In It                                                            |
 | --------------------------------------------------- | ----------------------------------------------------------------------- |
 | [BUILD.md](mcp/BUILD.md)                            | Step-by-step build workflow — tool calls, phases, verification gates    |
-| [SEGA System Design](project/SEGA_SYSTEM_DESIGN.md) | Full SEGA spec — mapping engine, convergence math, per-object overrides |
+| [SEGA System Design](archive/SEGA_SYSTEM_DESIGN.md) | Full SEGA spec — mapping engine, convergence math, per-object overrides |
 | [Creative Guide](mcp/CREATIVE.md)                   | Lighting recipes, material values, composition rules, color theory      |
 | [Reference](mcp/REFERENCE.md)                       | Pin layouts, node types, attribute IDs, material presets                |
 | [MCP User Guide](mcp/README.md)                     | All 78 tools, setup, tips, troubleshooting                              |

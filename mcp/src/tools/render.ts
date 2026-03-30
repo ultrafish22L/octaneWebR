@@ -27,7 +27,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       title: 'Start Render',
       description:
-        '[All phases] Start rendering. Auto-flushes pending changes. RT needs camera, geometry, kernel connected.',
+        'Start rendering. Auto-flushes pending changes. RT needs camera, geometry, kernel connected.',
       inputSchema: {
         render_target_handle: z
           .number()
@@ -59,7 +59,8 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     'stop_render',
     {
       title: 'Stop Render',
-      description: 'Stop the current render',
+      description:
+        'Stop the current render. Unsaved samples are lost — call save_render first if needed.',
       annotations: { destructiveHint: true },
     },
     async () => {
@@ -79,7 +80,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       title: 'Render Status',
       description:
-        'Get current render statistics including sample count, render time, and progress',
+        'Get render statistics: sample count, samples/sec, render time, resolution, and state. Use to check if render is converged before saving.',
       annotations: { readOnlyHint: true },
     },
     async () => {
@@ -106,7 +107,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       title: 'Save Render',
       description:
-        '[All phases] Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
+        'Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
       inputSchema: {
         path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
         format: z
@@ -194,118 +195,117 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
     {
       title: 'Save Render Passes',
       description:
-        'Save all enabled render passes to a directory. Each pass is saved as a separate file. Use get_enabled_aovs first to see which passes are active.',
-      inputSchema: {
-        output_directory: z.string().describe('Absolute path to output directory'),
-        format: z
-          .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
-          .default('EXR')
-          .describe('Image format (default EXR for passes)'),
-        use_half: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Use half-float precision for EXR (default true)'),
-      },
-      annotations: { destructiveHint: true },
-    },
-    async ({ output_directory, format, use_half }) => {
-      try {
-        const pathError = validateFilePath(output_directory);
-        if (pathError) return errorResult(new Error(pathError));
-
-        const fs = await import('fs');
-        if (!fs.existsSync(output_directory)) {
-          return errorResult(new Error(`Output directory does not exist: ${output_directory}`));
-        }
-
-        const imageSaveFormat = FORMAT_MAP[format] ?? 2; // default EXR
-        // Use saveRenderPasses1 (simpler overload with NamedColorSpace enum)
-        await client.callMethod(
-          'ApiRenderEngine',
-          'saveRenderPasses1',
-          {
-            outputDirectory: output_directory,
-            passesToExport: { renderPassId: 0, exportName: '' },
-            passesToExportLength: 0,
-            imageSaveFormat,
-            colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
-            premultipliedAlphaType: 0,
-            exrCompressionType: 0,
-            useHalf: use_half,
-            metadata: { values: [] },
-            metadataLength: 0,
-            asynchronous: false,
-          },
-          120_000
-        );
-        return jsonResult({ success: true, output_directory, format });
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.registerTool(
-    'save_render_passes_exr',
-    {
-      title: 'Save Render Passes EXR',
-      description:
-        'Save all enabled render passes as a single multi-layer EXR file. Production standard output for compositing.',
+        'Save all enabled render passes. Set multi_layer:true for a single multi-layer EXR (compositing standard), or false for separate files per pass. Use get_enabled_aovs to see active passes.',
       inputSchema: {
         path: z
           .string()
           .describe(
-            'Absolute file path for the multi-layer EXR (e.g. C:\\renders\\scene_passes.exr)'
+            'Output path. For multi_layer:true → absolute file path (.exr). For multi_layer:false → absolute directory path.'
+          ),
+        multi_layer: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            'true = single multi-layer EXR file, false = separate files per pass (default)'
+          ),
+        format: z
+          .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
+          .default('EXR')
+          .describe(
+            'Image format for separate files (ignored when multi_layer:true). Default EXR.'
           ),
         use_half: z
           .boolean()
           .optional()
           .default(true)
-          .describe('Use half-float precision (default true)'),
+          .describe('Use half-float precision for EXR (default true)'),
         preserve_layer_names: z
           .boolean()
           .optional()
           .default(true)
-          .describe('Preserve layer names in EXR (default true)'),
+          .describe(
+            'Preserve layer names in multi-layer EXR (default true). Ignored when multi_layer:false.'
+          ),
         premultiply_alpha: z
           .boolean()
           .optional()
           .default(false)
-          .describe('Premultiply alpha (default false)'),
+          .describe(
+            'Premultiply alpha in multi-layer EXR (default false). Ignored when multi_layer:false.'
+          ),
       },
       annotations: { destructiveHint: true },
     },
-    async ({ path: savePath, use_half, preserve_layer_names, premultiply_alpha }) => {
+    async ({
+      path: savePath,
+      multi_layer,
+      format,
+      use_half,
+      preserve_layer_names,
+      premultiply_alpha,
+    }) => {
       try {
         const pathError = validateFilePath(savePath);
         if (pathError) return errorResult(new Error(pathError));
 
         const fs = await import('fs');
-        const parentDir = path.dirname(savePath);
-        if (!fs.existsSync(parentDir)) {
-          return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
-        }
 
-        // Use saveRenderPassesMultiExr1 (simpler overload with NamedColorSpace enum)
-        await client.callMethod(
-          'ApiRenderEngine',
-          'saveRenderPassesMultiExr1',
-          {
-            fullPath: savePath,
-            passesToExport: { renderPassId: 0, exportName: '' },
-            passesToExportLength: 0,
-            useHalf: use_half,
-            colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
-            premultipliedAlpha: premultiply_alpha,
-            preserveLayerNames: preserve_layer_names,
-            metadata: { values: [] },
-            metadataLength: 0,
-            asynchronous: false,
-          },
-          120_000
-        );
-        return jsonResult({ success: true, path: savePath });
+        if (multi_layer) {
+          // Single multi-layer EXR
+          const parentDir = path.dirname(savePath);
+          if (!fs.existsSync(parentDir)) {
+            return errorResult(new Error(`Parent directory does not exist: ${parentDir}`));
+          }
+          await client.callMethod(
+            'ApiRenderEngine',
+            'saveRenderPassesMultiExr1',
+            {
+              fullPath: savePath,
+              passesToExport: { renderPassId: 0, exportName: '' },
+              passesToExportLength: 0,
+              useHalf: use_half,
+              colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
+              premultipliedAlpha: premultiply_alpha,
+              preserveLayerNames: preserve_layer_names,
+              metadata: { values: [] },
+              metadataLength: 0,
+              asynchronous: false,
+            },
+            120_000
+          );
+          return jsonResult({ success: true, path: savePath, multi_layer: true });
+        } else {
+          // Separate files per pass
+          if (!fs.existsSync(savePath)) {
+            return errorResult(new Error(`Output directory does not exist: ${savePath}`));
+          }
+          const imageSaveFormat = FORMAT_MAP[format] ?? 2; // default EXR
+          await client.callMethod(
+            'ApiRenderEngine',
+            'saveRenderPasses1',
+            {
+              outputDirectory: savePath,
+              passesToExport: { renderPassId: 0, exportName: '' },
+              passesToExportLength: 0,
+              imageSaveFormat,
+              colorSpace: 0, // NAMED_COLOR_SPACE_LINEAR_SRGB
+              premultipliedAlphaType: 0,
+              exrCompressionType: 0,
+              useHalf: use_half,
+              metadata: { values: [] },
+              metadataLength: 0,
+              asynchronous: false,
+            },
+            120_000
+          );
+          return jsonResult({
+            success: true,
+            output_directory: savePath,
+            format,
+            multi_layer: false,
+          });
+        }
       } catch (error: unknown) {
         return errorResult(error);
       }

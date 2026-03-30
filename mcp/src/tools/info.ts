@@ -154,7 +154,7 @@ export function registerInfoTools(
     {
       title: 'Profile Start',
       description:
-        'Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
+        '[Debug] Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
       inputSchema: { label: z.string().describe('Name for this profile span') },
       annotations: { destructiveHint: true },
     },
@@ -168,7 +168,7 @@ export function registerInfoTools(
     'profile_end',
     {
       title: 'Profile End',
-      description: 'End a named profile span started with profile_start.',
+      description: '[Debug] End a named profile span started with profile_start.',
       inputSchema: { label: z.string().describe('Name of the span to end') },
       annotations: { destructiveHint: true },
     },
@@ -183,7 +183,7 @@ export function registerInfoTools(
     {
       title: 'Profile Report',
       description:
-        'Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
+        '[Debug] Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
       annotations: { readOnlyHint: true },
     },
     async () => {
@@ -217,7 +217,7 @@ export function registerInfoTools(
     'profile_reset',
     {
       title: 'Profile Reset',
-      description: 'Reset all profiling data. Call before starting a timed build run.',
+      description: '[Debug] Reset all profiling data. Call before starting a timed build run.',
       annotations: { destructiveHint: true, idempotentHint: true },
     },
     async () => {
