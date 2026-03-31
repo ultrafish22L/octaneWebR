@@ -358,12 +358,41 @@ const MATERIALS: Record<string, MaterialRecipe> = {
   },
 };
 
+/** Common aliases → canonical surface type name. */
+const ALIASES: Record<string, string> = {
+  chrome: 'silver',
+  steel: 'silver',
+  metal: 'silver',
+  stone: 'stone_rough',
+  rock: 'stone_rough',
+  wood: 'bark',
+  timber: 'bark',
+  plastic: 'ceramic',
+  rubber: 'ceramic',
+  mirror: 'silver',
+  bronze: 'copper',
+  brass: 'copper',
+  rust: 'iron_rusted',
+  rusted: 'iron_rusted',
+  fabric: 'cotton',
+  cloth: 'cotton',
+  gem: 'crystal',
+  diamond: 'crystal',
+  frosted_glass: 'ice',
+  glow: 'glow_warm',
+  neon: 'glow_cool',
+  ground: 'dirt',
+  floor: 'concrete',
+  wall: 'plaster',
+};
+
 /**
  * Get a material recipe by surface type.
- * Returns the recipe or null if unknown.
+ * Returns the recipe or null if unknown. Resolves common aliases.
  */
 export function suggestMaterial(surfaceType: string): MaterialRecipe | null {
-  return MATERIALS[surfaceType.toLowerCase()] || null;
+  const key = surfaceType.toLowerCase();
+  return MATERIALS[key] || MATERIALS[ALIASES[key]] || null;
 }
 
 /**

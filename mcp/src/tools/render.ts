@@ -32,7 +32,7 @@ export function registerRenderTools(
     {
       title: 'Start Render',
       description:
-        'Start rendering. Auto-flushes pending changes. RT needs camera, geometry, kernel connected.',
+        'Start rendering. Auto-flushes pending changes. RT needs camera, geometry, kernel connected. See octane://docs/reference/3.',
       inputSchema: {
         render_target_handle: z
           .number()
@@ -112,7 +112,7 @@ export function registerRenderTools(
     {
       title: 'Save Render',
       description:
-        'Save current render to disk. Path must be absolute with existing parent directory. Formats: PNG (default), PNG16, EXR, EXR_TONEMAP, HDR, TGA, TIFF, TIFF16, JPG.',
+        'Save current render to disk. Path must be absolute with existing parent directory. Format defaults to PNG.',
       inputSchema: {
         path: z.string().describe('Absolute file path to save to (e.g. C:\\renders\\scene.png)'),
         format: z
@@ -171,14 +171,9 @@ export function registerRenderTools(
     {
       title: 'Enabled AOVs',
       description:
-        'Get the list of enabled AOV/render pass IDs on the current render target. Common IDs: 0=beauty, 3=diffuse, 7=reflection, 1000=geometric_normal, 1002=position, 1003=z_depth.',
+        'Get enabled AOV/render pass IDs on current RT. Call describe_tool("get_enabled_aovs") for params.',
       inputSchema: {
-        render_target_handle: z
-          .number()
-          .int()
-          .nonnegative()
-          .optional()
-          .describe('RT handle (uses current RT if omitted)'),
+        render_target_handle: z.number().int().nonnegative().optional(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -201,45 +196,16 @@ export function registerRenderTools(
     {
       title: 'Save Render Passes',
       description:
-        'Save all enabled render passes. Set multi_layer:true for a single multi-layer EXR (compositing standard), or false for separate files per pass. Use get_enabled_aovs to see active passes.',
+        'Save all enabled render passes. Call describe_tool("save_render_passes") for params.',
       inputSchema: {
-        path: z
-          .string()
-          .describe(
-            'Output path. For multi_layer:true → absolute file path (.exr). For multi_layer:false → absolute directory path.'
-          ),
-        multi_layer: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe(
-            'true = single multi-layer EXR file, false = separate files per pass (default)'
-          ),
+        path: z.string(),
+        multi_layer: z.boolean().optional().default(false),
         format: z
           .enum(['PNG', 'PNG16', 'EXR', 'EXR_TONEMAP', 'HDR', 'TGA', 'TIFF', 'TIFF16', 'JPG'])
-          .default('EXR')
-          .describe(
-            'Image format for separate files (ignored when multi_layer:true). Default EXR.'
-          ),
-        use_half: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Use half-float precision for EXR (default true)'),
-        preserve_layer_names: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe(
-            'Preserve layer names in multi-layer EXR (default true). Ignored when multi_layer:false.'
-          ),
-        premultiply_alpha: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe(
-            'Premultiply alpha in multi-layer EXR (default false). Ignored when multi_layer:false.'
-          ),
+          .default('EXR'),
+        use_half: z.boolean().optional().default(true),
+        preserve_layer_names: z.boolean().optional().default(true),
+        premultiply_alpha: z.boolean().optional().default(false),
       },
       annotations: { destructiveHint: true },
     },

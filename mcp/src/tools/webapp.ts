@@ -53,8 +53,7 @@ export function registerWebappTools(server: McpServer) {
     'refresh_ui',
     {
       title: 'Refresh UI',
-      description:
-        'Force octaneWebR to refresh its scene tree. Auto-sync happens after MCP changes, but use this if the web UI gets out of sync.',
+      description: 'Force octaneWebR to refresh its scene tree if out of sync.',
       annotations: { idempotentHint: true },
     },
     async () => {

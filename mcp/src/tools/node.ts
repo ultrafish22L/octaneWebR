@@ -57,7 +57,7 @@ export function registerNodeTools(
     {
       title: 'Create Node',
       description:
-        'Create an Octane node. Common types: NT_MAT_UNIVERSAL (PBR material), NT_GEO_MESH (mesh from .obj file), NT_GEO_OBJECT (primitive shapes — all 23 types supported), NT_TEX_IMAGE (image texture), NT_RENDERTARGET (RT). Use list_node_types for full catalog.',
+        'Create an Octane node by type name or ID. Prefer place_geo for geometry, create_light for lights, create_at_pin to create+wire in one call. Use list_node_types for the full catalog.',
       inputSchema: {
         node_type: z
           .string()
@@ -247,7 +247,7 @@ export function registerNodeTools(
         if (node_type === 'NT_GEO_MESH') {
           response.instruction =
             `Handle ${newHandle} created (NT_GEO_MESH). NEXT: set_attribute(A_FILENAME=34) + set_attribute(A_RELOAD=124, true) + flush_changes(). ` +
-            `Then MUST call get_geometry_stats() and confirm triCount increased. Do NOT proceed if triCount is unchanged.`;
+            `Then MUST call get_stats(type:"geometry") and confirm triCount increased. Do NOT proceed if triCount is unchanged.`;
         } else if (node_type === 'NT_GEO_OBJECT') {
           response.instruction = `Handle ${newHandle} created (NT_GEO_OBJECT). After connecting to RT: call fit_camera() + save_render to VERIFY this object is visible before adding the next object.`;
         }
@@ -288,7 +288,7 @@ export function registerNodeTools(
       title: 'Connect Nodes',
       description:
         "Connect source node to a target node's input pin. Use pin_name (preferred) or pin_index. " +
-        'Auto-verified after wiring. Cannot connect to auto-created internal children.',
+        'Auto-verified after wiring. See octane://docs/reference/3 for RT pin layout.',
       inputSchema: {
         target_handle: z
           .number()
@@ -498,10 +498,10 @@ export function registerNodeTools(
     'disconnect_pin',
     {
       title: 'Disconnect Pin',
-      description: 'Disconnect a pin on a node (sets connection to null). Updates scene cache.',
+      description: 'Disconnect a pin on a node. Call describe_tool("disconnect_pin") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
-        pin_index: z.number().describe('Pin index to disconnect'),
+        handle: z.number().int().nonnegative(),
+        pin_index: z.number(),
       },
       annotations: { destructiveHint: true },
     },
@@ -526,11 +526,11 @@ export function registerNodeTools(
   );
 
   server.registerTool(
-    'create_connected',
+    'create_at_pin',
     {
       title: 'Create Connected',
       description:
-        'Create a node and connect it to a target pin in one call. Saves round-trips for the most common pattern (e.g. create material + connect to mesh pin 0). Auto-verifies the connection. If connect fails, returns the created handle so you can retry or clean up.',
+        'Create a node and connect it to a target pin in one call. Auto-verifies the connection. If connect fails, returns the created handle for retry.',
       inputSchema: {
         node_type: z.string().describe('Node type (e.g. "NT_MAT_UNIVERSAL", "NT_GEO_OBJECT")'),
         target_handle: z.number().int().nonnegative().describe('Target node to connect to'),
@@ -633,10 +633,10 @@ export function registerNodeTools(
     'rename_node',
     {
       title: 'Rename Node',
-      description: 'Set the display name of a node. Does not affect connections or behavior.',
+      description: 'Set display name of a node. Call describe_tool("rename_node") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
-        name: z.string().min(1).describe('New display name'),
+        handle: z.number().int().nonnegative(),
+        name: z.string().min(1),
       },
       annotations: { destructiveHint: true },
     },
@@ -661,19 +661,11 @@ export function registerNodeTools(
     {
       title: 'Find Nodes',
       description:
-        'Search the scene graph for nodes by type ID or by name. Returns matching handles. Useful for working with loaded scenes where handles are unknown.',
+        'Search scene graph by type ID or name. Call describe_tool("find_nodes") for params.',
       inputSchema: {
-        type_id: z
-          .number()
-          .int()
-          .optional()
-          .describe('Node type ID to search for (e.g. 130 for NT_MAT_UNIVERSAL)'),
-        name: z.string().optional().describe('Node name to search for (exact match)'),
-        recurse: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Search recursively into subgraphs (default true)'),
+        type_id: z.number().int().optional(),
+        name: z.string().optional(),
+        recurse: z.boolean().optional().default(true),
       },
       annotations: { readOnlyHint: true },
     },
@@ -848,10 +840,9 @@ export function registerNodeTools(
     'clone_node',
     {
       title: 'Clone Node',
-      description:
-        'Deep-copy a node (and its subtree) within the scene. Returns the new root handle. All new handles are tracked in SceneCache.',
+      description: 'Deep-copy a node and its subtree. Call describe_tool("clone_node") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Handle of the node to duplicate'),
+        handle: z.number().int().nonnegative(),
       },
       annotations: { destructiveHint: true },
     },
@@ -891,8 +882,7 @@ export function registerNodeTools(
     'cleanup_orphans',
     {
       title: 'Cleanup Orphans',
-      description:
-        'Delete all orphaned/unconnected nodes in the scene. Refreshes SceneCache after cleanup. Use with caution — may remove nodes you intended to connect later.',
+      description: 'Delete all orphaned/unconnected nodes in scene. Use with caution.',
       annotations: { destructiveHint: true },
     },
     async () => {

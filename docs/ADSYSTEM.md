@@ -61,11 +61,11 @@ Two critics evaluate each render:
 
 Additionally:
 
-- **Semantic Critic** (`evaluate_semantics`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
+- **Semantic Critic** (`score_sega`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
 
 The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign. All assessments logged to `critique_stats.jsonl` per scene.
 
-**⛔ Never self-grade.** If `critique_render` returns a self-critique prompt instead of a Sonnet comparison, the call was made without `reference_image_path`. Fix the call — do not answer the prompt yourself and treat it as a grade. Self-assessment inflates scores and masks problems that Sonnet would catch.
+**⛔ Never self-grade.** If `score_render` returns a self-critique prompt instead of a Sonnet comparison, the call was made without `reference_image_path`. Fix the call — do not answer the prompt yourself and treat it as a grade. Self-assessment inflates scores and masks problems that Sonnet would catch.
 
 ### Model Selection Strategy
 
@@ -133,8 +133,8 @@ A full AD-enabled build flows through four gated phases: **Plan** (spatial math 
 | --------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `analyze_geo` (mugshot)     | Pass 1 diagnosis (3 images), Pass 2 verification (2 images, up to 4 attempts) | Each pass: prompt, image paths, raw response in labeled blocks                  |
 | `analyze_reference`         | 1 analysis call + 1 calibration call                                          | Prompt + response + calibration in labeled blocks                               |
-| `critique_render`           | 1 Sonnet comparison (concept+render, two images)                              | Prompt + image paths + response in labeled blocks.                              |
-| `evaluate_semantics`        | Pixel measurement (local) + optional VLM estimation                           | Gap vector, pixel measurements, worst dimensions, corrections — all in response |
+| `score_render`              | 1 Sonnet comparison (concept+render, two images)                              | Prompt + image paths + response in labeled blocks.                              |
+| `score_sega`                | Pixel measurement (local) + optional VLM estimation                           | Gap vector, pixel measurements, worst dimensions, corrections — all in response |
 | `get_vlm_estimation_prompt` | Returns prompt for caller                                                     | Full prompt text returned                                                       |
 
 ### Why this matters:

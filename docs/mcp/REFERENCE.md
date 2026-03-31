@@ -26,7 +26,7 @@ Always use absolute paths for `A_FILENAME`. Relative paths depend on Octane's wo
 set_attribute(handle, A_FILENAME=34, AT_STRING=14, "/absolute/path/to/file.obj")
 set_attribute(handle, A_RELOAD=124, AT_BOOL=1, true)   # MANDATORY — mesh won't load without this
 flush_changes()                                          # MANDATORY — flush to trigger actual load
-get_geometry_stats()                                    # VERIFY — triCount must be > 0
+get_stats(type:"geometry")                               # VERIFY — triCount must be > 0
 ```
 
 **Without A_RELOAD:** A_FILENAME succeeds silently but the mesh stays empty (triCount=0). Render shows nothing — no error, just invisible geometry.

@@ -1,6 +1,6 @@
 /**
- * Art Direction Tools — plan_composition, validate_layout, analyze_reference,
- * critique_render, apply_corrections, get_art_direction_state
+ * Art Direction Tools — plan_layout, validate_layout, analyze_reference,
+ * score_render, commit_scores, get_art_direction_state
  *
  * Solves two problems:
  * 1. Spatial reasoning: math-based validation BEFORE rendering (no guessing)
@@ -548,14 +548,14 @@ export function registerArtDirectionTools(
   segaState?: { clear(): void; clearScene(): void }
 ) {
   const placement = placementState ?? new ScenePlacementState();
-  // ── 1. plan_composition ──────────────────────────────────────────
+  // ── 1. plan_layout ──────────────────────────────────────────
 
   server.registerTool(
-    'plan_composition',
+    'plan_layout',
     {
       title: 'Plan Composition',
       description:
-        '[AD Phase 0] Create validated composition plan with camera math. Pure planning — no Octane nodes created. Returns plan + validation.',
+        '[AD Phase 0] Create validated composition plan with camera math. No Octane nodes created. Then: validate_layout. See octane://docs/creative/3.',
       inputSchema: {
         name: z.string().describe('Unique name for this composition'),
         description: z.string().describe('Creative brief'),
@@ -622,8 +622,8 @@ export function registerArtDirectionTools(
           build_checklist: buildChecklist,
           instruction: validation.passed
             ? 'Layout validated. Proceed to build the scene using these positions. Follow build_checklist exactly.'
-            : 'Layout has errors. Fix issues and call plan_composition again.',
-          ...adWorkflow(artState, 'plan_composition'),
+            : 'Layout has errors. Fix issues and call plan_layout again.',
+          ...adWorkflow(artState, 'plan_layout'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -662,15 +662,38 @@ export function registerArtDirectionTools(
     {
       title: 'Analyze Reference',
       description:
-        '[AD Phase 0] Extract composition data from a reference image via OTOY Studio vision. Returns structured data if backend available, otherwise returns a prompt for self-analysis.',
+        '[AD Phase 0] Extract composition data from a reference image via vision, OR accept a text-only concept brief. ' +
+        'At least one of image_path or scene_description is required. Text-only briefs skip vision analysis and return a structured concept for plan_layout.',
       inputSchema: {
-        image_path: z.string().describe('Absolute path to reference image'),
-        scene_description: z.string(),
+        image_path: z
+          .string()
+          .optional()
+          .describe('Absolute path to reference image (omit for text-only concept brief)'),
+        scene_description: z
+          .string()
+          .describe(
+            'Scene description — required. For text-only briefs, include mood, objects, composition intent.'
+          ),
         scale_hint: z.number().default(10).describe('World-space width of scene (default 10)'),
       },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async params => {
+      // ── Text-only concept brief (no image) ──────────────────────
+      if (!params.image_path) {
+        return jsonResult({
+          mode: 'text_brief',
+          scene_description: params.scene_description,
+          scale_hint: params.scale_hint,
+          instruction:
+            'Text concept brief accepted. No vision analysis (no image). ' +
+            'Use this description to: 1) set_sega with an appropriate mood preset or vector, ' +
+            '2) plan_layout with objects derived from the description. ' +
+            'For simple concepts, use Octane primitives. For complex scenes, generate meshes via OTOY Studio.',
+          ...adWorkflow(artState, 'analyze_reference'),
+        });
+      }
+
       const resolved = path.resolve(params.image_path);
       if (!fs.existsSync(resolved)) return errorResult(`Image not found: ${resolved}`);
 
@@ -688,7 +711,7 @@ export function registerArtDirectionTools(
         return errorResult(`Vision analysis failed: ${error.message}`);
       }
 
-      // Store calibration in artState for later critique_render calls
+      // Store calibration in artState for later score_render calls
       if (calibResult.calibration) {
         artState.setCalibration(resolved, calibResult.calibration);
       }
@@ -726,8 +749,8 @@ export function registerArtDirectionTools(
               calibration_cached: !!calibResult.calibration,
               calibration_keywords: calibResult.calibration?.keywords?.slice(0, 20),
               instruction: visionResult.data
-                ? 'Vision analysis complete. Calibration cached. Feed the analysis data into plan_composition, scaling relative positions by scale_hint.'
-                : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_composition.',
+                ? 'Vision analysis complete. Calibration cached. Feed the analysis data into plan_layout, scaling relative positions by scale_hint.'
+                : 'Vision analysis returned text but JSON parsing failed. Parse the raw_analysis text yourself and feed results to plan_layout.',
               ...adWorkflow(artState, 'analyze_reference'),
             },
             null,
@@ -743,20 +766,20 @@ export function registerArtDirectionTools(
         analysis_prompt: analysisPrompt,
         scale_hint: params.scale_hint,
         instruction:
-          'No vision API available. Read the image, answer the analysis_prompt, then feed results to plan_composition.',
+          'No vision API available. Read the image, answer the analysis_prompt, then feed results to plan_layout.',
         ...adWorkflow(artState, 'analyze_reference'),
       });
     }
   );
 
-  // ── 4. critique_render ───────────────────────────────────────────
+  // ── 4. score_render ───────────────────────────────────────────
 
   server.registerTool(
-    'critique_render',
+    'score_render',
     {
       title: 'Critique Render',
       description:
-        '[AD Phase 3] Save and score current render via VLM. Framing must be ≥3 before lighting/mood scores matter.',
+        '[AD Phase 3] Save and score current render via VLM. Framing ≥3 required before lighting/mood scores matter. Then: commit_scores. See octane://docs/creative/2.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to save render'),
         spec_name: z.string(),
@@ -776,7 +799,7 @@ export function registerArtDirectionTools(
     },
     async params => {
       const spec = artState.getSpec(params.spec_name);
-      if (!spec) return errorResult(`No spec "${params.spec_name}". Call plan_composition first.`);
+      if (!spec) return errorResult(`No spec "${params.spec_name}". Call plan_layout first.`);
 
       const pathErr = validateFilePath(params.render_path);
       if (pathErr) return errorResult(pathErr);
@@ -822,7 +845,7 @@ export function registerArtDirectionTools(
           artState.setCachedClay(clayModeNum);
           if (clayMode === 0 && !framingVerified) {
             warnings.push(
-              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
+              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
             );
           }
         } catch {
@@ -969,14 +992,14 @@ export function registerArtDirectionTools(
                 framing_verified: artState.isStepDone('framing_verified'),
                 instruction: passed
                   ? isClayMode
-                    ? `CLAY GATE PASSED (composition_match=${comparisonResult.composition_match}). Framing verified. Call set_clay_mode(0) and proceed to Phase 2 (materials & lighting).`
+                    ? `CLAY GATE PASSED (composition_match=${comparisonResult.composition_match}). Framing verified. Call clay_mode(0) and proceed to Phase 2 (materials & lighting).`
                     : 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
                   : isClayMode
                     ? `CLAY GATE FAILED (composition_match=${comparisonResult.composition_match}, need ≥3). Fix geometry/framing, re-render IN CLAY, and critique again. Do NOT turn off clay mode.`
                     : artState.isActive
-                      ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call apply_corrections with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call critique_render again. Repeat until passed=true or exhausted=true.`
+                      ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call commit_scores with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call score_render again. Repeat until passed=true or exhausted=true.`
                       : `Sonnet graded ${comparisonResult.grade}. Apply corrections and re-render.`,
-                ...adWorkflow(artState, 'critique_render'),
+                ...adWorkflow(artState, 'score_render'),
               },
               null,
               2
@@ -994,8 +1017,8 @@ export function registerArtDirectionTools(
           warnings,
           vision_backend: 'self',
           instruction:
-            'No Sonnet API or no concept art. Read the render + concept art yourself, give an A-F grade, then call apply_corrections with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
-          ...adWorkflow(artState, 'critique_render'),
+            'No Sonnet API or no concept art. Read the render + concept art yourself, give an A-F grade, then call commit_scores with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
+          ...adWorkflow(artState, 'score_render'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -1003,10 +1026,10 @@ export function registerArtDirectionTools(
     }
   );
 
-  // ── 5. apply_corrections ─────────────────────────────────────────
+  // ── 5. commit_scores ─────────────────────────────────────────
 
   server.registerTool(
-    'apply_corrections',
+    'commit_scores',
     {
       title: 'Apply Corrections',
       description:
@@ -1032,7 +1055,7 @@ export function registerArtDirectionTools(
       const spec = artState.getSpec(params.spec_name);
       if (!spec) return errorResult(`No spec "${params.spec_name}".`);
 
-      // Only record if critique_render (VLM path) didn't already record this iteration.
+      // Only record if score_render (VLM path) didn't already record this iteration.
       // VLM critique calls artState.addCritique() internally — recording again here
       // causes false stagnation detection after just 1 real iteration.
       const existingHistory = artState.getHistory(params.spec_name);
@@ -1092,7 +1115,7 @@ export function registerArtDirectionTools(
       } else {
         const worst = Object.entries(params.scores).reduce((a, b) => (a[1] < b[1] ? a : b));
         result.instruction = artState.isActive
-          ? `NOT PASSED. Focus on "${worst[0]}" (score ${worst[1]}). NEXT: apply the priority-1 corrections below, then re-render (save_render), then call critique_render again. Do NOT stop iterating.`
+          ? `NOT PASSED. Focus on "${worst[0]}" (score ${worst[1]}). NEXT: apply the priority-1 corrections below, then re-render (save_render), then call score_render again. Do NOT stop iterating.`
           : `Focus on "${worst[0]}" (score ${worst[1]}). Apply priority-1 corrections, re-render, critique again.`;
         result.priority_corrections = params.corrections
           .filter(c => c.priority === 1)
@@ -1100,7 +1123,7 @@ export function registerArtDirectionTools(
       }
       return jsonResult({
         ...result,
-        ...adWorkflow(artState, 'apply_corrections'),
+        ...adWorkflow(artState, 'commit_scores'),
       });
     }
   );
@@ -1108,13 +1131,12 @@ export function registerArtDirectionTools(
   // ── 6. get_art_direction_state ───────────────────────────────────
 
   server.registerTool(
-    'get_art_direction_state',
+    'ad_state',
     {
       title: 'Art Direction State',
       description:
-        'Get or set AD (Art Direction) state. Build modes: SHOP (fast, AD off), DRESS (full pipeline, AD on), SHOW (live demo, AD on). ' +
-        'Pass build_mode to set mode — AD flag auto-set per defaults. Pass set_mode to manually override AD on/off. ' +
-        'Returns: build mode, AD flag, specs, scores, iteration history.',
+        'Get or set AD state. Build modes: SHOP (fast, AD off), DRESS (full, AD on), SHOW (live, AD on). ' +
+        'Pass build_mode to switch. Returns: mode, AD flag, specs, scores, history.',
       inputSchema: {
         build_mode: z
           .enum(['shop', 'dress', 'show'])
@@ -1169,8 +1191,7 @@ export function registerArtDirectionTools(
       title: 'Reset Art Direction',
       description:
         'Clear all AD state (specs, SEGA vector, scores, placement DB) for a fresh build. ' +
-        'Does NOT touch the Octane scene — use reset_project for that. ' +
-        'Call this when starting a new scene build to clear stale AD state from a previous build.',
+        'Does NOT touch the Octane scene — pair with reset_project for full reset.',
       inputSchema: {
         confirm: z.boolean().describe('Must be true to confirm reset'),
       },
@@ -1330,10 +1351,10 @@ export function registerArtDirectionTools(
     }
   );
 
-  // ── 8. register_scene_object ──────────────────────────────────────
+  // ── 8. register_object ──────────────────────────────────────
 
   server.registerTool(
-    'register_scene_object',
+    'register_object',
     {
       title: 'Register Scene Object',
       description:
@@ -1506,7 +1527,7 @@ export function registerArtDirectionTools(
             warnings.length > 0
               ? 'Warnings detected — consider adjusting position/rotation.'
               : 'Object registered. Scene database updated.',
-          ...adWorkflow(artState, 'register_scene_object'),
+          ...adWorkflow(artState, 'register_object'),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -1520,8 +1541,7 @@ export function registerArtDirectionTools(
     'get_scene_placement_state',
     {
       title: 'Scene Placement State',
-      description:
-        'Get the current scene placement database: all registered objects, positions, bounds, roles, and warnings.',
+      description: 'Get scene placement database: objects, positions, bounds, roles.',
       annotations: { readOnlyHint: true },
     },
     async () => jsonResult(placement.snapshot())

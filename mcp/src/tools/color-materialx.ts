@@ -26,13 +26,9 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
     'get_ocio_config',
     {
       title: 'OCIO Config',
-      description:
-        'Load and query the current OCIO config. Returns all color spaces, displays, views, looks, and roles. Pass a config file path or omit to use the OCIO environment variable default.',
+      description: 'Query current OCIO config. Call describe_tool("get_ocio_config") for params.',
       inputSchema: {
-        config_path: z
-          .string()
-          .optional()
-          .describe('Path to OCIO config file. Omit to use OCIO env variable default.'),
+        config_path: z.string().optional(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -197,9 +193,9 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
     {
       title: 'List Color Spaces',
       description:
-        'List all available OCIO color spaces from the current config. Shortcut that returns just the color space names.',
+        'List OCIO color space names. Call describe_tool("list_color_spaces") for params.',
       inputSchema: {
-        config_path: z.string().optional().describe('OCIO config path (omit for default)'),
+        config_path: z.string().optional(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -249,73 +245,9 @@ export function registerColorMaterialXTools(server: McpServer, client: OctaneMcp
     }
   );
 
-  // ── MaterialX ───────────────────────────────────────────────────────
-
-  server.registerTool(
-    'import_materialx',
-    {
-      title: 'Import MaterialX',
-      description:
-        'Import a MaterialX (.mtlx) file into the scene. Creates all material nodes defined in the file. Returns the output node handle.',
-      inputSchema: {
-        file_path: z.string().describe('Absolute path to .mtlx file'),
-        use_native_nodes: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Use native MaterialX nodes (default true). False = convert to Octane nodes.'),
-      },
-      annotations: { destructiveHint: true },
-    },
-    async ({ file_path, use_native_nodes }) => {
-      try {
-        const pathError = validateFilePath(file_path);
-        if (pathError) return errorResult(new Error(pathError));
-
-        const rootHandle = await client.getRootNodeGraph();
-
-        const result = await client.callMethod('ApiMaterialXGlobal', 'importMaterialXFile', {
-          materialXFilePath: file_path,
-          parentNodeGraph: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
-          useNativeMaterialXNodes: use_native_nodes,
-        });
-
-        const outputHandle = extractHandle(result);
-        if (outputHandle) {
-          client.sceneCache.addNode(outputHandle, `MaterialX_import`, 'NT_UNKNOWN', 0);
-          mcpLog(`import_materialx: ${file_path} → handle ${outputHandle}`, 'info');
-        }
-
-        return jsonResult({
-          success: !!outputHandle,
-          file_path,
-          output_handle: outputHandle ?? null,
-        });
-      } catch (error: any) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.registerTool(
-    'list_materialx_nodes',
-    {
-      title: 'List MaterialX Nodes',
-      description:
-        'List all available MaterialX node categories supported by Octane. Returns category names like "standard_surface", "noise2d", etc.',
-      annotations: { readOnlyHint: true },
-    },
-    async () => {
-      try {
-        const result = await client.callMethod('ApiMaterialXGlobal', 'getAllMxNodeCategories', {});
-        const categories = result?.result?.data ?? result?.result ?? [];
-        return jsonResult({
-          category_count: Array.isArray(categories) ? categories.length : 0,
-          categories,
-        });
-      } catch (error: any) {
-        return errorResult(error);
-      }
-    }
-  );
+  // ── MaterialX — DISABLED: ApiMaterialXGlobal RPC not implemented in octaneServGrpc ──
+  // Re-enable when gRPC server adds MaterialX support.
+  //
+  // server.registerTool('import_materialx', ...);
+  // server.registerTool('list_materialx_nodes', ...);
 }

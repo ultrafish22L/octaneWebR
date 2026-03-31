@@ -189,23 +189,23 @@ const BUILD_MODE_AD_DEFAULTS: Record<string, AdMode> = {
 
 /** All steps in the AD workflow, in order. */
 export const AD_STEPS = [
-  // Phase 0 — Plan
-  'analyze_reference',
-  'analyze_geo',
-  'plan_composition',
+  // Phase 0 — Concept + Assets
+  'analyze_reference', // image or text brief — at least one required
+  'analyze_geo', // per mesh (skip for primitives-only)
+  'set_sega', // mood set after concept + assets are known
+  'plan_layout',
   'validate_layout',
   // Phase 1 — Frame
   'suggest_placement',
   'fit_camera',
-  'register_scene_object',
-  'framing_verified', // gate: visual confirm all objects framed
+  'register_object',
+  'framing_verified', // gate: clay critique passes composition_match >= 3
   // Phase 2 — Style
-  'set_artistic_intent',
   'suggest_lighting',
   'suggest_material',
   // Phase 3 — Critique (iterate)
-  'critique_render',
-  'apply_corrections',
+  'score_render',
+  'commit_scores',
 ] as const;
 
 export type AdStep = (typeof AD_STEPS)[number];
@@ -213,78 +213,85 @@ export type AdStep = (typeof AD_STEPS)[number];
 const STEP_PHASE: Record<AdStep, number> = {
   analyze_reference: 0,
   analyze_geo: 0,
-  plan_composition: 0,
+  set_sega: 0,
+  plan_layout: 0,
   validate_layout: 0,
   suggest_placement: 1,
   fit_camera: 1,
-  register_scene_object: 1,
+  register_object: 1,
   framing_verified: 1,
-  set_artistic_intent: 2,
   suggest_lighting: 2,
   suggest_material: 2,
-  critique_render: 3,
-  apply_corrections: 3,
+  score_render: 3,
+  commit_scores: 3,
 };
 
 /**
  * Prerequisites: which steps must be done before this step.
  *
- * critique_render has NO prereqs — it's used in BOTH:
+ * analyze_reference is the entry point — no prereqs. Accepts image OR text brief.
+ * set_sega after analyze_reference + analyze_geo: mood informed by concept + assets.
+ * plan_layout has no hard prereqs — works with primitives (no analyze_geo needed).
+ *
+ * score_render has NO prereqs — it's used in BOTH:
  *   - Phase 1 (clay composition check, before framing_verified)
  *   - Phase 3 (final critique loop, after dress)
  *
- * framing_verified requires critique_render because the clay-mode
+ * framing_verified requires score_render because the clay-mode
  * critique IS the gate. You can't skip it by just running fit_camera.
  */
 const STEP_PREREQS: Partial<Record<AdStep, AdStep[]>> = {
-  plan_composition: ['analyze_geo'],
-  validate_layout: ['plan_composition'],
-  suggest_placement: ['plan_composition'],
+  set_sega: ['analyze_reference'], // mood from concept analysis
+  plan_layout: [], // no hard prereqs — primitives skip analyze_geo
+  validate_layout: ['plan_layout'],
+  suggest_placement: ['plan_layout'],
   fit_camera: [], // always allowed — Phase 1 entry
-  register_scene_object: ['fit_camera'],
-  framing_verified: ['fit_camera', 'register_scene_object', 'critique_render'],
-  set_artistic_intent: ['framing_verified'],
-  suggest_lighting: ['set_artistic_intent'],
+  register_object: ['fit_camera'],
+  framing_verified: ['fit_camera', 'register_object', 'score_render'],
+  suggest_lighting: ['set_sega', 'framing_verified'], // needs mood AND locked framing
   suggest_material: ['framing_verified'],
-  critique_render: [], // no prereqs — used in Phase 1 (clay) AND Phase 3 (final)
-  apply_corrections: ['critique_render'],
+  score_render: [], // no prereqs — used in Phase 1 (clay) AND Phase 3 (final)
+  commit_scores: ['score_render'],
 };
 
 /** What to call next after completing this step (when AD active). */
 const STEP_NEXT: Partial<Record<AdStep, { step: AdStep; reason: string }>> = {
-  analyze_reference: { step: 'analyze_geo', reason: 'Analyze each mesh before planning layout' },
-  analyze_geo: {
-    step: 'plan_composition',
-    reason: 'Create composition plan from analyzed meshes',
+  analyze_reference: {
+    step: 'analyze_geo',
+    reason: 'Analyze each mesh (skip if primitives only, proceed to set_sega)',
   },
-  plan_composition: { step: 'validate_layout', reason: 'Validate geometry before building' },
+  analyze_geo: {
+    step: 'set_sega',
+    reason: 'Set mood now that concept + assets are known',
+  },
+  set_sega: { step: 'plan_layout', reason: 'Plan spatial layout with known mood' },
+  plan_layout: { step: 'validate_layout', reason: 'Validate geometry before building' },
   validate_layout: {
     step: 'suggest_placement',
     reason: 'Get collision-free positions for each object',
   },
   suggest_placement: { step: 'fit_camera', reason: 'Frame the placed objects' },
-  fit_camera: { step: 'register_scene_object', reason: 'Register placed object in scene DB' },
-  register_scene_object: {
-    step: 'critique_render',
+  fit_camera: { step: 'register_object', reason: 'Register placed object in scene DB' },
+  register_object: {
+    step: 'score_render',
     reason:
-      'Run critique_render IN CLAY MODE to verify composition. framing_verified gate requires critique_render + fit_camera + register_scene_object.',
+      'Run score_render IN CLAY MODE to verify composition. framing_verified gate requires score_render + fit_camera + register_object.',
   },
   framing_verified: {
-    step: 'set_artistic_intent',
-    reason: 'Set mood/style now that framing is locked',
+    step: 'suggest_lighting',
+    reason: 'Build lighting from SEGA mood now that framing is locked',
   },
-  set_artistic_intent: { step: 'suggest_lighting', reason: 'Build lighting recipe from mood' },
   suggest_lighting: {
     step: 'suggest_material',
     reason: 'Apply PBR properties (preserve mesh textures)',
   },
-  suggest_material: { step: 'critique_render', reason: 'Score the dressed scene' },
-  critique_render: {
-    step: 'apply_corrections',
+  suggest_material: { step: 'score_render', reason: 'Score the dressed scene' },
+  score_render: {
+    step: 'commit_scores',
     reason: 'Record scores and get correction priorities',
   },
-  apply_corrections: {
-    step: 'critique_render',
+  commit_scores: {
+    step: 'score_render',
     reason: 'Re-render and critique again until passed',
   },
 };
@@ -426,8 +433,8 @@ export class ArtDirectionState {
    *
    * framing_verified requires ALL THREE:
    *   1. fit_camera (scene is framed)
-   *   2. register_scene_object (objects registered in scene DB)
-   *   3. critique_render (VLM confirmed composition in clay mode)
+   *   2. register_object (objects registered in scene DB)
+   *   3. score_render (VLM confirmed composition in clay mode)
    *
    * This prevents skipping the clay-mode critique gate before Phase 2.
    */
@@ -436,10 +443,10 @@ export class ArtDirectionState {
     if (note) this._stepNotes.set(step, note);
     // Auto-complete framing_verified when all three Phase 1 gates are met
     if (
-      (step === 'fit_camera' || step === 'register_scene_object' || step === 'critique_render') &&
+      (step === 'fit_camera' || step === 'register_object' || step === 'score_render') &&
       this._completedSteps.has('fit_camera') &&
-      this._completedSteps.has('register_scene_object') &&
-      this._completedSteps.has('critique_render')
+      this._completedSteps.has('register_object') &&
+      this._completedSteps.has('score_render')
     ) {
       this._completedSteps.add('framing_verified');
     }

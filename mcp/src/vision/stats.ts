@@ -1,7 +1,7 @@
 /**
  * Critique Stats — append-only JSONL log per scene for audit trail and system tuning.
  *
- * Each critique_render call appends one line to {scene_folder}/critique_stats.jsonl.
+ * Each score_render call appends one line to {scene_folder}/critique_stats.jsonl.
  * Tracks Sonnet comparison scores plus orchestrator grades.
  */
 

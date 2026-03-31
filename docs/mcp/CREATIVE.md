@@ -73,7 +73,7 @@ Volumetric medium FIRST: NT_MED_SCATTERING on env + NT_KERN_PATHTRACING. Simple 
 
 ### Before Creating Nodes
 
-1. Know every object's position in 3D space (from `plan_composition` or recipe)
+1. Know every object's position in 3D space (from `plan_layout` or recipe)
 2. Know Z-depth relationships
 3. Camera: `fit_camera` handles framing during build. Hero camera comes in Phase 4 polish.
 

@@ -160,7 +160,7 @@ export function registerCameraTools(
     {
       title: 'Set Camera',
       description:
-        'Set camera position and/or target in world coordinates. ⛔ When AD is active, Phase 4 ONLY — use fit_camera for framing. If framing is wrong, fix geometry (position/scale/floor size), not the camera.',
+        '[Phase 4] Set camera position and/or target. ⛔ AD Phase 4 ONLY — use fit_camera for framing. Wrong framing = fix geometry, not camera. See octane://docs/creative/3.',
       inputSchema: {
         position: Vec3Schema.optional().describe('Camera position in world coordinates'),
         target: Vec3Schema.optional().describe('Camera look-at target in world coordinates'),
@@ -207,7 +207,7 @@ export function registerCameraTools(
     {
       title: 'Fit Camera',
       description:
-        'Compute and set camera to frame a bounding box. Call after every geo placement. Pass explicit bounds or omit to use scene bounds. Returns computed camera position, target, and distance.',
+        '[Phase 1+] Frame camera to bounding box. MANDATORY after every place_geo call. Pass explicit bounds or omit for auto. See octane://docs/creative/3.',
       inputSchema: {
         bbox_min: Vec3Schema.optional().describe(
           'Min corner of bounding box. Omit to auto-query scene bounds.'
@@ -384,7 +384,7 @@ export function registerCameraTools(
           result.warning =
             entryCount === 0
               ? 'Placement state is empty — using full scene bounds (includes ground planes, lights). ' +
-                'Framing may be inaccurate. Use register_scene_object or place_geo to register objects for correct subject framing.'
+                'Framing may be inaccurate. Use register_object or place_geo to register objects for correct subject framing.'
               : `Placement state has ${entryCount} entries but all are ground/light roles — no frameable subjects. ` +
                 'Using full scene bounds. Place a hero/secondary/accent/prop object for correct subject framing.';
         }

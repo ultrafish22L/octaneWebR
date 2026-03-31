@@ -13,7 +13,7 @@ const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
 
 // Build number — increment on every code change to verify running code matches build.
 // Check with get_octane_version() → mcp_build field.
-const MCP_BUILD = 73;
+const MCP_BUILD = 74;
 import {
   OctaneMcpClient,
   MCP_LOG_PATH,
@@ -28,6 +28,7 @@ import { AttrType, AttributeId, OBJ_API_ITEM, OBJ_API_NODE } from '../shared/Oct
 import { ApiCache } from '../ApiCache';
 
 import { jsonResult, errorResult } from './utils';
+import { searchCatalog, getCatalogEntry, TOOL_CATALOG } from './tool-catalog';
 
 export function registerInfoTools(
   server: McpServer,
@@ -76,8 +77,8 @@ export function registerInfoTools(
     'get_device_info',
     {
       title: 'Device Info',
-      description: 'Get GPU device information including name and memory usage',
-      inputSchema: { device_index: z.number().default(0).describe('GPU device index (default 0)') },
+      description: 'Get GPU device name and memory usage.',
+      inputSchema: { device_index: z.number().default(0) },
       annotations: { readOnlyHint: true },
     },
     async ({ device_index }) => {
@@ -104,7 +105,7 @@ export function registerInfoTools(
     {
       title: 'List Node Types',
       description:
-        'List available Octane node types, attribute types, and attribute IDs. Use category to filter node types by prefix (e.g. "CAM" for cameras, "MAT" for materials, "TEX" for textures, "GEO" for geometry, "LIGHT" for lights, "ENV" for environments, "KERN" for kernels).',
+        'List available Octane node types, attribute types, and attribute IDs. Filter by category prefix (e.g. "CAM", "MAT", "TEX", "GEO", "LIGHT").',
       inputSchema: {
         category: z
           .string()
@@ -147,82 +148,59 @@ export function registerInfoTools(
     }
   );
 
-  // ── Profiling tools ──────────────────────────────────────────────
+  // ── Profiling tool (consolidated) ─────────────────────────────────
 
   server.registerTool(
-    'profile_start',
+    'profile',
     {
-      title: 'Profile Start',
-      description:
-        '[Debug] Start a named profile span. Use to time high-level phases (e.g. "infra_setup", "geo_build", "materials").',
-      inputSchema: { label: z.string().describe('Name for this profile span') },
-      annotations: { destructiveHint: true },
+      title: 'Profile',
+      description: '[Debug] Performance profiling. Call describe_tool("profile") for params.',
+      inputSchema: {
+        action: z.enum(['start', 'end', 'report', 'reset']),
+        label: z.string().optional(),
+      },
     },
-    async ({ label }) => {
-      profileStart(label);
-      return jsonResult({ started: label });
-    }
-  );
+    async ({ action, label }) => {
+      switch (action) {
+        case 'start':
+          if (!label) return errorResult('label is required for action "start"');
+          profileStart(label);
+          return jsonResult({ started: label });
 
-  server.registerTool(
-    'profile_end',
-    {
-      title: 'Profile End',
-      description: '[Debug] End a named profile span started with profile_start.',
-      inputSchema: { label: z.string().describe('Name of the span to end') },
-      annotations: { destructiveHint: true },
-    },
-    async ({ label }) => {
-      const ms = profileEnd(label);
-      return jsonResult({ ended: label, durationMs: Math.round(ms) });
-    }
-  );
+        case 'end':
+          if (!label) return errorResult('label is required for action "end"');
+          const ms = profileEnd(label);
+          return jsonResult({ ended: label, durationMs: Math.round(ms) });
 
-  server.registerTool(
-    'profile_report',
-    {
-      title: 'Profile Report',
-      description:
-        '[Debug] Get profiling report: wall clock time, gRPC call breakdown by method, overhead analysis. Call after a build to see where time went.',
-      annotations: { readOnlyHint: true },
-    },
-    async () => {
-      const report = profileReport();
-      // Format a human-readable summary too
-      const lines = [
-        `=== PROFILE REPORT ===`,
-        `Wall clock:    ${(report.wallClockMs / 1000).toFixed(1)}s`,
-        `gRPC total:    ${(report.totalGrpcMs / 1000).toFixed(1)}s (${report.grpcCallCount} calls)`,
-        `Overhead:      ${(report.totalOverheadMs / 1000).toFixed(1)}s (mutex waits + serialization + MCP transport)`,
-        ``,
-        `── gRPC by method ──`,
-        ...report.grpcByMethod.map(
-          m =>
-            `  ${m.method.padEnd(40)} ${String(m.count).padStart(3)}x  ${String(m.avgMs).padStart(4)}ms avg  ${String(m.totalMs).padStart(6)}ms total`
-        ),
-      ];
-      if (report.spans.length > 0) {
-        lines.push(``, `── Manual spans ──`);
-        for (const s of report.spans) {
-          lines.push(`  ${s.label.padEnd(40)} ${String(s.durationMs).padStart(6)}ms`);
+        case 'report': {
+          const report = profileReport();
+          const lines = [
+            `=== PROFILE REPORT ===`,
+            `Wall clock:    ${(report.wallClockMs / 1000).toFixed(1)}s`,
+            `gRPC total:    ${(report.totalGrpcMs / 1000).toFixed(1)}s (${report.grpcCallCount} calls)`,
+            `Overhead:      ${(report.totalOverheadMs / 1000).toFixed(1)}s (mutex waits + serialization + MCP transport)`,
+            ``,
+            `── gRPC by method ──`,
+            ...report.grpcByMethod.map(
+              m =>
+                `  ${m.method.padEnd(40)} ${String(m.count).padStart(3)}x  ${String(m.avgMs).padStart(4)}ms avg  ${String(m.totalMs).padStart(6)}ms total`
+            ),
+          ];
+          if (report.spans.length > 0) {
+            lines.push(``, `── Manual spans ──`);
+            for (const s of report.spans) {
+              lines.push(`  ${s.label.padEnd(40)} ${String(s.durationMs).padStart(6)}ms`);
+            }
+          }
+          return {
+            content: [{ type: 'text' as const, text: lines.join('\n') }],
+          };
         }
-      }
-      return {
-        content: [{ type: 'text' as const, text: lines.join('\n') }],
-      };
-    }
-  );
 
-  server.registerTool(
-    'profile_reset',
-    {
-      title: 'Profile Reset',
-      description: '[Debug] Reset all profiling data. Call before starting a timed build run.',
-      annotations: { destructiveHint: true, idempotentHint: true },
-    },
-    async () => {
-      profileReset();
-      return jsonResult({ reset: true });
+        case 'reset':
+          profileReset();
+          return jsonResult({ reset: true });
+      }
     }
   );
 
@@ -230,8 +208,7 @@ export function registerInfoTools(
     'clear_log',
     {
       title: 'Clear Log',
-      description:
-        'Clear the log_mcp.log file to start with a fresh log. Returns the line count of the old log.',
+      description: 'Clear log_mcp.log for fresh debugging session.',
       annotations: { destructiveHint: true },
     },
     async () => {
@@ -248,6 +225,70 @@ export function registerInfoTools(
       } catch (error: any) {
         return errorResult(error);
       }
+    }
+  );
+
+  // ── Discovery tools ─────────────────────────────────────────────
+
+  server.registerTool(
+    'search_tools',
+    {
+      title: 'Search Tools',
+      description:
+        'Search all MCP tools by keyword. Returns matching tool names, summaries, and categories. Use before calling unfamiliar tools.',
+      inputSchema: {
+        query: z
+          .string()
+          .describe('Keywords to search (e.g. "lighting", "animation set", "phase 2")'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ query }) => {
+      const results = searchCatalog(query);
+      if (results.length === 0) {
+        return jsonResult({
+          query,
+          matches: 0,
+          hint: `No tools match "${query}". Try broader terms. Categories: ${[...new Set(TOOL_CATALOG.map(t => t.category))].join(', ')}`,
+        });
+      }
+      return jsonResult({
+        query,
+        matches: results.length,
+        tools: results.map(t => ({
+          name: t.name,
+          summary: t.summary,
+          category: t.category,
+          ...(t.phase ? { phase: t.phase } : {}),
+          has_detailed_docs: !!t.params,
+        })),
+      });
+    }
+  );
+
+  server.registerTool(
+    'describe_tool',
+    {
+      title: 'Describe Tool',
+      description:
+        'Get full parameter documentation for a tool. Essential for long-tail tools with slim schemas — returns the complete param descriptions.',
+      inputSchema: {
+        name: z.string().describe('Tool name (e.g. "animation", "save_render_passes")'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ name }) => {
+      const entry = getCatalogEntry(name);
+      if (!entry) {
+        return errorResult(`Unknown tool: "${name}". Use search_tools to find available tools.`);
+      }
+      return jsonResult({
+        name: entry.name,
+        summary: entry.summary,
+        category: entry.category,
+        ...(entry.phase ? { phase: entry.phase } : {}),
+        params: entry.params ?? 'Full parameter docs are in the tool schema (core tool).',
+      });
     }
   );
 }

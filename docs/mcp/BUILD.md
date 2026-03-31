@@ -110,24 +110,24 @@ Every step produces a visible change. The human should see a render update withi
 
 When running autonomously (multi-scene, unattended), these gates are **non-negotiable**. Each gate HALTS the build if not met. No "I'll do it later" — if you skip a gate, the scene fails.
 
-| Gate   | Check                                                                | If Skipped                                                                          |
-| ------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **G0** | `analyze_reference` was called on concept art                        | Scene has no composition data — layout will be random                               |
-| **G1** | `set_artistic_intent` was called with preset or vector               | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
-| **G2** | Every mesh ran through `analyze_geo` before `place_geo`              | Orientation will be wrong — wasted iterations                                       |
-| **G3** | `critique_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
-| **G4** | `evaluate_semantics` ran at least once per scene                     | No SEGA gap measurement — you can't know what's wrong                               |
-| **G5** | Orchestrator (you) read render + concept art at C3                   | Single-critic blind spot — Sonnet misses context you have                           |
-| **G6** | `fit_camera` called after every geometry add                         | Camera may not frame all objects                                                    |
-| **G7** | Logs checked (all 3 files) after each phase                          | Silent errors accumulate                                                            |
+| Gate   | Check                                                             | If Skipped                                                                          |
+| ------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **G0** | `analyze_reference` was called on concept art                     | Scene has no composition data — layout will be random                               |
+| **G1** | `set_sega` was called with preset or vector                       | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
+| **G2** | Every mesh ran through `analyze_geo` before `place_geo`           | Orientation will be wrong — wasted iterations                                       |
+| **G3** | `score_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
+| **G4** | `score_sega` ran at least once per scene                          | No SEGA gap measurement — you can't know what's wrong                               |
+| **G5** | Orchestrator (you) read render + concept art at C3                | Single-critic blind spot — Sonnet misses context you have                           |
+| **G6** | `fit_camera` called after every geometry add                      | Camera may not frame all objects                                                    |
+| **G7** | Logs checked (all 3 files) after each phase                       | Silent errors accumulate                                                            |
 
-**If `critique_render` returns a self-critique prompt instead of a Sonnet grade:** STOP. Pass `reference_image_path` pointing to concept art. If Sonnet still fails, investigate the error — do NOT self-grade and move on.
+**If `score_render` returns a self-critique prompt instead of a Sonnet grade:** STOP. Pass `reference_image_path` pointing to concept art. If Sonnet still fails, investigate the error — do NOT self-grade and move on.
 
 **Common autonomous drift patterns (observed failures):**
 
 - Substituting primitives for 3D meshes "to save time" → flat, CG-looking scenes
 - Skipping Phase 0/0b "because I know what I want" → no SEGA context, generic lighting
-- Running `critique_render` without `reference_image_path` → self-critique fallback, inflated grades
+- Running `score_render` without `reference_image_path` → self-critique fallback, inflated grades
 - Batching 3+ objects without intermediate `fit_camera` + render → framing breaks, objects lost
 - Optimizing scene count over quality → every scene suffers
 - **Skipping creative review** → 3 objects on a floor is never a finished scene. Walls, textures, HDRI = mandatory
@@ -151,14 +151,14 @@ Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-p
 | Hero              | 1 (yaw 22°, elevation 25°)                             | Textured (clay off), tight margin | Reference thumbnail for human review                                         |
 
 - **⚠️ Never skip mugshots.** Every mesh runs the full 2-pass VLM protocol — no exceptions. The `source_endpoint` parameter is deprecated and ignored.
-- **Configuration mode:** `analyze_geo(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Use `benchmark_vlm_models` to rank accuracy.
+- **Configuration mode:** `analyze_geo(configuration=true)` renders all 8 MUGSHOT_VIEWS as a 4×2 contact sheet and benchmarks every VLM model. Benchmark tool currently disabled.
 - **Sidecar:** `.mesh_info.json` v5 — geometry, semantic, source, visual_check (pass1 + pass2 arrays), final_suggestion.
 - **Autonomous:** Proceeds without human input. Flags `verified: false` only if Pass 2 fails after 4 attempts.
 
 **Related tools:**
 
 - `place_geo` (Phase 1) — Import + place in one call. Reads sidecar, applies orientation/scale/offset, wires placement→geo group→RT.
-- `benchmark_vlm_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
+- `benchmark_vlm_models` — DISABLED. Score VLM models from configuration runs (re-enable when needed).
 
 ```
 ❌ place_geo("gargoyle.obj") without analyze_geo → guess rotation → wrong → waste iterations
@@ -167,48 +167,46 @@ Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-p
 
 ---
 
-### Phase 0: Composition Planning (before any Octane calls)
+### Phase 0: Concept + Assets + Plan (before any Octane calls)
 
-**Requires AD.** Skipped when AD is OFF (SHOP default, or "no AD" flag). When skipped, use recipe positions directly in Phase 3.
+**Requires AD.** Skipped when AD is OFF (SHOP default, or "no AD" flag). When skipped, use recipe positions directly in Phase 1.
 
 Run BEFORE creating any nodes. Pure math — validates layout without touching Octane.
 
-| Step | Action                                                                          | Result                                                                          |
-| ---- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 0a   | `analyze_reference(image_path, description)` — if ref image provided            | Structured extraction prompt. Read image + answer prompt → scene data           |
-| 0b   | `plan_composition(name, objects, camera, focal_point)`                          | CompositionSpec with computed camera math + auto-validation                     |
-| 0c   | `validate_layout(spec_name)` — if plan_composition auto-validation had warnings | Detailed geometric checks: frustum, depth separation, proximity, grid alignment |
-| 0d   | Fix any validation errors, re-run plan_composition                              | Clean validated spec                                                            |
+**Concept input is REQUIRED** — at least one of:
+
+- **Image concept:** `analyze_reference(image_path, scene_description)` → vision extracts mood, composition, object list
+- **Text concept:** `analyze_reference(scene_description)` → text brief, no image needed. Include mood, objects, composition intent.
+
+Simple concepts (geometric still life, product shot) can use Octane primitives — skip mesh download. Complex concepts → generate meshes via OTOY Studio image-to-3D, then `analyze_geo` each mesh.
+
+| Step | Action                                                                     | Result                                                                          |
+| ---- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 0a   | `analyze_reference(image_path OR scene_description)` — concept input       | Composition data (from vision or text brief)                                    |
+| 0b   | `analyze_geo(obj_path)` per mesh — skip for primitives-only                | .mesh_info.json sidecar with orientation/scale/offset                           |
+| 0c   | `set_sega(preset or vector)` — mood AFTER concept + assets are known       | SEGA vector initialized, drives lighting/material values                        |
+| 0d   | `plan_layout(name, objects, camera, focal_point)`                          | CompositionSpec with computed camera math + auto-validation                     |
+| 0e   | `validate_layout(spec_name)` — if plan_layout auto-validation had warnings | Detailed geometric checks: frustum, depth separation, proximity, grid alignment |
+| 0f   | Fix any validation errors, re-run plan_layout                              | Clean validated spec                                                            |
 
 **Hard gate:** Do NOT call `create_node` until `validate_layout` passes with 0 errors.
 
-### Phase 0b: Artistic Intent (after composition planning)
-
-**Requires AD.** Skipped when AD is OFF. `suggest_lighting`/`suggest_material` still return reasonable defaults without intent.
-
-| Step | Action                                                           | Result                  |
-| ---- | ---------------------------------------------------------------- | ----------------------- |
-| 0e   | `set_artistic_intent(preset or vector from recipe mood)`         | SEGA vector initialized |
-| 0f   | `get_artistic_intent()` — confirm dimensions match recipe vision | Intent locked           |
-
-**Why here:** SEGA intent drives `suggest_lighting` and `suggest_material` values in Phase 2. Setting it before building ensures mood-consistent choices from the start.
-
 ### Phase 1: First Visual (get render on screen ASAP)
 
-**CLAY MODE ON.** Call `set_clay_mode(2)` (color clay) before first render. All Phase 1 renders are clay — no materials, no lighting tuning. The only goal is correct composition: right objects, right framing, right camera. Color clay preserves diffuse textures for better visibility than grey clay (mode 1), which washes out against bright environments.
+**CLAY MODE ON.** Call `clay_mode(2)` (color clay) before first render. All Phase 1 renders are clay — no materials, no lighting tuning. The only goal is correct composition: right objects, right framing, right camera. Color clay preserves diffuse textures for better visibility than grey clay (mode 1), which washes out against bright environments.
 
 | Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(2)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
+| 1    | `create_node(NT_RENDERTARGET)` + `clay_mode(2)`                                                                                           | RT handle + clay mode active                                                                                                                                                                                                                                         |
 | 2    | Place mesh via `place_geo(type:"mesh", obj_path)` → auto-wires to geo group → RT                                                          | **Object exists**. `place_geo` handles OBJ/GLB, creates mesh+placement+material+PBR textures, wires to RT, auto-registers. Reads sidecar for rotation/scale.                                                                                                         |
 | 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
 | 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |
-| 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `critique_render` must pass composition before Phase 2.**                                                                                                                                                                |
+| 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `score_render` must pass composition before Phase 2.**                                                                                                                                                                   |
 
 **Hard rules for Phase 1:**
 
-- **Clay mode stays ON** until `critique_render` passes. `critique_render` warns if clay is off during early iterations.
-- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. **Clay uses a composition-only scale:** Sonnet is explicitly instructed that clay replaces ALL materials with uniform flat color — it grades SPATIAL LAYOUT ONLY (shapes present, positions correct, camera angle, silhouettes, scale relationships). It does NOT penalize for missing darkness, reflections, textures, lighting, or mood. `missing_elements` lists only missing geometry, never material properties. `mood_match` and `density_match` are always 3 (neutral) in clay. Pass = `composition_match >= 3`. When passed, `framing_verified` is set automatically. **This gate is enforced mechanically** — you cannot rationalize past a failing composition score.
+- **Clay mode stays ON** until `score_render` passes. `score_render` warns if clay is off during early iterations.
+- **`score_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `score_render` while still in clay mode. **Clay uses a composition-only scale:** Sonnet is explicitly instructed that clay replaces ALL materials with uniform flat color — it grades SPATIAL LAYOUT ONLY (shapes present, positions correct, camera angle, silhouettes, scale relationships). It does NOT penalize for missing darkness, reflections, textures, lighting, or mood. `missing_elements` lists only missing geometry, never material properties. `mood_match` and `density_match` are always 3 (neutral) in clay. Pass = `composition_match >= 3`. When passed, `framing_verified` is set automatically. **This gate is enforced mechanically** — you cannot rationalize past a failing composition score.
 - **Only `fit_camera`** — NEVER `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry (position, scale, floor plane size). `set_camera` is for Phase 4 hero shots only.
 - **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
 - **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
@@ -227,7 +225,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 
 ### ⛔ Creative Review Pass (MANDATORY before critique)
 
-**After placing all objects but BEFORE running `critique_render`**, stop and ask yourself:
+**After placing all objects but BEFORE running `score_render`**, stop and ask yourself:
 
 1. **"What else does this scene need?"** — Walls for mounted objects? A backdrop? Environmental context?
 2. **"Is anything floating?"** — Objects must be grounded. Mounted objects need a surface behind them.
@@ -235,7 +233,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 4. **"Is there depth?"** — Foreground/midground/background layers. Not everything on the same Z plane.
 5. **"Does the concept art match what I built?"** — If concept shows a room and you built a product shot, either add environment or regenerate a matching concept.
 
-Add 1-3 supporting elements based on answers. THEN run `critique_render`.
+Add 1-3 supporting elements based on answers. THEN run `score_render`.
 
 ### Framing Quality Checklist (verify before ANY critique call)
 
@@ -248,23 +246,23 @@ Read the render image and check:
 - [ ] Camera distance appropriate (not absurdly far back)
 - [ ] Scene has visual depth (not all objects on same plane)
 
-If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't waste Sonnet calls on obviously broken framing.
+If ANY check fails, fix geometry/camera BEFORE running `score_render`. Don't waste Sonnet calls on obviously broken framing.
 
 ```
 ❌ WRONG Phase 1:
-  place_geo → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → style
+  place_geo → set_camera({manually tweaked}) → eyeball clay render → clay_mode(0) → style
 
 ✅ RIGHT Phase 1:
-  place_geo (reads sidecar automatically) → fit_camera() → save_render → critique_render (clay)
-  → Sonnet grade C+? → YES → set_clay_mode(0) → Phase 2
-  → Sonnet grade D/F? → fix geometry → fit_camera() → critique_render again
+  place_geo (reads sidecar automatically) → fit_camera() → save_render → score_render (clay)
+  → Sonnet grade C+? → YES → clay_mode(0) → Phase 2
+  → Sonnet grade D/F? → fix geometry → fit_camera() → score_render again
 ```
 
 ### Phase 2: Materials & Lighting (ONLY after Phase 1 critique passes)
 
 | Step | Action                                                                | Notes                                                     |
 | ---- | --------------------------------------------------------------------- | --------------------------------------------------------- |
-| 5    | `set_clay_mode(0)` — turn off clay                                    | Materials become visible                                  |
+| 5    | `clay_mode(0)` — turn off clay                                        | Materials become visible                                  |
 | 6    | `setup_lighting(mood)` — full 3-point + env dim in ONE call           | Reads SEGA intent for temps/ratios. Creates key+fill+rim. |
 | 7    | `suggest_material(surface_type)` → apply PBR properties               | Respect .mtl textures — don't override albedo             |
 | 8    | Fine-tune: `set_daylight(power, turbidity)` or individual light attrs | Use `create_light` for additional accent/practical lights |
@@ -280,7 +278,7 @@ For each additional object:
 
 1. `suggest_placement(object_name, bounds)` — get collision-free position from scene placement DB
 2. Create mesh → apply analyze_geo rotation → material → placement at suggested position → connect to geo group
-3. `register_scene_object(name, position, bounds)` — update scene DB (warns on overlap)
+3. `register_object(name, position, bounds)` — update scene DB (warns on overlap)
 4. `fit_camera()` → render → verify
 5. `get_scene_placement_state()` — inspect DB if placement looks wrong
 
@@ -290,28 +288,28 @@ For each additional object:
 
 Hero camera, fine-tune lighting, final beauty pass `save_render`.
 
-**`set_camera` belongs HERE — Phase 4 only.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_composition` camera overrides) for the beauty pass. Using `set_camera` earlier bypasses framing validation and masks geometry problems.
+**`set_camera` belongs HERE — Phase 4 only.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_layout` camera overrides) for the beauty pass. Using `set_camera` earlier bypasses framing validation and masks geometry problems.
 
 ### Critique Loop — Dual-Perspective (run after every save_render in Phases 2-4)
 
 **Requires AD.** Skipped when AD is OFF. When skipped, save the render and move on — no scoring, no corrections. **When AD is ON, both critics run every iteration — never skip one.**
 
-| Step | Action                                                           | Result                                          |
-| ---- | ---------------------------------------------------------------- | ----------------------------------------------- |
-| C1   | `critique_render(render_path, spec_name, reference_image_path?)` | Sonnet concept-vs-render comparison (A-F grade) |
-| C2   | `evaluate_semantics(render_path)`                                | Pixel-level intent gap analysis vs SEGA vector  |
-| C3   | Read the saved render image + concept art (Read tool)            | Orchestrator visual review — your own A-F grade |
+| Step | Action                                                        | Result                                          |
+| ---- | ------------------------------------------------------------- | ----------------------------------------------- |
+| C1   | `score_render(render_path, spec_name, reference_image_path?)` | Sonnet concept-vs-render comparison (A-F grade) |
+| C2   | `score_sega(render_path)`                                     | Pixel-level intent gap analysis vs SEGA vector  |
+| C3   | Read the saved render image + concept art (Read tool)         | Orchestrator visual review — your own A-F grade |
 
 **Orchestrator grade is MANDATORY.** You MUST state your own A-F grade explicitly before proceeding to C4. "I read it and it looks ok" is NOT a grade. State: `"Orchestrator grade: C+. [1 sentence reason]."` This is non-negotiable.
 
 | C4 | Compare both assessments: Sonnet + orchestrator | Dual-assessment synthesis |
-| C5 | `apply_corrections(spec_name, scores, corrections)` | Records score, detects stagnation |
+| C5 | `commit_scores(spec_name, scores, corrections)` | Records score, detects stagnation |
 | C6 | If score < 3.5 OR Sonnet grade < C: fix top corrections, re-render, go to C1 | Iteration |
 | C7 | If stagnating (2 iterations < 0.3 improvement): redesign plan | Plan change, not tweaking |
 
 ### Vision Critic — Sonnet + Orchestrator
 
-`critique_render` runs one automated critic (Sonnet), then the orchestrator (you) adds a second:
+`score_render` runs one automated critic (Sonnet), then the orchestrator (you) adds a second:
 
 1. **Sonnet comparison** (Anthropic API, two images) — concept art + render side-by-side. Holistic A-F grade, mood/density/composition match 1-5, missing elements, top fixes. **This is the primary critic.** Grade A or B = pass.
 2. **Orchestrator** (you, main Claude context) — read both images yourself at step C3. Give your own A-F grade. Note whether you agree with Sonnet. You have build context Sonnet doesn't.
@@ -402,7 +400,7 @@ Primitive values: see `REFERENCE.md` §7a.
 
 ## §6 Camera Workflow
 
-**`fit_camera(yaw, elevation, margin)` handles 90% of camera needs.** Use it after every geometry change. For hero shots in Phase 4, use `set_camera(position, target)` or `plan_composition` for precise framing.
+**`fit_camera(yaw, elevation, margin)` handles 90% of camera needs.** Use it after every geometry change. For hero shots in Phase 4, use `set_camera(position, target)` or `plan_layout` for precise framing.
 
 ### 3D Asset Orientation
 
@@ -420,7 +418,7 @@ Two separate clear operations — Octane scene vs AD state:
 
 1. `reset_ad(confirm: true)` — clears all AD state: specs, SEGA vector, scores, placement DB. Does NOT touch Octane.
 2. `reset_project()` — clears the Octane scene, invalidates all handles. Does NOT touch AD state.
-3. Verify: `get_scene_tree` → count: 0, `get_art_direction_state` → specs: []
+3. Verify: `get_scene_tree` → count: 0, `ad_state` → specs: []
 
 **For a new scene build, call both:** `reset_ad` first (clear stale AD from previous scene), then `reset_project` (clear Octane scene). Order matters — `reset_project` triggers `clearScene()` which preserves AD specs/SEGA, so calling `reset_ad` after would be needed anyway.
 

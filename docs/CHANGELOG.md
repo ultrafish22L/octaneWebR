@@ -4,6 +4,36 @@ All notable changes to octaneWebR.
 
 ---
 
+## [3.0.2] - 2026-03-30
+
+### Changed
+
+- **78 → 64 tools** — consolidated getter/setter pairs into toggle tools, merged utility clusters (profile 4→1, stats 3→1, animation 6→1), disabled 3 broken tools.
+- **13 tool renames** — standardized to "score" language (`critique_render` → `score_render`, `evaluate_semantics` → `score_sega`), SEGA brand (`set_artistic_intent` → `set_sega`), toggle pattern (`set_clay_mode` → `clay_mode`), clarity (`create_connected` → `create_at_pin`, `plan_composition` → `plan_layout`). Full table in CLAUDE.md.
+- **Tiered tool schemas** — 38 core tools keep full descriptions, 24 long-tail tools have slim schemas with `describe_tool()` pointer. Reduces startup token cost ~1,200 tokens.
+- **AD workflow ordering fixed** — `set_sega` moved from Phase 2 to Phase 0 (mood set early, not after framing). `plan_layout` no longer requires `analyze_geo` (primitives-only scenes work).
+- **Phase-selectable ad-workflow prompt** — `getPrompt("ad-workflow", phase:"2")` loads only that phase (~300 tokens vs ~2K for full workflow).
+- **Text concept briefs** — `analyze_reference(scene_description)` accepts text-only input when no concept image exists. At least one concept input (image or text) is required.
+- **Material aliases** — 25 common aliases (chrome→silver, stone→stone_rough, wood→bark, etc.) resolve automatically in `suggest_material`.
+
+### Added
+
+- **`search_tools(query)`** — keyword search across all 64 tools by name, summary, category, phase.
+- **`describe_tool(name)`** — full parameter documentation for any tool. Essential for long-tail tools with slim schemas.
+- **Tool catalog** (`tool-catalog.ts`) — centralized metadata for all tools, powering discovery.
+- **§ section refs in tool descriptions** — 15 tools now point to specific doc sections (e.g., `octane://docs/creative/1`).
+- **Prerequisite chains in descriptions** — `analyze_geo` → `place_geo` → `fit_camera`, `score_render` → `commit_scores`, `plan_layout` → `validate_layout`.
+
+### Removed
+
+- **`import_materialx`** — RPC not implemented in octaneServGrpc.
+- **`list_materialx_nodes`** — same underlying RPC.
+- **`benchmark_vlm_models`** — niche VLM calibration tool, not needed for scene building.
+- **`get_clay_mode`** / **`get_render_priority`** / **`get_subsample_mode`** — merged into toggle tools.
+- **`check_animated`** — merged into consolidated `animation` tool.
+
+---
+
 ## [3.0.1] - 2026-03-31
 
 ### Added

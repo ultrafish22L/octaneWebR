@@ -12,82 +12,57 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
   let prevTriCount = -1;
 
   server.registerTool(
-    'get_geometry_stats',
+    'get_stats',
     {
-      title: 'Geometry Stats',
+      title: 'Scene Stats',
       description:
-        'Get scene geometry statistics: triangle count, instance count, voxel count, hair segment count, Gaussian splat count, etc. Useful for understanding scene complexity.',
-      annotations: { readOnlyHint: true },
-    },
-    async () => {
-      try {
-        const result = await client.callMethod('ApiRenderEngine', 'getGeometryStatistics', {});
-
-        // Fix 4: Detect triCount drops — likely means geometry disconnected or mesh failed to load
-        const stats = (result as any)?.stats ?? result;
-        const currentTriCount = Number(stats?.triCount ?? 0);
-        const response: Record<string, any> = { stats };
-
-        // Only warn on meaningful drops (not after reset_project which goes to 0)
-        if (prevTriCount > 12 && currentTriCount < prevTriCount) {
-          response.warning =
-            `\u26a0 triCount DROPPED from ${prevTriCount} to ${currentTriCount}. ` +
-            `Geometry was lost. STOP. Follow crash protocol: ` +
-            `1) read log_mcp.log for errors, ` +
-            `2) call get_scene_tree to check connections, ` +
-            `3) trace the actual cause. Do NOT guess from docs.`;
-        }
-        prevTriCount = currentTriCount;
-
-        return jsonResult(response);
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.registerTool(
-    'get_texture_stats',
-    {
-      title: 'Texture Stats',
-      description:
-        'Get VRAM breakdown by texture type (RGBA32, RGBA64, Y8, Y16, virtual textures, etc.). Shows how much GPU memory textures consume.',
-      annotations: { readOnlyHint: true },
-    },
-    async () => {
-      try {
-        const result = await client.callMethod('ApiRenderEngine', 'getTexturesStatistics', {});
-        return jsonResult(result);
-      } catch (error: unknown) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.registerTool(
-    'get_resource_stats',
-    {
-      title: 'Resource Stats',
-      description:
-        'Get device resource breakdown: runtime, film, geometry, node system, images, compositor, denoiser memory usage. Specify device_index for multi-GPU setups.',
+        'Get scene statistics. Types: geometry (tri/instance counts), texture (VRAM by type), resource (GPU memory breakdown).',
       inputSchema: {
+        type: z.enum(['geometry', 'texture', 'resource']).describe('Stats category'),
         device_index: z
           .number()
           .int()
           .nonnegative()
           .optional()
           .default(0)
-          .describe('GPU device index (default 0)'),
+          .describe('GPU device index for resource stats (default 0)'),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ device_index }) => {
+    async ({ type, device_index }) => {
       try {
-        const result = await client.callMethod('ApiRenderEngine', 'getResourceStatistics', {
-          deviceIx: device_index,
-          memoryLocation: 0, // GPU memory
-        });
-        return jsonResult(result);
+        switch (type) {
+          case 'geometry': {
+            const result = await client.callMethod('ApiRenderEngine', 'getGeometryStatistics', {});
+            const stats = (result as any)?.stats ?? result;
+            const currentTriCount = Number(stats?.triCount ?? 0);
+            const response: Record<string, any> = { type: 'geometry', stats };
+
+            if (prevTriCount > 12 && currentTriCount < prevTriCount) {
+              response.warning =
+                `\u26a0 triCount DROPPED from ${prevTriCount} to ${currentTriCount}. ` +
+                `Geometry was lost. STOP. Follow crash protocol: ` +
+                `1) read log_mcp.log for errors, ` +
+                `2) call get_scene_tree to check connections, ` +
+                `3) trace the actual cause. Do NOT guess from docs.`;
+            }
+            prevTriCount = currentTriCount;
+            return jsonResult(response);
+          }
+
+          case 'texture': {
+            const result = await client.callMethod('ApiRenderEngine', 'getTexturesStatistics', {});
+            return jsonResult({ type: 'texture', ...result });
+          }
+
+          case 'resource': {
+            const result = await client.callMethod('ApiRenderEngine', 'getResourceStatistics', {
+              deviceIx: device_index,
+              memoryLocation: 0,
+            });
+            return jsonResult({ type: 'resource', device_index, ...result });
+          }
+        }
       } catch (error: unknown) {
         return errorResult(error);
       }
@@ -129,7 +104,7 @@ export function registerStatsTools(server: McpServer, client: OctaneMcpClient) {
     {
       title: 'Render State',
       description:
-        'Get comprehensive render pipeline state: is compiling shaders, compressing textures, has pending data, is paused, has failure. Useful for troubleshooting render issues.',
+        'Get comprehensive render pipeline state: compiling, pending, paused, failure. For troubleshooting.',
       annotations: { readOnlyHint: true },
     },
     async () => {

@@ -451,7 +451,7 @@ async function connectRaw(
     objectPtr: { handle: String(targetHandle), type: OBJ_API_NODE },
     pinIdx,
     sourceNode: { handle: String(sourceHandle), type: OBJ_API_NODE },
-    evaluate: false,
+    evaluate: true,
     doCycleCheck: true,
   });
 }
@@ -1421,7 +1421,7 @@ interface MugshotVLMResult {
  * Returns structured orientation data or null if VLM unavailable.
  *
  * NOTE: Only uses otoy-studio as vision backend. Anthropic/Gemini direct API
- * paths are NOT used for mugshot analysis — those stay for critique_render only.
+ * paths are NOT used for mugshot analysis — those stay for score_render only.
  */
 async function analyzeMugshotsWithVLM(
   mugshotPaths: string[],
@@ -2117,7 +2117,7 @@ export function registerImportTools(
     {
       title: 'Analyze Mesh',
       description:
-        'Analyze mesh orientation and scale BEFORE placement. Renders mugshots, sends to VLM for orientation verification. Caches result in .mesh_info.json sidecar. Accepts OBJ, GLB, or glTF. MUST run on every mesh before placement.',
+        '[Phase 0b] Analyze mesh orientation and scale via VLM mugshots. Caches in .mesh_info.json sidecar. Accepts OBJ, GLB, glTF. MUST run before place_geo for every mesh.',
       inputSchema: {
         obj_path: z.string().describe('Absolute path to mesh file (OBJ, GLB, or glTF)'),
         scene_context: z
@@ -2768,139 +2768,9 @@ export function registerImportTools(
     }
   );
 
-  // ── benchmark_vlm_models ──────────────────────────────────────────
-
-  server.registerTool(
-    'benchmark_vlm_models',
-    {
-      title: 'Benchmark VLM Models',
-      description:
-        'Score VLM models from configuration mode runs. Set ground_truth on scoreboard entries first, then call this to compute accuracy per model and set the preferred model.',
-      inputSchema: {
-        set_ground_truth: z
-          .array(
-            z.object({
-              mesh: z.string().describe('Mesh name (matches scoreboard run)'),
-              is_upright: z.boolean(),
-              front_direction: z.string().describe('toward_camera | away | left | right'),
-              correction: z.array(z.number()).length(3).describe('[x, y, z] degrees'),
-            })
-          )
-          .optional()
-          .describe('Set ground truth for meshes before scoring'),
-      },
-      annotations: { destructiveHint: true, openWorldHint: true },
-    },
-    async ({ set_ground_truth }) => {
-      try {
-        const sb = loadScoreboard();
-
-        // Apply ground truth if provided
-        if (set_ground_truth) {
-          for (const gt of set_ground_truth) {
-            const run = sb.runs.find(r => r.mesh === gt.mesh);
-            if (run) {
-              run.ground_truth = {
-                is_upright: gt.is_upright,
-                front_direction: gt.front_direction,
-                correction: gt.correction as [number, number, number],
-              };
-              mcpLog(`mugshot scoring: set ground truth for "${gt.mesh}"`, 'info');
-            } else {
-              mcpLog(`mugshot scoring: no run found for "${gt.mesh}"`, 'warn');
-            }
-          }
-        }
-
-        // Score all models
-        const runsWithTruth = sb.runs.filter(r => r.ground_truth !== null);
-        if (runsWithTruth.length === 0) {
-          saveScoreboard(sb);
-          return jsonResult({
-            message: 'No runs with ground_truth set. Set ground_truth first, then score.',
-            runs: sb.runs.map(r => ({ mesh: r.mesh, has_ground_truth: !!r.ground_truth })),
-          });
-        }
-
-        const modelScores: Record<string, { correct: number; total: number; details: any[] }> = {};
-
-        for (const run of runsWithTruth) {
-          const gt = run.ground_truth!;
-          for (const [model, result] of Object.entries(run.model_results)) {
-            if (!modelScores[model]) modelScores[model] = { correct: 0, total: 0, details: [] };
-            const ms = modelScores[model];
-            ms.total += 3; // 3 criteria per mesh
-
-            const uprightMatch = result.is_upright === gt.is_upright;
-            const frontMatch =
-              result.front_direction.toLowerCase().replace(/[^a-z_]/g, '') ===
-              gt.front_direction.toLowerCase().replace(/[^a-z_]/g, '');
-            const corrClose = result.correction.every(
-              (v, i) => Math.abs(v - gt.correction[i]) <= 15
-            );
-
-            if (uprightMatch) ms.correct++;
-            if (frontMatch) ms.correct++;
-            if (corrClose) ms.correct++;
-
-            ms.details.push({
-              mesh: run.mesh,
-              upright: uprightMatch ? '✓' : `✗ (got ${result.is_upright}, want ${gt.is_upright})`,
-              front: frontMatch
-                ? '✓'
-                : `✗ (got ${result.front_direction}, want ${gt.front_direction})`,
-              correction: corrClose
-                ? '✓'
-                : `✗ (got [${result.correction}], want [${gt.correction}])`,
-            });
-          }
-        }
-
-        // Compute accuracy and find best
-        const ranked: Array<{
-          model: string;
-          accuracy: number;
-          correct: number;
-          total: number;
-          details: any[];
-        }> = [];
-        for (const [model, scores] of Object.entries(modelScores)) {
-          const accuracy =
-            scores.total > 0 ? Math.round((scores.correct / scores.total) * 1000) / 10 : 0;
-          ranked.push({
-            model,
-            accuracy,
-            correct: scores.correct,
-            total: scores.total,
-            details: scores.details,
-          });
-          sb.scores[model] = { accuracy, total: scores.total, correct: scores.correct };
-        }
-        ranked.sort((a, b) => b.accuracy - a.accuracy);
-
-        // Set preferred model to the best performer
-        if (ranked.length > 0) {
-          sb.preferred_model = ranked[0].model;
-          mcpLog(
-            `mugshot scoring: preferred model set to "${ranked[0].model}" (${ranked[0].accuracy}%)`,
-            'info'
-          );
-        }
-
-        saveScoreboard(sb);
-
-        return jsonResult({
-          ranked,
-          preferred_model: sb.preferred_model,
-          meshes_scored: runsWithTruth.length,
-          total_runs: sb.runs.length,
-        });
-      } catch (error: any) {
-        mcpLog(`benchmark_vlm_models FAILED: ${error.message}`, 'error');
-        return errorResult(error);
-      }
-    }
-  );
+  // ── benchmark_vlm_models — DISABLED: niche calibration tool, not needed for scene building ──
+  // Re-enable for VLM model comparison sessions.
+  // server.registerTool('benchmark_vlm_models', ...);
 
   // ── place_geo helpers ──────────────────────────────────────────────
   // ── Shared helpers for place_geo ──────────────────────────────────
@@ -2988,7 +2858,7 @@ export function registerImportTools(
     {
       title: 'Place Geometry',
       description:
-        'Unified geometry placement for primitives and meshes. Sets shape/transform, wires to geo group on active RT, auto-registers. Primitives need no analyze_geo.',
+        '[Phase 1] Place primitives or meshes. Wires to geo group on active RT, auto-registers. After: analyze_geo (meshes only). Then: fit_camera. See octane://docs/reference/1.',
       inputSchema: {
         type: z
           .enum(['primitive', 'mesh'])
@@ -3343,7 +3213,7 @@ export function registerImportTools(
       title: 'Apply Material',
       description:
         '[AD Phase 2] Apply a PBR material recipe to an existing material node in one call. ' +
-        'Pass values from suggest_material. Set skip_albedo:true if mesh has .mtl textures.',
+        'Pass values from suggest_material. Skip albedo if mesh has .mtl textures. See octane://docs/reference/5.',
       inputSchema: {
         material_handle: z.number().int().nonnegative().describe('Handle of NT_MAT_UNIVERSAL node'),
         albedo: z

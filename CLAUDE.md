@@ -1,6 +1,30 @@
-## v3.0.1 (MCP_BUILD 73)
+## v3.0.2 (MCP_BUILD 74)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
+
+### Tool renames (build 74)
+
+| Old name                  | New name          | Why                                         |
+| ------------------------- | ----------------- | ------------------------------------------- |
+| `create_connected`        | `create_at_pin`   | Clearer — says where it connects            |
+| `get_art_direction_state` | `ad_state`        | Toggle pattern (get/set via optional param) |
+| `set_clay_mode`           | `clay_mode`       | Toggle pattern                              |
+| `set_render_priority`     | `render_priority` | Toggle pattern                              |
+| `set_subsample_mode`      | `subsample_mode`  | Toggle pattern                              |
+| `set_artistic_intent`     | `set_sega`        | SEGA brand, shorter                         |
+| `get_artistic_intent`     | `get_sega`        | SEGA brand, shorter                         |
+| `adjust_artistic_intent`  | `adjust_sega`     | SEGA brand, shorter                         |
+| `evaluate_semantics`      | `score_sega`      | "Score" standardization                     |
+| `critique_render`         | `score_render`    | "Score" standardization                     |
+| `apply_corrections`       | `commit_scores`   | It records scores, doesn't apply fixes      |
+| `register_scene_object`   | `register_object` | "Scene" implied                             |
+| `plan_composition`        | `plan_layout`     | Matches `validate_layout`                   |
+
+Consolidated tools: `profile` (was 4), `get_stats` (was 3), `animation` (was 6). Toggle tools: pass value to set, omit to read.
+
+Disabled: `import_materialx`, `list_materialx_nodes` (RPC not implemented), `benchmark_vlm_models` (niche).
+
+Discovery: `search_tools(query)` and `describe_tool(name)` — find tools by keyword, get full param docs for long-tail tools.
 
 ## Startup
 
@@ -16,7 +40,7 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 1. `octaneServGrpc/build/Release/octaneServGrpc.exe` (wait ~6s, port 51022)
 2. Verify single instance: `tasklist | grep octaneServGrpc` → exactly 1 row
 3. `preview_start("octaneWebR")`
-4. `get_octane_version()` — verify mcp_build 72
+4. `get_octane_version()` — verify mcp_build 74
 
 ## What to call
 

@@ -191,31 +191,33 @@ describe('ArtDirectionState', () => {
     it('tracks completed steps', () => {
       state.completeStep('analyze_geo');
       expect(state.isStepDone('analyze_geo')).toBe(true);
-      expect(state.isStepDone('plan_composition')).toBe(false);
+      expect(state.isStepDone('plan_layout')).toBe(false);
     });
 
     it('checks prerequisites', () => {
-      // plan_composition requires analyze_geo
-      expect(state.checkPrereqs('plan_composition')).toEqual(['analyze_geo']);
-      state.completeStep('analyze_geo');
-      expect(state.checkPrereqs('plan_composition')).toEqual([]);
+      // set_sega requires analyze_reference
+      expect(state.checkPrereqs('set_sega')).toEqual(['analyze_reference']);
+      state.completeStep('analyze_reference');
+      expect(state.checkPrereqs('set_sega')).toEqual([]);
+      // plan_layout has no hard prereqs (primitives skip analyze_geo)
+      expect(state.checkPrereqs('plan_layout')).toEqual([]);
     });
 
-    it('auto-completes framing_verified when fit_camera + register_scene_object + critique_render done', () => {
+    it('auto-completes framing_verified when fit_camera + register_object + score_render done', () => {
       state.completeStep('fit_camera');
       expect(state.isStepDone('framing_verified')).toBe(false);
-      state.completeStep('register_scene_object');
+      state.completeStep('register_object');
       expect(state.isStepDone('framing_verified')).toBe(false);
-      state.completeStep('critique_render');
+      state.completeStep('score_render');
       expect(state.isStepDone('framing_verified')).toBe(true);
     });
 
     it('getWorkflowStatus shows completed and pending', () => {
       state.completeStep('analyze_geo');
-      state.completeStep('plan_composition');
-      const status = state.getWorkflowStatus('plan_composition');
+      state.completeStep('plan_layout');
+      const status = state.getWorkflowStatus('plan_layout');
       expect(status.completed).toContain('analyze_geo');
-      expect(status.completed).toContain('plan_composition');
+      expect(status.completed).toContain('plan_layout');
       expect(status.pending).toContain('validate_layout');
       expect(status.next_step?.step).toBe('validate_layout');
     });
@@ -250,12 +252,12 @@ describe('ArtDirectionState', () => {
 
     it('reports missing prerequisites', () => {
       state.setMode('active');
-      // plan_composition requires analyze_geo — skip it
-      const result = adWorkflow(state, 'plan_composition');
+      // set_sega requires analyze_reference — skip it
+      const result = adWorkflow(state, 'set_sega');
       const wf = result!.ad_workflow as any;
       expect(wf.prereq_warnings).toBeDefined();
       expect(wf.prereq_warnings.length).toBeGreaterThan(0);
-      expect(wf.prereq_warnings[0]).toContain('analyze_geo');
+      expect(wf.prereq_warnings[0]).toContain('analyze_reference');
     });
   });
 });

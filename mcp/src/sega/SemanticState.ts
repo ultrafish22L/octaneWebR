@@ -200,7 +200,7 @@ export class SemanticState {
     return s;
   }
 
-  /** Summary for get_artistic_intent tool. */
+  /** Summary for get_sega tool. */
   getSummary(): {
     global: SemanticVector;
     activeDimensions: string[];

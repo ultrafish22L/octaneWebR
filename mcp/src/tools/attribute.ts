@@ -199,8 +199,8 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
       title: 'Set Attribute',
       description:
         'Set a node attribute value by ID. Supports bool, int, float, float3, float4, string. ' +
-        'Key gotcha: transform attrs (translation/rotation/scale) must be set on the TRANSFORM CHILD (pin 3), not the geo object itself. ' +
-        'See octane://constants for attribute IDs and type codes.',
+        'Transform attrs (translation/rotation/scale) go on the TRANSFORM CHILD at pin 3, not the geo object. ' +
+        'See octane://constants for IDs.',
       inputSchema: {
         handle: z.number().int().nonnegative().describe('Node handle'),
         attribute_id: z.number().describe('Attribute ID'),
@@ -277,7 +277,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'Flush Changes',
       description:
-        'Flush pending attribute changes by calling ApiChangeManager.update(). Required after set_attribute calls made with skip_evaluate:true.',
+        'Flush pending attribute changes. Required after set_attribute calls with skip_evaluate:true.',
       annotations: { idempotentHint: true },
     },
     async () => {
@@ -302,9 +302,9 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'List Attributes',
       description:
-        'Enumerate all attributes on a node. Returns list of {id, name, type} for every attribute. Essential for discovering what properties a node supports.',
+        'Enumerate all attributes on a node. Call describe_tool("list_attributes") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
+        handle: z.number().int().nonnegative(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -362,10 +362,10 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'Describe Attribute',
       description:
-        'Get metadata for a specific attribute by ID: name, type, isArray, defaults, description. Use after list_attributes to dig into a specific attribute.',
+        'Get attribute metadata by ID. Call describe_tool("describe_attribute") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
-        attribute_id: z.number().describe('Attribute ID'),
+        handle: z.number().int().nonnegative(),
+        attribute_id: z.number(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -400,21 +400,12 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     {
       title: 'Read Pin Value',
       description:
-        "Get the value of a pin's connected node attribute in one call. Shortcut for: get_node_info → find connected_handle → get_attribute. Returns the A_VALUE (185) of the connected node. Auto-detects attribute type if not specified.",
+        'Get a pin\'s connected node attribute value in one call. Call describe_tool("read_pin_value") for params.',
       inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
-        pin_index: z.number().int().nonnegative().describe('Pin index to read value from'),
-        attribute_id: z
-          .number()
-          .optional()
-          .default(185)
-          .describe('Attribute ID to read (default: A_VALUE=185)'),
-        expected_type: z
-          .number()
-          .optional()
-          .describe(
-            'AttrType. If omitted, auto-detects via list_attributes on the connected node. Common: AT_FLOAT4=12 (value nodes), AT_FLOAT3=11 (color), AT_STRING=14.'
-          ),
+        handle: z.number().int().nonnegative(),
+        pin_index: z.number().int().nonnegative(),
+        attribute_id: z.number().optional().default(185),
+        expected_type: z.number().optional(),
       },
       annotations: { readOnlyHint: true },
     },
@@ -495,35 +486,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           attribute_id,
           expected_type: resolvedType,
           value,
-        });
-      } catch (error: any) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.registerTool(
-    'check_animated',
-    {
-      title: 'Check Animated',
-      description:
-        'Check if an attribute on a node has animation. Returns true if an animator is attached.',
-      inputSchema: {
-        handle: z.number().int().nonnegative().describe('Node handle'),
-        attribute_id: z.number().describe('Attribute ID to check'),
-      },
-      annotations: { readOnlyHint: true },
-    },
-    async ({ handle, attribute_id }) => {
-      try {
-        const result = await client.callMethod('ApiItem', 'isAnimated', {
-          objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
-          id: attribute_id,
-        });
-        return jsonResult({
-          handle,
-          attribute_id,
-          is_animated: result?.result ?? false,
         });
       } catch (error: any) {
         return errorResult(error);

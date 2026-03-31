@@ -112,44 +112,44 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### F. Render Control (6 tools)
 
-| #   | Test                                                 | Pass Criteria                          | Render-Check             |
-| --- | ---------------------------------------------------- | -------------------------------------- | ------------------------ |
-| 1   | `set_clay_mode` (2=color)                            | success: true                          | Yes — color clay render  |
-| 2   | `get_clay_mode`                                      | Returns current mode                   | —                        |
-| 3   | `set_clay_mode` (0=none)                             | success: true                          | Yes — materials restored |
-| 4   | `set_render_priority` (HIGH) → `get_render_priority` | Round-trip matches                     | —                        |
-| 5   | `set_subsample_mode` (1) → `get_subsample_mode`      | Set succeeds (getter may return stale) | —                        |
-| 6   | Reset all to defaults                                | All back to 0/MEDIUM                   | —                        |
+| #   | Test                                                     | Pass Criteria                          | Render-Check             |
+| --- | -------------------------------------------------------- | -------------------------------------- | ------------------------ |
+| 1   | `clay_mode` (2=color)                                    | success: true                          | Yes — color clay render  |
+| 2   | `clay_mode` (no args)                                    | Returns current mode                   | —                        |
+| 3   | `clay_mode` (0=none)                                     | success: true                          | Yes — materials restored |
+| 4   | `render_priority` (HIGH) → `render_priority` (read back) | Round-trip matches                     | —                        |
+| 5   | `subsample_mode` (1) → `subsample_mode` (read back)      | Set succeeds (getter may return stale) | —                        |
+| 6   | Reset all to defaults                                    | All back to 0/MEDIUM                   | —                        |
 
 ### G. Stats (5 tools)
 
-| #   | Test                 | Pass Criteria                           |
-| --- | -------------------- | --------------------------------------- |
-| 1   | `get_geometry_stats` | Returns triCount > 0, instanceCount > 0 |
-| 2   | `get_texture_stats`  | Returns texture type breakdown          |
-| 3   | `get_resource_stats` | Returns memory breakdown                |
-| 4   | `get_scene_bounds`   | Returns valid bbox (min < max)          |
-| 5   | `get_render_state`   | Returns 5 boolean flags                 |
+| #   | Test                         | Pass Criteria                           |
+| --- | ---------------------------- | --------------------------------------- |
+| 1   | `get_stats(type:"geometry")` | Returns triCount > 0, instanceCount > 0 |
+| 2   | `get_stats(type:"texture")`  | Returns texture type breakdown          |
+| 3   | `get_stats(type:"resource")` | Returns memory breakdown                |
+| 4   | `get_scene_bounds`           | Returns valid bbox (min < max)          |
+| 5   | `get_render_state`           | Returns 5 boolean flags                 |
 
-### H. Animation (5 tools)
+### H. Animation (1 consolidated tool)
 
-| #   | Test                                           | Pass Criteria                    | Render-Check |
-| --- | ---------------------------------------------- | -------------------------------- | ------------ |
-| 1   | `set_animation_data` (Y rotation, 3 keyframes) | keyframe_count: 3                | —            |
-| 2   | `is_animated`                                  | Returns true                     | —            |
-| 3   | `get_animation_data`                           | Returns matching keyframe values | —            |
-| 4   | `get_animation_range`                          | Returns time span                | —            |
-| 5   | `clear_animation` → `is_animated`              | Returns false after clear        | —            |
+| #   | Test                                                                | Pass Criteria                    | Render-Check |
+| --- | ------------------------------------------------------------------- | -------------------------------- | ------------ |
+| 1   | `animation(action:"set", ...)` (Y rotation, 3 keyframes)            | keyframe_count: 3                | —            |
+| 2   | `animation(action:"check", ...)`                                    | Returns true                     | —            |
+| 3   | `animation(action:"get", ...)`                                      | Returns matching keyframe values | —            |
+| 4   | `animation(action:"range")`                                         | Returns time span                | —            |
+| 5   | `animation(action:"clear", ...)` → `animation(action:"check", ...)` | Returns false after clear        | —            |
 
 ### I. Art Direction (6 tools)
 
 | #   | Test                             | Pass Criteria                         | Render-Check       |
 | --- | -------------------------------- | ------------------------------------- | ------------------ |
-| 1   | `plan_composition`               | Returns spec + validation             | —                  |
+| 1   | `plan_layout`                    | Returns spec + validation             | —                  |
 | 2   | `validate_layout`                | Returns issues list                   | —                  |
-| 3   | `critique_render`                | Returns A-F grade + comparison scores | Yes — render saved |
-| 4   | `apply_corrections`              | Records score history                 | —                  |
-| 5   | `get_art_direction_state`        | Returns specs + scores                | —                  |
+| 3   | `score_render`                   | Returns A-F grade + comparison scores | Yes — render saved |
+| 4   | `commit_scores`                  | Records score history                 | —                  |
+| 5   | `ad_state`                       | Returns specs + scores                | —                  |
 | 6   | `analyze_reference` (with image) | Returns composition data or prompt    | —                  |
 
 ### J. Creative (2 tools)
@@ -161,12 +161,12 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### K. Color & MaterialX (4 tools)
 
-| #   | Test                   | Pass Criteria                                                           |
-| --- | ---------------------- | ----------------------------------------------------------------------- |
-| 1   | `get_ocio_config`      | Returns config data or "no config" error                                |
-| 2   | `list_color_spaces`    | Returns color space list or "no config" error                           |
-| 3   | `list_materialx_nodes` | Returns 100+ categories                                                 |
-| 4   | `import_materialx`     | Not implemented in octaneServGrpc (returns UNIMPLEMENTED). See TODO.md. |
+| #   | Test                   | Pass Criteria                                                  |
+| --- | ---------------------- | -------------------------------------------------------------- |
+| 1   | `get_ocio_config`      | Returns config data or "no config" error                       |
+| 2   | `list_color_spaces`    | Returns color space list or "no config" error                  |
+| 3   | `list_materialx_nodes` | Returns 100+ categories                                        |
+| 4   | `import_materialx`     | DISABLED — RPC not implemented in octaneServGrpc. See TODO.md. |
 
 ### L. Project (3 tools)
 
@@ -178,14 +178,14 @@ Stop everything, start fresh, build a red sphere scene via MCP, check logs at ev
 
 ### M. System (9 tools)
 
-| #   | Test                                                                 | Pass Criteria                         |
-| --- | -------------------------------------------------------------------- | ------------------------------------- |
-| 1   | `get_octane_version`                                                 | Returns version + name                |
-| 2   | `get_device_info`                                                    | Returns GPU + memory                  |
-| 3   | `list_node_types` (category filter)                                  | Returns filtered types                |
-| 4   | `profile_reset` → `profile_start` → `profile_end` → `profile_report` | Full profiling lifecycle              |
-| 5   | `clear_log`                                                          | Returns old line count                |
-| 6   | `refresh_webapp`                                                     | Returns client count or "not running" |
+| #   | Test                                                                                                         | Pass Criteria                         |
+| --- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| 1   | `get_octane_version`                                                                                         | Returns version + name                |
+| 2   | `get_device_info`                                                                                            | Returns GPU + memory                  |
+| 3   | `list_node_types` (category filter)                                                                          | Returns filtered types                |
+| 4   | `profile(action:"reset")` → `profile(action:"start")` → `profile(action:"end")` → `profile(action:"report")` | Full profiling lifecycle              |
+| 5   | `clear_log`                                                                                                  | Returns old line count                |
+| 6   | `refresh_webapp`                                                                                             | Returns client count or "not running" |
 
 ---
 
@@ -214,10 +214,10 @@ Run all categories A–M in order. Expected: ~65 tool calls, ~15 render checks, 
 
 ## §4 Known Issues
 
-| Tool                 | Issue                                                | Severity |
-| -------------------- | ---------------------------------------------------- | -------- |
-| `import_materialx`   | RPC not implemented in octaneServGrpc                | HIGH     |
-| `get_subsample_mode` | Returns stale value after set                        | LOW      |
-| `list_color_spaces`  | Fails without loaded OCIO config                     | EXPECTED |
-| `reset_project`      | `suppressUI` prevents blocking dialog — not an issue | N/A      |
-| LiveDB tools (4)     | Octane gRPC "invalid pointer type" bug — disabled    | HIGH     |
+| Tool                | Issue                                                | Severity |
+| ------------------- | ---------------------------------------------------- | -------- |
+| `import_materialx`  | RPC not implemented — tool disabled                  | HIGH     |
+| `subsample_mode`    | Read-back may return stale value after set           | LOW      |
+| `list_color_spaces` | Fails without loaded OCIO config                     | EXPECTED |
+| `reset_project`     | `suppressUI` prevents blocking dialog — not an issue | N/A      |
+| LiveDB tools (4)    | Octane gRPC "invalid pointer type" bug — disabled    | HIGH     |

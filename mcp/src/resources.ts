@@ -395,7 +395,7 @@ export function registerResources(
     'octane://sega/presets',
     {
       description:
-        'All 25 SEGA presets with name, category, description, and full semantic vector. Use with set_artistic_intent(preset:"name"). Categories: mood, artist, film, genre.',
+        'All 25 SEGA presets with name, category, description, and full semantic vector. Use with set_sega(preset:"name"). Categories: mood, artist, film, genre.',
     },
     async () => ({
       contents: [
@@ -424,7 +424,7 @@ export function registerResources(
     'octane://sega/dimensions',
     {
       description:
-        'All 15 SEGA semantic dimensions with name, description, range [-1,+1], positive/negative labels, and NL aliases. Use with set_artistic_intent(vector:{dimension:value}) or adjust_artistic_intent(dimension, value).',
+        'All 15 SEGA semantic dimensions with name, description, range [-1,+1], positive/negative labels, and NL aliases. Use with set_sega(vector:{dimension:value}) or adjust_sega(dimension, value).',
     },
     async () => ({
       contents: [
@@ -469,12 +469,7 @@ export function registerResources(
                   phase: '0',
                   name: 'Plan',
                   description: 'Composition planning before any Octane node creation',
-                  tools: [
-                    'analyze_reference',
-                    'plan_composition',
-                    'validate_layout',
-                    'analyze_geo',
-                  ],
+                  tools: ['analyze_reference', 'plan_layout', 'validate_layout', 'analyze_geo'],
                   gate: 'validate_layout passes with 0 errors',
                 },
                 {
@@ -482,7 +477,7 @@ export function registerResources(
                   name: 'Intent',
                   description:
                     'Set SEGA mood before geometry — drives suggest_lighting/suggest_material values',
-                  tools: ['set_artistic_intent', 'get_artistic_intent'],
+                  tools: ['set_sega', 'get_sega'],
                   gate: 'SEGA vector initialized',
                 },
                 {
@@ -490,15 +485,15 @@ export function registerResources(
                   name: 'Frame',
                   description: 'Clay mode ON. Import geometry, frame camera, verify composition',
                   tools: [
-                    'set_clay_mode',
+                    'clay_mode',
                     'place_geo',
                     'fit_camera',
-                    'register_scene_object',
+                    'register_object',
                     'start_render',
                     'save_render',
-                    'critique_render',
+                    'score_render',
                   ],
-                  gate: 'critique_render grade >= C in clay mode',
+                  gate: 'score_render grade >= C in clay mode',
                   rules: [
                     'Clay mode stays ON until critique passes',
                     'fit_camera after EVERY geo add — no exceptions',
@@ -511,13 +506,13 @@ export function registerResources(
                   name: 'Style',
                   description: 'Materials + lighting. Clay mode OFF.',
                   tools: [
-                    'set_clay_mode',
+                    'clay_mode',
                     'setup_lighting',
                     'create_light',
                     'set_daylight',
                     'suggest_lighting',
                     'suggest_material',
-                    'set_artistic_intent',
+                    'set_sega',
                   ],
                   gate: 'Materials and lighting applied to all surfaces',
                 },
@@ -525,7 +520,7 @@ export function registerResources(
                   phase: '3',
                   name: 'Critique',
                   description: 'Dual-critic evaluation loop (Sonnet + orchestrator)',
-                  tools: ['critique_render', 'evaluate_semantics', 'apply_corrections'],
+                  tools: ['score_render', 'score_sega', 'commit_scores'],
                   gate: 'Sonnet grade B+ or stagnation detected',
                   rules: [
                     'reference_image_path is MANDATORY for critique',

@@ -31,10 +31,10 @@ If it still shows `2026.2` after switching backends, the MCP process needs a ful
 set_attribute(mesh, A_FILENAME=34, AT_STRING=14, "path.obj")
 set_attribute(mesh, A_RELOAD=124, AT_BOOL=1, true)
 update_scene()   ← MANDATORY on Alpha 5
-get_geometry_stats()  ← verify triCount > 0
+get_stats(type:"geometry")  ← verify triCount > 0
 ```
 
-**Meshes can silently unload** during scene changes (connecting new objects, flushing batched attributes). After any major scene mutation, re-reload all meshes and verify with `get_geometry_stats()`.
+**Meshes can silently unload** during scene changes (connecting new objects, flushing batched attributes). After any major scene mutation, re-reload all meshes and verify with `get_stats(type:"geometry")`.
 
 ---
 

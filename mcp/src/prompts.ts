@@ -8,7 +8,7 @@
  *   4 original: setup-scene, add-material, build-lit-object, troubleshoot-scene
  *   5 new: ad-workflow, mesh-pipeline, setup-lighting, critique-loop, scene-checklist
  *
- * v3.0.1: All prompts reference composite tools (place_geo, apply_material, setup_lighting, create_light).
+ * v3.0.2: Tool renames (set_sega, score_render, etc.), phase-selectable ad-workflow, text concept briefs.
  * Constants moved to octane://constants resource — prompts reference it.
  */
 
@@ -50,7 +50,7 @@ export function registerPrompts(server: McpServer) {
    - Blurry → DOF on (set aperture to 0 on camera child pin 14)
 
 5. **Environment** — for quick setup, the daylight env auto-created by RT is sufficient.
-   For HDRI: create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1) + image texture.
+   For HDRI: create_at_pin("NT_ENV_TEXTURE", RT_handle, pin_index=1) + image texture.
 
 Query octane://constants for attribute IDs and type codes.
 Query octane://docs/reference/3 for RT pin layout.`,
@@ -84,20 +84,15 @@ Query octane://docs/reference/3 for RT pin layout.`,
 1. suggest_material(surface_type) → returns PBR recipe (roughness, metallic, specular, IOR, albedo)
 2. apply_material(material_handle, ...recipe values) → applies all properties in one call
    - Set skip_albedo:true if mesh has .mtl textures (preserves existing texture colors)
-   - Call with surface_type:"list" to see all 30+ available types (gold, glass, moss, marble, etc.)
+   - Call with surface_type:"list" to see all 30+ available types
 
 ## Manual path (when you need fine control)
-1. Create: create_connected("NT_MAT_UNIVERSAL", mesh_handle, pin_index=0) for NT_GEO_MESH, pin_index=1 for NT_GEO_OBJECT
-2. Set properties via pin children:
-   - Pin 2 (albedo): read_pin_value → set_attribute(child, 185, AT_FLOAT3=11, {x,y,z})
-   - Pin 4 (metallic): read_pin_value → set_attribute(child, 185, AT_FLOAT=9, value)
-   - Pin 6 (specular): same pattern
-   - Pin 8 (roughness): same pattern
-   - Pin 12 (IOR): same pattern
-   Query octane://pin-layout/NT_MAT_UNIVERSAL for all 52 pins.
+1. Create: create_at_pin("NT_MAT_UNIVERSAL", mesh_handle, pin_index=0) for NT_GEO_MESH, pin_index=1 for NT_GEO_OBJECT
+2. Query octane://pin-layout/NT_MAT_UNIVERSAL for pin names and indices, then set_attribute on pin children
+   See octane://docs/reference/5 for material presets.
 
 ## Image textures
-   create_connected("NT_TEX_IMAGE", material_handle, pin_name="albedo")
+   create_at_pin("NT_TEX_IMAGE", material_handle, pin_name="albedo")
    set_attribute(image_handle, 34, AT_STRING=14, "C:/path/to/texture.png")
 
 ## Verify
@@ -112,7 +107,8 @@ Query octane://docs/reference/3 for RT pin layout.`,
     'build-lit-object',
     {
       title: 'Build Lit Object',
-      description: 'Create a complete object with geometry, material, placement, and lighting.',
+      description:
+        'Quick-start: place geometry + material + lighting in one workflow. For full AD pipeline, use ad-workflow instead.',
     },
     async () => ({
       messages: [
@@ -120,25 +116,21 @@ Query octane://docs/reference/3 for RT pin layout.`,
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Build a complete lit object in an Octane scene.
+            text: `Build a complete lit object (no AD pipeline).
 
-1. **Place geometry** — place_geo handles RT, wiring, and registration:
-   - Primitive: place_geo(type:"primitive", shape:"sphere", position:{x:0,y:1,z:0}, role:"hero", material:{albedo:{x:0.8,y:0.2,z:0.1}, roughness:0.3, metallic:0.0})
-   - Mesh: analyze_geo(obj_path) first, then place_geo(type:"mesh", obj_path, role:"hero")
-   - Ground: place_geo(type:"primitive", shape:"plane", scale:{x:5,y:1,z:5}, role:"ground")
+1. **Place geometry** — place_geo(type:"primitive", shape:"sphere", position:{x:0,y:1,z:0}, role:"hero")
+   For mesh: analyze_geo(obj_path) first, then place_geo(type:"mesh", obj_path, role:"hero")
+   Ground: place_geo(type:"primitive", shape:"plane", scale:{x:5,y:1,z:5}, role:"ground")
 
-2. **Apply material** — suggest_material → apply_material:
-   - suggest_material("marble") → recipe with roughness, metallic, specular, IOR, albedo
-   - apply_material(material_handle, ...recipe values)
+2. **Apply material** — suggest_material("marble") → apply_material(material_handle, ...recipe)
 
-3. **Set up lighting** — setup_lighting creates a full 3-point rig in one call:
-   - setup_lighting(mood:"dramatic") → key + fill + rim lights, dims environment
-   - For individual lights: create_light(type:"emissive", position:{...}, power:10, temperature:5500)
+3. **Set up lighting** — setup_lighting(mood:"dramatic") → full 3-point rig in one call
 
 4. **Frame camera** — fit_camera(framing_mode:"subjects") after every geo add
 
 5. **Render & verify** — start_render() → save_render(path) → check output
-   - Render after EVERY object, not in batch`,
+
+For full scene builds with AD gates and critique: use getPrompt("ad-workflow") instead.`,
           },
         },
       ],
@@ -201,7 +193,7 @@ Query octane://docs/reference/3 for RT pin layout.`,
 ## Phase Workflow Issues
 
 ### "Which phase am I in?"
-- get_art_direction_state() → shows current phase and completed gates
+- ad_state() → shows current phase and completed gates
 - Query octane://workflow/phases for phase tool map
 
 ### "fit_camera frames too wide"
@@ -209,10 +201,10 @@ Query octane://docs/reference/3 for RT pin layout.`,
 - Fix: reduce floor scale to <= 3x scene width, or pass explicit bbox to fit_camera
 
 ### "suggest_lighting returns generic values"
-- Cause: set_artistic_intent was not called (no SEGA vector)
-- Fix: call set_artistic_intent(preset:"...") FIRST, then suggest_lighting
+- Cause: set_sega was not called (no SEGA vector)
+- Fix: call set_sega(preset:"...") FIRST, then suggest_lighting
 
-### "critique_render returns self-critique prompt instead of Sonnet grade"
+### "score_render returns self-critique prompt instead of Sonnet grade"
 - Cause: missing reference_image_path parameter
 - Fix: pass reference_image_path pointing to concept art PNG
 
@@ -233,51 +225,46 @@ Query octane://docs/reference/3 for RT pin layout.`,
 
   // ── NEW PROMPTS ───────────────────────────────────────────────────
 
-  server.registerPrompt(
-    'ad-workflow',
-    {
-      title: 'AD Workflow',
-      description:
-        'Complete AD scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules.',
-      argsSchema: {
-        concept_image_path: z.string().optional().describe('Path to concept art PNG'),
-        spec_name: z.string().optional().describe('Composition spec name'),
-      },
-    },
-    async ({ concept_image_path, spec_name }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text: `AD Workflow — Complete scene build from concept to beauty render.
+  // ── AD Workflow (phase-selectable) ─────────────────────────────────
 
-## Activate
-Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
+  const AD_ACTIVATE = `## Activate
+Call ad_state(build_mode:"dress") to enable AD with phased gates.`;
 
-## Pre-Phase — CLEAR (start fresh, MANDATORY)
+  const AD_PHASES: Record<string, string> = {
+    '0': `## Pre-Phase — CLEAR (start fresh, MANDATORY)
 0. reset_ad(confirm: true) → clear stale AD state from any previous scene
 0b. reset_project() → clear Octane scene. **ALWAYS run this before a new build — stale geometry will corrupt your scene.**
 
-## Phase 0 — PLAN (no Octane calls yet)
-1. analyze_reference(concept_art_path) → extract composition data
-2. set_artistic_intent(preset or vector) → initialize SEGA mood
-3. plan_composition(name, objects, camera, focal_point) → spatial layout
-4. validate_layout(spec_name) → geometric checks
+## Phase 0 — CONCEPT + PLAN
+**Concept input is REQUIRED** — at least one of:
+  - **Image concept:** analyze_reference(image_path, scene_description) → vision extracts mood/composition
+  - **Text concept:** analyze_reference(scene_description) → text brief for manual mood/composition
+
+1. analyze_reference(image_path OR scene_description) → concept data
+   - Image: OTOY Studio vision extracts composition, mood hints, object list
+   - Text-only: returns structured brief. Include mood, objects, composition intent in description.
+   - Simple concepts (geometric still life, product shot) → use primitives, skip mesh download
+   - Complex concepts → generate meshes via OTOY Studio image-to-3D
+
+2. analyze_geo(obj_path) for EVERY mesh — skip for primitives-only scenes
+   - Creates .mesh_info.json sidecar with orientation/scale/offset
+   - MUST run before place_geo. No exceptions for meshes.
+   - **PARALLEL WORK:** Hunyuan-3D takes ~3 min. Build scene infrastructure in parallel.
+
+3. set_sega(preset or vector) → set mood AFTER concept + assets are known
+   - Mood informed by analyze_reference output + asset characteristics
+   - Drives suggest_lighting/suggest_material values downstream
+
+4. plan_layout(name, objects, camera, focal_point) → spatial layout
+5. validate_layout(spec_name) → geometric checks
    **GATE: validate_layout passes with 0 errors. Do NOT create nodes until this passes.**
 
-## Phase 0.5 — ASSETS
-5. analyze_geo(obj_path) for EVERY mesh — NEVER skip mugshot verification
-   - Creates .mesh_info.json sidecar with orientation/scale/offset
-   - MUST run before place_geo. No exceptions.
-   - Do NOT pass source_endpoint — always run full VLM mugshot verification.
-   - **PARALLEL WORK:** Hunyuan-3D takes ~3 min. While waiting, build scene infrastructure (RT, env, floor, pedestal primitives). Do NOT wait idle.
 5b. Generate HDRI via OTOY Studio: flux-pro/new with equirectangular panorama prompt
    - Save to aigenerated/{scene}/assets/hdri_{scene}.png
-   - Apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
+   - Apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION`,
 
-## Phase 1 — FRAME (clay mode)
-6. set_clay_mode(2) → color clay ON
+    '1': `## Phase 1 — FRAME (clay mode)
+6. clay_mode(2) → color clay ON
 7. create_node("NT_RENDERTARGET") → RT (auto-creates camera + kernel)
 8. place_geo(obj_path, role:"hero") → imports, orients, wires, auto-registers in placement state
    For primitives (ground, hills, backdrops): place_geo(type:"primitive", shape:"box", ...) → auto-wires + registers
@@ -290,7 +277,7 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
     - "Does the floor have character?" Textured floor >> flat grey.
     - "Is there depth?" Foreground/mid/background layers.
     Add 1-3 supporting elements based on answers.
-13. critique_render(render_path, spec_name, reference_image_path=concept_art)
+13. score_render(render_path, spec_name, reference_image_path=concept_art)
     **CLAY GATE (enforced mechanically): composition_match >= 3 = pass.**
     Sonnet is instructed to grade SPATIAL LAYOUT ONLY in clay mode:
     - Only scores whether the right shapes are present in the right positions
@@ -306,10 +293,10 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
 - Generate HDRI from concept art via OTOY Studio (equirectangular panorama)
 - Apply HDRI to NT_ENV_TEXTURE with NT_TEX_IMAGE using SPHERE PROJECTION
 - No infinite floor planes (scale <= 3x scene width)
-- reference_image_path is MANDATORY for critique
+- reference_image_path is MANDATORY for critique`,
 
-## Phase 2 — STYLE (materials + lighting)
-14. set_clay_mode(0) → materials visible
+    '2': `## Phase 2 — STYLE (materials + lighting)
+14. clay_mode(0) → materials visible
 15. setup_lighting(mood) → creates full 3-point rig (key+fill+rim) + dims env in ONE call
     - Reads SEGA intent automatically for temperatures and ratios
     - Subject bounds auto-read from placement state
@@ -324,30 +311,31 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
 ### Phase 2 Rules:
 - **Ground planes = primitives.** Use place_geo(type:"primitive", shape:"plane"), not place_geo(type:"mesh"). Never analyze_geo on a flat quad.
 - **setup_lighting for the 3-point rig.** Don't manually create emissive planes — that's what the tool does internally.
-- **create_light for individual lights.** Glowing mushrooms, neon signs, accent lights — pass material_handle to add emission to existing objects.
+- **create_light for individual lights.** Glowing mushrooms, neon signs, accent lights — pass material_handle to add emission to existing objects.`,
 
-## Phase 3 — CRITIQUE LOOP
-18. critique_render(render_path, spec_name, reference_image_path) → Sonnet grade
-19. evaluate_semantics(render_path) → SEGA gap measurement. **Skip on iteration 1** — gross issues dominate, mood fine-tuning is premature. Run from iteration 2 onward.
+    '3': `## Phase 3 — CRITIQUE LOOP
+18. score_render(render_path, spec_name, reference_image_path) → Sonnet grade
+19. score_sega(render_path) → SEGA gap measurement. **Skip on iteration 1** — gross issues dominate, mood fine-tuning is premature. Run from iteration 2 onward.
 20. Read render + concept art yourself → orchestrator grade (be HARSH on framing)
     **MANDATORY: State your own A-F grade explicitly.** Format: "Orchestrator grade: C+. [reason]." Not optional.
-21. apply_corrections(spec_name, iteration, overall_score, passed, scores)
+21. commit_scores(spec_name, iteration, overall_score, passed, scores)
 22. If grade < B+: fix top corrections, re-render, go to 18
 23. If stagnating (2 iterations < 0.3 improvement): redesign plan, don't tweak
     **GATE: Sonnet grade B+ or stagnation detected**
 
 ### Score Priority:
 - framing >= 3 required BEFORE lighting/mood scores matter
-- If framing < 3: fix camera/geometry FIRST, don't touch materials
+- If framing < 3: fix camera/geometry FIRST, don't touch materials`,
 
-## Phase 4 — BEAUTY
+    '4': `## Phase 4 — BEAUTY
 24. set_camera(position, target) → hero shot composition
 25. save_render(path) → beauty render
 26. save_project(path) → persist scene
 27. Check 3 log files (log_mcp, log_grpc, log_client) — 0 errors
-28. reset_ad(confirm:true) + reset_project() → clean AD state + Octane scene for next scene
+28. reset_ad(confirm:true) + reset_project() → clean AD state + Octane scene for next scene`,
+  };
 
-## HARD RULES:
+  const AD_HARD_RULES = `## HARD RULES:
 - fit_camera only in Phases 1-3. set_camera Phase 4 only.
 - 3 objects on a floor = automatic fail. Build the STAGE.
 - Concept art must match scope (product shot → product concept, not room interior)
@@ -355,11 +343,41 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
 - On error: FULL STOP → read logs → trace root cause → fix → verify
 
 Query octane://workflow/phases for structured phase data.
-Query octane://sega/presets for available SEGA presets.`,
+Query octane://sega/presets for available SEGA presets.`;
+
+  server.registerPrompt(
+    'ad-workflow',
+    {
+      title: 'AD Workflow',
+      description:
+        'Complete AD scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules. Pass phase to load only that phase.',
+      argsSchema: {
+        concept_image_path: z.string().optional().describe('Path to concept art PNG'),
+        spec_name: z.string().optional().describe('Composition spec name'),
+        phase: z
+          .enum(['0', '1', '2', '3', '4'])
+          .optional()
+          .describe('Load only this phase. Omit for full workflow.'),
+      },
+    },
+    async ({ concept_image_path, spec_name, phase }) => {
+      let text: string;
+      if (phase && AD_PHASES[phase]) {
+        text = `AD Workflow — Phase ${phase}\n\n${AD_ACTIVATE}\n\n${AD_PHASES[phase]}\n\n${AD_HARD_RULES}`;
+      } else {
+        // Full workflow (backwards compatible)
+        const allPhases = ['0', '1', '2', '3', '4'].map(k => AD_PHASES[k]).join('\n\n');
+        text = `AD Workflow — Complete scene build from concept to beauty render.\n\n${AD_ACTIVATE}\n\n${allPhases}\n\n${AD_HARD_RULES}`;
+      }
+      return {
+        messages: [
+          {
+            role: 'user' as const,
+            content: { type: 'text' as const, text },
           },
-        },
-      ],
-    })
+        ],
+      };
+    }
   );
 
   server.registerPrompt(
@@ -380,35 +398,21 @@ Query octane://sega/presets for available SEGA presets.`,
             type: 'text' as const,
             text: `Import a mesh into the scene with correct orientation and placement.
 
-1. **analyze_geo(obj_path)** — NEVER skip mugshot verification
-   - Renders diagnostic mugshots, VLM verifies orientation via 2-pass protocol
-   - Creates .mesh_info.json sidecar with rotation/scale/offset
-   - MUST run before place_geo. No exceptions.
-   - Do NOT pass source_endpoint — always run full VLM verification
+1. **analyze_geo(obj_path)** — MUST run before place_geo. No exceptions.
+   - Caches orientation/scale/offset in .mesh_info.json sidecar
    - Pass target_height to override auto-estimated scale
 
-2. **place_geo(obj_path, role:"hero|secondary|accent|prop|ground")**
-   - Reads .mesh_info.json sidecar, applies transforms automatically
-   - Wires: placement → geo group → RT (creates RT if none exists)
-   - Auto-registers in scene placement state (fit_camera knows about it)
-   - Optional: position override, rotation_override, scale_override
-   - Optional: geo_group_handle to attach to specific geo group
+2. **place_geo(type:"mesh", obj_path, role:"hero")** — reads sidecar, wires to RT, auto-registers.
 
-3. **fit_camera(framing_mode:"subjects")**
-   - MANDATORY after every place_geo call
-   - Always pass framing_mode:"subjects" — excludes ground plane from framing
-   - Params: elevation (default 20°), yaw (default 0°), margin (default 0.3)
+3. **fit_camera(framing_mode:"subjects")** — MANDATORY after every place_geo call.
 
-4. **start_render() → save_render(path) → verify**
-   - Object should be visible, correctly oriented, grounded
+4. **start_render() → save_render(path) → verify** — check orientation and grounding.
 
 ## GOTCHAS:
-- GLB/glTF files auto-converted to OBJ (texture paths may need fixing)
-- If place_geo errors: DIAGNOSE the error. Don't fall back to manual create_node chains.
-- Scale: analyze_geo estimates real-world height. Override with target_height if wrong.
-- Always check the render — orientation issues are common with new mesh sources.
-
-Always use place_geo — it reads the sidecar, wires to RT, and registers in placement state automatically.`,
+- GLB/glTF auto-converted to OBJ (texture paths may need fixing)
+- If place_geo errors: DIAGNOSE. Don't fall back to manual create_node chains.
+- Scale wrong? Override with target_height on analyze_geo.
+- Always check the render — orientation issues are common with new mesh sources.`,
           },
         },
       ],
@@ -431,7 +435,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
             text: `Set up scene lighting with environment and 3-point key/fill/rim.
 
 ## Quick path (recommended)
-1. set_artistic_intent(preset:"dramatic") → initializes SEGA mood (drives lighting values)
+1. set_sega(preset:"dramatic") → initializes SEGA mood (drives lighting values)
 2. setup_lighting(mood:"dramatic") → creates full 3-point rig (key+fill+rim) in ONE call
    - Reads SEGA intent for temperatures and ratios automatically
    - Subject bounds auto-read from placement state
@@ -444,7 +448,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
    - Pass material_handle to add emission to an existing object
 
 ## HDRI environment
-   create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1)
+   create_at_pin("NT_ENV_TEXTURE", RT_handle, pin_index=1)
    set_attribute(env_handle, 34, AT_STRING=14, "path/to/hdri.hdr")
    HDRI prompt: "360 degree equirectangular panorama, [scene], HDR, seamless"
 
@@ -481,12 +485,12 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
             type: 'text' as const,
             text: `Run the dual-critic evaluation loop (Phases 2-4).
 
-## C1. critique_render(render_path, spec_name, reference_image_path)
+## C1. score_render(render_path, spec_name, reference_image_path)
    → Sonnet compares concept art vs render → A-F grade, 1-5 scores, top fixes
    **MANDATORY: reference_image_path must point to concept art.**
    If you get a self-critique prompt back → you forgot the reference path. Re-call.
 
-## C2. evaluate_semantics(render_path)
+## C2. score_sega(render_path)
    → Pixel analysis measures gap vs SEGA target vector
    → Returns gap dimensions + correction suggestions
    → **Skip on iteration 1** — gross issues dominate, mood fine-tuning premature. Run from iteration 2+.
@@ -501,7 +505,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
 ## C4. Synthesize: Sonnet grade + your grade + semantic gaps
    → Identify top 3 corrections by priority
 
-## C5. apply_corrections(spec_name, iteration, overall_score, passed, scores)
+## C5. commit_scores(spec_name, iteration, overall_score, passed, scores)
    → Records scores, detects stagnation, gates further iteration
    → scores: {framing, depth, composition, lighting, placement} each 1-5
 
@@ -537,7 +541,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
     {
       title: 'Scene Checklist',
       description:
-        'Pre-critique quality checklist. Run BEFORE calling critique_render to avoid wasting Sonnet calls on obviously broken scenes.',
+        'Pre-critique quality checklist. Run BEFORE calling score_render to avoid wasting Sonnet calls on obviously broken scenes.',
     },
     async () => ({
       messages: [
@@ -545,7 +549,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Pre-critique quality checklist. Verify ALL checks before calling critique_render.
+            text: `Pre-critique quality checklist. Verify ALL checks before calling score_render.
 
 ## FRAMING
 - [ ] Hero object clearly visible, occupying >15% of frame
@@ -569,7 +573,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
 - [ ] Warm/cool temperature contrast (not everything same Kelvin)
 
 ## TECHNICAL
-- [ ] Clay mode OFF for Phase 2+ renders (set_clay_mode(0))
+- [ ] Clay mode OFF for Phase 2+ renders (clay_mode(0))
 - [ ] RT has camera (pin 0), geometry (pin 3), kernel (pin 6) connected
 - [ ] All mesh_info.json orientation transforms applied via place_geo
 - [ ] No infinite floor planes (scale <= 3x scene width)
@@ -578,7 +582,7 @@ Always use place_geo — it reads the sidecar, wires to RT, and registers in pla
 ## ACTION
 If ANY framing check fails → fix geometry/camera BEFORE critique
 If ANY composition check fails → add elements BEFORE critique
-If ALL checks pass → proceed to critique_render with reference_image_path
+If ALL checks pass → proceed to score_render with reference_image_path
 
 Don't waste Sonnet calls on obviously broken framing.`,
           },

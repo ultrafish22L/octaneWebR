@@ -2,9 +2,9 @@
  * SEGA Tools — Semantic Artistic Guidance for Octane MCP.
  *
  * 3 MCP tools:
- *   set_artistic_intent  — Set scene mood via preset, raw vector, or NL description
- *   get_artistic_intent  — Read current semantic state + resolved parameters
- *   adjust_artistic_intent — Fine-tune a single dimension
+ *   set_sega  — Set scene mood via preset, raw vector, or NL description
+ *   get_sega  — Read current semantic state + resolved parameters
+ *   adjust_sega — Fine-tune a single dimension
  *
  * These are pure knowledge tools — they compute parameter recipes.
  * The AI applies recipes step-by-step using existing MCP tools (DRESS protocol).
@@ -63,16 +63,16 @@ export function registerSegaTools(
   segaState: SemanticState,
   artState?: ArtDirectionState
 ) {
-  // ── set_artistic_intent ───────────────────────────────────────────
+  // ── set_sega ───────────────────────────────────────────
 
   server.registerTool(
-    'set_artistic_intent',
+    'set_sega',
     {
-      title: 'Set Artistic Intent',
+      title: 'Set SEGA Intent',
       description:
-        '[AD Phase 0b / 2] Set scene artistic intent via preset, semantic vector, or natural language. ' +
+        '[AD Phase 0b / 2] Set SEGA (Semantic Artistic Guidance) intent via preset, vector, or natural language. ' +
         'Drives suggest_lighting/suggest_material values. Returns resolved parameters + Berlyne warnings. ' +
-        'Call with preset:"list" to see all presets.',
+        'See octane://sega/presets for catalog.',
       inputSchema: {
         preset: z
           .string()
@@ -119,7 +119,7 @@ export function registerSegaTools(
             },
             dimensions: listDimensions(),
             instruction:
-              'Call set_artistic_intent with any preset name, or provide a raw vector with dimension values.',
+              'Call set_sega with any preset name, or provide a raw vector with dimension values.',
           });
         }
 
@@ -139,7 +139,7 @@ export function registerSegaTools(
                   category: p.category,
                   description: p.description,
                 })),
-                instruction: 'Call set_artistic_intent with one of these preset names.',
+                instruction: 'Call set_sega with one of these preset names.',
               });
             }
             return jsonResult({
@@ -176,7 +176,7 @@ export function registerSegaTools(
             instruction:
               'Parse the natural language using the system prompt and user message above. ' +
               'Extract dimension values as JSON: {"deltas":{...},"mode":"absolute"|"relative","confidence":0-1}. ' +
-              'Then call set_artistic_intent again with the parsed vector.',
+              'Then call set_sega again with the parsed vector.',
           });
         } else {
           return jsonResult({
@@ -209,7 +209,7 @@ export function registerSegaTools(
             'Apply lighting values via suggest_lighting or directly create emissive boxes. ' +
             'Apply material values to NT_MAT_UNIVERSAL attributes. ' +
             'Apply camera values via set_camera.',
-          ...(artState ? adWorkflow(artState, 'set_artistic_intent') : {}),
+          ...(artState ? adWorkflow(artState, 'set_sega') : {}),
         });
       } catch (error: any) {
         return errorResult(error);
@@ -217,14 +217,14 @@ export function registerSegaTools(
     }
   );
 
-  // ── get_artistic_intent ───────────────────────────────────────────
+  // ── get_sega ───────────────────────────────────────────
 
   server.registerTool(
-    'get_artistic_intent',
+    'get_sega',
     {
-      title: 'Get Artistic Intent',
+      title: 'Get SEGA Intent',
       description:
-        'Read current scene artistic intent: semantic vector, resolved parameters, ' +
+        'Read current SEGA intent: semantic vector, resolved parameters, ' +
         'active dimensions, per-object overrides, Berlyne warnings, and undo depth.',
       inputSchema: {
         object_id: z
@@ -248,7 +248,7 @@ export function registerSegaTools(
           resolved,
           instruction:
             'The resolved values show current lighting, material, and camera parameters ' +
-            'derived from the semantic vector. Use adjust_artistic_intent to fine-tune.',
+            'derived from the semantic vector. Use adjust_sega to fine-tune.',
         });
       } catch (error: any) {
         return errorResult(error);
@@ -256,14 +256,14 @@ export function registerSegaTools(
     }
   );
 
-  // ── adjust_artistic_intent ────────────────────────────────────────
+  // ── adjust_sega ────────────────────────────────────────
 
   server.registerTool(
-    'adjust_artistic_intent',
+    'adjust_sega',
     {
-      title: 'Adjust Artistic Intent',
+      title: 'Adjust SEGA',
       description:
-        '[AD Phase 2] Fine-tune a single semantic dimension. Absolute (set to value) or relative (delta from current). ' +
+        '[AD Phase 2] Fine-tune a single SEGA dimension. Absolute (set to value) or relative (delta from current). ' +
         'Returns updated vector + resolved parameters + warnings.',
       inputSchema: {
         dimension: z
@@ -362,14 +362,14 @@ export function registerSegaTools(
     }
   );
 
-  // ── evaluate_semantics ─────────────────────────────────────────────
+  // ── score_sega ─────────────────────────────────────────────
 
   server.registerTool(
-    'evaluate_semantics',
+    'score_sega',
     {
-      title: 'Evaluate Semantics',
+      title: 'Score SEGA',
       description:
-        '[AD Phase 3] Measure mood/style gap between render and SEGA target. Returns gap vector + correction suggestions. Only useful after framing is correct.',
+        '[AD Phase 3] Score render against SEGA target. Returns gap vector + correction suggestions. Only useful after framing is correct.',
       inputSchema: {
         render_path: z.string().describe('Absolute path to the rendered image (PNG)'),
         vlm_measurements: z
@@ -388,7 +388,7 @@ export function registerSegaTools(
         const target = segaState.getGlobal();
         if (Object.keys(target).length === 0) {
           return jsonResult({
-            error: 'No artistic intent set. Call set_artistic_intent first.',
+            error: 'No artistic intent set. Call set_sega first.',
           });
         }
 
@@ -414,7 +414,7 @@ export function registerSegaTools(
           summary: result.summary,
           instruction: result.gap.converged
             ? 'Scene matches target intent. No further adjustments needed.'
-            : 'Apply the corrections via adjust_artistic_intent, then re-render and critique again.',
+            : 'Apply the corrections via adjust_sega, then re-render and critique again.',
         });
       } catch (error: any) {
         return errorResult(error);
@@ -429,9 +429,7 @@ export function registerSegaTools(
     {
       title: 'VLM Estimation Prompt',
       description:
-        'Get a prompt for VLM (vision model) to estimate perceptual semantic dimensions ' +
-        'from a render image. Use this prompt with the vision critic, then pass results ' +
-        'to evaluate_semantics as vlm_measurements.',
+        'Get a prompt for VLM to estimate perceptual semantic dimensions from a render. Call describe_tool("get_vlm_estimation_prompt") for usage.',
       annotations: { readOnlyHint: true },
     },
     async () => {
@@ -441,7 +439,7 @@ export function registerSegaTools(
 
         if (targetDims.length === 0) {
           return jsonResult({
-            error: 'No artistic intent set. Call set_artistic_intent first.',
+            error: 'No artistic intent set. Call set_sega first.',
           });
         }
 
@@ -463,7 +461,7 @@ export function registerSegaTools(
           ),
           instruction:
             'Send this prompt along with the render image to a vision model. ' +
-            'Parse the response and pass the measurements to evaluate_semantics as vlm_measurements.',
+            'Parse the response and pass the measurements to score_sega as vlm_measurements.',
         });
       } catch (error: any) {
         return errorResult(error);
@@ -478,12 +476,11 @@ export function registerSegaTools(
     {
       title: 'Save SEGA Preset',
       description:
-        'Save the current SEGA semantic vector as a named preset for reuse. ' +
-        'Presets are stored in session memory (not persisted to disk). Query octane://sega/presets for built-in presets.',
+        'Save current SEGA vector as named preset (session only). Call describe_tool("save_sega_preset") for params.',
       inputSchema: {
-        name: z.string().describe('Preset name (e.g. "my_moody_setup")'),
-        description: z.string().optional().describe('Short description of this preset'),
-        tags: z.array(z.string()).optional().describe('Search tags for this preset'),
+        name: z.string(),
+        description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
       },
       annotations: { destructiveHint: true },
     },
@@ -527,7 +524,7 @@ export function registerSegaTools(
           vector,
           category: 'user',
           totalPresets: PRESETS.length,
-          instruction: `Preset "${preset.name}" saved. Use set_artistic_intent with preset:"${preset.name}" to load it.`,
+          instruction: `Preset "${preset.name}" saved. Use set_sega with preset:"${preset.name}" to load it.`,
         });
       } catch (error: any) {
         return errorResult(error);
