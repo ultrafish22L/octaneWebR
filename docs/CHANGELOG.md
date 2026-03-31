@@ -31,7 +31,7 @@ All notable changes to octaneWebR.
 
 ### Changed
 
-- **78 → 64 tools** — consolidated getter/setter pairs into toggle tools, merged utility clusters (profile 4→1, stats 3→1, animation 6→1), disabled 3 broken tools.
+- **78 → 65 tools** — consolidated getter/setter pairs into toggle tools, merged utility clusters (profile 4→1, stats 3→1, animation 6→1), disabled 3 broken tools.
 - **13 tool renames** — standardized to "score" language (`critique_render` → `score_render`, `evaluate_semantics` → `score_sega`), SEGA brand (`set_artistic_intent` → `set_sega`), toggle pattern (`set_clay_mode` → `clay_mode`), clarity (`create_connected` → `create_at_pin`, `plan_composition` → `plan_layout`). Full table in CLAUDE.md.
 - **Tiered tool schemas** — 38 core tools keep full descriptions, 24 long-tail tools have slim schemas with `describe_tool()` pointer. Reduces startup token cost ~1,200 tokens.
 - **AD workflow ordering fixed** — `set_sega` moved from Phase 2 to Phase 0 (mood set early, not after framing). `plan_layout` no longer requires `analyze_geo` (primitives-only scenes work).
@@ -41,7 +41,7 @@ All notable changes to octaneWebR.
 
 ### Added
 
-- **`search_tools(query)`** — keyword search across all 64 tools by name, summary, category, phase.
+- **`search_tools(query)`** — keyword search across all 65 tools by name, summary, category, phase.
 - **`describe_tool(name)`** — full parameter documentation for any tool. Essential for long-tail tools with slim schemas.
 - **Tool catalog** (`tool-catalog.ts`) — centralized metadata for all tools, powering discovery.
 - **§ section refs in tool descriptions** — 15 tools now point to specific doc sections (e.g., `octane://docs/creative/1`).

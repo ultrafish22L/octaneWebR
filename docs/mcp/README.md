@@ -1,10 +1,10 @@
 # Octane MCP User Guide
 
-Control Octane Render from AI agents. **63 active tools**. Build scenes, set materials, position cameras, and render — all through natural language. v3.1.1.
+Control Octane Render from AI agents. **65 active tools**. Build scenes, set materials, position cameras, and render — all through natural language. v3.1.1.
 
 ## What Is This?
 
-**MCP** (Model Context Protocol) is a standard that lets AI assistants use external tools. The Octane MCP server wraps Octane's gRPC LiveLink API into 78 tools that Claude can call. The AI becomes your 3D scene builder — you describe what you want, it creates nodes, wires them together, sets materials, frames the camera, and renders.
+**MCP** (Model Context Protocol) is a standard that lets AI assistants use external tools. The Octane MCP server wraps Octane's gRPC LiveLink API into 65 tools that Claude can call. The AI becomes your 3D scene builder — you describe what you want, it creates nodes, wires them together, sets materials, frames the camera, and renders.
 
 Three ways to use it:
 

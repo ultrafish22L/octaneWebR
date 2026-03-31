@@ -1,6 +1,6 @@
 # Quick Start
 
-**OctaneWebR** is a browser UI and AI scene builder for Octane Render. The browser provides a scene outliner, node graph editor, parameter inspector, and live render viewport. The MCP server gives Claude 78 tools to build scenes through natural language.
+**OctaneWebR** is a browser UI and AI scene builder for Octane Render. The browser provides a scene outliner, node graph editor, parameter inspector, and live render viewport. The MCP server gives Claude 65 tools to build scenes through natural language.
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ Claude creates nodes, sets materials, positions the camera, and renders — whil
 
 ## Next Steps
 
-- [docs/mcp/README.md](docs/mcp/README.md) — Full MCP guide (78 tools)
+- [docs/mcp/README.md](docs/mcp/README.md) — Full MCP guide (65 tools)
 - [docs/mcp/BUILD.md](docs/mcp/BUILD.md) — Build workflow (SCRATCH, DRESS, SHOW)
 - [docs/mcp/REFERENCE.md](docs/mcp/REFERENCE.md) — Node types, attributes, material presets
 - [docs/mcp/CREATIVE.md](docs/mcp/CREATIVE.md) — Lighting, materials, composition

@@ -313,12 +313,7 @@ export const TOOL_CATALOG: ToolEntry[] = [
         'AttrType. If omitted, auto-detects. Common: AT_FLOAT4=12, AT_FLOAT3=11, AT_STRING=14.',
     },
   },
-  {
-    name: 'flush_changes',
-    summary: 'Flush pending changes after set_attribute(skip_evaluate:true)',
-    category: 'attributes',
-    params: {}, // no params
-  },
+  // flush_changes removed in build 75 — server auto-flushes after every mutation
 
   // ── Render Control ──────────────────────────────────────────────
   {

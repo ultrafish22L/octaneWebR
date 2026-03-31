@@ -24,7 +24,7 @@ npm run dev                                      # Start web UI (port 43929)
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
 │  Vite Dev Server    │              │   MCP Server       │
 │  HTTP proxy + WS    │              │   stdio transport   │
-│  port 43929         │              │   78 tools          │
+│  port 43929         │              │   65 tools          │
 └──────────┬──────────┘              └─────────┬──────────┘
            │ HTTP/WS                            │ stdio
 ┌──────────┴──────────┐              ┌─────────┴──────────┐
@@ -43,7 +43,7 @@ Both paths use the same shared gRPC client with a compatibility layer for differ
 | Capability                    | What It Is                                                                                                        | Learn More                                                     |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | **Browser UI**                | Scene outliner, node graph editor, parameter inspector, live render viewport, picker tools, themes                | [Below](#browser-ui)                                           |
-| **AI Scene Builder (MCP)**    | 78 tools let Claude build Octane scenes from natural language — nodes, materials, cameras, renders                | [MCP Guide](docs/mcp/README.md)                                |
+| **AI Scene Builder (MCP)**    | 65 tools let Claude build Octane scenes from natural language — nodes, materials, cameras, renders                | [MCP Guide](docs/mcp/README.md)                                |
 | **Art Direction System**      | Composition planning, spatial validation, mesh analysis, collision-free placement, vision critique                | [AD System](docs/ADSYSTEM.md)                                  |
 | **SEGA Artistic Guidance**    | 15-dimension mood/style vector with 25 presets (dramatic, noir, Vermeer, Kubrick...) and natural language control | [AD System](docs/ADSYSTEM.md#sega--semantic-artistic-guidance) |
 | **Asset Generation Pipeline** | AI image → 3D mesh → OBJ conversion → mesh analysis → Octane import → placement → render                          | [AD System](docs/ADSYSTEM.md#asset-generation-pipeline)        |
@@ -63,7 +63,7 @@ Both paths use the same shared gRPC client with a compatibility layer for differ
 
 ### MCP Server (AI Scene Builder)
 
-78 tools let AI agents control Octane through natural language:
+65 tools let AI agents control Octane through natural language:
 
 | Category            | Count | What They Do                                                                  |
 | ------------------- | ----- | ----------------------------------------------------------------------------- |
@@ -114,7 +114,7 @@ octaneWebR/
 │   └── styles/                  # CSS themes (134 variables each)
 ├── server/proto/                # Protobuf definitions
 ├── shared/                      # Shared constants (AttrType, AttributeId, etc.)
-├── mcp/src/                     # MCP server (78 tools, SceneCache, ApiCache)
+├── mcp/src/                     # MCP server (65 tools, SceneCache, ApiCache)
 │   ├── tools/                   # Tool implementations by category
 │   ├── types/                   # TypeScript interfaces (GrpcClientTypes)
 │   └── __tests__/               # Unit tests
@@ -156,7 +156,7 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 | Doc                                                           | What's In It                                                                   |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [QUICKSTART.md](./QUICKSTART.md)                              | Full setup guide — running in 5 minutes                                        |
-| [docs/mcp/README.md](./docs/mcp/README.md)                    | Complete MCP user guide — all 78 tools, tips, pitfalls                         |
+| [docs/mcp/README.md](./docs/mcp/README.md)                    | Complete MCP user guide — all 65 tools, tips, pitfalls                         |
 | [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)              | Lookup tables — pin layouts, node types, attribute IDs, presets                |
 | [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                      | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                  |
 | [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                | Creative guide — lighting, materials, composition                              |

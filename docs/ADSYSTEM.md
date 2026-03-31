@@ -172,4 +172,4 @@ diag_front.png, diag_side.png, diag_top.png
 | [SEGA System Design](archive/SEGA_SYSTEM_DESIGN.md) | Full SEGA spec — mapping engine, convergence math, per-object overrides |
 | [Creative Guide](mcp/CREATIVE.md)                   | Lighting recipes, material values, composition rules, color theory      |
 | [Reference](mcp/REFERENCE.md)                       | Pin layouts, node types, attribute IDs, material presets                |
-| [MCP User Guide](mcp/README.md)                     | All 78 tools, setup, tips, troubleshooting                              |
+| [MCP User Guide](mcp/README.md)                     | All 65 tools, setup, tips, troubleshooting                              |

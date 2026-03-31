@@ -48,7 +48,7 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 1. `octaneServGrpc/build/Release/octaneServGrpc.exe` (wait ~6s, port 51022)
 2. Verify single instance: `tasklist | grep octaneServGrpc` → exactly 1 row
 3. `preview_start("octaneWebR")`
-4. `get_octane_version()` — verify mcp_build 74
+4. `get_octane_version()` — verify mcp_build 75
 
 ## What to call
 

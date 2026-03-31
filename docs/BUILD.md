@@ -77,7 +77,7 @@ octaneWebR/
 │   ├── proto/            # Protobuf definitions
 │   └── src/grpc/         # Shared gRPC client (OctaneGrpcClientBase)
 ├── shared/               # Protocol constants (AttrType, AttributeId, etc.)
-├── mcp/                  # MCP server (separate package, 78 tools)
+├── mcp/                  # MCP server (separate package, 65 tools)
 ├── electron/             # Electron main + preload
 ├── native/               # D3D11 shared surface native addon
 └── vite-plugin-octane-grpc.ts  # Embedded proxy plugin
