@@ -9,6 +9,7 @@
  *   5 new: ad-workflow, mesh-pipeline, setup-lighting, critique-loop, scene-checklist
  *
  * v3.0.2: Tool renames (set_sega, score_render, etc.), phase-selectable ad-workflow, text concept briefs.
+ * v3.1.1: Server auto-flush, MCP streamlined (no evaluate:false/update()), attributeChanged live-refresh, pin guard, bool fix.
  * Constants moved to octane://constants resource — prompts reference it.
  */
 

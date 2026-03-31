@@ -4,6 +4,29 @@ All notable changes to octaneWebR.
 
 ---
 
+## [3.1.1] - 2026-03-31
+
+### Changed
+
+- **Server auto-flush** — `ApiChangeManager::update()` called unconditionally after every `setValueByAttrID` and `connectToIx` in the C++ server. MCP no longer needs `evaluate: false` or manual `update()` calls.
+- **MCP streamlined** — all `evaluate: false` → `evaluate: true`, all manual `ApiChangeManager.update()` calls removed. Zero flush-ordering knowledge required in MCP tools.
+- **`flush_changes` tool removed** — server handles flushing automatically.
+- **`skip_evaluate` param deprecated** — `set_attribute` ignores it; server always flushes.
+- **Bool parsing fix** — `set_attribute` with `value: "false"` (string) no longer coerces to `true` via `Boolean()`.
+
+### Added
+
+- **Pin bounds guard** — `connectToIx` returns `FAILED_PRECONDITION` if `pinIdx >= pinCount()`. Prevents SDK crash from connecting to non-existent pins.
+- **`notifyWebapp` for all mutation tools** — `set_attribute`, `create_light`, `setup_lighting`, `set_daylight`, `place_geo` primitive path now notify the web UI.
+- **`attributeChanged` event** — new WebSocket event type for attribute value changes (separate from structural `nodeChanged`).
+- **Inspector live-refresh** — `useParameterValue` hook subscribes to `OnAttributeChanged` via a global dispatcher pattern (1 listener total, Map-based dispatch by handle). Inspector checkboxes/values update in real-time when MCP changes attributes.
+
+### Fixed
+
+- **`place_geo` crash** — `ApiChangeManager.update: unknown C++ exception` when placing first primitive on an RT with no geo group. Root cause: bulk deferred flush of 10+ operations including geo group creation + RT wiring + pin expansion + geometry attachment. Fixed by server-side auto-flush after every mutation.
+
+---
+
 ## [3.0.2] - 2026-03-30
 
 ### Changed

@@ -199,6 +199,8 @@ export class ConnectionService extends BaseService {
             } else if (message.type === 'nodeChanged') {
               //              Logger.info('WebSocket: MCP nodeChanged', message.handle);
               this.emit('OnMcpNodeChanged', { handle: message.handle });
+            } else if (message.type === 'attributeChanged') {
+              this.emit('OnAttributeChanged', { handle: message.handle });
             } else {
               Logger.warn('WebSocket: Unknown message type:', message.type);
             }

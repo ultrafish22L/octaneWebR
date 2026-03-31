@@ -258,7 +258,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           timeout
         );
 
-        await notifyWebapp({ type: 'nodeChanged', handle });
+        await notifyWebapp({ type: 'attributeChanged', handle });
         return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {
         return errorResult(error);

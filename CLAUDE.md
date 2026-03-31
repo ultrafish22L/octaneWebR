@@ -1,6 +1,14 @@
-## v3.0.2 (MCP_BUILD 74)
+## v3.1.1 (MCP_BUILD 75)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
+
+### What's new (build 75)
+
+- **Server auto-flush** — `update()` after every `setValueByAttrID` and `connectToIx`. MCP uses `evaluate: true` everywhere — no manual `update()` calls, no flush ordering.
+- **`flush_changes` tool removed** — server handles it.
+- **Pin guard** — `connectToIx` rejects `pinIdx >= pinCount()` with `FAILED_PRECONDITION`.
+- **`attributeChanged` event** — inspector live-refreshes when MCP changes attribute values.
+- **Bool fix** — `set_attribute` with `value: "false"` string no longer coerces to `true`.
 
 ### Tool renames (build 74)
 

@@ -12,13 +12,28 @@
  * - Type conversion for all Octane attribute types
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneProtocol';
 import { Logger } from '../../../utils/Logger';
 import { useStatusActions } from '../../../contexts/StatusMessageContext';
 import { requestQueue } from '../../../utils/RequestQueue';
+
+// Single global dispatcher for attribute changes — avoids per-component listener leak on HMR.
+// One listener on the client, dispatches to subscribers by handle.
+const attributeSubscribers = new Map<number, Set<() => void>>();
+let globalListenerInstalled = false;
+
+function installGlobalListener(client: OctaneClient): void {
+  if (globalListenerInstalled) return;
+  globalListenerInstalled = true;
+  client.on('OnAttributeChanged', (...args: unknown[]) => {
+    const event = args[0] as { handle: number };
+    const subs = attributeSubscribers.get(event.handle);
+    if (subs) subs.forEach(cb => cb());
+  });
+}
 import type { ParameterRawValue, ParameterValue } from '../../../services/octane/ItemService';
 export type { ParameterRawValue, ParameterValue };
 
@@ -37,6 +52,24 @@ export function useParameterValue(
 ): UseParameterValueReturn {
   const { setTemporaryStatus } = useStatusActions();
   const [paramValue, setParamValue] = useState<ParameterValue | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // Subscribe to global attribute change dispatcher (1 listener total, not per-component)
+  useEffect(() => {
+    if (!node.handle) return;
+    installGlobalListener(client);
+    const handle = node.handle;
+    const cb = () => setRefreshTick(t => t + 1);
+    if (!attributeSubscribers.has(handle)) attributeSubscribers.set(handle, new Set());
+    attributeSubscribers.get(handle)!.add(cb);
+    return () => {
+      const subs = attributeSubscribers.get(handle);
+      if (subs) {
+        subs.delete(cb);
+        if (subs.size === 0) attributeSubscribers.delete(handle);
+      }
+    };
+  }, [node.handle, client]);
 
   // Fetch parameter value for end nodes (matching octaneWeb's GenericNodeRenderer.getValue())
   // `node` is in the dependency array (not just node.handle/node.attrInfo) so the effect
@@ -123,7 +156,7 @@ export function useParameterValue(
     return () => {
       cancelled = true;
     };
-  }, [isEndNode, node, node.handle, node.attrInfo, node.name, node.outType, client]);
+  }, [isEndNode, node, node.handle, node.attrInfo, node.name, node.outType, client, refreshTick]);
 
   // Handle parameter value change — delegates to ItemService (single source of truth
   // for AttrType→protobuf mapping, cache invalidation, and ApiChangeManager.update)
