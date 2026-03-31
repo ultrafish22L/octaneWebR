@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { OctaneMcpClient, mcpLogLazy } from '../OctaneMcpClient';
 import { jsonResult, errorResult, OBJ_API_ITEM } from './utils';
 import { AttrType, AttributeId } from '../shared/OctaneConstants';
+import { notifyWebapp } from './webapp';
 
 /** Targeted error message when hasAttr returns false */
 function missingAttrError(handle: number, attribute_id: number): string {
@@ -94,7 +95,7 @@ function extractAttributeValue(result: any, expectedType: number): any {
 function buildValueParams(value: any, expectedType: number): Record<string, any> {
   switch (expectedType) {
     case AT_BOOL:
-      return { bool_value: Boolean(value) };
+      return { bool_value: value === true || value === 'true' || value === 1 };
     case AT_INT:
       return { int_value: Number(value) };
     case AT_FLOAT:
@@ -224,9 +225,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
           .boolean()
           .optional()
           .default(false)
-          .describe(
-            'If true, skip ApiChangeManager.update() after setting. Caller must call flush_changes manually. Use for batching multiple attribute changes.'
-          ),
+          .describe('Deprecated — ignored. Server always flushes after every set.'),
       },
       annotations: { destructiveHint: true },
     },
@@ -247,7 +246,6 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
         // Use 120s timeout to prevent hung tool calls while still catching real failures.
         const isFileLoad = attribute_id === AttributeId.A_FILENAME;
         const timeout = isFileLoad ? 120_000 : undefined;
-        // Match web UI pattern: set with evaluate:false, then ApiChangeManager.update()
         await client.callMethod(
           'ApiItem',
           setMethod,
@@ -255,16 +253,12 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
             objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
             attribute_id,
             ...valueParams,
-            evaluate: false,
+            evaluate: true,
           },
           timeout
         );
 
-        // Flush scene evaluation unless caller explicitly skips (for batching)
-        if (!skip_evaluate) {
-          await client.callMethod('ApiChangeManager', 'update', {});
-        }
-
+        await notifyWebapp({ type: 'nodeChanged', handle });
         return jsonResult({ success: true, handle, attribute_id, value });
       } catch (error: any) {
         return errorResult(error);
@@ -272,23 +266,7 @@ export function registerAttributeTools(server: McpServer, client: OctaneMcpClien
     }
   );
 
-  server.registerTool(
-    'flush_changes',
-    {
-      title: 'Flush Changes',
-      description:
-        'Flush pending attribute changes. Required after set_attribute calls with skip_evaluate:true.',
-      annotations: { idempotentHint: true },
-    },
-    async () => {
-      try {
-        await client.callMethod('ApiChangeManager', 'update', {});
-        return jsonResult({ success: true, message: 'Scene evaluation flushed.' });
-      } catch (error: any) {
-        return errorResult(error);
-      }
-    }
-  );
+  // flush_changes removed — server now flushes after every mutation automatically.
 
   // NOTE: set_pin_value (setPinValueByIx) is defined in the proto but returns
   // UNIMPLEMENTED from the Octane gRPC server. All 6 pin value RPCs (get/set ×

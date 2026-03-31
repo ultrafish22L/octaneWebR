@@ -480,7 +480,7 @@ async function createMeshPlacement(
     objectPtr: { handle: String(mesh), type: OBJ_API_ITEM },
     attribute_id: AttributeId.A_FILENAME,
     string_value: objPath,
-    evaluate: false,
+    evaluate: true,
   });
 
   // Create placement
@@ -497,7 +497,7 @@ async function createMeshPlacement(
     objectPtr: { handle: String(placement), type: OBJ_API_NODE },
     pinIdx: 1,
     sourceNode: { handle: String(mesh), type: OBJ_API_NODE },
-    evaluate: false,
+    evaluate: true,
     doCycleCheck: true,
   });
 
@@ -572,7 +572,7 @@ async function setAttrRaw(
       objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
       attribute_id: attrId,
       ...valueParams,
-      evaluate: false,
+      evaluate: true,
     },
     timeout
   );
@@ -1081,8 +1081,7 @@ async function renderViews(
     groundPlacement = gp;
   }
 
-  // Flush + select RT
-  await client.callMethod('ApiChangeManager', 'update', {});
+  // Select RT (evaluate=true on all prior calls handles flushing)
   await client.callMethod('ApiRenderEngine', 'setRenderTargetNode', {
     targetNode: { handle: String(rt), type: OBJ_API_NODE },
   });
@@ -1172,7 +1171,6 @@ async function renderViews(
           });
         }
         groundVisible = view.ground;
-        await client.callMethod('ApiChangeManager', 'update', {});
       }
 
       // Clay mode: default on (mode 2 = color clay), off only when clay===false
@@ -1197,7 +1195,6 @@ async function renderViews(
       });
 
       // Render
-      await client.callMethod('ApiChangeManager', 'update', {});
       await client.callMethod('ApiRenderEngine', 'continueRendering', {});
       const t0 = Date.now();
       while (Date.now() - t0 < 30000) {
@@ -1849,7 +1846,7 @@ export function registerImportTools(
           objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
           attribute_id: AttributeId.A_FILENAME,
           string_value: objPath.replace(/\//g, '\\'),
-          evaluate: false,
+          evaluate: true,
         },
         120_000
       );
@@ -1859,7 +1856,7 @@ export function registerImportTools(
         objectPtr: { handle: String(meshHandle), type: OBJ_API_ITEM },
         attribute_id: AttributeId.A_RELOAD,
         bool_value: true,
-        evaluate: false,
+        evaluate: true,
       });
 
       client.sceneCache.addNode(meshHandle, 'Mesh', 'NT_GEO_MESH', 1);
@@ -1882,7 +1879,7 @@ export function registerImportTools(
         objectPtr: { handle: String(placementHandle), type: OBJ_API_NODE },
         pinIdx: 1,
         sourceNode: { handle: String(meshHandle), type: OBJ_API_NODE },
-        evaluate: false,
+        evaluate: true,
         doCycleCheck: true,
       });
 
@@ -1920,7 +1917,7 @@ export function registerImportTools(
         objectPtr: { handle: String(meshHandle), type: OBJ_API_NODE },
         pinIdx: 0,
         sourceNode: { handle: String(matHandle), type: OBJ_API_NODE },
-        evaluate: false,
+        evaluate: true,
         doCycleCheck: true,
       });
 
@@ -1962,7 +1959,7 @@ export function registerImportTools(
             objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
             attribute_id: AttributeId.A_FILENAME,
             string_value: texPath.replace(/\//g, '\\'),
-            evaluate: false,
+            evaluate: true,
           },
           120_000
         );
@@ -1971,7 +1968,7 @@ export function registerImportTools(
           objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
           pinIdx: matPin,
           sourceNode: { handle: String(handle), type: OBJ_API_NODE },
-          evaluate: false,
+          evaluate: true,
           doCycleCheck: true,
         });
 
@@ -2840,11 +2837,10 @@ export function registerImportTools(
     return { geoGroup, rtHandle };
   }
 
-  /** Wire a node to geo group, flush, continue rendering. */
+  /** Wire a node to geo group, continue rendering. */
   async function wireToGeoGroup(nodeHandle: number, geoGroup: number): Promise<number> {
     const actualPin = await ensureDynamicPin(client, geoGroup);
     await connectRaw(client, geoGroup, nodeHandle, actualPin);
-    await client.callMethod('ApiChangeManager', 'update', {});
     await client.callMethod('ApiRenderEngine', 'continueRendering', {});
     return actualPin;
   }
@@ -3182,6 +3178,7 @@ export function registerImportTools(
           }
         }
 
+        await notifyWebapp({ type: 'nodeAdded', handle: geoHandle });
         return jsonResult({
           success: true,
           name: displayName,
@@ -3272,8 +3269,7 @@ export function registerImportTools(
           await applyPin(MAT_PIN.IOR, 'ior', 9, ior);
         }
 
-        // Flush all changes at once
-        await client.callMethod('ApiChangeManager', 'update', {});
+        // No manual flush needed — evaluate=true on all prior calls
 
         return jsonResult({
           success: failed.length === 0,

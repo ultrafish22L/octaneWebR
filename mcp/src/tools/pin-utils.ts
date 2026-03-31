@@ -233,9 +233,8 @@ export async function ensureDynamicPin(
         objectPtr: { handle: String(targetHandle), type: OBJ_API_ITEM },
         attribute_id: AttributeId.A_PIN_COUNT,
         int_value: pinIndex + 1,
-        evaluate: false,
+        evaluate: true,
       });
-      await client.callMethod('ApiChangeManager', 'update', {});
     }
     return pinIndex;
   }
@@ -272,9 +271,8 @@ export async function ensureDynamicPin(
       objectPtr: { handle: String(targetHandle), type: OBJ_API_ITEM },
       attribute_id: AttributeId.A_PIN_COUNT,
       int_value: newCount,
-      evaluate: false,
+      evaluate: true,
     });
-    await client.callMethod('ApiChangeManager', 'update', {});
     return curCount; // new slot at end
   }
 

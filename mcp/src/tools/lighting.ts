@@ -16,6 +16,7 @@ import { ApiCache } from '../ApiCache';
 import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
 import { ScenePlacementState } from '../ScenePlacementState';
 import { SemanticState } from '../sega/index';
+import { notifyWebapp } from './webapp';
 import { resolveToLightingSummary } from '../sega/MappingEngine';
 import { suggestLighting } from '../creative/lighting';
 import {
@@ -119,7 +120,7 @@ async function setAttrRaw(
     objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
     attribute_id: attrId,
     ...valueParams,
-    evaluate: false,
+    evaluate: true,
   });
 }
 
@@ -262,9 +263,6 @@ async function createEmissiveLight(
   const pin = await ensureDynamicPin(client, params.geoGroupHandle);
   await connectRaw(client, params.geoGroupHandle, geo, pin);
 
-  // 8. Flush
-  await client.callMethod('ApiChangeManager', 'update', {});
-
   mcpLog(
     `create_light: ${params.name} at (${params.position.x.toFixed(2)}, ${params.position.y.toFixed(2)}, ${params.position.z.toFixed(2)}) ${params.temperature}K power=${params.power}`,
     'info'
@@ -307,7 +305,6 @@ async function addEmissionToMaterial(
     doCycleCheck: true,
   });
 
-  await client.callMethod('ApiChangeManager', 'update', {});
   mcpLog(
     `create_light: added emission to material ${materialHandle} (${temperature}K, power=${power})`,
     'info'
@@ -394,6 +391,7 @@ export function registerLightingTools(
             params.power,
             params.color
           );
+          await notifyWebapp({ type: 'nodeChanged', handle: params.material_handle });
           return jsonResult({
             success: true,
             mode: 'add_emission',
@@ -452,6 +450,7 @@ export function registerLightingTools(
             });
           }
 
+          await notifyWebapp({ type: 'nodeAdded', handle: result.light_handle });
           return jsonResult({
             success: true,
             mode: 'emissive',
@@ -517,8 +516,8 @@ export function registerLightingTools(
         // Connect to geo group
         const pin = await ensureDynamicPin(client, geoGroupHandle);
         await connectRaw(client, geoGroupHandle, lightHandle, pin);
-        await client.callMethod('ApiChangeManager', 'update', {});
 
+        await notifyWebapp({ type: 'nodeAdded', handle: lightHandle });
         return jsonResult({
           success: true,
           mode: 'native',
@@ -704,7 +703,6 @@ export function registerLightingTools(
           // Pin 3 = sun intensity (dim to near zero for studio lighting)
           const sunChild = await getConnectedChild(client, envHandle, 3);
           if (sunChild) await setAttrRaw(client, sunChild, AttributeId.A_VALUE, 9, envPower * 0.5);
-          await client.callMethod('ApiChangeManager', 'update', {});
         } catch (e: any) {
           mcpLog(`setup_lighting: env adjustment skipped: ${e.message}`, 'warn');
         }
@@ -713,6 +711,8 @@ export function registerLightingTools(
           `setup_lighting: ${mood} — ${lights.length} lights created, env power=${envPower.toFixed(3)}`,
           'info'
         );
+
+        for (const l of lights) await notifyWebapp({ type: 'nodeAdded', handle: l.handle });
 
         return jsonResult({
           success: true,
@@ -829,8 +829,7 @@ export function registerLightingTools(
           }
         }
 
-        await client.callMethod('ApiChangeManager', 'update', {});
-
+        await notifyWebapp({ type: 'nodeChanged', handle: envHandle });
         return jsonResult({
           success: true,
           env_handle: envHandle,

@@ -201,7 +201,7 @@ export function registerNodeTools(
                   objectPtr: { handle: String(apertureHandle), type: OBJ_API_ITEM },
                   attribute_id: AttributeId.A_VALUE,
                   float_value: 0,
-                  evaluate: false,
+                  evaluate: true,
                 });
                 warnings.push(
                   'DOF disabled (aperture set to 0). Set aperture > 0 on camera pin 14 to re-enable.'
@@ -222,7 +222,7 @@ export function registerNodeTools(
                 objectPtr: { handle: String(effPin.handle), type: OBJ_API_ITEM },
                 attribute_id: AttributeId.A_VALUE,
                 float_value: 1.0,
-                evaluate: false,
+                evaluate: true,
               });
               warnings.push(
                 'Emission efficiency set to 1.0 (default was 0.025). Adjust if too bright.'
@@ -421,9 +421,6 @@ export function registerNodeTools(
           return errorResult('Provide pin_name (preferred) or pin_index');
         }
 
-        // Flush scene changes so the connection takes effect immediately
-        await client.callMethod('ApiChangeManager', 'update', {});
-
         // Auto-verify: check the pin actually got connected (silent failures are common)
         const verifyPinIdx = resolvedPinIndex ?? pin_index ?? 0;
         let verified = true;
@@ -514,8 +511,6 @@ export function registerNodeTools(
           evaluate: true,
           doCycleCheck: true,
         });
-        // Flush scene changes so the disconnect takes effect immediately
-        await client.callMethod('ApiChangeManager', 'update', {});
         client.sceneCache.removeConnection(handle, pin_index);
         await notifyWebapp({ type: 'nodeChanged', handle });
         return jsonResult({ success: true, handle, pin: pin_index });
@@ -572,9 +567,6 @@ export function registerNodeTools(
           evaluate: true,
           doCycleCheck: true,
         });
-        // Flush scene changes so the connection takes effect immediately
-        await client.callMethod('ApiChangeManager', 'update', {});
-
         // --- Verify ---
         let verified = true;
         let verifyWarning: string | undefined;

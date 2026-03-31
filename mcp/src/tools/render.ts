@@ -50,8 +50,6 @@ export function registerRenderTools(
             targetNode: { handle: String(render_target_handle), type: OBJ_API_NODE },
           });
         }
-        // Flush all pending scene changes so the render reflects current state
-        await client.callMethod('ApiChangeManager', 'update', {});
         await client.callMethod('ApiRenderEngine', 'continueRendering', {});
         return jsonResult({ success: true });
       } catch (error: any) {
