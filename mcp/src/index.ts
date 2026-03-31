@@ -162,7 +162,7 @@ async function main() {
   registerCameraTools(server, client, placementState, artState);
   registerRenderTools(server, client, artState);
   registerSceneTools(server, client, cache);
-  registerNodeTools(server, client, cache);
+  registerNodeTools(server, client, cache, placementState);
   registerAttributeTools(server, client);
   registerWebappTools(server);
   registerImportTools(server, client, cache, artState, placementState);

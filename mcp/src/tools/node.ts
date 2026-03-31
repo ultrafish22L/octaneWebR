@@ -50,7 +50,8 @@ async function getOutTypeFallback(
 export function registerNodeTools(
   server: McpServer,
   client: OctaneMcpClient,
-  cache: ApiCache | null
+  cache: ApiCache | null,
+  placementState?: import('../ScenePlacementState').ScenePlacementState
 ) {
   server.registerTool(
     'create_node',
@@ -274,6 +275,7 @@ export function registerNodeTools(
           objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
         });
         client.sceneCache.removeNode(handle);
+        placementState?.removeEntry(handle);
         await notifyWebapp({ type: 'nodeDeleted', handle });
         return jsonResult({ success: true, deleted_handle: handle });
       } catch (error: any) {

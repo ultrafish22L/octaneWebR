@@ -266,9 +266,11 @@ export class ScenePlacementState {
   }
 
   /** Combined AABB of frameable objects (hero + secondary + accent + prop), excluding ground & light. */
-  getFramingBounds(): AABB | null {
+  getFramingBounds(excludeHandles?: Set<number>): AABB | null {
+    // Only frame hero + secondary + accent — exclude ground, light, prop (walls/backdrops)
+    const FRAMEABLE_ROLES = new Set(['hero', 'secondary', 'accent']);
     const frameable = [...this.entries.values()].filter(
-      e => e.role !== 'ground' && e.role !== 'light'
+      e => FRAMEABLE_ROLES.has(e.role) && !excludeHandles?.has(e.handle)
     );
     if (frameable.length === 0) return null;
     let min = { ...frameable[0].boundsWorld.min };
@@ -293,6 +295,74 @@ export class ScenePlacementState {
   getHeroBounds(): AABB | null {
     const hero = this.getHero();
     return hero ? hero.boundsWorld : null;
+  }
+
+  /**
+   * Refresh all entries from Octane live state. Returns set of camera-invisible handles.
+   * Prunes entries whose handles no longer exist in Octane (dead handles).
+   * @param queryFn — async function that queries a single entry's live state from Octane.
+   */
+  async refreshFromOctane(
+    queryFn: (handle: number) => Promise<{
+      alive: boolean;
+      cameraVisible: boolean;
+      position?: Vec3;
+      scale?: Vec3;
+    }>
+  ): Promise<Set<number>> {
+    const invisible = new Set<number>();
+    const dead: number[] = [];
+
+    for (const entry of this.entries.values()) {
+      try {
+        const live = await queryFn(entry.handle);
+        if (!live.alive) {
+          dead.push(entry.handle);
+          continue;
+        }
+        if (!live.cameraVisible) {
+          invisible.add(entry.handle);
+        }
+        if (live.position && live.scale) {
+          // Recompute boundsWorld from live transform + original extents
+          const oldExt = {
+            x: entry.boundsWorld.max.x - entry.boundsWorld.min.x,
+            y: entry.boundsWorld.max.y - entry.boundsWorld.min.y,
+            z: entry.boundsWorld.max.z - entry.boundsWorld.min.z,
+          };
+          // Scale ratio: new scale / old scale (avoid div by zero)
+          const sx = live.scale.x / (entry.scale.x || 1);
+          const sy = live.scale.y / (entry.scale.y || 1);
+          const sz = live.scale.z / (entry.scale.z || 1);
+          const halfX = (oldExt.x * sx) / 2;
+          const halfY = (oldExt.y * sy) / 2;
+          const halfZ = (oldExt.z * sz) / 2;
+          entry.position = live.position;
+          entry.scale = live.scale;
+          entry.boundsWorld = {
+            min: {
+              x: live.position.x - halfX,
+              y: live.position.y - halfY,
+              z: live.position.z - halfZ,
+            },
+            max: {
+              x: live.position.x + halfX,
+              y: live.position.y + halfY,
+              z: live.position.z + halfZ,
+            },
+          };
+        }
+      } catch {
+        dead.push(entry.handle);
+      }
+    }
+
+    // Prune dead handles
+    for (const h of dead) {
+      this.entries.delete(h);
+    }
+
+    return invisible;
   }
 
   /** Snapshot for debugging. */

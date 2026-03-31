@@ -1155,6 +1155,15 @@ async function renderViews(
 
   let groundVisible = true;
 
+  // Save user's clay mode before mugshots so we can restore it afterward
+  let savedClayMode = 0;
+  try {
+    const clayState = await client.callMethod('ApiRenderEngine', 'clayMode', {});
+    savedClayMode = clayState?.result ?? clayState?.mode ?? 0;
+  } catch {
+    /* if read fails, default to 0 (off) */
+  }
+
   try {
     for (const view of views) {
       // Toggle ground
@@ -1229,9 +1238,9 @@ async function renderViews(
       mcpLog(`mugshot: saved ${view.name} → ${outPath}`, 'info');
     }
   } finally {
-    // Always restore clay mode even if render loop throws
+    // Always restore user's original clay mode even if render loop throws
     await client
-      .callMethod('ApiRenderEngine', 'setClayMode', { mode: 0 })
+      .callMethod('ApiRenderEngine', 'setClayMode', { mode: savedClayMode })
       .catch((e: any) => mcpLog(`mugshot: failed to restore clay mode: ${e?.message}`, 'warn'));
 
     // Cleanup: delete all created nodes so mugshots don't pollute the scene
@@ -2492,13 +2501,13 @@ export function registerImportTools(
                 'info'
               );
             } else {
-              // Upright — just handle front-facing
-              finalRotation = { x: 0, y: 0, z: 0 };
+              // Upright per VLM — keep geometric axis correction, only adjust front-facing (Y rotation)
+              finalRotation = { ...orientation.suggestedRotation };
               finalGroundOffset = rawGroundOffset;
               const fv = parseInt(String(diag.front_visible_in || '1'), 10);
-              if (fv === 3) finalRotation.y = 180;
-              else if (fv === 2) finalRotation.y = -90;
-              else if (fv === 4) finalRotation.y = 90;
+              if (fv === 3) finalRotation.y += 180;
+              else if (fv === 2) finalRotation.y += -90;
+              else if (fv === 4) finalRotation.y += 90;
             }
 
             // Always render diagnostic mugshots — never skip
@@ -2956,16 +2965,17 @@ export function registerImportTools(
               new Error('Sidecar has no placement suggestion. Re-run analyze_geo.')
             );
 
-          // Extract transforms from sidecar (with overrides from params)
-          const rotOverride =
-            rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0 ? rotation : undefined;
-          const rot =
-            rotOverride ||
-            (() => {
-              const r = suggestion.rotation_deg || suggestion.rotation;
-              if (Array.isArray(r)) return { x: r[0], y: r[1], z: r[2] };
-              return r || { x: 0, y: 0, z: 0 };
-            })();
+          // Extract transforms from sidecar — ADD user rotation on top of sidecar rotation
+          const sidecarRot = (() => {
+            const r = suggestion.rotation_deg || suggestion.rotation;
+            if (Array.isArray(r)) return { x: r[0], y: r[1], z: r[2] };
+            return r || { x: 0, y: 0, z: 0 };
+          })();
+          const rot = {
+            x: sidecarRot.x + rotation.x,
+            y: sidecarRot.y + rotation.y,
+            z: sidecarRot.z + rotation.z,
+          };
           const scaleOverride = typeof scale === 'number' && scale !== 1 ? scale : undefined;
           const scaleFactor = scaleOverride ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
           const posOverride =

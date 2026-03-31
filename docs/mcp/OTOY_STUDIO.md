@@ -33,7 +33,18 @@ POST /r2/otoy-studio/flux-pro/new
 }
 ```
 
-**HDRI environment images** should use `"landscape_16_9"` with prompt: `"360 degree equirectangular panorama, [scene description], high dynamic range, seamless horizon, photorealistic, landscape 16:9"`. Apply via `NT_ENV_TEXTURE` + `NT_TEX_IMAGE` with **sphere projection**.
+**HDRI environment images — use Hunyuan World (NOT FLUX Pro).** FLUX Pro cannot produce true equirectangular projections. Instead:
+
+1. Generate a reference image with FLUX Pro: `"[scene description], wide landscape, dramatic sky, photorealistic"`
+2. Feed it to Hunyuan World to produce a proper panorama:
+   ```bash
+   POST /r2/otoy-studio/hunyuan_world
+   { "image_url": "<flux_result_url>", "prompt": "[scene description]" }
+   ```
+3. Poll `status_url` → download panorama PNG (1920x960)
+4. Apply via `NT_ENV_TEXTURE` + `NT_TEX_IMAGE` with **sphere projection**
+
+Hunyuan World produces actual panoramic projections from a single image — $0.15/image, async (~30-60s).
 
 **Mesh concept images** should use `"square_hd"`, white background, isolated object, product photography style. Add `", no base, no pedestal, no stand"` to the prompt when the scene doesn't want display bases. This gives Hunyuan clean input.
 
@@ -70,12 +81,11 @@ Image gen: ~6-12s. Image-to-3D: ~2-3 min.
 response.images[0].url → download PNG
 
 # Image-to-3D result
-response.model_urls.obj.url → download OBJ
-response.model_urls.glb.url → download GLB (optional)
+response.model_urls.glb.url → download GLB (⚠️ ALWAYS use this)
 response.thumbnail.url → download preview PNG
 ```
 
-The OBJ comes with `material.mtl` referencing PBR textures. Download all to same directory.
+**⛔ ALWAYS download GLB, NEVER OBJ.** The OBJ+MTL from Hunyuan is incomplete — the API only exposes the metallic map as a texture URL, but the MTL references 4 PBR textures (diffuse, metallic, roughness, normal). The missing 3 result in all-black meshes. GLB embeds all PBR textures correctly. Do NOT download `model_urls.obj.url`, `model_urls.mtl.url`, or `model_urls.texture.url`.
 
 ### Endpoint Discovery
 
@@ -117,9 +127,9 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
     → save hdri.png → apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
 2.  analyze_reference (Octane MCP) — extract composition
 3.  Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated, no pedestal)
-4.  Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → OBJ + textures
-5.  analyze_geo (Octane MCP) → orientation check
-6.  place_geo (Octane MCP) → place in scene
+4.  Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → download GLB (NOT OBJ)
+5.  analyze_geo (Octane MCP, .glb path) → orientation check (GLB is Z-up, needs rotation)
+6.  place_geo (Octane MCP, .glb path) → place in scene with embedded PBR textures
 ```
 
 **Parallel work:** Steps 3-4 take ~3 min. During that time, build scene infrastructure in Octane (RT, kernel, environment, floor).

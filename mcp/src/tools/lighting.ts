@@ -26,6 +26,7 @@ import {
   OBJ_API_NODE,
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM,
+  getConnectedByPinName,
 } from './utils';
 import { ensureDynamicPin } from './pin-utils';
 import { AttributeId } from '../shared/OctaneConstants';
@@ -173,6 +174,7 @@ async function createEmissiveLight(
     power: number;
     color?: { x: number; y: number; z: number };
     double_sided: boolean;
+    visible: boolean;
     name: string;
     geoGroupHandle: number;
   }
@@ -262,6 +264,21 @@ async function createEmissiveLight(
   // 7. Connect to geo group
   const pin = await ensureDynamicPin(client, params.geoGroupHandle);
   await connectRaw(client, params.geoGroupHandle, geo, pin);
+
+  // 8. Camera visibility — hide emissive plane from camera by default
+  if (!params.visible) {
+    try {
+      const objLayer = await getConnectedChild(client, geo, 2); // pin 2 = objectLayer
+      if (objLayer) {
+        const camVisChild = await getConnectedChild(client, objLayer, 2); // pin 2 = camera_visibility
+        if (camVisChild) {
+          await setAttrRaw(client, camVisChild, AttributeId.A_VALUE, 1, false);
+        }
+      }
+    } catch (e: any) {
+      mcpLog(`create_light: failed to set camera visibility: ${e?.message}`, 'warn');
+    }
+  }
 
   mcpLog(
     `create_light: ${params.name} at (${params.position.x.toFixed(2)}, ${params.position.y.toFixed(2)}, ${params.position.z.toFixed(2)}) ${params.temperature}K power=${params.power}`,
@@ -370,6 +387,12 @@ export function registerLightingTools(
           .optional()
           .describe('Target geo group (default: auto-find on active RT)'),
         double_sided: z.boolean().default(true).describe('Double-sided emission (default true)'),
+        visible: z
+          .boolean()
+          .default(false)
+          .describe(
+            'Camera visibility for emissive geometry (default false — light casts but plane is invisible to camera). Set true to make the light plane visible.'
+          ),
       },
       annotations: { destructiveHint: true },
     },
@@ -422,6 +445,7 @@ export function registerLightingTools(
             power: params.power,
             color: params.color,
             double_sided: params.double_sided,
+            visible: params.visible,
             name,
             geoGroupHandle,
           });
@@ -577,12 +601,69 @@ export function registerLightingTools(
     },
     async params => {
       try {
-        // 1. Resolve subject bounds
+        // 1. Resolve subject bounds (refresh from Octane first)
         let boundsMin = params.subject_bounds_min;
         let boundsMax = params.subject_bounds_max;
         if (!boundsMin || !boundsMax) {
           if (placementState) {
-            const fb = placementState.getFramingBounds();
+            let excludeHandles: Set<number> | undefined;
+            try {
+              excludeHandles = await placementState.refreshFromOctane(async (handle: number) => {
+                let alive = true;
+                let cameraVisible = true;
+                let position: { x: number; y: number; z: number } | undefined;
+                let scale: { x: number; y: number; z: number } | undefined;
+
+                const olH = await getConnectedByPinName(client, handle, 'objectLayer');
+                if (olH === 0) {
+                  const xfH = await getConnectedByPinName(client, handle, 'transform');
+                  if (xfH === 0) {
+                    alive = false;
+                    return { alive, cameraVisible, position, scale };
+                  }
+                }
+                if (olH) {
+                  const cvH = await getConnectedByPinName(client, olH, 'camera_visibility');
+                  if (cvH) {
+                    try {
+                      const val = await client.callMethod('ApiItem', 'getValueByAttrID', {
+                        objectPtr: { handle: String(cvH), type: OBJ_API_ITEM },
+                        attribute_id: AttributeId.A_VALUE,
+                        expected_type: 1,
+                      });
+                      if (val?.result === false || val?.bool_value === false) cameraVisible = false;
+                    } catch {
+                      /* assume visible */
+                    }
+                  }
+                }
+                const xfH = await getConnectedByPinName(client, handle, 'transform');
+                if (xfH) {
+                  try {
+                    const p = await client.callMethod('ApiItem', 'getValueByAttrID', {
+                      objectPtr: { handle: String(xfH), type: OBJ_API_ITEM },
+                      attribute_id: AttributeId.A_TRANSLATION,
+                      expected_type: 11,
+                    });
+                    const s = await client.callMethod('ApiItem', 'getValueByAttrID', {
+                      objectPtr: { handle: String(xfH), type: OBJ_API_ITEM },
+                      attribute_id: AttributeId.A_SCALE,
+                      expected_type: 11,
+                    });
+                    const pv = p?.result ?? p?.float3_value;
+                    const sv = s?.result ?? s?.float3_value;
+                    if (pv) position = { x: pv.x ?? 0, y: pv.y ?? 0, z: pv.z ?? 0 };
+                    if (sv) scale = { x: sv.x ?? 1, y: sv.y ?? 1, z: sv.z ?? 1 };
+                  } catch {
+                    /* keep alive, use cached */
+                  }
+                }
+                return { alive, cameraVisible, position, scale };
+              });
+            } catch {
+              mcpLog('setup_lighting: failed to refresh placement from Octane', 'warn');
+            }
+            const fb = placementState.getFramingBounds(excludeHandles);
             if (fb) {
               boundsMin = fb.min;
               boundsMax = fb.max;
@@ -683,6 +764,7 @@ export function registerLightingTools(
             temperature: light.temperature,
             power: light.power,
             double_sided: true,
+            visible: false,
             name: `${light.type}_light`,
             geoGroupHandle,
           });

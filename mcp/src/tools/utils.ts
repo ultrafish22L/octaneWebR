@@ -88,3 +88,46 @@ export {
   OBJ_API_NODE_GRAPH,
   OBJ_API_ITEM_ARRAY,
 } from '../shared/OctaneConstants';
+
+import { OBJ_API_NODE } from '../shared/OctaneConstants';
+
+/**
+ * Find a connected node by pin NAME (not index) on any node type.
+ * Uses real gRPC calls: pinCount → pinNameIx(ix) → match → connectedNodeIx(ix).
+ * Works across NT_GEO_OBJECT, NT_GEO_MESH, NT_GEO_PLACEMENT, etc.
+ * Returns 0 if pin not found, nothing connected, or node doesn't exist.
+ */
+export async function getConnectedByPinName(
+  client: { callMethod: (svc: string, method: string, params: any) => Promise<any> },
+  handle: number,
+  pinName: string
+): Promise<number> {
+  try {
+    // Get pin count
+    const countResult = await client.callMethod('ApiNode', 'pinCount', {
+      objectPtr: { handle: String(handle), type: OBJ_API_NODE },
+    });
+    const count = Number(countResult?.result ?? 0);
+    if (!count) return 0;
+
+    // Iterate pins by index, check name
+    for (let ix = 0; ix < count; ix++) {
+      const nameResult = await client.callMethod('ApiNode', 'pinNameIx', {
+        objectPtr: { handle: String(handle), type: OBJ_API_NODE },
+        index: ix,
+      });
+      const name = nameResult?.result ?? '';
+      if (name === pinName) {
+        const connected = await client.callMethod('ApiNode', 'connectedNodeIx', {
+          objectPtr: { handle: String(handle), type: OBJ_API_NODE },
+          pinIx: ix,
+          enterWrapperNode: true,
+        });
+        return Number(connected?.result?.handle ?? 0);
+      }
+    }
+  } catch {
+    // Node doesn't exist or query failed
+  }
+  return 0;
+}

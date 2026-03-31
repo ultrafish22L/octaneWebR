@@ -4,9 +4,16 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { OctaneMcpClient } from '../OctaneMcpClient';
-import { jsonResult, errorResult } from './utils';
+import { OctaneMcpClient, mcpLog } from '../OctaneMcpClient';
+import {
+  jsonResult,
+  errorResult,
+  OBJ_API_NODE,
+  OBJ_API_ITEM,
+  getConnectedByPinName,
+} from './utils';
 import { ScenePlacementState } from '../ScenePlacementState';
+import { AttributeId } from '../shared/OctaneConstants';
 import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
 
 const Vec3Schema = z
@@ -16,6 +23,78 @@ const Vec3Schema = z
     z: z.number(),
   })
   .describe('3D vector {x, y, z}');
+
+/**
+ * Query live state from Octane for each placement entry via ScenePlacementState.refreshFromOctane.
+ * Uses pin NAMES (not indices) so it works across all node types (NT_GEO_OBJECT, NT_GEO_MESH, etc).
+ */
+async function refreshPlacementFromOctane(
+  client: OctaneMcpClient,
+  placementState: ScenePlacementState
+): Promise<Set<number>> {
+  return placementState.refreshFromOctane(async (handle: number) => {
+    let alive = true;
+    let cameraVisible = true;
+    let position: { x: number; y: number; z: number } | undefined;
+    let scale: { x: number; y: number; z: number } | undefined;
+
+    // Check node exists by querying any pin
+    const olHandle = await getConnectedByPinName(client, handle, 'objectLayer');
+    if (olHandle === 0) {
+      // No objectLayer pin — could be NT_GEO_MESH or node doesn't exist.
+      // Try transform to confirm alive.
+      const xfHandle = await getConnectedByPinName(client, handle, 'transform');
+      if (xfHandle === 0) {
+        alive = false;
+        return { alive, cameraVisible, position, scale };
+      }
+    }
+
+    // Camera visibility: objectLayer → camera_visibility
+    if (olHandle) {
+      const cvHandle = await getConnectedByPinName(client, olHandle, 'camera_visibility');
+      if (cvHandle) {
+        try {
+          const valResult = await client.callMethod('ApiItem', 'getValueByAttrID', {
+            objectPtr: { handle: String(cvHandle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_VALUE,
+            expected_type: 1,
+          });
+          if (valResult?.result === false || valResult?.bool_value === false) {
+            cameraVisible = false;
+          }
+        } catch {
+          // Can't read visibility — assume visible
+        }
+      }
+    }
+
+    // Live transform: node → "transform" pin → A_TRANSLATION, A_SCALE
+    const xfHandle = await getConnectedByPinName(client, handle, 'transform');
+    if (xfHandle) {
+      try {
+        const posResult = await client.callMethod('ApiItem', 'getValueByAttrID', {
+          objectPtr: { handle: String(xfHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_TRANSLATION,
+          expected_type: 11,
+        });
+        const scaleResult = await client.callMethod('ApiItem', 'getValueByAttrID', {
+          objectPtr: { handle: String(xfHandle), type: OBJ_API_ITEM },
+          attribute_id: AttributeId.A_SCALE,
+          expected_type: 11,
+        });
+        const p = posResult?.result ?? posResult?.float3_value;
+        const s = scaleResult?.result ?? scaleResult?.float3_value;
+        if (p) position = { x: p.x ?? 0, y: p.y ?? 0, z: p.z ?? 0 };
+        if (s) scale = { x: s.x ?? 1, y: s.y ?? 1, z: s.z ?? 1 };
+      } catch {
+        // Transform read failed — keep alive, use cached bounds
+      }
+    }
+
+    return { alive, cameraVisible, position, scale };
+  });
+}
 
 /** Default horizontal FOV in degrees.
  * Octane thin lens default: 36mm sensor / 50mm focal = 2*atan(36/(2*50)) ≈ 39.6°.
@@ -181,19 +260,20 @@ export function registerCameraTools(
         // Up vector defaults to {0,1,0}. Degenerate up guard is in gRPC server.
         params.up = up ?? { x: 0, y: 1, z: 0 };
 
-        await client.callMethod('LiveLink', 'SetCamera', params);
-
-        // Phase 1 warning: if framing_verified hasn't been completed, warn loudly
-        const warnings: string[] = [];
+        // Hard gate: reject set_camera before framing_verified (Phase 1-3)
         if (artState?.isActive && !artState.isStepDone('framing_verified')) {
-          warnings.push(
-            '⛔ PHASE VIOLATION: set_camera used before framing_verified. In Phase 1, use fit_camera ONLY. set_camera is for Phase 4 hero shots.'
-          );
+          return jsonResult({
+            success: false,
+            error:
+              '⛔ REJECTED: set_camera is blocked before framing_verified. Use fit_camera(framing_mode:"subjects") in Phase 1-3. set_camera is Phase 4 only. If fit_camera frames wrong, fix geometry (position/scale), do NOT bypass with set_camera.',
+            ...(artState ? adWorkflow(artState, 'fit_camera') : {}),
+          });
         }
+
+        await client.callMethod('LiveLink', 'SetCamera', params);
 
         return jsonResult({
           success: true,
-          ...(warnings.length > 0 ? { warnings } : {}),
           ...(artState ? adWorkflow(artState, 'fit_camera') : {}),
         });
       } catch (error: any) {
@@ -257,6 +337,20 @@ export function registerCameraTools(
             placementState.getEntries().length > 0 &&
             framing_mode !== 'scene'
           ) {
+            // Query live transforms + camera visibility from Octane
+            let excludeHandles: Set<number> | undefined;
+            try {
+              excludeHandles = await refreshPlacementFromOctane(client, placementState);
+              if (excludeHandles.size > 0) {
+                mcpLog(
+                  `fit_camera: excluding ${excludeHandles.size} camera-invisible objects from framing`,
+                  'info'
+                );
+              }
+            } catch {
+              // If query fails, use cached state
+            }
+
             if (framing_mode === 'hero') {
               const heroBounds = placementState.getHeroBounds();
               if (heroBounds) {
@@ -272,7 +366,7 @@ export function registerCameraTools(
               }
               // Fallback: try subjects if no hero
               if (!resolved) {
-                const framingBounds = placementState.getFramingBounds();
+                const framingBounds = placementState.getFramingBounds(excludeHandles);
                 if (framingBounds) {
                   bMin = framingBounds.min;
                   bMax = framingBounds.max;
@@ -282,7 +376,7 @@ export function registerCameraTools(
               }
             } else {
               // framing_mode === 'subjects'
-              const framingBounds = placementState.getFramingBounds();
+              const framingBounds = placementState.getFramingBounds(excludeHandles);
               if (framingBounds) {
                 bMin = framingBounds.min;
                 bMax = framingBounds.max;
