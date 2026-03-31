@@ -372,6 +372,173 @@ export const PRESETS: SemanticPreset[] = [
     tags: ['macro', 'close-up', 'nature', 'insect', 'flower', 'mushroom', 'detail'],
     source: 'industry-derived',
   },
+
+  // ── Hidden / Easter Eggs ───────────────────────────────────────────
+  {
+    name: 'sega',
+    category: 'hidden',
+    description: 'SEEEGAAAA! Vivid electric 90s energy — saturation cranked, high arousal.',
+    vector: {
+      saturation: 0.8,
+      arousal: 0.6,
+      contrast: 0.5,
+      warmth: -0.1,
+      pleasure: 0.5,
+    },
+    tags: ['sega', 'sonic', 'genesis', 'mega drive', 'retro', '90s'],
+    source: 'easter-egg',
+    easterEgg: {
+      event: 'sega',
+      art: [
+        '  ╔═══════════════════════════════════╗',
+        '  ║  ░██████╗███████╗░██████╗░█████╗  ║',
+        '  ║  ██╔════╝██╔════╝██╔════╝██╔══██╗ ║',
+        '  ║  ╚█████╗░█████╗░░██║░░██╗███████║ ║',
+        '  ║  ░╚═══██╗██╔══╝░░██║░░╚██╔══██║║ ║',
+        '  ║  ██████╔╝███████╗╚██████╗██║░░██║ ║',
+        '  ║  ╚═════╝░╚══════╝░╚═════╝╚═╝░░╚═╝ ║',
+        '  ╚═══════════════════════════════════╝',
+      ].join('\n'),
+      tradition:
+        'SEGA: Semantic Artistic Guidance — a perceptual computing framework ' +
+        'that maps human aesthetic intent to physically-based rendering parameters ' +
+        'across 15 dimensions. The fact that it shares its name with the legendary ' +
+        'game company? Pure serendipity. No hedgehogs were harmed in the making of ' +
+        'this renderer.',
+    },
+  },
+  {
+    name: 'moo',
+    category: 'hidden',
+    description: 'Have you mooed today?',
+    vector: {
+      pleasure: 0.6,
+      warmth: 0.3,
+      arousal: -0.2,
+      groundedness: 0.5,
+    },
+    tags: ['moo', 'cow', 'easter egg'],
+    source: 'easter-egg',
+    easterEgg: {
+      event: 'moo',
+      art: [
+        '         (__)',
+        '         (oo)',
+        '   /------\\/',
+        '  / |    ||',
+        ' *  /\\---/\\',
+        '    ~~   ~~',
+      ].join('\n'),
+      tradition:
+        'The classic developer easter egg. apt-get moo, pip install moo, ' +
+        'npm moo — every good tool has one. Now Octane SEGA does too.',
+    },
+  },
+  {
+    name: 'dino',
+    category: 'hidden',
+    description: 'No internet required. Prehistoric desert mood.',
+    vector: {
+      warmth: 0.8,
+      contrast: 0.7,
+      complexity: -0.5,
+      groundedness: 0.8,
+      atmosphere: 0.3,
+      saturation: -0.2,
+    },
+    tags: ['dino', 't-rex', 'dinosaur', 'chrome', 'offline', 'runner'],
+    source: 'easter-egg',
+    easterEgg: {
+      event: 'dino',
+      art: [
+        '            __',
+        '           / _)',
+        '    _.----._/ /',
+        '   /         /',
+        ' __/ (  | (  |',
+        "/__.-'|_|--|_|",
+      ].join('\n'),
+      tradition:
+        "Inspired by Chrome's offline T-Rex runner — the hidden game that appears " +
+        'when you lose your internet connection. Press spacebar to jump! ' +
+        'This preset channels that barren, sun-scorched desert energy.',
+    },
+  },
+  {
+    name: 't-rex',
+    category: 'hidden',
+    description: 'Alias for dino preset.',
+    vector: {
+      warmth: 0.8,
+      contrast: 0.7,
+      complexity: -0.5,
+      groundedness: 0.8,
+      atmosphere: 0.3,
+      saturation: -0.2,
+    },
+    tags: ['t-rex', 'dino', 'dinosaur', 'chrome', 'offline'],
+    source: 'easter-egg',
+    easterEgg: {
+      event: 'dino',
+      art: [
+        '            __',
+        '           / _)',
+        '    _.----._/ /',
+        '   /         /',
+        ' __/ (  | (  |',
+        "/__.-'|_|--|_|",
+      ].join('\n'),
+      tradition:
+        "Inspired by Chrome's offline T-Rex runner — the hidden game that appears " +
+        'when you lose your internet connection. Press spacebar to jump!',
+    },
+  },
+  {
+    name: 'bob_ross',
+    category: 'hidden',
+    description: 'Happy little trees. No mistakes, just happy accidents.',
+    vector: {
+      warmth: 0.5,
+      contrast: -0.2,
+      arousal: -0.4,
+      pleasure: 0.7,
+      groundedness: 0.6,
+      atmosphere: 0.2,
+    },
+    tags: ['bob ross', 'happy', 'trees', 'accidents', 'painting'],
+    source: 'easter-egg',
+  },
+  {
+    name: 'vaporwave',
+    category: 'hidden',
+    description: 'A E S T H E T I C',
+    vector: {
+      saturation: 0.7,
+      warmth: -0.3,
+      contrast: 0.3,
+      atmosphere: 0.5,
+      complexity: -0.3,
+      pleasure: 0.4,
+    },
+    tags: ['vaporwave', 'aesthetic', 'retro', 'synthwave', '80s', 'neon'],
+    source: 'easter-egg',
+  },
+  {
+    name: 'liminal',
+    category: 'hidden',
+    description: 'The backrooms called. Something feels... off.',
+    vector: {
+      arousal: -0.6,
+      pleasure: -0.4,
+      atmosphere: 0.6,
+      complexity: -0.6,
+      warmth: 0.1,
+      intimacy: -0.3,
+      groundedness: 0.4,
+    },
+    tags: ['liminal', 'backrooms', 'uncanny', 'eerie', 'empty'],
+    source: 'easter-egg',
+  },
 ];
 
 // ── Lookup Helpers ──────────────────────────────────────────────────
@@ -387,13 +554,14 @@ export function findPresetsByTag(tag: string): SemanticPreset[] {
   return PRESETS.filter(p => p.tags.some(t => t.toLowerCase().includes(lower)));
 }
 
-/** List all presets, optionally filtered by category. */
-export function listPresets(category?: PresetCategory): SemanticPreset[] {
-  if (!category) return [...PRESETS];
-  return PRESETS.filter(p => p.category === category);
+/** List all presets, optionally filtered by category. Hidden presets excluded by default. */
+export function listPresets(category?: PresetCategory, includeHidden = false): SemanticPreset[] {
+  const base = includeHidden ? PRESETS : PRESETS.filter(p => p.category !== 'hidden');
+  if (!category) return [...base];
+  return base.filter(p => p.category === category);
 }
 
-/** List just preset names, optionally filtered by category. */
-export function listPresetNames(category?: PresetCategory): string[] {
-  return listPresets(category).map(p => p.name);
+/** List just preset names, optionally filtered by category. Hidden presets excluded by default. */
+export function listPresetNames(category?: PresetCategory, includeHidden = false): string[] {
+  return listPresets(category, includeHidden).map(p => p.name);
 }

@@ -172,7 +172,7 @@ async function main() {
   registerAnimationTools(server, client);
   registerColorMaterialXTools(server, client);
 
-  // Register Art Direction tools (composition planning, critique loop, scene placement)
+  // Register Art Direction tools (composition planning, score loop, scene placement)
   registerArtDirectionTools(server, client, artState, placementState, segaState);
 
   // Register Creative tools (lighting, materials knowledge)

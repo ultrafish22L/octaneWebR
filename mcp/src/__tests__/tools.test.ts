@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SceneCache } from '../SceneCache';
 import { jsonResult, errorResult, extractHandle, extractValue } from '../tools/utils';
-import { parseCritiqueResponse } from '../vision/prompts';
+import { parseScoreResponse } from '../vision/prompts';
 
 describe('create_node: cache tracking', () => {
   it('addNode populates scene cache after creation', () => {
@@ -192,11 +192,11 @@ describe('extractValue edge cases', () => {
 });
 
 // ────────────────────────────────────────────────────────────
-// parseCritiqueResponse (vision/prompts.ts)
+// parseScoreResponse (vision/prompts.ts)
 // ────────────────────────────────────────────────────────────
 
-describe('parseCritiqueResponse', () => {
-  const validCritique = {
+describe('parseScoreResponse', () => {
+  const validScore = {
     scores: { framing: 3, depth: 2, composition: 4, lighting: 3, placement: 2 },
     overall: 2.8, // VLM's math — server recomputes to 2.9 via weighted formula
     passed: false,
@@ -205,7 +205,7 @@ describe('parseCritiqueResponse', () => {
   };
 
   it('parses clean JSON directly', () => {
-    const result = parseCritiqueResponse(JSON.stringify(validCritique));
+    const result = parseScoreResponse(JSON.stringify(validScore));
     expect(result).not.toBeNull();
     expect(result!.scores.framing).toBe(3);
     expect(result!.overall).toBe(2.9); // server-side weighted recompute
@@ -215,29 +215,29 @@ describe('parseCritiqueResponse', () => {
   });
 
   it('extracts JSON from markdown code block', () => {
-    const markdown = `Here is my analysis:\n\`\`\`json\n${JSON.stringify(validCritique)}\n\`\`\`\nThank you.`;
-    const result = parseCritiqueResponse(markdown);
+    const markdown = `Here is my analysis:\n\`\`\`json\n${JSON.stringify(validScore)}\n\`\`\`\nThank you.`;
+    const result = parseScoreResponse(markdown);
     expect(result).not.toBeNull();
     expect(result!.scores.depth).toBe(2);
     expect(result!.overall).toBe(2.9); // server-side weighted recompute
   });
 
   it('extracts JSON from markdown without language tag', () => {
-    const markdown = `Analysis:\n\`\`\`\n${JSON.stringify(validCritique)}\n\`\`\``;
-    const result = parseCritiqueResponse(markdown);
+    const markdown = `Analysis:\n\`\`\`\n${JSON.stringify(validScore)}\n\`\`\``;
+    const result = parseScoreResponse(markdown);
     expect(result).not.toBeNull();
     expect(result!.scores.composition).toBe(4);
   });
 
   it('finds JSON object embedded in prose', () => {
-    const mixed = `I see the following issues. ${JSON.stringify(validCritique)} That concludes my review.`;
-    const result = parseCritiqueResponse(mixed);
+    const mixed = `I see the following issues. ${JSON.stringify(validScore)} That concludes my review.`;
+    const result = parseScoreResponse(mixed);
     expect(result).not.toBeNull();
     expect(result!.scores.lighting).toBe(3);
   });
 
   it('falls back to description-only for non-JSON text', () => {
-    const result = parseCritiqueResponse('This is just regular text with no JSON.');
+    const result = parseScoreResponse('This is just regular text with no JSON.');
     expect(result).not.toBeNull();
     expect(result!.description).toBe('This is just regular text with no JSON.');
     expect(result!.scores.framing).toBe(3); // defaults
@@ -245,28 +245,28 @@ describe('parseCritiqueResponse', () => {
   });
 
   it('falls back to description-only for JSON without scores field', () => {
-    const result = parseCritiqueResponse('{"foo": "bar", "overall": 3}');
+    const result = parseScoreResponse('{"foo": "bar", "overall": 3}');
     expect(result).not.toBeNull();
     expect(result!.passed).toBe(false);
   });
 
   it('falls back to description-only for JSON without valid scores', () => {
-    const result = parseCritiqueResponse('{"scores": {"framing": 3}, "overall": "good"}');
+    const result = parseScoreResponse('{"scores": {"framing": 3}, "overall": "good"}');
     expect(result).not.toBeNull();
     expect(result!.passed).toBe(false);
   });
 
   it('handles pretty-printed JSON in code blocks', () => {
-    const prettyJson = JSON.stringify(validCritique, null, 2);
+    const prettyJson = JSON.stringify(validScore, null, 2);
     const markdown = `\`\`\`json\n${prettyJson}\n\`\`\``;
-    const result = parseCritiqueResponse(markdown);
+    const result = parseScoreResponse(markdown);
     expect(result).not.toBeNull();
     expect(result!.corrections[0].target).toBe('camera_position');
   });
 
   it('preserves corrections array with objectId', () => {
     const withObjectId = {
-      ...validCritique,
+      ...validScore,
       corrections: [
         {
           target: 'object_position',
@@ -276,7 +276,7 @@ describe('parseCritiqueResponse', () => {
         },
       ],
     };
-    const result = parseCritiqueResponse(JSON.stringify(withObjectId));
+    const result = parseScoreResponse(JSON.stringify(withObjectId));
     expect(result).not.toBeNull();
     expect(result!.corrections[0].objectId).toBe('hero_sphere');
   });
@@ -288,7 +288,7 @@ describe('parseCritiqueResponse', () => {
       passed: true,
       overall: 4.5,
     };
-    const result = parseCritiqueResponse(JSON.stringify(perfect));
+    const result = parseScoreResponse(JSON.stringify(perfect));
     expect(result).not.toBeNull();
     expect(result!.corrections).toHaveLength(0);
     expect(result!.passed).toBe(true);

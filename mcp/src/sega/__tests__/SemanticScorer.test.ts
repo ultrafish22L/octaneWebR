@@ -4,11 +4,11 @@ import {
   isGapStagnating,
   buildVLMEstimationPrompt,
   parseVLMEstimation,
-  runCritique,
-} from '../SemanticCritic';
+  runScore,
+} from '../SemanticScorer';
 import type { SemanticVector } from '../types';
 
-describe('SemanticCritic', () => {
+describe('SemanticScorer', () => {
   describe('computeGap', () => {
     it('returns zero gap for matching vectors', () => {
       const gap = computeGap({ warmth: 0.5, contrast: 0.3 }, { warmth: 0.5, contrast: 0.3 });
@@ -133,9 +133,9 @@ describe('SemanticCritic', () => {
     });
   });
 
-  describe('runCritique', () => {
+  describe('runScore', () => {
     it('handles missing image gracefully', () => {
-      const result = runCritique({ warmth: 0.7, contrast: 0.5 }, '/nonexistent/image.png');
+      const result = runScore({ warmth: 0.7, contrast: 0.5 }, '/nonexistent/image.png');
       // Should still compute gap using only VLM measurements (empty)
       expect(result.pixelMeasurement).toBeNull();
       expect(result.gap).toBeDefined();
@@ -143,12 +143,12 @@ describe('SemanticCritic', () => {
     });
 
     it('includes Berlyne warnings for extreme target values', () => {
-      const result = runCritique({ warmth: 0.95, contrast: 0.9 }, '/nonexistent/image.png');
+      const result = runScore({ warmth: 0.95, contrast: 0.9 }, '/nonexistent/image.png');
       expect(result.warnings.length).toBeGreaterThanOrEqual(2);
     });
 
     it('merges VLM measurements', () => {
-      const result = runCritique({ pleasure: 0.7, warmth: 0.5 }, '/nonexistent/image.png', {
+      const result = runScore({ pleasure: 0.7, warmth: 0.5 }, '/nonexistent/image.png', {
         pleasure: 0.4,
       });
       // VLM measurement should appear in measured vector
@@ -156,7 +156,7 @@ describe('SemanticCritic', () => {
     });
 
     it('generates corrections for gap dimensions', () => {
-      const result = runCritique({ pleasure: 0.8 }, '/nonexistent/image.png', { pleasure: 0.2 });
+      const result = runScore({ pleasure: 0.8 }, '/nonexistent/image.png', { pleasure: 0.2 });
       // Gap is -0.6, so correction should be +0.6
       expect(result.corrections.pleasure).toBeCloseTo(0.6);
     });

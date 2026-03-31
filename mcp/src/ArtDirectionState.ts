@@ -1,7 +1,7 @@
 /**
  * ArtDirectionState — session-persistent state for the art direction system.
  *
- * Tracks composition specs, critique history, and object-to-handle mappings.
+ * Tracks composition specs, score history, and object-to-handle mappings.
  * Cleared on crash/reset/load (same lifecycle as SceneCache).
  *
  * Design rules:
@@ -38,9 +38,9 @@ export interface CameraSpec {
   compositionRule: 'rule-of-thirds' | 'centered' | 'golden-ratio' | 'diagonal';
 }
 
-/** Cached VLM calibration of concept art — run once, used for all critique comparisons. */
+/** Cached VLM calibration of concept art — run once, used for all score comparisons. */
 export interface CachedCalibration {
-  /** VLM's composition description of concept art (same prompt as render critique) */
+  /** VLM's composition description of concept art (same prompt as render score) */
   composition: string;
   /** VLM's semantic dimension estimates for concept art */
   semanticEstimates?: Record<string, number>;
@@ -77,7 +77,7 @@ export interface CorrectionEntry {
   description: string;
 }
 
-export interface CritiqueScores {
+export interface ScoreValues {
   framing: number;
   depth: number;
   composition: number;
@@ -107,11 +107,11 @@ export interface OrchestratorAssessment {
   agrees_with_sonnet: boolean;
 }
 
-export interface CritiqueRecord {
+export interface ScoreRecord {
   iteration: number;
   overallScore: number;
   passed: boolean;
-  scores: CritiqueScores;
+  scores: ScoreValues;
   corrections: CorrectionEntry[];
   /** Sonnet concept-vs-render comparison (when concept art available) */
   comparison?: ComparisonScores;
@@ -166,10 +166,10 @@ export interface AdContext {
 /** Minimum score improvement to not be considered stagnating */
 const STAGNATION_THRESHOLD = 0.3;
 
-/** Maximum critique iterations before forcing a redesign */
+/** Maximum score iterations before forcing a redesign */
 export const MAX_ITERATIONS = 5;
 
-/** Score threshold for a passing critique */
+/** Score threshold for a passing score */
 export const PASS_THRESHOLD = 3.5;
 
 /** Minimum acceptable individual dimension score */
@@ -199,11 +199,11 @@ export const AD_STEPS = [
   'suggest_placement',
   'fit_camera',
   'register_object',
-  'framing_verified', // gate: clay critique passes composition_match >= 3
+  'framing_verified', // gate: clay score passes composition_match >= 3
   // Phase 2 — Style
   'suggest_lighting',
   'suggest_material',
-  // Phase 3 — Critique (iterate)
+  // Phase 3 — Score (iterate)
   'score_render',
   'commit_scores',
 ] as const;
@@ -235,10 +235,10 @@ const STEP_PHASE: Record<AdStep, number> = {
  *
  * score_render has NO prereqs — it's used in BOTH:
  *   - Phase 1 (clay composition check, before framing_verified)
- *   - Phase 3 (final critique loop, after dress)
+ *   - Phase 3 (final score loop, after dress)
  *
  * framing_verified requires score_render because the clay-mode
- * critique IS the gate. You can't skip it by just running fit_camera.
+ * score IS the gate. You can't skip it by just running fit_camera.
  */
 const STEP_PREREQS: Partial<Record<AdStep, AdStep[]>> = {
   set_sega: ['analyze_reference'], // mood from concept analysis
@@ -292,7 +292,7 @@ const STEP_NEXT: Partial<Record<AdStep, { step: AdStep; reason: string }>> = {
   },
   commit_scores: {
     step: 'score_render',
-    reason: 'Re-render and critique again until passed',
+    reason: 'Re-render and score again until passed',
   },
 };
 
@@ -307,7 +307,7 @@ export interface WorkflowStatus {
 
 export class ArtDirectionState {
   private specs = new Map<string, CompositionSpec>();
-  private history = new Map<string, CritiqueRecord[]>();
+  private history = new Map<string, ScoreRecord[]>();
   private _handleMap = new Map<string, number>(); // objectId → Octane handle
   private _mode: AdMode = 'inactive';
   private _buildMode: BuildMode = null;
@@ -347,7 +347,7 @@ export class ArtDirectionState {
     const specName = this.specs.size > 0 ? (this.specs.keys().next().value ?? null) : null;
     const spec = specName ? (this.specs.get(specName) ?? null) : null;
 
-    // Previous critique data
+    // Previous score data
     const records = specName ? (this.history.get(specName) ?? []) : [];
     const lastRecord = records.length > 0 ? records[records.length - 1] : null;
 
@@ -436,7 +436,7 @@ export class ArtDirectionState {
    *   2. register_object (objects registered in scene DB)
    *   3. score_render (VLM confirmed composition in clay mode)
    *
-   * This prevents skipping the clay-mode critique gate before Phase 2.
+   * This prevents skipping the clay-mode score gate before Phase 2.
    */
   completeStep(step: AdStep, note?: string): void {
     this._completedSteps.add(step);
@@ -544,16 +544,16 @@ export class ArtDirectionState {
     return [...this.specs.keys()];
   }
 
-  // ── Critique history ────────────────────────────────────────────
+  // ── Score history ────────────────────────────────────────────
 
-  addCritique(specName: string, record: CritiqueRecord): void {
+  addScore(specName: string, record: ScoreRecord): void {
     if (!this.history.has(specName)) {
       this.history.set(specName, []);
     }
     this.history.get(specName)!.push(record);
   }
 
-  getHistory(specName: string): CritiqueRecord[] {
+  getHistory(specName: string): ScoreRecord[] {
     return this.history.get(specName) || [];
   }
 
@@ -569,7 +569,7 @@ export class ArtDirectionState {
 
   /**
    * Returns true if the last 2 iterations improved by less than STAGNATION_THRESHOLD.
-   * Only meaningful after at least 2 critiques.
+   * Only meaningful after at least 2 scores.
    */
   isStagnating(specName: string): boolean {
     const h = this.history.get(specName);

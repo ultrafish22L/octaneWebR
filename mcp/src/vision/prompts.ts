@@ -1,5 +1,5 @@
 /**
- * Vision critique prompts — description-first approach.
+ * Vision score prompts — description-first approach.
  *
  * VLM describes what it sees in natural language (its strength),
  * then provides minimal numeric scores. All scoring math (weighting,
@@ -10,10 +10,10 @@ import { mcpLogLazy } from '../OctaneMcpClient';
 import type { CompositionSpec } from '../ArtDirectionState';
 
 /**
- * Build a structured critique prompt for a single render.
+ * Build a structured score prompt for a single render.
  * Forces measurable observations, not vague impressions.
  */
-export function buildCritiquePrompt(spec: CompositionSpec): string {
+export function buildScorePrompt(spec: CompositionSpec): string {
   const objectList = spec.objects.map(o => `  - "${o.id}" (${o.role})`).join('\n');
 
   return `Look at this 3D render and check the COMPOSITION against the plan below.
@@ -36,7 +36,7 @@ Answer each question:
 }
 
 /**
- * Build a calibration prompt for concept art — same composition questions as critique
+ * Build a calibration prompt for concept art — same composition questions as score
  * but without "THE PLAN" section (the concept art IS the plan).
  * Run once per scene, cache the result as the VLM calibration baseline.
  */
@@ -112,9 +112,7 @@ Scale by ${scaleHint} to get world-space coordinates.`;
  * Build a context-aware comparison prompt for concept art vs render (two images).
  * Uses AdContext to tailor scoring to current phase, iteration, and mood target.
  */
-export function buildComparisonCritiquePrompt(
-  ctx: import('../ArtDirectionState').AdContext
-): string {
+export function buildComparisonScorePrompt(ctx: import('../ArtDirectionState').AdContext): string {
   // Build expected objects list from context
   const objectList =
     ctx.objects.length > 0
@@ -192,7 +190,7 @@ top_fixes: max 3 items, most impactful first. notes: max 1 sentence.`;
 }
 
 /**
- * Parse a VLM response into structured critique scores.
+ * Parse a VLM response into structured score scores.
  * Handles both clean JSON and JSON embedded in markdown/text.
  */
 /**
@@ -210,10 +208,10 @@ function coerceScore(v: unknown): number | null {
 }
 
 /**
- * Normalize a parsed JSON object into valid critique scores.
+ * Normalize a parsed JSON object into valid score scores.
  * Handles VLM quirks: string numbers, missing fields, out-of-range values.
  */
-export interface NormalizedCritique {
+export interface NormalizedScore {
   scores: {
     framing: number;
     depth: number;
@@ -230,7 +228,7 @@ export interface NormalizedCritique {
   raw: string;
 }
 
-function normalizeScores(data: any): NormalizedCritique | null {
+function normalizeScores(data: any): NormalizedScore | null {
   // Accept scores at top level (new format) or nested in scores:{} (old format)
   const s = data?.scores ?? data;
   if (!s) return null;
@@ -298,7 +296,7 @@ function normalizeScores(data: any): NormalizedCritique | null {
   };
 }
 
-export function parseCritiqueResponse(response: string): NormalizedCritique | null {
+export function parseScoreResponse(response: string): NormalizedScore | null {
   // Candidates to try parsing, in order of confidence
   const candidates: string[] = [response];
 
@@ -328,7 +326,7 @@ export function parseCritiqueResponse(response: string): NormalizedCritique | nu
         const data = JSON.parse(repaired);
         const result = normalizeScores(data);
         if (result) {
-          mcpLogLazy('info', () => `[vision:parseCritique] repaired truncated JSON`);
+          mcpLogLazy('info', () => `[vision:parseScore] repaired truncated JSON`);
           return result;
         }
       } catch {
@@ -339,7 +337,7 @@ export function parseCritiqueResponse(response: string): NormalizedCritique | nu
 
   // Description-only response (no JSON / no scores) — treat raw text as description
   if (response.trim().length > 20) {
-    mcpLogLazy('info', () => `[vision:parseCritique] no JSON found, using raw text as description`);
+    mcpLogLazy('info', () => `[vision:parseScore] no JSON found, using raw text as description`);
     return {
       scores: { framing: 3, depth: 3, composition: 3, lighting: 3, placement: 3 },
       overall: 3,

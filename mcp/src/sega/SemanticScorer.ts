@@ -1,5 +1,5 @@
 /**
- * SemanticCritic — measures semantic gap between target and rendered image.
+ * SemanticScorer — measures semantic gap between target and rendered image.
  *
  * Replaces the old 1-5 scoring system with a meaningful gap vector:
  *   target:   { warmth: 0.7, contrast: 0.6 }
@@ -81,9 +81,9 @@ export function isGapStagnating(prevMagnitude: number, currentMagnitude: number)
   return Math.abs(prevMagnitude - currentMagnitude) < STAGNATION_THRESHOLD;
 }
 
-// ── Critique Result ─────────────────────────────────────────────────
+// ── Score Result ─────────────────────────────────────────────────
 
-export interface SemanticCritiqueResult {
+export interface SemanticScoreResult {
   /** Target semantic vector */
   target: SemanticVector;
   /** Measured semantic vector (pixel + VLM) */
@@ -167,7 +167,7 @@ export function parseVLMEstimation(response: string): SemanticVector | null {
 }
 
 /**
- * Run a full semantic critique on a rendered image.
+ * Run a full semantic score on a rendered image.
  *
  * Steps:
  * 1. Pixel analysis (contrast, warmth, saturation, atmosphere)
@@ -178,11 +178,11 @@ export function parseVLMEstimation(response: string): SemanticVector | null {
  * The VLM estimation must be done externally (by the AI calling the VLM tool)
  * and passed in as vlmMeasurements. This function combines everything.
  */
-export function runCritique(
+export function runScore(
   target: SemanticVector,
   imagePath: string,
   vlmMeasurements?: SemanticVector
-): SemanticCritiqueResult {
+): SemanticScoreResult {
   // Step 1: Pixel measurements
   const pixelMeasurement = analyzeImage(imagePath);
   const pixelVector = pixelMeasurement ? measurementToVector(pixelMeasurement) : {};

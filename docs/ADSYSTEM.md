@@ -52,7 +52,7 @@ A 15-dimension mixing board where each slider (-1.0 to +1.0) captures a perceptu
 
 ---
 
-### 4. Vision Critique Loop — Sonnet + Orchestrator
+### 4. Vision Score Loop — Sonnet + Orchestrator
 
 Two critics evaluate each render:
 
@@ -63,27 +63,27 @@ Additionally:
 
 - **Semantic Critic** (`score_sega`) — measures where the render sits in SEGA space vs target, outputs a gap vector showing exactly what's wrong and by how much.
 
-The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign. All assessments logged to `critique_stats.jsonl` per scene.
+The loop iterates: render → score → fix weakest → re-render → re-score. Stagnation detection (< 0.3 improvement over 2 iterations) triggers approach redesign. All assessments logged to `score_stats.jsonl` per scene.
 
-**⛔ Never self-grade.** If `score_render` returns a self-critique prompt instead of a Sonnet comparison, the call was made without `reference_image_path`. Fix the call — do not answer the prompt yourself and treat it as a grade. Self-assessment inflates scores and masks problems that Sonnet would catch.
+**⛔ Never self-grade.** If `score_render` returns a self-score prompt instead of a Sonnet comparison, the call was made without `reference_image_path`. Fix the call — do not answer the prompt yourself and treat it as a grade. Self-assessment inflates scores and masks problems that Sonnet would catch.
 
 ### Model Selection Strategy
 
 | Role                 | Model                    | Why                                                                           |
 | -------------------- | ------------------------ | ----------------------------------------------------------------------------- |
-| Render critique      | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator         |
+| Render scoring       | Sonnet (Anthropic API)   | Two-image comparison, strong holistic judgment, independent evaluator         |
 | Reference analysis   | Sonnet (Anthropic API)   | Single-image composition extraction, needs real understanding                 |
 | Calibration          | Sonnet (Anthropic API)   | Concept art description for keyword caching                                   |
 | Orchestrator review  | Opus (main context)      | Best model, full build context, catches what API calls miss                   |
 | Mugshot verification | moondream3 (otoy-studio) | `analyze_geo` pre-pass only — checks orientation/scale, not aesthetic quality |
 
-> **Details:** [BUILD.md Critique Loop](mcp/BUILD.md#critique-loop--dual-perspective-run-after-every-save_render-in-phases-2-4)
+> **Details:** [BUILD.md Score Loop](mcp/BUILD.md#score-loop--dual-perspective-run-after-every-save_render-in-phases-2-4)
 
 ---
 
 ### 5. Creative Knowledge
 
-Two recipe tools work with or without AD: `suggest_lighting` (3-point setup for 7 moods, adapted to SEGA intent when active) and `suggest_material` (PBR values for 30+ surface types). Starting points, not final values — the critique loop may adjust.
+Two recipe tools work with or without AD: `suggest_lighting` (3-point setup for 7 moods, adapted to SEGA intent when active) and `suggest_material` (PBR values for 30+ surface types). Starting points, not final values — the score loop may adjust.
 
 > **Details:** [Creative Guide](mcp/CREATIVE.md)
 
@@ -98,7 +98,7 @@ End-to-end from idea to rendered scene:
 3. **3D mesh generation** — `que.otoy.studio` API (Hunyuan-3D v3.1 Pro) → OBJ + PBR textures
 4. **Mesh analysis** — `analyze_geo` mugshot protocol for orientation/scale
 5. **Scene build** — Import, apply materials/lighting from SEGA intent, collision-free placement
-6. **Critique and iterate** — Vision critique loop until render matches intent
+6. **Score and iterate** — Vision score loop until render matches intent
 
 Each step is optional. You can skip AI generation and import your own meshes, skip SEGA and light manually. Every piece works standalone.
 
@@ -110,7 +110,7 @@ Each step is optional. You can skip AI generation and import your own meshes, sk
 
 ## How It All Fits Together
 
-A full AD-enabled build flows through four gated phases: **Plan** (spatial math + SEGA intent + mesh analysis) → **Frame** (geometry + camera in clay, gate: Sonnet grade ≥ C) → **Dress** (materials + lighting + environment) → **Critique** (Sonnet + orchestrator scoring, iterate until pass). AD can be disabled for quick tests — recipe tools still work with sensible defaults.
+A full AD-enabled build flows through four gated phases: **Plan** (spatial math + SEGA intent + mesh analysis) → **Frame** (geometry + camera in clay, gate: Sonnet grade ≥ C) → **Dress** (materials + lighting + environment) → **Score** (Sonnet + orchestrator scoring, iterate until pass). AD can be disabled for quick tests — recipe tools still work with sensible defaults.
 
 > **Details:** [BUILD.md §3](mcp/BUILD.md#3-dress-protocol) for the full phase-by-phase protocol.
 

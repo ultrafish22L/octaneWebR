@@ -11,7 +11,7 @@ If you're directing the AI builder (telling Claude what to create), here's what 
 1. **Plan** — Analyze reference images, compute spatial layout, set artistic mood. No rendering yet — pure math and intent.
 2. **Frame** — Build the first object, start the render, frame the camera. Get something on screen fast.
 3. **Style** — Materials, lighting, environment. Apply SEGA-driven values for mood consistency.
-4. **Critique** — Vision model scores the render. Fix the weakest dimension. Re-render. Loop until good.
+4. **Score** — Vision model scores the render. Fix the weakest dimension. Re-render. Loop until good.
 
 Each phase has hard gates — you don't move forward until the current phase passes. This prevents the common failure mode of polishing materials on a badly framed scene.
 
@@ -72,11 +72,11 @@ Only after all 12 steps pass: proceed to DRESS or SHOW.
 
 \*AD is a per-run flag. Default ON for DRESS/SHOW, OFF for SHOP. Override with "no AD" or "use AD" in the run command.
 
-**"no AD" flag:** Disables all art direction phases. Skips Phase 0 (composition planning), Phase 0b (artistic intent), and the critique loop (C1-C7). Build proceeds mechanically from recipe positions, materials, and lighting values. `suggest_lighting` and `suggest_material` still work (they don't require AD state). Use when testing pipeline mechanics, debugging wiring, or when speed matters more than composition quality.
+**"no AD" flag:** Disables all art direction phases. Skips Phase 0 (composition planning), Phase 0b (artistic intent), and the score loop (C1-C7). Build proceeds mechanically from recipe positions, materials, and lighting values. `suggest_lighting` and `suggest_material` still work (they don't require AD state). Use when testing pipeline mechanics, debugging wiring, or when speed matters more than composition quality.
 
 **SHOP (Workshop):** Fast workbench mode. AD OFF by default. Build from Phase 1 directly. Use `suggest_lighting` and `suggest_material` for quick values. For quick tests, smoke tests, tool verification, and experimentation where composition quality doesn't matter. The goal is speed, not beauty.
 
-**DRESS (Rehearsal):** Full build pipeline. AD ON by default — Phase 0 composition planning, critique loop after renders, SEGA intent tracking. 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for serious scene building. **Default — use unless told otherwise.** Say "no AD" to run DRESS without art direction (rote recipe execution).
+**DRESS (Rehearsal):** Full build pipeline. AD ON by default — Phase 0 composition planning, score loop after renders, SEGA intent tracking. 1 object at a time, render after each step, hero camera from the start. Stop on any failure — debug, fix, verify, then resume. This is the working mode for serious scene building. **Default — use unless told otherwise.** Say "no AD" to run DRESS without art direction (rote recipe execution).
 
 **SHOW (Performance):** Same as DRESS build order, AD ON by default. Smooth, continuous flow for live demos and VIP audiences. If something breaks mid-show, skip it and keep going — fix it later. Never debug in front of an audience.
 
@@ -110,31 +110,56 @@ Every step produces a visible change. The human should see a render update withi
 
 When running autonomously (multi-scene, unattended), these gates are **non-negotiable**. Each gate HALTS the build if not met. No "I'll do it later" — if you skip a gate, the scene fails.
 
-| Gate   | Check                                                             | If Skipped                                                                          |
-| ------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **G0** | `analyze_reference` was called on concept art                     | Scene has no composition data — layout will be random                               |
-| **G1** | `set_sega` was called with preset or vector                       | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
-| **G2** | Every mesh ran through `analyze_geo` before `place_geo`           | Orientation will be wrong — wasted iterations                                       |
-| **G3** | `score_render` returned Sonnet grade (not self-critique fallback) | You have no external validation — self-grading is unreliable                        |
-| **G4** | `score_sega` ran at least once per scene                          | No SEGA gap measurement — you can't know what's wrong                               |
-| **G5** | Orchestrator (you) read render + concept art at C3                | Single-critic blind spot — Sonnet misses context you have                           |
-| **G6** | `fit_camera` called after every geometry add                      | Camera may not frame all objects                                                    |
-| **G7** | Logs checked (all 3 files) after each phase                       | Silent errors accumulate                                                            |
+| Gate   | Check                                                          | If Skipped                                                                          |
+| ------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **G0** | `analyze_reference` was called on concept art                  | Scene has no composition data — layout will be random                               |
+| **G1** | `set_sega` was called with preset or vector                    | `suggest_lighting`/`suggest_material` have no mood context — values will be generic |
+| **G2** | Every mesh ran through `analyze_geo` before `place_geo`        | Orientation will be wrong — wasted iterations                                       |
+| **G3** | `score_render` returned Sonnet grade (not self-score fallback) | You have no external validation — self-grading is unreliable                        |
+| **G4** | `score_sega` ran at least once per scene                       | No SEGA gap measurement — you can't know what's wrong                               |
+| **G5** | Orchestrator (you) read render + concept art at C3             | Single-critic blind spot — Sonnet misses context you have                           |
+| **G6** | `fit_camera` called after every geometry add                   | Camera may not frame all objects                                                    |
+| **G7** | Logs checked (all 3 files) after each phase                    | Silent errors accumulate                                                            |
 
-**If `score_render` returns a self-critique prompt instead of a Sonnet grade:** STOP. Pass `reference_image_path` pointing to concept art. If Sonnet still fails, investigate the error — do NOT self-grade and move on.
+**If `score_render` returns a self-score prompt instead of a Sonnet grade:** STOP. Pass `reference_image_path` pointing to concept art. If Sonnet still fails, investigate the error — do NOT self-grade and move on.
 
 **Common autonomous drift patterns (observed failures):**
 
 - Substituting primitives for 3D meshes "to save time" → flat, CG-looking scenes
 - Skipping Phase 0/0b "because I know what I want" → no SEGA context, generic lighting
-- Running `score_render` without `reference_image_path` → self-critique fallback, inflated grades
+- Running `score_render` without `reference_image_path` → self-score fallback, inflated grades
 - Batching 3+ objects without intermediate `fit_camera` + render → framing breaks, objects lost
 - Optimizing scene count over quality → every scene suffers
 - **Skipping creative review** → 3 objects on a floor is never a finished scene. Walls, textures, HDRI = mandatory
 - **Concept/scope mismatch** → generating a full-room interior concept then building a product shot. Match concept art to buildable scope.
 - **Falling back to manual node wiring** when `place_geo` errors → diagnose the error, don't work around it
-- **Soft orchestrator self-critique** → grading your own render D when it's clearly F. Be harsh on framing.
+- **Soft orchestrator self-score** → grading your own render D when it's clearly F. Be harsh on framing.
 - **No parallel work** → waiting idle during 3-min mesh generation instead of building scene infrastructure
+- **Geo group divergence** → (fixed in build 76) mixing `place_geo` primitives and meshes could create separate RT/geo_groups because heavy mesh loading changed the active RT mid-session. Fix: `findOrCreateGeoGroup` now caches the session-level geo_group. If you still see objects on different RTs, pass `geo_group_handle` explicitly from your first placement to subsequent ones.
+- **No interior light in emissive objects** → If the hero is a lantern, lamp, torch, crystal, or any light-emitting artifact: put a light source INSIDE it. Use `create_light(type:"emissive", shape:"sphere", scale:0.08, visible:false)` positioned at the object's interior center, with matching color. A lantern without a light inside it is never acceptable.
+
+### Known Code Bugs (unresolved)
+
+**⚠️ BUG: Hero camera always crops mesh tops** — `fit_camera(framing_mode:"hero")` consistently crops the top ~30% of tall meshes. Two compounding causes:
+
+1. **Margin cap (camera.ts:426):** `effectiveMargin = framing_mode === 'hero' ? Math.min(margin, 0.15) : margin` — hard-caps hero margin to 15% regardless of caller input. Too aggressive for tall/narrow meshes.
+
+2. **refreshFromOctane destroys asymmetric bounds (ScenePlacementState.ts:342-352):** After `place_geo` correctly computes world AABB via `computeWorldAABB` (rotation-aware, handles non-centered geometry), `refreshFromOctane` overwrites it by re-centering extents at position: `position.y ± halfHeight`. For rotated meshes where the base sits AT the position and the mesh extends UPWARD (e.g., Z-up mesh with 90° X rotation, bounds [-1.148, 0] in Z → [0, 1.0] in Y), this shifts the top bound DOWN by half the height. The camera then frames to the wrong (too low) top, cropping the actual mesh top.
+
+   **Example:** Lantern mesh at Y=0.78, actual top at Y=1.78. After refresh: registered top at Y=1.28. Camera frames to 1.28 + 15% margin = 1.47. Real mesh top at 1.78 gets cropped by 0.31 units.
+
+   **Workaround:** Use `framing_mode:"subjects"` with generous margin (0.25+) instead of `framing_mode:"hero"`. The subjects mode uses the union of all subject bounds which is less affected by individual mesh errors.
+
+   **Fix needed:** `refreshFromOctane` must preserve the AABB offset from position (store center-to-position delta), not assume centering. Or: store `localMin`/`localMax` + rotation on the entry and recompute properly on refresh.
+
+### Creative Workflow: Interior Lighting for Emissive Objects
+
+**MANDATORY for any hero that is a light source.** If the hero object emits light (lantern, lamp, candle, crystal, glowing artifact):
+
+1. **Place a small emissive INSIDE the mesh** — `create_light(type:"emissive", shape:"sphere", scale:0.05-0.1, visible:false)` at the object's interior center. Color should match the glow (cyan for crystal, warm for flame, etc.). Power 50-200 depending on scene darkness.
+2. **OR add emission to the mesh material** — `create_light(material_handle: hero_material_handle)` to make the mesh itself emit light through translucent surfaces.
+3. **The emissive must be INSIDE the mesh geometry**, not just at the same world position. Offset Y slightly toward the light-emitting part (e.g., crystal panel center, not base).
+4. **This light should be the DOMINANT source** in the scene — if the hero is a lantern, its glow defines the mood, not the 3-point rig.
 
 ### Pre-Phase: analyze_geo (BLOCKING — before ANY placement)
 
@@ -228,7 +253,7 @@ Simple concepts (geometric still life, product shot) can use Octane primitives �
 
 **⚠️ Do NOT use FLUX Pro directly for HDRIs** — it cannot produce true equirectangular projections. Always go through Hunyuan World.
 
-### ⛔ Creative Review Pass (MANDATORY before critique)
+### ⛔ Creative Review Pass (MANDATORY before scoring)
 
 **After placing all objects but BEFORE running `score_render`**, stop and ask yourself:
 
@@ -237,10 +262,11 @@ Simple concepts (geometric still life, product shot) can use Octane primitives �
 3. **"Does the floor have character?"** — Textured floor (stone, wood, metal) >> flat grey primitive.
 4. **"Is there depth?"** — Foreground/midground/background layers. Not everything on the same Z plane.
 5. **"Does the concept art match what I built?"** — If concept shows a room and you built a product shot, either add environment or regenerate a matching concept.
+6. **"Does the hero emit light?"** — If it's a lantern, lamp, torch, crystal, or any glowing object: **there MUST be a light source INSIDE the mesh.** A lantern without interior light is never acceptable. Use `create_light(type:"emissive", shape:"sphere", scale:0.05-0.1)` positioned at the glowing element's center, with matching color and high power (50-200). This interior light should be the DOMINANT light in the scene — it defines the mood.
 
 Add 1-3 supporting elements based on answers. THEN run `score_render`.
 
-### Framing Quality Checklist (MANDATORY before ANY critique call)
+### Framing Quality Checklist (MANDATORY before ANY score call)
 
 Read the saved render PNG and verify. **This is C0 — if it fails, do NOT call `score_render`.**
 
@@ -264,7 +290,7 @@ If hero is cropped: increase `fit_camera(margin)` or reduce hero scale → re-re
   → Sonnet grade D/F? → fix geometry → fit_camera() → score_render again
 ```
 
-### Phase 2: Materials & Lighting (ONLY after Phase 1 critique passes)
+### Phase 2: Materials & Lighting (ONLY after Phase 1 score passes)
 
 | Step | Action                                                                | Notes                                                     |
 | ---- | --------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -296,7 +322,7 @@ Hero camera, fine-tune lighting, final beauty pass `save_render`.
 
 **`set_camera` belongs HERE — Phase 4 only.** During Phases 1-3, `fit_camera` handles framing automatically — it shows you the full scene so you can verify every change. Only in Phase 4 do you compose the final hero shot with `set_camera` (or `plan_layout` camera overrides) for the beauty pass. Using `set_camera` earlier bypasses framing validation and masks geometry problems.
 
-### Critique Loop — Dual-Perspective (run after every save_render in Phases 2-4)
+### Score Loop — Dual-Perspective (run after every save_render in Phases 2-4)
 
 **Requires AD.** Skipped when AD is OFF. When skipped, save the render and move on — no scoring, no corrections. **When AD is ON, both critics run every iteration — never skip one.**
 
@@ -323,11 +349,11 @@ Hero camera, fine-tune lighting, final beauty pass `save_render`.
 1. **Sonnet comparison** (Anthropic API, two images) — concept art + render side-by-side. Holistic A-F grade, mood/density/composition match 1-5, missing elements, top fixes. **This is the primary critic.** Grade A or B = pass.
 2. **Orchestrator** (you, main Claude context) — read both images yourself at step C3. Give your own A-F grade. Note whether you agree with Sonnet. You have build context Sonnet doesn't.
 
-Both assessments are logged to `critique_stats.jsonl` per scene for system tuning.
+Both assessments are logged to `score_stats.jsonl` per scene for system tuning.
 
-**⛔ `reference_image_path` is MANDATORY** when concept art exists. Without it, Sonnet can't compare — the tool falls back to a self-critique prompt. Self-critique is NOT a substitute for Sonnet judgment. If you see a self-critique prompt returned, you made an error: re-call with the correct path. Never grade yourself and move on.
+**⛔ `reference_image_path` is MANDATORY** when concept art exists. Without it, Sonnet can't compare — the tool falls back to a self-score prompt. Self-score is NOT a substitute for Sonnet judgment. If you see a self-score prompt returned, you made an error: re-call with the correct path. Never grade yourself and move on.
 
-- Vision module: `mcp/src/vision/` — `critiqueWithReference()` (Sonnet two-image comparison)
+- Vision module: `mcp/src/vision/` — `scoreWithReference()` (Sonnet two-image comparison)
 
 ### Render Status — Don't Blind Sleep, Always Check Samples
 
@@ -343,7 +369,7 @@ After `start_render` or `set_camera`, call `get_render_status` to check `state: 
 
 Log these alongside every saved render for calibration and debugging. A low-res or noisy render is a data quality issue — knowing the sample count explains it.
 
-**Clay verification renders:** Don't wait for full convergence. 10 samples is sufficient for checking object visibility and framing. Call `get_render_status` immediately after `start_render` — don't sleep first. Full sample counts only matter for beauty/critique renders.
+**Clay verification renders:** Don't wait for full convergence. 10 samples is sufficient for checking object visibility and framing. Call `get_render_status` immediately after `start_render` — don't sleep first. Full sample counts only matter for beauty/score renders.
 
 **Polling pattern** (do NOT sleep-then-save):
 

@@ -1,17 +1,17 @@
 /**
- * Critique Stats — append-only JSONL log per scene for audit trail and system tuning.
+ * Score Stats — append-only JSONL log per scene for audit trail and system tuning.
  *
- * Each score_render call appends one line to {scene_folder}/critique_stats.jsonl.
+ * Each score_render call appends one line to {scene_folder}/score_stats.jsonl.
  * Tracks Sonnet comparison scores plus orchestrator grades.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { mcpLog } from '../OctaneMcpClient';
-import type { CritiqueScores } from '../ArtDirectionState';
-import type { ComparisonCritiqueResult } from './index';
+import type { ScoreScores } from '../ArtDirectionState';
+import type { ComparisonScoreResult } from './index';
 
-export interface CritiqueStatsEntry {
+export interface ScoreStatsEntry {
   timestamp: string;
   iteration: number;
   phase?: number;
@@ -47,19 +47,19 @@ export interface CritiqueStatsEntry {
 }
 
 /**
- * Append a critique stats entry to the scene's JSONL file.
- * Derives scene folder from render_path (goes up until it finds critique_stats.jsonl
+ * Append a score stats entry to the scene's JSONL file.
+ * Derives scene folder from render_path (goes up until it finds score_stats.jsonl
  * or uses the render's parent directory).
  */
-export function appendCritiqueStats(
+export function appendScoreStats(
   renderPath: string,
   iteration: number,
-  structuralScores: CritiqueScores,
+  structuralScores: ScoreScores,
   structuralOverall: number,
   structuralPassed: boolean,
   options?: {
     phase?: number;
-    comparison?: ComparisonCritiqueResult;
+    comparison?: ComparisonScoreResult;
     orchestrator?: { grade: string; agrees_with_sonnet: boolean; notes: string };
     structuralModel?: string;
     structuralLatencyMs?: number;
@@ -70,9 +70,9 @@ export function appendCritiqueStats(
     const renderDir = path.dirname(path.resolve(renderPath));
     // Go up one level if we're in temp/
     const sceneDir = path.basename(renderDir) === 'temp' ? path.dirname(renderDir) : renderDir;
-    const statsPath = path.join(sceneDir, 'critique_stats.jsonl');
+    const statsPath = path.join(sceneDir, 'score_stats.jsonl');
 
-    const entry: CritiqueStatsEntry = {
+    const entry: ScoreStatsEntry = {
       timestamp: new Date().toISOString(),
       iteration,
       phase: options?.phase,
@@ -111,9 +111,9 @@ export function appendCritiqueStats(
     }
 
     fs.appendFileSync(statsPath, JSON.stringify(entry) + '\n', 'utf-8');
-    mcpLog(`VISION/stats: appended critique #${iteration} to ${statsPath}`, 'info');
+    mcpLog(`VISION/stats: appended score #${iteration} to ${statsPath}`, 'info');
   } catch (error: any) {
     mcpLog(`VISION/stats: failed to write stats: ${error.message}`, 'warn');
-    // Non-fatal — don't break critique flow for stats
+    // Non-fatal — don't break score flow for stats
   }
 }

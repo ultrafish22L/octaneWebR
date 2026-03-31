@@ -401,3 +401,17 @@ export function suggestMaterial(surfaceType: string): MaterialRecipe | null {
 export function listMaterialTypes(): string[] {
   return Object.keys(MATERIALS);
 }
+
+/** Alias keys for fuzzy match. */
+export function listMaterialAliases(): string[] {
+  return Object.keys(ALIASES);
+}
+
+/** Material notes indexed by name, for semantic search. */
+export function getMaterialNotes(): Record<string, { notes: string }> {
+  const out: Record<string, { notes: string }> = {};
+  for (const [k, v] of Object.entries(MATERIALS)) {
+    out[k] = { notes: v.notes };
+  }
+  return out;
+}

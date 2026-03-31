@@ -37,7 +37,7 @@ export const TOOL_CATALOG: ToolEntry[] = [
   { name: 'score_render', summary: 'Save and score render via VLM', category: 'ad', phase: '3' },
   {
     name: 'commit_scores',
-    summary: 'Record critique scores, detect stagnation, gate iteration',
+    summary: 'Record scores, detect stagnation, gate iteration',
     category: 'ad',
     phase: '3',
   },

@@ -5,7 +5,7 @@ import {
   MAX_ITERATIONS,
   adWorkflow,
 } from '../ArtDirectionState';
-import type { CompositionSpec, CritiqueRecord } from '../ArtDirectionState';
+import type { CompositionSpec, ScoreRecord } from '../ArtDirectionState';
 
 function makeSpec(name: string): CompositionSpec {
   return {
@@ -26,7 +26,7 @@ function makeSpec(name: string): CompositionSpec {
   };
 }
 
-function makeCritique(iteration: number, score: number, passed = false): CritiqueRecord {
+function makeScore(iteration: number, score: number, passed = false): ScoreRecord {
   return {
     iteration,
     overallScore: score,
@@ -59,18 +59,18 @@ describe('ArtDirectionState', () => {
 
     it('resets history when spec is updated', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.5));
+      state.addScore('s', makeScore(1, 2.5));
       expect(state.getIterationCount('s')).toBe(1);
       state.setSpec('s', makeSpec('s')); // re-set
       expect(state.getIterationCount('s')).toBe(0);
     });
   });
 
-  describe('critique history', () => {
+  describe('score history', () => {
     it('tracks scores across iterations', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.0));
-      state.addCritique('s', makeCritique(2, 3.0));
+      state.addScore('s', makeScore(1, 2.0));
+      state.addScore('s', makeScore(2, 3.0));
       expect(state.getLatestScore('s')).toBe(3.0);
       expect(state.getIterationCount('s')).toBe(2);
       expect(state.getHistory('s')).toHaveLength(2);
@@ -84,21 +84,21 @@ describe('ArtDirectionState', () => {
   describe('stagnation detection', () => {
     it('not stagnating with <2 iterations', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.5));
+      state.addScore('s', makeScore(1, 2.5));
       expect(state.isStagnating('s')).toBe(false);
     });
 
     it('detects stagnation when improvement < 0.3', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.5));
-      state.addCritique('s', makeCritique(2, 2.6)); // +0.1 < 0.3
+      state.addScore('s', makeScore(1, 2.5));
+      state.addScore('s', makeScore(2, 2.6)); // +0.1 < 0.3
       expect(state.isStagnating('s')).toBe(true);
     });
 
     it('not stagnating when improvement >= 0.3', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.0));
-      state.addCritique('s', makeCritique(2, 2.5)); // +0.5 >= 0.3
+      state.addScore('s', makeScore(1, 2.0));
+      state.addScore('s', makeScore(2, 2.5)); // +0.5 >= 0.3
       expect(state.isStagnating('s')).toBe(false);
     });
   });
@@ -107,7 +107,7 @@ describe('ArtDirectionState', () => {
     it('not exhausted with fewer than MAX_ITERATIONS', () => {
       state.setSpec('s', makeSpec('s'));
       for (let i = 1; i < MAX_ITERATIONS; i++) {
-        state.addCritique('s', makeCritique(i, 2.0));
+        state.addScore('s', makeScore(i, 2.0));
       }
       expect(state.isExhausted('s')).toBe(false);
     });
@@ -115,7 +115,7 @@ describe('ArtDirectionState', () => {
     it('exhausted at MAX_ITERATIONS without passing', () => {
       state.setSpec('s', makeSpec('s'));
       for (let i = 1; i <= MAX_ITERATIONS; i++) {
-        state.addCritique('s', makeCritique(i, 2.0));
+        state.addScore('s', makeScore(i, 2.0));
       }
       expect(state.isExhausted('s')).toBe(true);
     });
@@ -123,9 +123,9 @@ describe('ArtDirectionState', () => {
     it('not exhausted if last iteration passed', () => {
       state.setSpec('s', makeSpec('s'));
       for (let i = 1; i < MAX_ITERATIONS; i++) {
-        state.addCritique('s', makeCritique(i, 2.0));
+        state.addScore('s', makeScore(i, 2.0));
       }
-      state.addCritique('s', makeCritique(MAX_ITERATIONS, 4.0, true));
+      state.addScore('s', makeScore(MAX_ITERATIONS, 4.0, true));
       expect(state.isExhausted('s')).toBe(false);
     });
   });
@@ -141,7 +141,7 @@ describe('ArtDirectionState', () => {
   describe('clear', () => {
     it('clears all state', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 2.0));
+      state.addScore('s', makeScore(1, 2.0));
       state.mapHandle('hero', 42);
       state.clear();
       expect(state.listSpecs()).toEqual([]);
@@ -153,7 +153,7 @@ describe('ArtDirectionState', () => {
   describe('getSummary', () => {
     it('returns structured summary', () => {
       state.setSpec('s', makeSpec('s'));
-      state.addCritique('s', makeCritique(1, 3.0));
+      state.addScore('s', makeScore(1, 3.0));
       state.mapHandle('hero', 42);
       const summary = state.getSummary();
       expect(summary.specs).toEqual(['s']);

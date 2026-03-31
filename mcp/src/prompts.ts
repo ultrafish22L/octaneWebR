@@ -6,7 +6,7 @@
  *
  * 9 prompts:
  *   4 original: setup-scene, add-material, build-lit-object, troubleshoot-scene
- *   5 new: ad-workflow, mesh-pipeline, setup-lighting, critique-loop, scene-checklist
+ *   5 new: ad-workflow, mesh-pipeline, setup-lighting, score-loop, scene-checklist
  *
  * v3.0.2: Tool renames (set_sega, score_render, etc.), phase-selectable ad-workflow, text concept briefs.
  * v3.1.1: Server auto-flush, MCP streamlined (no evaluate:false/update()), attributeChanged live-refresh, pin guard, bool fix.
@@ -131,7 +131,7 @@ Query octane://docs/reference/3 for RT pin layout.`,
 
 5. **Render & verify** — start_render() → save_render(path) → check output
 
-For full scene builds with AD gates and critique: use getPrompt("ad-workflow") instead.`,
+For full scene builds with AD gates and scoring: use getPrompt("ad-workflow") instead.`,
           },
         },
       ],
@@ -205,7 +205,7 @@ For full scene builds with AD gates and critique: use getPrompt("ad-workflow") i
 - Cause: set_sega was not called (no SEGA vector)
 - Fix: call set_sega(preset:"...") FIRST, then suggest_lighting
 
-### "score_render returns self-critique prompt instead of Sonnet grade"
+### "score_render returns self-score prompt instead of Sonnet grade"
 - Cause: missing reference_image_path parameter
 - Fix: pass reference_image_path pointing to concept art PNG
 
@@ -272,11 +272,15 @@ Call ad_state(build_mode:"dress") to enable AD with phased gates.`;
 9. fit_camera(framing_mode:"subjects") → frames hero+secondary, EXCLUDES ground. MANDATORY after every geo add.
 10. start_render() → FIRST VISUAL — check get_render_status immediately, 10 samples enough for clay
 11. Add remaining objects: place_geo/place_geo → fit_camera(framing_mode:"subjects") → render + VERIFY each object visible after EACH
-12. **Creative review** (MANDATORY before critique):
+12. **Creative review** (MANDATORY before scoring):
     - "What else does this scene need?" Walls? Backdrop? Environment?
     - "Is anything floating?" Objects must be grounded.
     - "Does the floor have character?" Textured floor >> flat grey.
     - "Is there depth?" Foreground/mid/background layers.
+    - "Does the hero emit light?" If it's a lantern/lamp/torch/crystal/glowing object:
+      PUT A LIGHT INSIDE IT. create_light(type:"emissive", shape:"sphere", scale:0.05-0.1,
+      visible:false) at the glowing element's center, matching color, power 50-200.
+      This interior light should be the DOMINANT source — it defines the mood.
     Add 1-3 supporting elements based on answers.
 13. score_render(render_path, spec_name, reference_image_path=concept_art)
     **CLAY GATE (enforced mechanically): composition_match >= 3 = pass.**
@@ -286,15 +290,15 @@ Call ad_state(build_mode:"dress") to enable AD with phased gates.`;
     - missing_elements should only list missing geometry, never material properties
     - lighting_match, material_match, mood_match, and depth_match are always 3 (neutral) in clay
     When passed, framing_verified is set automatically. Response tells you to proceed.
-    If failed: fix geometry/framing, re-render IN CLAY, critique again. Do NOT turn off clay.
+    If failed: fix geometry/framing, re-render IN CLAY, score again. Do NOT turn off clay.
 
 ### Phase 1 Hard Rules:
-- Clay mode stays ON until clay critique passes (composition_match >= 3)
+- Clay mode stays ON until clay score passes (composition_match >= 3)
 - ONLY fit_camera — NEVER set_camera to fix framing (fix geometry instead)
 - Generate HDRI from concept art via OTOY Studio (equirectangular panorama)
 - Apply HDRI to NT_ENV_TEXTURE with NT_TEX_IMAGE using SPHERE PROJECTION
 - No infinite floor planes (scale <= 3x scene width)
-- reference_image_path is MANDATORY for critique`,
+- reference_image_path is MANDATORY for scoring`,
 
     '2': `## Phase 2 — STYLE (materials + lighting)
 14. clay_mode(0) → materials visible
@@ -314,7 +318,7 @@ Call ad_state(build_mode:"dress") to enable AD with phased gates.`;
 - **setup_lighting for the 3-point rig.** Don't manually create emissive planes — that's what the tool does internally.
 - **create_light for individual lights.** Glowing mushrooms, neon signs, accent lights — pass material_handle to add emission to existing objects.`,
 
-    '3': `## Phase 3 — CRITIQUE LOOP
+    '3': `## Phase 3 — SCORE LOOP
 18. score_render(render_path, spec_name, reference_image_path) → Sonnet grade
 19. score_sega(render_path) → SEGA gap measurement. **Skip on iteration 1** — gross issues dominate, mood fine-tuning is premature. Run from iteration 2 onward.
 20. Read render + concept art yourself → orchestrator grade (be HARSH on framing)
@@ -468,9 +472,9 @@ Query octane://sega/presets for available SEGA presets.`;
   );
 
   server.registerPrompt(
-    'critique-loop',
+    'score-loop',
     {
-      title: 'Critique Loop',
+      title: 'Score Loop',
       description:
         'Run the dual-critic evaluation loop (C1-C7): Sonnet + orchestrator grades, SEGA gap, corrections.',
       argsSchema: {
@@ -489,7 +493,7 @@ Query octane://sega/presets for available SEGA presets.`;
 ## C1. score_render(render_path, spec_name, reference_image_path)
    → Sonnet compares concept art vs render → A-F grade, 1-5 scores, top fixes
    **MANDATORY: reference_image_path must point to concept art.**
-   If you get a self-critique prompt back → you forgot the reference path. Re-call.
+   If you get a self-score prompt back → you forgot the reference path. Re-call.
 
 ## C2. score_sega(render_path)
    → Pixel analysis measures gap vs SEGA target vector
@@ -530,7 +534,7 @@ Query octane://sega/presets for available SEGA presets.`;
 
 ## PASS CRITERIA
    Sonnet grade B+ (or better) = pass.
-   Both assessments logged to critique_stats.jsonl per scene.`,
+   Both assessments logged to score_stats.jsonl per scene.`,
           },
         },
       ],
@@ -542,7 +546,7 @@ Query octane://sega/presets for available SEGA presets.`;
     {
       title: 'Scene Checklist',
       description:
-        'Pre-critique quality checklist. Run BEFORE calling score_render to avoid wasting Sonnet calls on obviously broken scenes.',
+        'Pre-score quality checklist. Run BEFORE calling score_render to avoid wasting Sonnet calls on obviously broken scenes.',
     },
     async () => ({
       messages: [
@@ -550,7 +554,7 @@ Query octane://sega/presets for available SEGA presets.`;
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Pre-critique quality checklist. Verify ALL checks before calling score_render.
+            text: `Pre-score quality checklist. Verify ALL checks before calling score_render.
 
 ## FRAMING
 - [ ] Hero object clearly visible, occupying >15% of frame
@@ -572,6 +576,9 @@ Query octane://sega/presets for available SEGA presets.`;
 - [ ] Emission efficiency set to 1.0 on all emissive materials (not default 0.025)
 - [ ] Visible shadows present
 - [ ] Warm/cool temperature contrast (not everything same Kelvin)
+- [ ] **If hero is a light-emitting object (lantern/lamp/torch/crystal): light source INSIDE the mesh?**
+      A lantern without interior light = automatic fail. Use create_light(type:"emissive", shape:"sphere",
+      scale:0.05-0.1, visible:false) at the glowing element's center. This should be the DOMINANT light.
 
 ## TECHNICAL
 - [ ] Clay mode OFF for Phase 2+ renders (clay_mode(0))
@@ -581,8 +588,8 @@ Query octane://sega/presets for available SEGA presets.`;
 - [ ] fit_camera called after last geometry change
 
 ## ACTION
-If ANY framing check fails → fix geometry/camera BEFORE critique
-If ANY composition check fails → add elements BEFORE critique
+If ANY framing check fails → fix geometry/camera BEFORE scoring
+If ANY composition check fails → add elements BEFORE scoring
 If ALL checks pass → proceed to score_render with reference_image_path
 
 Don't waste Sonnet calls on obviously broken framing.`,

@@ -19,12 +19,12 @@ import { getDimension, findDimensionByAlias, listDimensions, DIMENSIONS } from '
 import { resolveFullState } from './MappingEngine';
 import { buildNLParsePrompt, buildNLParseUserMessage, parseNLResponse } from './NLParser';
 import {
-  runCritique,
+  runScore,
   buildVLMEstimationPrompt,
   parseVLMEstimation,
   computeGap,
   isGapStagnating,
-} from './SemanticCritic';
+} from './SemanticScorer';
 import { analyzeImage } from './PixelAnalyzer';
 import { PRESETS } from './presets';
 import type { SemanticVector, SemanticPreset } from './types';
@@ -39,13 +39,13 @@ export type { NLParseResult } from './NLParser';
 export { analyzeImage, measurementToVector } from './PixelAnalyzer';
 export type { PixelMeasurement } from './PixelAnalyzer';
 export {
-  runCritique,
+  runScore,
   computeGap,
   isGapStagnating,
   buildVLMEstimationPrompt,
   parseVLMEstimation,
-} from './SemanticCritic';
-export type { SemanticGap, SemanticCritiqueResult } from './SemanticCritic';
+} from './SemanticScorer';
+export type { SemanticGap, SemanticScoreResult } from './SemanticScorer';
 export type {
   SemanticVector,
   DimensionDefinition,
@@ -57,6 +57,8 @@ export type {
 } from './types';
 
 import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
+import { detectContradictions, detectVagueness } from './guidance';
+import { fuzzySearch } from '../creative/fuzzyMatch';
 
 export function registerSegaTools(
   server: McpServer,
@@ -123,13 +125,23 @@ export function registerSegaTools(
           });
         }
 
+        // NL exact "sega" → redirect to hidden preset (easter egg)
+        if (
+          params.natural_language &&
+          !params.preset &&
+          params.natural_language.trim().toLowerCase() === 'sega'
+        ) {
+          params.preset = 'sega';
+        }
+
         // Resolve input to a vector
         let targetVector: SemanticVector;
+        let matchedPreset: SemanticPreset | undefined;
 
         if (params.preset) {
-          // Try exact match first, then tag search
-          const preset = getPreset(params.preset);
-          if (!preset) {
+          // Try exact match first, then tag search, then fuzzy match
+          matchedPreset = getPreset(params.preset);
+          if (!matchedPreset) {
             const tagged = findPresetsByTag(params.preset);
             if (tagged.length > 0) {
               return jsonResult({
@@ -142,13 +154,25 @@ export function registerSegaTools(
                 instruction: 'Call set_sega with one of these preset names.',
               });
             }
+            // Fuzzy match — typo correction
+            const allNames = PRESETS.map(p => p.name);
+            const fuzzy = fuzzySearch(params.preset, allNames);
+            if (fuzzy.didYouMean) {
+              return jsonResult({
+                error: `Unknown preset "${params.preset}".`,
+                did_you_mean: fuzzy.didYouMean,
+                similar: fuzzy.suggestions.map(s => s.name),
+                available: listPresetNames(),
+                instruction: `Did you mean "${fuzzy.didYouMean}"? Call set_sega with that preset name.`,
+              });
+            }
             return jsonResult({
               error: `Unknown preset "${params.preset}".`,
               available: listPresetNames(),
               instruction: 'Pick from the available presets above.',
             });
           }
-          targetVector = preset.vector;
+          targetVector = matchedPreset.vector;
         } else if (params.vector) {
           // Validate dimension names
           const unknowns = Object.keys(params.vector).filter(d => !getDimension(d));
@@ -161,8 +185,22 @@ export function registerSegaTools(
           }
           targetVector = params.vector;
         } else if (params.natural_language) {
+          // Vagueness detection — before investing in NL parse
+          const vagueness = detectVagueness(params.natural_language);
+          if (vagueness.isVague) {
+            return jsonResult({
+              guidance: true,
+              message: vagueness.guidingQuestion,
+              vague_terms: vagueness.vagueTerms,
+              suggestions: vagueness.suggestions,
+              preset_suggestions: vagueness.presetSuggestions,
+              instruction:
+                'Your description is broad — pick a more specific direction from the suggestions, ' +
+                'or try one of the suggested presets with set_sega(preset: "name").',
+            });
+          }
+
           // Return NL parse prompt for the AI to answer
-          // The AI reads this, parses the user's intent, then calls back with parsed vector
           const systemPrompt = buildNLParsePrompt();
           const userMessage = buildNLParseUserMessage(
             params.natural_language,
@@ -200,7 +238,11 @@ export function registerSegaTools(
         const resolved = resolveFullState(effective);
         const warnings = segaState.getWarnings();
 
-        return jsonResult({
+        // Contradiction detection — advisory, does not block
+        const contradictions = detectContradictions(effective);
+
+        // Build response
+        const response: Record<string, unknown> = {
           vector: effective,
           resolved,
           warnings: warnings.length > 0 ? warnings : undefined,
@@ -210,7 +252,29 @@ export function registerSegaTools(
             'Apply material values to NT_MAT_UNIVERSAL attributes. ' +
             'Apply camera values via set_camera.',
           ...(artState ? adWorkflow(artState, 'set_sega') : {}),
-        });
+        };
+
+        // Easter egg metadata — clearly signal the fun event
+        if (matchedPreset?.easterEgg) {
+          response.easter_egg = true;
+          response.easter_egg_event = matchedPreset.easterEgg.event;
+          response.easter_egg_art = matchedPreset.easterEgg.art;
+          response.easter_egg_tradition = matchedPreset.easterEgg.tradition;
+          response.easter_egg_description = matchedPreset.description;
+        }
+
+        // Contradiction tensions
+        if (contradictions.hasTension) {
+          response.tensions = contradictions.pairs.map(p => ({
+            dimensions: [p.dimA, p.dimB],
+            coefficient: p.coefficient,
+            tension: Math.round(p.tension * 100) / 100,
+            optionA: p.optionA,
+            optionB: p.optionB,
+          }));
+        }
+
+        return jsonResult(response);
       } catch (error: any) {
         return errorResult(error);
       }
@@ -392,7 +456,7 @@ export function registerSegaTools(
           });
         }
 
-        const result = runCritique(target, params.render_path, params.vlm_measurements);
+        const result = runScore(target, params.render_path, params.vlm_measurements);
 
         return jsonResult({
           target: result.target,
@@ -414,7 +478,7 @@ export function registerSegaTools(
           summary: result.summary,
           instruction: result.gap.converged
             ? 'Scene matches target intent. No further adjustments needed.'
-            : 'Apply the corrections via adjust_sega, then re-render and critique again.',
+            : 'Apply the corrections via adjust_sega, then re-render and score again.',
         });
       } catch (error: any) {
         return errorResult(error);

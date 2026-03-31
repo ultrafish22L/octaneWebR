@@ -495,10 +495,10 @@ export function registerResources(
                   ],
                   gate: 'score_render grade >= C in clay mode',
                   rules: [
-                    'Clay mode stays ON until critique passes',
+                    'Clay mode stays ON until score passes',
                     'fit_camera after EVERY geo add — no exceptions',
                     'NEVER use set_camera to fix framing — fix geometry instead',
-                    'Creative review before critique: "What else does this scene need?"',
+                    'Creative review before scoring: "What else does this scene need?"',
                   ],
                 },
                 {
@@ -518,12 +518,12 @@ export function registerResources(
                 },
                 {
                   phase: '3',
-                  name: 'Critique',
+                  name: 'Score',
                   description: 'Dual-critic evaluation loop (Sonnet + orchestrator)',
                   tools: ['score_render', 'score_sega', 'commit_scores'],
                   gate: 'Sonnet grade B+ or stagnation detected',
                   rules: [
-                    'reference_image_path is MANDATORY for critique',
+                    'reference_image_path is MANDATORY for scoring',
                     'framing >= 3 required BEFORE lighting/mood scores matter',
                     'If stagnating (2 iterations < 0.3 improvement): redesign, do not tweak',
                   ],
@@ -565,7 +565,7 @@ export function registerResources(
               build_mode: artState?.buildMode ?? null,
               ad_active: artState?.isActive ?? false,
               description: artState?.isActive
-                ? `${(artState.buildMode ?? 'custom').toUpperCase()} — AD active. Phases enforced, critique loop active.`
+                ? `${(artState.buildMode ?? 'custom').toUpperCase()} — AD active. Phases enforced, score loop active.`
                 : artState?.buildMode
                   ? `${artState.buildMode.toUpperCase()} — AD inactive. Tools work freely.`
                   : 'No build mode set. Freeform — all tools available without phase enforcement.',

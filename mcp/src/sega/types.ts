@@ -51,7 +51,14 @@ export interface DimensionDefinition {
 
 // ── Presets ──────────────────────────────────────────────────────────
 
-export type PresetCategory = 'mood' | 'artist' | 'film' | 'genre' | 'user';
+export type PresetCategory = 'mood' | 'artist' | 'film' | 'genre' | 'user' | 'hidden';
+
+/** Metadata for easter egg presets — clearly signals fun event to the user. */
+export interface EasterEggMeta {
+  event: string; // e.g. "moo", "dino"
+  art: string; // ASCII art
+  tradition: string; // explain the tradition
+}
 
 export interface SemanticPreset {
   name: string;
@@ -59,7 +66,9 @@ export interface SemanticPreset {
   description: string;
   vector: SemanticVector;
   tags: string[]; // NL trigger words
-  source: string; // "industry-derived" | "user-created" | "learned"
+  source: string; // "industry-derived" | "user-created" | "learned" | "easter-egg"
+  /** Present only on easter egg presets — signals a fun event to the user. */
+  easterEgg?: EasterEggMeta;
 }
 
 // ── Parameter Resolution ────────────────────────────────────────────

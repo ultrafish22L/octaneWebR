@@ -11,7 +11,13 @@ import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
 import { jsonResult, errorResult } from '../tools/utils';
 import { suggestLighting } from './lighting';
-import { suggestMaterial, listMaterialTypes } from './materials';
+import {
+  suggestMaterial,
+  listMaterialTypes,
+  listMaterialAliases,
+  getMaterialNotes,
+} from './materials';
+import { fuzzyMatchMaterial, semanticMaterialSearch } from './fuzzyMatch';
 import { ArtDirectionState, adWorkflow } from '../ArtDirectionState';
 
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -92,10 +98,21 @@ export function registerCreativeTools(
 
       const recipe = suggestMaterial(surface_type);
       if (!recipe) {
+        // Fuzzy match — typo correction + semantic search
+        const materialKeys = listMaterialTypes();
+        const aliasKeys = listMaterialAliases();
+        const fuzzy = fuzzyMatchMaterial(surface_type, materialKeys, aliasKeys);
+        const semantic = semanticMaterialSearch(surface_type, getMaterialNotes());
+
         return jsonResult({
           error: `Unknown surface type "${surface_type}".`,
-          available_types: listMaterialTypes(),
-          instruction: 'Pick from the available types above.',
+          ...(fuzzy.didYouMean ? { did_you_mean: fuzzy.didYouMean } : {}),
+          ...(fuzzy.suggestions.length > 0 ? { similar: fuzzy.suggestions.map(s => s.name) } : {}),
+          ...(semantic.length > 0 ? { related: semantic } : {}),
+          available_types: materialKeys,
+          instruction: fuzzy.didYouMean
+            ? `Did you mean "${fuzzy.didYouMean}"? Call suggest_material with that name.`
+            : 'Pick from the available types above.',
         });
       }
 

@@ -6,10 +6,10 @@
  *
  * Functions:
  * - callVision(): single image + prompt → text (used by calibrate + analyze)
- * - callVisionPair(): two images + prompt → text (used by critique)
+ * - callVisionPair(): two images + prompt → text (used by score)
  * - calibrateReference(): concept art → cached keywords
  * - analyzeReference(): concept art → structured JSON
- * - critiqueWithReference(): concept + render → A-F grade
+ * - scoreWithReference(): concept + render → A-F grade
  */
 
 import fs from 'fs';
@@ -185,7 +185,7 @@ export async function callVision(imagePath: string, prompt: string): Promise<Vis
 }
 
 /**
- * Send two images + prompt to Sonnet. Used by critiqueWithReference.
+ * Send two images + prompt to Sonnet. Used by scoreWithReference.
  */
 export async function callVisionPair(
   imagePath1: string,
@@ -296,9 +296,9 @@ export async function analyzeReference(
   return { backend, data, raw: text, model, promptSent, vlmRawResponse };
 }
 
-// ── Concept-vs-Render Critique ──────────────────────────────────────
+// ── Concept-vs-Render Scoring ──────────────────────────────────────
 
-export interface ComparisonCritiqueResult {
+export interface ComparisonScoreResult {
   grade: string;
   composition_match: number;
   lighting_match: number;
@@ -317,11 +317,11 @@ export interface ComparisonCritiqueResult {
 /**
  * Send concept art + render to Sonnet for holistic A-F comparison.
  */
-export async function critiqueWithReference(
+export async function scoreWithReference(
   renderPath: string,
   conceptPath: string,
   comparisonPrompt: string
-): Promise<ComparisonCritiqueResult | null> {
+): Promise<ComparisonScoreResult | null> {
   const startMs = Date.now();
   const { text, backend, model, promptSent, vlmRawResponse } = await callVisionPair(
     conceptPath,
@@ -336,7 +336,7 @@ export async function critiqueWithReference(
   const parsed = parseJsonResponse(text);
 
   if (!parsed) {
-    mcpLog('VISION: Sonnet critique response not parseable as JSON', 'warn');
+    mcpLog('VISION: Sonnet score response not parseable as JSON', 'warn');
     return {
       grade: '?',
       composition_match: 0,

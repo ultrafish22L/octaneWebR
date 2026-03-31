@@ -2807,11 +2807,42 @@ export function registerImportTools(
     EMISSION: 44,
   } as const;
 
-  /** Find or create a geo group on the active RT. */
+  // Session-level geo_group affinity: once a geo_group is found/created,
+  // reuse it for all subsequent place_geo calls. Prevents divergence when
+  // heavy SDK operations (mesh loading) change the active RT mid-session.
+  let sessionGeoGroup: { geoGroup: number; rtHandle: number } | null = null;
+
+  /** Find or create a geo group on the active RT.
+   *  Caches result so all place_geo calls in a session share one geo_group. */
   async function findOrCreateGeoGroup(
     geoGroupOverride?: number
   ): Promise<{ geoGroup: number; rtHandle: number }> {
     if (geoGroupOverride) return { geoGroup: geoGroupOverride, rtHandle: 0 };
+
+    // Reuse session-level geo_group if still valid (node exists and is connected)
+    if (sessionGeoGroup) {
+      try {
+        const info = await client.callMethod('ApiNode', 'connectedNodeIx', {
+          objectPtr: { handle: String(sessionGeoGroup.rtHandle), type: OBJ_API_NODE },
+          pinIx: 3,
+          enterWrapperNode: true,
+        });
+        const connHandle = extractHandle(info);
+        if (connHandle === sessionGeoGroup.geoGroup) {
+          return sessionGeoGroup;
+        }
+        mcpLog(
+          `place_geo: cached geo_group ${sessionGeoGroup.geoGroup} stale (RT pin 3 now ${connHandle}), re-resolving`,
+          'warn'
+        );
+      } catch {
+        mcpLog(
+          `place_geo: cached geo_group ${sessionGeoGroup.geoGroup} invalid, re-resolving`,
+          'warn'
+        );
+      }
+      sessionGeoGroup = null;
+    }
 
     const activeRt = await client.callMethod('ApiRenderEngine', 'getRenderTargetNode', {});
     const activeRtHandle = extractHandle(activeRt);
@@ -2819,12 +2850,14 @@ export function registerImportTools(
       const pins = await enumeratePins(client, activeRtHandle);
       const geoPin = pins.find(p => p.index === 3);
       if (geoPin?.connectedHandle) {
-        return { geoGroup: geoPin.connectedHandle, rtHandle: activeRtHandle };
+        sessionGeoGroup = { geoGroup: geoPin.connectedHandle, rtHandle: activeRtHandle };
+        return sessionGeoGroup;
       }
       const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
       await connectRaw(client, activeRtHandle, geoGroup, 3);
       mcpLog(`place_geo: created geo group ${geoGroup} on existing RT ${activeRtHandle}`, 'info');
-      return { geoGroup, rtHandle: activeRtHandle };
+      sessionGeoGroup = { geoGroup, rtHandle: activeRtHandle };
+      return sessionGeoGroup;
     }
 
     const rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
@@ -2843,7 +2876,8 @@ export function registerImportTools(
       targetNode: { handle: String(rtHandle), type: OBJ_API_NODE },
     });
     mcpLog(`place_geo: created new RT ${rtHandle} with geo group ${geoGroup}`, 'info');
-    return { geoGroup, rtHandle };
+    sessionGeoGroup = { geoGroup, rtHandle };
+    return sessionGeoGroup;
   }
 
   /** Wire a node to geo group, continue rendering. */

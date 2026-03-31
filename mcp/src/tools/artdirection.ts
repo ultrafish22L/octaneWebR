@@ -4,7 +4,7 @@
  *
  * Solves two problems:
  * 1. Spatial reasoning: math-based validation BEFORE rendering (no guessing)
- * 2. Quality control: structured critique loop with stagnation detection
+ * 2. Quality control: structured score loop with stagnation detection
  *
  * Tools 1-3 are pure math (no Octane calls, fully testable).
  * Tools 4-5 use existing gRPC calls (save_render).
@@ -19,7 +19,7 @@ import { OctaneMcpClient } from '../OctaneMcpClient';
 import {
   ArtDirectionState,
   CompositionSpec,
-  CritiqueRecord,
+  ScoreRecord,
   PASS_THRESHOLD,
   MIN_DIMENSION_SCORE,
   MAX_ITERATIONS,
@@ -42,13 +42,13 @@ import {
 import {
   analyzeReference as visionAnalyze,
   calibrateReference as visionCalibrate,
-  critiqueWithReference as visionCompare,
+  scoreWithReference as visionCompare,
 } from '../vision/index';
 import {
   buildReferenceAnalysisPrompt as buildVisionRefPrompt,
-  buildComparisonCritiquePrompt,
+  buildComparisonScorePrompt,
 } from '../vision/prompts';
-import { appendCritiqueStats } from '../vision/stats';
+import { appendScoreStats } from '../vision/stats';
 import { computeWorldAABB } from './pin-utils';
 
 // ── Vector math helpers ──────────────────────────────────────────────
@@ -460,9 +460,9 @@ function computeSuggestedCamera(
   };
 }
 
-// ── Critique prompt builders ─────────────────────────────────────────
+// ── Score prompt builders ─────────────────────────────────────────
 
-function buildCritiquePrompt(spec: CompositionSpec): string {
+function buildScorePrompt(spec: CompositionSpec): string {
   const objectList = spec.objects
     .map(
       o =>
@@ -681,6 +681,30 @@ export function registerArtDirectionTools(
     async params => {
       // ── Text-only concept brief (no image) ──────────────────────
       if (!params.image_path) {
+        // Empty or whitespace-only description — guide the user
+        if (!params.scene_description?.trim()) {
+          return jsonResult({
+            mode: 'text_brief',
+            guidance: true,
+            message:
+              'A scene description is needed to plan the layout. ' +
+              'Describe three things: a subject (what), a mood (how it feels), and a setting (where).',
+            examples: [
+              'A weathered stone pedestal in a misty forest clearing, golden hour light filtering through the canopy',
+              'A sleek product shot of a chrome sphere on a marble surface, dramatic studio lighting',
+              'An underwater coral formation, ethereal blue light from above, close-up macro detail',
+            ],
+            presets_for_inspiration: [
+              'ethereal',
+              'dramatic',
+              'noir',
+              'golden_hour',
+              'landscape_epic',
+              'still_life_dutch',
+            ],
+          });
+        }
+
         return jsonResult({
           mode: 'text_brief',
           scene_description: params.scene_description,
@@ -733,7 +757,7 @@ export function registerArtDirectionTools(
         if (calibResult.calibration) {
           content.push({
             type: 'text',
-            text: `--- VLM CALIBRATION (cached for critique) ---\n${calibResult.calibration.composition}\n--- END CALIBRATION ---`,
+            text: `--- VLM CALIBRATION (cached for scoring) ---\n${calibResult.calibration.composition}\n--- END CALIBRATION ---`,
           });
         }
         content.push({
@@ -777,7 +801,7 @@ export function registerArtDirectionTools(
   server.registerTool(
     'score_render',
     {
-      title: 'Critique Render',
+      title: 'Score Render',
       description:
         '[AD Phase 3] Save and score current render via VLM. Framing ≥3 required before lighting/mood scores matter. Then: commit_scores. See octane://docs/creative/2.',
       inputSchema: {
@@ -792,7 +816,7 @@ export function registerArtDirectionTools(
           .optional()
           .default(false)
           .describe(
-            'Include raw Sonnet prompt and response in output (default false). Use for debugging critique results.'
+            'Include raw Sonnet prompt and response in output (default false). Use for debugging score results.'
           ),
       },
       annotations: { destructiveHint: true, openWorldHint: true },
@@ -845,7 +869,7 @@ export function registerArtDirectionTools(
           artState.setCachedClay(clayModeNum);
           if (clayMode === 0 && !framingVerified) {
             warnings.push(
-              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
+              '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call clay_mode(2) (color clay), re-render, then score again. Only turn off clay AFTER this score passes framing ≥ 3.'
             );
           }
         } catch {
@@ -861,14 +885,14 @@ export function registerArtDirectionTools(
 
         // ── Sonnet comparison (primary critic) ──────────────────────
         const conceptPath = params.reference_image_path || spec.referenceImagePath;
-        let comparisonResult: import('../vision/index').ComparisonCritiqueResult | null = null;
+        let comparisonResult: import('../vision/index').ComparisonScoreResult | null = null;
         if (conceptPath && fs.existsSync(path.resolve(conceptPath))) {
-          const comparisonPrompt = buildComparisonCritiquePrompt(artState.context);
+          const comparisonPrompt = buildComparisonScorePrompt(artState.context);
           try {
             comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
           } catch (visError: any) {
             warnings.push(
-              `Vision comparison failed: ${visError.message}. Falling back to self-critique.`
+              `Vision comparison failed: ${visError.message}. Falling back to self-score.`
             );
             comparisonResult = null;
           }
@@ -892,16 +916,16 @@ export function registerArtDirectionTools(
           const fullPass = !isClayMode && (grade === 'A' || grade === 'B');
           const passed = clayPass || fullPass;
 
-          // Mechanical gate: clay critique passes → mark framing_verified
+          // Mechanical gate: clay score passes → mark framing_verified
           if (isClayMode && clayPass && !framingVerified) {
             artState.completeStep(
               'framing_verified',
-              `Clay critique passed: composition_match=${comparisonResult.composition_match}, grade=${comparisonResult.grade}`
+              `Clay score passed: composition_match=${comparisonResult.composition_match}, grade=${comparisonResult.grade}`
             );
           }
 
-          // Record critique
-          const record: CritiqueRecord = {
+          // Record score
+          const record: ScoreRecord = {
             iteration,
             overallScore,
             passed,
@@ -933,10 +957,10 @@ export function registerArtDirectionTools(
             renderPath: resolved,
             timestamp: Date.now(),
           };
-          artState.addCritique(params.spec_name, record);
+          artState.addScore(params.spec_name, record);
 
           // Write stats JSONL
-          appendCritiqueStats(resolved, iteration, record.scores, overallScore, passed, {
+          appendScoreStats(resolved, iteration, record.scores, overallScore, passed, {
             phase: artState.isActive ? artState.getWorkflowStatus().phase : undefined,
             comparison: comparisonResult,
           });
@@ -947,15 +971,15 @@ export function registerArtDirectionTools(
           if (params.verbose) {
             content.push({
               type: 'text',
-              text: `--- SONNET CRITIQUE PROMPT ---\n${comparisonResult.promptSent}\n--- END PROMPT ---`,
+              text: `--- SONNET SCORE PROMPT ---\n${comparisonResult.promptSent}\n--- END PROMPT ---`,
             });
             content.push({
               type: 'text',
-              text: `--- SONNET CRITIQUE IMAGES ---\nconcept: ${path.resolve(conceptPath!)}\nrender: ${resolved}\n--- END IMAGES ---`,
+              text: `--- SONNET SCORE IMAGES ---\nconcept: ${path.resolve(conceptPath!)}\nrender: ${resolved}\n--- END IMAGES ---`,
             });
             content.push({
               type: 'text',
-              text: `--- SONNET CRITIQUE RESPONSE ---\n${comparisonResult.vlmRawResponse}\n--- END RESPONSE ---`,
+              text: `--- SONNET SCORE RESPONSE ---\n${comparisonResult.vlmRawResponse}\n--- END RESPONSE ---`,
             });
           }
 
@@ -995,7 +1019,7 @@ export function registerArtDirectionTools(
                     ? `CLAY GATE PASSED (composition_match=${comparisonResult.composition_match}). Framing verified. Call clay_mode(0) and proceed to Phase 2 (materials & lighting).`
                     : 'PASSED. Scene meets quality bar. Save .orbx and proceed.'
                   : isClayMode
-                    ? `CLAY GATE FAILED (composition_match=${comparisonResult.composition_match}, need ≥3). Fix geometry/framing, re-render IN CLAY, and critique again. Do NOT turn off clay mode.`
+                    ? `CLAY GATE FAILED (composition_match=${comparisonResult.composition_match}, need ≥3). Fix geometry/framing, re-render IN CLAY, and score again. Do NOT turn off clay mode.`
                     : artState.isActive
                       ? `NOT PASSED (Sonnet grade: ${comparisonResult.grade}). DO NOT STOP. You MUST: (1) call commit_scores with these scores, (2) fix the top correction, (3) re-render + save_render, (4) call score_render again. Repeat until passed=true or exhausted=true.`
                       : `Sonnet graded ${comparisonResult.grade}. Apply corrections and re-render.`,
@@ -1008,16 +1032,16 @@ export function registerArtDirectionTools(
           return { content };
         }
 
-        // Fallback: no Anthropic key or no concept art — self-critique
+        // Fallback: no Anthropic key or no concept art — self-score
         return jsonResult({
           render_path: resolved,
-          critique_prompt: buildCritiquePrompt(spec),
+          score_prompt: buildScorePrompt(spec),
           spec_name: params.spec_name,
           iteration,
           warnings,
           vision_backend: 'self',
           instruction:
-            'No Sonnet API or no concept art. Read the render + concept art yourself, give an A-F grade, then call commit_scores with scores. DO NOT STOP after one critique — iterate until passed or exhausted.',
+            'No Sonnet API or no concept art. Read the render + concept art yourself, give an A-F grade, then call commit_scores with scores. DO NOT STOP after one score — iterate until passed or exhausted.',
           ...adWorkflow(artState, 'score_render'),
         });
       } catch (error: any) {
@@ -1033,7 +1057,7 @@ export function registerArtDirectionTools(
     {
       title: 'Apply Corrections',
       description:
-        '[AD Phase 3] Record critique scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
+        '[AD Phase 3] Record scores. Tracks history, detects stagnation, gates further iteration. If framing <3, directs back to Phase 1 (camera) before any aesthetic changes.',
       inputSchema: {
         spec_name: z.string(),
         iteration: z.number().int(),
@@ -1056,13 +1080,13 @@ export function registerArtDirectionTools(
       if (!spec) return errorResult(`No spec "${params.spec_name}".`);
 
       // Only record if score_render (VLM path) didn't already record this iteration.
-      // VLM critique calls artState.addCritique() internally — recording again here
+      // VLM score calls artState.addScore() internally — recording again here
       // causes false stagnation detection after just 1 real iteration.
       const existingHistory = artState.getHistory(params.spec_name);
       const alreadyRecorded = existingHistory.some(h => h.iteration === params.iteration);
 
       if (!alreadyRecorded) {
-        const record: CritiqueRecord = {
+        const record: ScoreRecord = {
           iteration: params.iteration,
           overallScore: params.overall_score,
           passed: params.passed,
@@ -1071,7 +1095,7 @@ export function registerArtDirectionTools(
           renderPath: params.render_path || '',
           timestamp: Date.now(),
         };
-        artState.addCritique(params.spec_name, record);
+        artState.addScore(params.spec_name, record);
       }
 
       const history = artState.getHistory(params.spec_name);
@@ -1091,7 +1115,7 @@ export function registerArtDirectionTools(
       };
 
       if (params.passed) {
-        result.instruction = 'Critique passed! Proceed to next phase or save final render.';
+        result.instruction = 'Score passed! Proceed to next phase or save final render.';
       } else if (params.scores.framing < 3) {
         result.instruction =
           'FRAMING FAILURE (score ' +
@@ -1116,7 +1140,7 @@ export function registerArtDirectionTools(
         const worst = Object.entries(params.scores).reduce((a, b) => (a[1] < b[1] ? a : b));
         result.instruction = artState.isActive
           ? `NOT PASSED. Focus on "${worst[0]}" (score ${worst[1]}). NEXT: apply the priority-1 corrections below, then re-render (save_render), then call score_render again. Do NOT stop iterating.`
-          : `Focus on "${worst[0]}" (score ${worst[1]}). Apply priority-1 corrections, re-render, critique again.`;
+          : `Focus on "${worst[0]}" (score ${worst[1]}). Apply priority-1 corrections, re-render, score again.`;
         result.priority_corrections = params.corrections
           .filter(c => c.priority === 1)
           .map(c => c.description);
@@ -1173,7 +1197,7 @@ export function registerArtDirectionTools(
         ...(build_mode || set_mode
           ? {
               instruction: adActive
-                ? `AD workflow ACTIVE (${summary.build_mode ?? 'custom'}). Phases enforced, critique loop active. Follow the workflow checklist.`
+                ? `AD workflow ACTIVE (${summary.build_mode ?? 'custom'}). Phases enforced, score loop active. Follow the workflow checklist.`
                 : `AD workflow INACTIVE (${summary.build_mode ?? 'freeform'}). All tools work freely with no phase enforcement.`,
             }
           : {}),

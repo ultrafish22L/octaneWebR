@@ -55,10 +55,31 @@ export function jsonResult(data: unknown) {
 
 export function errorResult(error: unknown) {
   const msg = error instanceof Error ? error.message : String(error);
+  const data: Record<string, unknown> = { error: msg };
+
+  // Dino offline hint for gRPC connection failures
+  if (isOfflineError(msg)) {
+    data.offline_hint =
+      '\uD83E\uDD95 Looks like Octane is offline. No endless runner here, but try: ' +
+      'tasklist | grep octaneServGrpc';
+  }
+
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify({ error: msg }) }],
+    content: [{ type: 'text' as const, text: JSON.stringify(data) }],
     isError: true as const,
   };
+}
+
+/** Detect gRPC UNAVAILABLE / DEADLINE_EXCEEDED errors indicating Octane is offline. */
+function isOfflineError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('unavailable') ||
+    lower.includes('deadline_exceeded') ||
+    lower.includes('connect econnrefused') ||
+    lower.includes('no connection') ||
+    lower.includes('failed to connect')
+  );
 }
 
 // ── gRPC response extractors ─────────────────────────────────────────

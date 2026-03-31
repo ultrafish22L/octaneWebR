@@ -12,7 +12,7 @@
  * - Type conversion for all Octane attribute types
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SceneNode } from '../../../services/OctaneClient';
 import type { OctaneClient } from '../../../services/OctaneClient';
 import { AttributeId, AttrType } from '../../../constants/OctaneProtocol';

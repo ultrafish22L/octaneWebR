@@ -325,6 +325,13 @@ export class ScenePlacementState {
         }
         if (live.position && live.scale) {
           // Recompute boundsWorld from live transform + original extents
+          // BUG: This re-centers extents at position (position ± halfExtent), destroying
+          // the asymmetric AABB that computeWorldAABB correctly computed for rotated meshes.
+          // For meshes with non-centered geometry (e.g., Z-up lantern with bounds Z=[-1.148, 0],
+          // rotated 90° X so base is at position and mesh extends UPWARD), this shifts the
+          // top bound down by half the height, causing fit_camera(hero) to crop the top.
+          // FIX: Store localMin/localMax + rotation on entry, recompute via computeWorldAABB.
+          // Or: store center-to-position offset and preserve it during refresh.
           const oldExt = {
             x: entry.boundsWorld.max.x - entry.boundsWorld.min.x,
             y: entry.boundsWorld.max.y - entry.boundsWorld.min.y,

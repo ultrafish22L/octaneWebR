@@ -44,7 +44,7 @@ Both paths use the same shared gRPC client with a compatibility layer for differ
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | **Browser UI**                | Scene outliner, node graph editor, parameter inspector, live render viewport, picker tools, themes                | [Below](#browser-ui)                                           |
 | **AI Scene Builder (MCP)**    | 65 tools let Claude build Octane scenes from natural language — nodes, materials, cameras, renders                | [MCP Guide](docs/mcp/README.md)                                |
-| **Art Direction System**      | Composition planning, spatial validation, mesh analysis, collision-free placement, vision critique                | [AD System](docs/ADSYSTEM.md)                                  |
+| **Art Direction System**      | Composition planning, spatial validation, mesh analysis, collision-free placement, vision scoring                 | [AD System](docs/ADSYSTEM.md)                                  |
 | **SEGA Artistic Guidance**    | 15-dimension mood/style vector with 25 presets (dramatic, noir, Vermeer, Kubrick...) and natural language control | [AD System](docs/ADSYSTEM.md#sega--semantic-artistic-guidance) |
 | **Asset Generation Pipeline** | AI image → 3D mesh → OBJ conversion → mesh analysis → Octane import → placement → render                          | [AD System](docs/ADSYSTEM.md#asset-generation-pipeline)        |
 | **Creative Knowledge**        | Lighting recipes for 7 moods, material presets for 30+ surfaces, composition rules                                | [Creative Guide](docs/mcp/CREATIVE.md)                         |
@@ -153,16 +153,16 @@ Pre-commit hooks (Husky) run linting and type checks automatically.
 
 ## Documentation
 
-| Doc                                                           | What's In It                                                                   |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [QUICKSTART.md](./QUICKSTART.md)                              | Full setup guide — running in 5 minutes                                        |
-| [docs/mcp/README.md](./docs/mcp/README.md)                    | Complete MCP user guide — all 65 tools, tips, pitfalls                         |
-| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)              | Lookup tables — pin layouts, node types, attribute IDs, presets                |
-| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                      | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                  |
-| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                | Creative guide — lighting, materials, composition                              |
-| [docs/ADSYSTEM.md](./docs/ADSYSTEM.md)                        | Art Direction system — composition, SEGA mood, vision critique, asset pipeline |
-| [octaneServGrpc/docs/TODO.md](../octaneServGrpc/docs/TODO.md) | Unimplemented RPCs, SDK limitations, open items                                |
-| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                      | Version history                                                                |
+| Doc                                                           | What's In It                                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [QUICKSTART.md](./QUICKSTART.md)                              | Full setup guide — running in 5 minutes                                       |
+| [docs/mcp/README.md](./docs/mcp/README.md)                    | Complete MCP user guide — all 65 tools, tips, pitfalls                        |
+| [docs/mcp/REFERENCE.md](./docs/mcp/REFERENCE.md)              | Lookup tables — pin layouts, node types, attribute IDs, presets               |
+| [docs/mcp/BUILD.md](./docs/mcp/BUILD.md)                      | Build protocols — SCRATCH, FRESH, DRESS, SHOW                                 |
+| [docs/mcp/CREATIVE.md](./docs/mcp/CREATIVE.md)                | Creative guide — lighting, materials, composition                             |
+| [docs/ADSYSTEM.md](./docs/ADSYSTEM.md)                        | Art Direction system — composition, SEGA mood, vision scoring, asset pipeline |
+| [octaneServGrpc/docs/TODO.md](../octaneServGrpc/docs/TODO.md) | Unimplemented RPCs, SDK limitations, open items                               |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md)                      | Version history                                                               |
 
 ### External Resources
 
