@@ -123,7 +123,8 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
 
 ```
 1.  Concept art — REST flux-pro/new → save concept_art.png
-1b. HDRI environment — REST flux-pro/new (equirectangular panorama prompt, landscape_16_9)
+1b. HDRI environment — (1) REST flux-pro/new (landscape reference image)
+    (2) REST hunyuan_world (image_url + prompt → proper panorama)
     → save hdri.png → apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
 2.  analyze_reference (Octane MCP) — extract composition
 3.  Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated, no pedestal)

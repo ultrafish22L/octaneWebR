@@ -106,8 +106,8 @@ These are hard constraints that apply regardless of which prompt you're followin
 
 1. **`analyze_geo` before `place_geo`** — always, no exceptions. Never skip mugshot VLM verification. Do NOT pass `source_endpoint`.
 2. **`place_geo` over manual `create_node` chains** — diagnose errors, don't work around
-3. **`fit_camera(framing_mode:"subjects")`** — always pass this, never bare `fit_camera()`
-4. **`set_camera` is Phase 4 ONLY** — wrong framing = wrong geometry
+3. **`fit_camera(framing_mode:"subjects")`** — always pass this, never bare `fit_camera()`. Frames hero+secondary+accent only (excludes ground/prop/light). Queries live transforms from Octane via pin names.
+4. **`set_camera` is Phase 4 ONLY** — BLOCKED by MCP before `framing_verified`. Returns error, not a warning.
 5. **Visual verify EVERY change** — `save_render` + `preview_screenshot`
 6. **Primitives via `place_geo`** — ground planes, backdrops, pedestals → `place_geo(type:"primitive", shape:"box")`. Never run `analyze_geo` on a flat quad.
 7. **MCP restart = `taskkill //F //IM node.exe`** — MCP is a Claude project-level server. Kill ALL node.exe, wait 3s, call any MCP tool → Claude auto-restarts with fresh tool discovery. Never start MCP manually. **⛔ NEVER skip a test because a tool is missing — that means MCP is stale. Kill, restart, verify, then test.**
