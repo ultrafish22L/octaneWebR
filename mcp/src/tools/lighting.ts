@@ -591,8 +591,24 @@ export function registerLightingTools(
             }
           }
           if (!boundsMin || !boundsMax) {
+            // Fallback: query scene bounds from Octane
+            try {
+              const sceneBounds = await client.callMethod('ApiSceneGraph', 'getSceneBounds', {});
+              if (sceneBounds?.bboxMin && sceneBounds?.bboxMax) {
+                boundsMin = sceneBounds.bboxMin;
+                boundsMax = sceneBounds.bboxMax;
+                mcpLog(
+                  'setup_lighting: using scene bounds as fallback (no placement state)',
+                  'info'
+                );
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+          if (!boundsMin || !boundsMax) {
             return errorResult(
-              'No subject bounds available. Pass subject_bounds_min/max or register objects with place_geo first.'
+              'No subject bounds available. Pass subject_bounds_min/max, register objects with place_geo, or ensure scene has geometry.'
             );
           }
         }
@@ -652,14 +668,20 @@ export function registerLightingTools(
           rtHandle = found.rtHandle;
         }
 
-        // 7. Create all lights
+        // 7. Create all lights — scale relative to subject size (smaller subjects = smaller lights)
+        const subjectExtent = Math.max(
+          boundsMax!.x - boundsMin!.x,
+          boundsMax!.y - boundsMin!.y,
+          boundsMax!.z - boundsMin!.z
+        );
+        const lightScale = Math.max(0.02, Math.min(0.2, subjectExtent * 0.08));
         const lights: Array<{ id: string; type: string; handle: number; pin: number }> = [];
         for (const light of recipe.lights) {
           const result = await createEmissiveLight(client, {
             shape: 'plane',
             position: light.position,
             rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 0.3, y: 0.3, z: 0.3 },
+            scale: { x: lightScale, y: lightScale, z: lightScale },
             temperature: light.temperature,
             power: light.power,
             double_sided: true,

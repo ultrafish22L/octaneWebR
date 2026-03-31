@@ -1,12 +1,11 @@
 /**
- * Import & Analysis Tools — import_geo, analyze_geo, place_geo
+ * Import & Analysis Tools — analyze_geo, place_geo, apply_material
  *
- * import_geo: Low-level geometry import (OBJ, GLB/glTF). OBJ loaded directly;
- *             GLB/glTF converted to OBJ first via Python trimesh.
- * analyze_geo: Analyzes a mesh file to suggest orientation, scale, and ground placement.
- * place_geo: Unified placement for primitives and meshes — wires to geo group, registers in scene.
- *              Results cached in .mesh_info.json sidecar files next to the OBJ.
- *              v2: Includes visual mugshot analysis via VLM for reliable orientation detection.
+ * analyze_geo: VLM orientation analysis. Converts GLB→OBJ, extracts PBR textures,
+ *              renders mugshots, caches results in .mesh_info.json sidecar.
+ * place_geo: Unified placement for primitives and meshes — auto-wires to RT,
+ *            reads sidecar transforms, wires all PBR textures, registers in scene.
+ * apply_material: Applies PBR recipe to existing material node in one call.
  *
  * Uses Python trimesh for geometry analysis (must be installed: pip install trimesh).
  */
@@ -46,20 +45,31 @@ const ASSETS_DIR = path.resolve(__dirname, '../../assets');
  * Convert GLB to OBJ using Python trimesh.
  * Returns { objPath, texturePaths, vertices, faces, bounds }.
  */
-async function convertGlbToObj(
-  glbPath: string,
-  outDir: string,
-  name: string
-): Promise<{
+interface GlbConversionResult {
   objPath: string;
   texturePaths: string[];
+  pbrTextures: {
+    albedo?: string;
+    metallic?: string;
+    roughness?: string;
+    normal?: string;
+    emissive?: string;
+    occlusion?: string;
+  };
   vertices: number;
   faces: number;
   boundsMin: [number, number, number];
   boundsMax: [number, number, number];
-}> {
+}
+
+async function convertGlbToObj(
+  glbPath: string,
+  outDir: string,
+  name: string
+): Promise<GlbConversionResult> {
   const script = `
 import trimesh, json, os, sys
+import numpy as np
 
 glb_path = sys.argv[1]
 out_dir = sys.argv[2]
@@ -68,19 +78,75 @@ name = sys.argv[3]
 os.makedirs(out_dir, exist_ok=True)
 scene = trimesh.load(glb_path)
 if hasattr(scene, 'geometry'):
-    mesh = trimesh.util.concatenate(list(scene.geometry.values()))
+    geos = list(scene.geometry.values())
+    mesh = trimesh.util.concatenate(geos)
 else:
+    geos = [scene]
     mesh = scene
 
 obj_path = os.path.join(out_dir, name + '.obj')
 mesh.export(obj_path, file_type='obj')
 
-# Find exported texture files
-textures = [f for f in os.listdir(out_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+# Extract PBR textures from first geometry with a PBRMaterial
+pbr = {}
+for geo in geos:
+    mat = getattr(getattr(geo, 'visual', None), 'material', None)
+    if mat is None or type(mat).__name__ != 'PBRMaterial':
+        continue
+
+    # Albedo / base color
+    bc = getattr(mat, 'baseColorTexture', None)
+    if bc is not None:
+        p = os.path.join(out_dir, 'albedo.png')
+        bc.save(p)
+        pbr['albedo'] = p
+
+    # Metallic-Roughness (glTF packs G=roughness, B=metallic)
+    mr = getattr(mat, 'metallicRoughnessTexture', None)
+    if mr is not None:
+        arr = np.array(mr)
+        if arr.ndim == 3 and arr.shape[2] >= 3:
+            from PIL import Image
+            roughness = Image.fromarray(arr[:,:,1])
+            metallic = Image.fromarray(arr[:,:,2])
+            rp = os.path.join(out_dir, 'roughness.png')
+            mp = os.path.join(out_dir, 'metallic.png')
+            roughness.save(rp)
+            metallic.save(mp)
+            pbr['roughness'] = rp
+            pbr['metallic'] = mp
+
+    # Normal
+    nm = getattr(mat, 'normalTexture', None)
+    if nm is not None:
+        p = os.path.join(out_dir, 'normal.png')
+        nm.save(p)
+        pbr['normal'] = p
+
+    # Emissive
+    em = getattr(mat, 'emissiveTexture', None)
+    if em is not None:
+        p = os.path.join(out_dir, 'emissive.png')
+        em.save(p)
+        pbr['emissive'] = p
+
+    # Occlusion
+    oc = getattr(mat, 'occlusionTexture', None)
+    if oc is not None:
+        p = os.path.join(out_dir, 'occlusion.png')
+        oc.save(p)
+        pbr['occlusion'] = p
+
+    break  # use first PBR material
+
+# Collect all texture files (for backward compat)
+diagnostic = ('.mugshot_', '.diag_', '.check_', '.hero.', '.mesh_info')
+textures = [f for f in os.listdir(out_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg')) and not any(d in f for d in diagnostic)]
 
 result = {
     'objPath': obj_path,
     'texturePaths': [os.path.join(out_dir, t) for t in textures],
+    'pbrTextures': pbr,
     'vertices': len(mesh.vertices),
     'faces': len(mesh.faces),
     'boundsMin': mesh.bounds[0].tolist(),
@@ -1647,6 +1713,7 @@ export function registerImportTools(
       // Phase 1: Get OBJ path — convert if GLB/glTF, use directly if OBJ
       let objPath: string;
       let texturePaths: string[] = [];
+      let pbrTextures: GlbConversionResult['pbrTextures'] = {};
       let vertices = 0;
       let faces = 0;
       let boundsMin: [number, number, number] = [0, 0, 0];
@@ -1660,17 +1727,42 @@ export function registerImportTools(
 
         // Check for .mtl companion — Octane reads it automatically
         const objDir = path.dirname(objPath);
-        const mtlPath = objPath.replace(/\.obj$/i, '.mtl');
+        // Parse mtllib directive from OBJ to find correct MTL filename
+        let mtlPath = objPath.replace(/\.obj$/i, '.mtl'); // fallback: same basename
+        try {
+          const objHead = fs.readFileSync(objPath, 'utf-8').slice(0, 2000);
+          const mtlMatch = objHead.match(/^mtllib\s+(.+)$/m);
+          if (mtlMatch) {
+            mtlPath = path.resolve(objDir, mtlMatch[1].trim());
+          }
+        } catch {
+          /* fallback to basename guess */
+        }
         if (fs.existsSync(mtlPath)) {
           hasMtl = true;
-          mcpLog(`import_geo: found .mtl companion — Octane will load textures from it`, 'info');
-          // Parse .mtl to find referenced texture maps
+          mcpLog(`import_geo: found .mtl companion at ${mtlPath}`, 'info');
+          // Parse .mtl to find referenced texture maps + PBR maps
           try {
             const mtlContent = fs.readFileSync(mtlPath, 'utf-8');
-            const mapLines = mtlContent.match(/^map_\w+\s+(.+)$/gm) || [];
+            const mapLines = mtlContent.match(/^map_\w+.*$/gm) || [];
             for (const line of mapLines) {
-              const texFile = line.replace(/^map_\w+\s+/, '').trim();
+              // Extract map type and filename (handle -bm flag for bump)
+              const parts = line.match(/^(map_\w+)\s+(?:-\w+\s+[\d.]+\s+)?(.+)$/);
+              if (!parts) continue;
+              const mapType = parts[1].toLowerCase();
+              const texFile = parts[2].trim();
               const texFullPath = path.resolve(objDir, texFile);
+              // Map MTL types to PBR channels
+              if (mapType === 'map_kd' && fs.existsSync(texFullPath))
+                pbrTextures.albedo = texFullPath;
+              if (mapType === 'map_pm' && fs.existsSync(texFullPath))
+                pbrTextures.metallic = texFullPath;
+              if (mapType === 'map_pr' && fs.existsSync(texFullPath))
+                pbrTextures.roughness = texFullPath;
+              if (mapType === 'map_bump' && fs.existsSync(texFullPath))
+                pbrTextures.normal = texFullPath;
+              if (mapType === 'map_ke' && fs.existsSync(texFullPath))
+                pbrTextures.emissive = texFullPath;
               if (fs.existsSync(texFullPath) && !texturePaths.includes(texFullPath)) {
                 texturePaths.push(texFullPath);
               }
@@ -1680,11 +1772,42 @@ export function registerImportTools(
             /* mtl parse is best-effort */
           }
         }
-        // Also pick up any loose texture files next to OBJ (exclude mugshots from analyze_geo)
+        // Check for PBR textures extracted by convertGlbToObj (standard names in same dir)
+        const PBR_FILENAMES: Array<[string, keyof typeof pbrTextures]> = [
+          ['albedo.png', 'albedo'],
+          ['metallic.png', 'metallic'],
+          ['roughness.png', 'roughness'],
+          ['normal.png', 'normal'],
+          ['emissive.png', 'emissive'],
+          ['occlusion.png', 'occlusion'],
+        ];
+        for (const [filename, channel] of PBR_FILENAMES) {
+          if (!pbrTextures[channel]) {
+            const fullPath = path.join(objDir, filename);
+            if (fs.existsSync(fullPath)) {
+              pbrTextures[channel] = fullPath;
+            }
+          }
+        }
+        if (Object.keys(pbrTextures).length > 0) {
+          mcpLog(`import_geo: PBR textures found: ${Object.keys(pbrTextures).join(', ')}`, 'info');
+        }
+
+        // Also pick up any loose texture files next to OBJ (exclude analyze_geo diagnostics)
         if (texturePaths.length === 0) {
+          const DIAGNOSTIC_PATTERNS = [
+            '.mugshot_',
+            '.diag_',
+            '.check_',
+            '.hero.',
+            '.mesh_info',
+            '.mugshot_contact',
+          ];
           const siblings = fs.readdirSync(objDir);
           texturePaths = siblings
-            .filter(f => /\.(png|jpg|jpeg)$/i.test(f) && !f.includes('.mugshot_'))
+            .filter(
+              f => /\.(png|jpg|jpeg)$/i.test(f) && !DIAGNOSTIC_PATTERNS.some(p => f.includes(p))
+            )
             .map(f => path.join(objDir, f));
         }
       } else {
@@ -1697,10 +1820,15 @@ export function registerImportTools(
         );
         objPath = conv.objPath;
         texturePaths = conv.texturePaths;
+        pbrTextures = conv.pbrTextures || {};
         vertices = conv.vertices;
         faces = conv.faces;
         boundsMin = conv.boundsMin;
         boundsMax = conv.boundsMax;
+        mcpLog(
+          `import_geo: PBR textures: ${Object.keys(pbrTextures).join(', ') || 'none'}`,
+          'info'
+        );
       }
 
       // Phase 2: Create NT_GEO_MESH and set filename
@@ -1796,74 +1924,100 @@ export function registerImportTools(
         doCycleCheck: true,
       });
 
-      let texHandle = 0;
-      // If OBJ has .mtl, Octane loads textures internally — don't override albedo.
-      // Only create explicit texture node for GLB conversions or loose textures without .mtl.
-      if (texturePaths.length > 0 && !hasMtl) {
+      // ── PBR Texture Wiring ──────────────────────────────────────────
+      // Octane's gRPC OBJ loader does NOT process MTL texture directives.
+      // We create NT_TEX_IMAGE nodes and wire them to the correct material pins.
+      // NT_MAT_UNIVERSAL pin layout: 2=albedo(RGB), 4=metallic(float), 8=roughness(float), 36=bump/normal
+
+      /** Helper: create an image texture node, set filename, connect to material pin */
+      async function wireTexture(
+        texPath: string,
+        matPin: number,
+        label: string,
+        isFloat = false
+      ): Promise<number> {
+        const nodeType = isFloat ? 36 /* NT_TEX_FLOATIMAGE */ : NodeTypeId.NT_TEX_IMAGE;
         const texResult = await client.callMethod('ApiNode', 'create', {
-          type: NodeTypeId.NT_TEX_IMAGE,
+          type: nodeType,
           ownerGraph: { handle: String(rootGraph), type: OBJ_API_NODE_GRAPH },
           configurePins: true,
         });
-        texHandle = extractHandle(texResult) ?? 0;
+        const handle = extractHandle(texResult) ?? 0;
+        if (!handle) {
+          mcpLog(`import_geo: failed to create ${label} texture node`, 'warn');
+          return 0;
+        }
+        client.sceneCache.addNode(
+          handle,
+          label,
+          isFloat ? 'NT_TEX_FLOATIMAGE' : 'NT_TEX_IMAGE',
+          nodeType
+        );
+        notifyWebapp({ type: 'nodeAdded', handle });
 
-        if (texHandle) {
-          client.sceneCache.addNode(texHandle, 'Texture', 'NT_TEX_IMAGE', 34);
-          notifyWebapp({ type: 'nodeAdded', handle: texHandle });
-
-          // Set texture filename — extended timeout for large textures
-          await client.callMethod(
-            'ApiItem',
-            'setValueByAttrID',
-            {
-              objectPtr: { handle: String(texHandle), type: OBJ_API_ITEM },
-              attribute_id: AttributeId.A_FILENAME,
-              string_value: texturePaths[0].replace(/\//g, '\\'),
-              evaluate: false,
-            },
-            120_000
-          );
-
-          // Connect texture → material albedo (pin 2 on NT_MAT_UNIVERSAL)
-          await client.callMethod('ApiNode', 'connectToIx', {
-            objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
-            pinIdx: 2, // albedo pin
-            sourceNode: { handle: String(texHandle), type: OBJ_API_NODE },
+        await client.callMethod(
+          'ApiItem',
+          'setValueByAttrID',
+          {
+            objectPtr: { handle: String(handle), type: OBJ_API_ITEM },
+            attribute_id: AttributeId.A_FILENAME,
+            string_value: texPath.replace(/\//g, '\\'),
             evaluate: false,
-            doCycleCheck: true,
-          });
+          },
+          120_000
+        );
+
+        await client.callMethod('ApiNode', 'connectToIx', {
+          objectPtr: { handle: String(matHandle), type: OBJ_API_NODE },
+          pinIdx: matPin,
+          sourceNode: { handle: String(handle), type: OBJ_API_NODE },
+          evaluate: false,
+          doCycleCheck: true,
+        });
+
+        mcpLog(`import_geo: wired ${label} texture → material pin ${matPin}`, 'info');
+        return handle;
+      }
+
+      let texHandle = 0;
+      const wiredTextures: string[] = [];
+
+      // Albedo (pin 2) — use PBR albedo, or first texture from texturePaths
+      const albedoPath = pbrTextures.albedo || (texturePaths.length > 0 ? texturePaths[0] : null);
+      if (albedoPath) {
+        texHandle = await wireTexture(albedoPath, 2, 'Albedo');
+        if (texHandle) wiredTextures.push('albedo');
+      }
+
+      // Metallic (pin 4) — texture map if available, otherwise scalar
+      if (pbrTextures.metallic) {
+        await wireTexture(pbrTextures.metallic, 4, 'Metallic', true);
+        wiredTextures.push('metallic');
+      } else {
+        const metallicChild = await getConnectedChild(client, matHandle, 4);
+        if (metallicChild) {
+          await setAttrRaw(client, metallicChild, AttributeId.A_VALUE, 9, metallic ?? 0.3);
         }
       }
 
-      // Set metallic and roughness on material child pins via shared helper
-      const matPins = await enumeratePins(client, matHandle);
-      let metallicHandle = 0;
-      let roughnessHandle = 0;
-      for (const pin of matPins) {
-        if (pin.name === 'metallic' && pin.connectedHandle) metallicHandle = pin.connectedHandle;
-        if (pin.name === 'roughness' && pin.connectedHandle) roughnessHandle = pin.connectedHandle;
-        if (metallicHandle && roughnessHandle) break;
+      // Roughness (pin 8) — texture map if available, otherwise scalar
+      if (pbrTextures.roughness) {
+        await wireTexture(pbrTextures.roughness, 8, 'Roughness', true);
+        wiredTextures.push('roughness');
+      } else {
+        const roughnessChild = await getConnectedChild(client, matHandle, 8);
+        if (roughnessChild) {
+          await setAttrRaw(client, roughnessChild, AttributeId.A_VALUE, 9, roughness ?? 0.4);
+        }
       }
 
-      const metallicVal = metallic ?? 0.3;
-      const roughnessVal = roughness ?? 0.4;
+      // Normal/Bump (pin 36) — texture map if available
+      if (pbrTextures.normal) {
+        await wireTexture(pbrTextures.normal, 36, 'Normal');
+        wiredTextures.push('normal');
+      }
 
-      if (metallicHandle) {
-        await client.callMethod('ApiItem', 'setValueByAttrID', {
-          objectPtr: { handle: String(metallicHandle), type: OBJ_API_ITEM },
-          attribute_id: AttributeId.A_VALUE,
-          float3_value: { x: metallicVal, y: metallicVal, z: metallicVal },
-          evaluate: false,
-        });
-      }
-      if (roughnessHandle) {
-        await client.callMethod('ApiItem', 'setValueByAttrID', {
-          objectPtr: { handle: String(roughnessHandle), type: OBJ_API_ITEM },
-          attribute_id: AttributeId.A_VALUE,
-          float3_value: { x: roughnessVal, y: roughnessVal, z: roughnessVal },
-          evaluate: false,
-        });
-      }
+      mcpLog(`import_geo: PBR textures wired: [${wiredTextures.join(', ')}]`, 'info');
 
       mcpLog(
         `import_geo: complete — mesh=${meshHandle} placement=${placementHandle} material=${matHandle} tex=${texHandle || 'none'}`,
@@ -1908,6 +2062,7 @@ export function registerImportTools(
         },
         obj_path: objPath,
         textures: texturePaths,
+        pbr_wired: wiredTextures,
         vertices,
         faces,
         bounds: {
@@ -2133,7 +2288,9 @@ export function registerImportTools(
 
         // Tier 3: Lean VLM orientation — diagnose / correct / verify / hero
         mcpLog(`analyze_geo: Tier 3 — lean VLM orientation`, 'info');
-        const outputDir = path.dirname(resolved);
+        const meshDir = path.dirname(resolved);
+        const outputDir = path.join(meshDir, 'mugshots');
+        fs.mkdirSync(outputDir, { recursive: true });
         const baseName = path.basename(resolved, '.obj');
         const rawMin = { x: geo.boundsMin[0], y: geo.boundsMin[1], z: geo.boundsMin[2] };
         const rawMax = { x: geo.boundsMax[0], y: geo.boundsMax[1], z: geo.boundsMax[2] };
@@ -2247,7 +2404,7 @@ export function registerImportTools(
               rawMax
             );
             heroPath = heroPaths[0] || '';
-            visualCheck.hero_shot = path.basename(heroPath);
+            visualCheck.hero_shot = path.relative(meshDir, heroPath);
             mcpLog(`analyze_geo: hero shot → ${heroPath}`, 'info');
           } else {
             // === PASS 1: Diagnosis — render 2-3 raw views, ask VLM what it sees ===
@@ -2302,7 +2459,7 @@ export function registerImportTools(
             });
             vlmTranscript.push({
               type: 'text',
-              text: `--- MUGSHOT PASS 1 IMAGES ---\n${diagPaths.map(p => path.basename(p)).join(', ')}\n--- END IMAGES ---`,
+              text: `--- MUGSHOT PASS 1 IMAGES ---\n${diagPaths.map(p => path.relative(meshDir, p)).join(', ')}\n--- END IMAGES ---`,
             });
 
             // Parse Pass 1 response
@@ -2319,7 +2476,7 @@ export function registerImportTools(
               protocol: 'lean_2pass',
               vlm_model: pass1.model || vlmModel,
               pass1_diagnosis: diag,
-              pass1_views: diagPaths.map(p => path.basename(p)),
+              pass1_views: diagPaths.map(p => path.relative(meshDir, p)),
             };
 
             // === MAP DIAGNOSIS → ROTATION (deterministic) ===
@@ -2412,7 +2569,7 @@ export function registerImportTools(
             });
             vlmTranscript.push({
               type: 'text',
-              text: `--- MUGSHOT PASS 2 (attempt ${attempt + 1}) IMAGES ---\n${checkPaths.map(p => path.basename(p)).join(', ')}\n--- END IMAGES ---`,
+              text: `--- MUGSHOT PASS 2 (attempt ${attempt + 1}) IMAGES ---\n${checkPaths.map(p => path.relative(meshDir, p)).join(', ')}\n--- END IMAGES ---`,
             });
 
             const verifyMatch = pass2.text.match(/\{[\s\S]*\}/);
@@ -2423,7 +2580,7 @@ export function registerImportTools(
                 'info'
               );
               visualCheck[`pass2_attempt_${attempt + 1}`] = {
-                views: checkPaths.map(p => path.basename(p)),
+                views: checkPaths.map(p => path.relative(meshDir, p)),
                 result: vResult,
               };
 
@@ -2898,9 +3055,26 @@ export function registerImportTools(
         // ── Mesh path: import via importGeoInternal, read sidecar, wire, register ──
         if (type === 'mesh') {
           if (!obj_path) return errorResult(new Error('obj_path is required for type="mesh"'));
-          const resolved = path.resolve(obj_path);
+          let resolved = path.resolve(obj_path);
           if (!fs.existsSync(resolved))
             return errorResult(new Error(`File not found: ${resolved}`));
+
+          // GLB/glTF: analyze_geo converts to OBJ in a subdirectory. Use the OBJ path.
+          const ext = path.extname(resolved).toLowerCase();
+          if (ext === '.glb' || ext === '.gltf') {
+            const baseName = path.basename(resolved, ext);
+            const objInSubdir = path.join(path.dirname(resolved), baseName, baseName + '.obj');
+            if (fs.existsSync(objInSubdir)) {
+              mcpLog(`place_geo: GLB input → using converted OBJ: ${objInSubdir}`, 'info');
+              resolved = objInSubdir;
+            } else {
+              return errorResult(
+                new Error(
+                  `GLB file needs conversion first. Run analyze_geo("${obj_path}") to convert to OBJ, then call place_geo with the OBJ path: ${objInSubdir}`
+                )
+              );
+            }
+          }
 
           // Read sidecar for transforms
           const sidecarPath = resolved.replace(/\.obj$/i, '.mesh_info.json');

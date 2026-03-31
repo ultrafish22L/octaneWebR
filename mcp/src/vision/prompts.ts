@@ -109,22 +109,86 @@ Scale by ${scaleHint} to get world-space coordinates.`;
 }
 
 /**
- * Build a holistic comparison prompt for concept art vs render (two images).
- * Sent to Sonnet with concept as Image 1, render as Image 2.
- * Keep it short — Sonnet has both images, it can see what's wrong.
+ * Build a context-aware comparison prompt for concept art vs render (two images).
+ * Uses AdContext to tailor scoring to current phase, iteration, and mood target.
  */
-export function buildComparisonCritiquePrompt(_spec: CompositionSpec, _phase?: number): string {
-  if (_phase === 1) {
-    // Clay mode — grade composition/framing ONLY, ignore materials/lighting/mood
-    return `Image 1 is the concept art. Image 2 is a CLAY MODE 3D render (no materials, no lighting — flat shading only).
-Grade the render's COMPOSITION AND FRAMING only. Ignore colors, materials, lighting, mood, and surface detail — those are intentionally absent in clay mode.
-Focus on: object placement, camera angle, silhouette match, spatial layout, scale relationships, and whether the key elements are present and correctly positioned.
-Answer as JSON: { "grade": "C+", "mood_match": 3, "density_match": 3, "composition_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }
-IMPORTANT: mood_match and density_match should be scored leniently (3 = acceptable) since clay mode has no materials or lighting. composition_match is the primary score.`;
+export function buildComparisonCritiquePrompt(
+  ctx: import('../ArtDirectionState').AdContext
+): string {
+  // Build expected objects list from context
+  const objectList =
+    ctx.objects.length > 0
+      ? `\nExpected objects: ${ctx.objects.map(o => `${o.id} (${o.role})`).join(', ')}.`
+      : '';
+
+  // ── CLAY MODE (Phase 1) ──────────────────────────────────────────
+  if (ctx.isClay) {
+    return `Image 1 is the concept art. Image 2 is a CLAY MODE 3D render.
+${objectList}
+
+CLAY MODE RULES — read these before scoring:
+- Clay mode replaces ALL materials with uniform flat color. There are NO textures, NO reflections, NO darkness, NO lighting effects. This is intentional.
+- Do NOT penalize for: missing darkness/shadows, missing reflections, missing material properties (marble, metal, glass), wrong colors, missing mood/atmosphere, missing environmental lighting. These CANNOT exist in clay mode and will be added later.
+- Do NOT list material or lighting properties in missing_elements. "Reflective floor", "dark background", "dramatic lighting" are NOT missing — they are disabled.
+- ONLY evaluate: Are the correct SHAPES present? Are they in the right POSITIONS relative to each other? Is the CAMERA ANGLE similar? Do the SILHOUETTES and SCALE RELATIONSHIPS match?
+
+Score composition_match 1-5 based ONLY on spatial layout:
+5 = all objects present, correct positions, camera matches concept
+4 = objects present with minor position/scale differences
+3 = key objects present, rough layout matches
+2 = some objects missing or major position errors
+1 = layout doesn't match concept at all
+
+Answer as JSON: { "grade": "C+", "composition_match": 3, "lighting_match": 3, "material_match": 3, "mood_match": 3, "depth_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }
+IMPORTANT: In clay mode, lighting_match, material_match, mood_match, and depth_match MUST be 3 (neutral). Only composition_match matters. missing_elements should ONLY list missing GEOMETRY (objects/shapes), never materials or lighting.`;
   }
+
+  // ── FULL RENDER (Phase 2+) ───────────────────────────────────────
+
+  // Build mood description from SEGA intent
+  let moodLine = '';
+  if (ctx.segaActiveDimensions.length > 0) {
+    const dims = ctx.segaActiveDimensions
+      .map(d => {
+        const v = ctx.segaIntent[d];
+        const label = v > 0.3 ? 'high' : v < -0.3 ? 'low' : 'moderate';
+        return `${label} ${d}`;
+      })
+      .slice(0, 5)
+      .join(', ');
+    moodLine = `\nTarget mood: ${dims}.${ctx.lightingMood ? ` Lighting mood: ${ctx.lightingMood}.` : ''}`;
+  }
+
+  // Build iteration context
+  let iterationLine = '';
+  if (ctx.iteration > 1 && ctx.previousGrade) {
+    iterationLine = `\nIteration ${ctx.iteration}. Previous grade: ${ctx.previousGrade}.`;
+    if (ctx.previousFixes.length > 0) {
+      iterationLine += ` Previous top fixes: ${ctx.previousFixes.join('; ')}.`;
+    }
+    iterationLine += ' Evaluate whether previous issues were addressed.';
+  }
+  if (ctx.stagnating) {
+    iterationLine +=
+      '\n⚠️ Scene is STAGNATING (last 2 iterations showed <0.3 improvement). Recommend large structural changes, not tweaks.';
+  }
+
   return `Image 1 is the concept art. Image 2 is the 3D render.
-Compare them and grade the render A-F.
-Answer as JSON: { "grade": "C+", "mood_match": 3, "density_match": 3, "composition_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }`;
+${objectList}${moodLine}${iterationLine}
+
+Compare the render against the concept art. Grade A-F.
+
+Score each dimension 1-5:
+- composition_match: Object placement, camera angle, framing, spatial layout
+- lighting_match: Light direction, shadow quality, contrast, temperature
+- material_match: Surface quality, roughness, reflectivity, texture detail
+- mood_match: Overall atmosphere, color palette, emotional tone vs target
+- depth_match: Foreground/mid/background separation, depth cues, scale
+
+Grade scale: A=exceptional, B=good (minor issues), C=acceptable (clear issues), D=poor (major problems), F=fundamentally wrong.
+
+Answer as JSON: { "grade": "C+", "composition_match": 3, "lighting_match": 3, "material_match": 3, "mood_match": 3, "depth_match": 3, "missing_elements": [], "top_fixes": [], "notes": "" }
+top_fixes: max 3 items, most impactful first. notes: max 1 sentence.`;
 }
 
 /**

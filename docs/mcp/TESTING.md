@@ -6,6 +6,8 @@
 
 **MCP restart = SCRATCH.** If the MCP server process dies, gets killed, or restarts for any reason (including after `npm run build`), you MUST run the full SCRATCH protocol before resuming tests. An MCP restart invalidates all cached handles, clears the relay, and resets session state. Resuming mid-test after an MCP restart produces false results — stale handles get gated, the relay may be dead, and the preview viewport may be disconnected. No shortcuts.
 
+**⛔ NEVER skip a test because tools are stale or missing.** If a tool you expect to exist is not in the tool list, the MCP is running old code. You MUST: `taskkill //F //IM node.exe` → wait 3s → call `get_octane_version` to trigger MCP restart → verify the tool exists → THEN test. "Tool not found" is NEVER an acceptable reason to skip or defer a test. It means your MCP is stale — fix it, don't work around it.
+
 **Testing is always DRESS mode.** Stop on failure, debug, fix, verify, resume. See `BUILD.md` §2.
 
 **The dev server and preview window MUST be running for ALL tests.** No exceptions — not for smoke tests, not for gotcha verification, not for "quick checks". The preview viewport is how you confirm Octane is alive and rendering. Without it you are testing blind.

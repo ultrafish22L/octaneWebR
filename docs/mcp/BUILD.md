@@ -10,7 +10,7 @@ If you're directing the AI builder (telling Claude what to create), here's what 
 
 1. **Plan** — Analyze reference images, compute spatial layout, set artistic mood. No rendering yet — pure math and intent.
 2. **Frame** — Build the first object, start the render, frame the camera. Get something on screen fast.
-3. **Dress** — Materials, lighting, environment. Apply SEGA-driven values for mood consistency.
+3. **Style** — Materials, lighting, environment. Apply SEGA-driven values for mood consistency.
 4. **Critique** — Vision model scores the render. Fix the weakest dimension. Re-render. Loop until good.
 
 Each phase has hard gates — you don't move forward until the current phase passes. This prevents the common failure mode of polishing materials on a badly framed scene.
@@ -56,11 +56,11 @@ Only after all 12 steps pass: proceed to DRESS or SHOW.
 
 ### Build Gotchas
 
-| Problem                              | Fix                                                                              |
-| ------------------------------------ | -------------------------------------------------------------------------------- |
-| `tsc -p mcp/tsconfig.json` OOMs      | **NEVER use tsc for MCP builds.** Use `cd mcp && npm run build` (esbuild, 10ms). |
-| MCP server running stale code        | `cd mcp && npm run build`, then `taskkill //F //IM node.exe` + restart           |
-| GrpcProxyServer changes not compiled | Always use `npm run build` (full build includes `build:grpc-server` step)        |
+| Problem                              | Fix                                                                                                                                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tsc -p mcp/tsconfig.json` OOMs      | **NEVER use tsc for MCP builds.** Use `cd mcp && npm run build` (esbuild, 10ms).                                                                                        |
+| MCP server running stale code        | `cd mcp && npm run build`, then `taskkill //F //IM node.exe` + restart. **⛔ NEVER skip a test because a tool is missing — stale MCP is a bug, not a reason to defer.** |
+| GrpcProxyServer changes not compiled | Always use `npm run build` (full build includes `build:grpc-server` step)                                                                                               |
 
 ### Build Modes (after SCRATCH completes)
 
@@ -138,7 +138,7 @@ When running autonomously (multi-scene, unattended), these gates are **non-negot
 
 ### Pre-Phase: analyze_geo (BLOCKING — before ANY placement)
 
-> **⛔ HARD GATE: Do NOT call `import_geo` on any mesh until `analyze_geo` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
+> **⛔ HARD GATE: Do NOT call `place_geo` on any mesh until `analyze_geo` has run on it.** MCP will warn if you skip this. Placing a mesh without analysis wastes entire iterations on wrong orientation.
 
 Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-pass — no Octane calls in the scene yet.
 
@@ -161,8 +161,8 @@ Run `analyze_geo` on every mesh asset BEFORE building the scene. This is a pre-p
 - `benchmark_vlm_models` — Score VLM models from configuration runs, set ground truth, rank by accuracy.
 
 ```
-❌ import_geo("gargoyle.obj") → guess rotation → wrong → waste iterations
-✅ analyze_geo("gargoyle.obj") → read sidecar → place_geo or import_geo with correction → correct first try
+❌ place_geo("gargoyle.obj") without analyze_geo → guess rotation → wrong → waste iterations
+✅ analyze_geo("gargoyle.obj") → read sidecar → place_geo with correction → correct first try
 ```
 
 ---
@@ -200,7 +200,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 | Step | Action                                                                                                                                    | Result                                                                                                                                                                                                                                                               |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `create_node(NT_RENDERTARGET)` + `set_clay_mode(2)`                                                                                       | RT handle + clay mode active                                                                                                                                                                                                                                         |
-| 2    | Import mesh via `import_geo(file_path)` → placement → geo group → RT `pin_index:3`                                                        | **Object exists**. `import_geo` handles OBJ/GLB, creates mesh+placement+material, returns all handles including transform. Apply `mesh_info` rotation/scale from cached sidecar.                                                                                     |
+| 2    | Place mesh via `place_geo(type:"mesh", obj_path)` → auto-wires to geo group → RT                                                          | **Object exists**. `place_geo` handles OBJ/GLB, creates mesh+placement+material+PBR textures, wires to RT, auto-registers. Reads sidecar for rotation/scale.                                                                                                         |
 | 3    | `start_render` → `fit_camera(yaw, elevation, margin)` (auto-frames scene bounds)                                                          | **FIRST VISUAL — human sees something.** `fit_camera` computes camera position from scene bounds. Params: `elevation` (degrees above horizon, default 20), `yaw` (orbit degrees, default 0 = front), `margin` (fraction, default 0.3). No manual camera math needed. |
 | 4    | Create environment → `connect_nodes(env, RT, pin_name:"environment")`. Create PT kernel → `connect_nodes(kernel, RT, pin_name:"kernel")`. | Sky appears (but clay mode — no lighting effects yet). Use `NT_KERN_PATHTRACING` (type ID 25).                                                                                                                                                                       |
 | 5    | Add remaining scene objects (ground, props) → `fit_camera()` after EACH                                                                   | Verify all objects visible in clay. **GATE: `critique_render` must pass composition before Phase 2.**                                                                                                                                                                |
@@ -208,7 +208,7 @@ Run BEFORE creating any nodes. Pure math — validates layout without touching O
 **Hard rules for Phase 1:**
 
 - **Clay mode stays ON** until `critique_render` passes. `critique_render` warns if clay is off during early iterations.
-- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. **Clay uses a composition-only scale:** Sonnet is told it's a clay render and grades framing/composition only (ignoring materials, lighting, mood). Pass = `composition_match >= 3`. When passed, `framing_verified` is set automatically and the response tells you to proceed to Phase 2. **This gate is enforced mechanically** — you cannot rationalize past a failing composition score.
+- **`critique_render` IN CLAY is the gate** — do NOT eyeball the clay render and move on. You MUST call `critique_render` while still in clay mode. **Clay uses a composition-only scale:** Sonnet is explicitly instructed that clay replaces ALL materials with uniform flat color — it grades SPATIAL LAYOUT ONLY (shapes present, positions correct, camera angle, silhouettes, scale relationships). It does NOT penalize for missing darkness, reflections, textures, lighting, or mood. `missing_elements` lists only missing geometry, never material properties. `mood_match` and `density_match` are always 3 (neutral) in clay. Pass = `composition_match >= 3`. When passed, `framing_verified` is set automatically. **This gate is enforced mechanically** — you cannot rationalize past a failing composition score.
 - **Only `fit_camera`** — NEVER `set_camera` to work around framing problems. If `fit_camera` frames wrong, the geometry is wrong — fix the geometry (position, scale, floor plane size). `set_camera` is for Phase 4 hero shots only.
 - **No infinite floor planes.** A floor plane at scale 30 creates 300-unit bounds and makes `fit_camera` useless. Use scene-appropriate ground geometry (hills, platforms) that fits the composition. If you need a ground plane, keep it small (scale ≤ 3x the scene width).
 - **No lighting tuning.** Don't touch sundir, turbidity, sun size, or materials. That's Phase 2.
@@ -252,10 +252,10 @@ If ANY check fails, fix geometry/camera BEFORE running `critique_render`. Don't 
 
 ```
 ❌ WRONG Phase 1:
-  import_geo → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → dress
+  place_geo → set_camera({manually tweaked}) → eyeball clay render → set_clay_mode(0) → style
 
 ✅ RIGHT Phase 1:
-  import_geo → apply mesh_info rotation/scale → fit_camera() → save_render → critique_render (clay)
+  place_geo (reads sidecar automatically) → fit_camera() → save_render → critique_render (clay)
   → Sonnet grade C+? → YES → set_clay_mode(0) → Phase 2
   → Sonnet grade D/F? → fix geometry → fit_camera() → critique_render again
 ```

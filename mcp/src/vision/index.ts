@@ -300,9 +300,11 @@ export async function analyzeReference(
 
 export interface ComparisonCritiqueResult {
   grade: string;
-  mood_match: number;
-  density_match: number;
   composition_match: number;
+  lighting_match: number;
+  material_match: number;
+  mood_match: number;
+  depth_match: number;
   missing_elements: string[];
   top_fixes: string[];
   notes: string;
@@ -337,9 +339,11 @@ export async function critiqueWithReference(
     mcpLog('VISION: Sonnet critique response not parseable as JSON', 'warn');
     return {
       grade: '?',
-      mood_match: 0,
-      density_match: 0,
       composition_match: 0,
+      lighting_match: 0,
+      material_match: 0,
+      mood_match: 0,
+      depth_match: 0,
       missing_elements: [],
       top_fixes: [],
       notes: text,
@@ -352,9 +356,11 @@ export async function critiqueWithReference(
 
   return {
     grade: String(parsed.grade || '?'),
-    mood_match: Number(parsed.mood_match || 0),
-    density_match: Number(parsed.density_match || 0),
     composition_match: Number(parsed.composition_match || 0),
+    lighting_match: Number(parsed.lighting_match ?? parsed.mood_match ?? 0),
+    material_match: Number(parsed.material_match ?? parsed.density_match ?? 0),
+    mood_match: Number(parsed.mood_match || 0),
+    depth_match: Number(parsed.depth_match ?? parsed.density_match ?? 0),
     missing_elements: Array.isArray(parsed.missing_elements) ? parsed.missing_elements : [],
     top_fixes: Array.isArray(parsed.top_fixes) ? parsed.top_fixes : [],
     notes: String(parsed.notes || ''),

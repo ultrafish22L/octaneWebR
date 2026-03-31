@@ -4,25 +4,11 @@
  * Encodes domain knowledge from CLAUDE.md and docs/mcp/ so any MCP client
  * gets the knowledge, not just Claude Code with CLAUDE.md loaded.
  *
- * 10 prompts total:
- *   4 original (updated): setup-scene, add-material, build-lit-object, troubleshoot-scene
- *   6 new: dress-workflow, mesh-pipeline, setup-lighting, critique-loop,
- *          scene-checklist, troubleshoot-scene (expanded from troubleshoot-render)
+ * 9 prompts:
+ *   4 original: setup-scene, add-material, build-lit-object, troubleshoot-scene
+ *   5 new: ad-workflow, mesh-pipeline, setup-lighting, critique-loop, scene-checklist
  *
- * Tool names updated for v3 renames:
- *   create_and_connect → create_connected
- *   import_geo → import_geo
- *   attach_mesh → place_geo
- *   update_scene → flush_changes
- *   delete_unconnected → cleanup_orphans
- *   get_all_attributes → list_attributes
- *   get_attribute_info → describe_attribute
- *   get_pin_value → read_pin_value
- *   refresh_webapp → refresh_ui
- *   is_node_animated → list_animated_attributes
- *   save_user_preset → save_sega_preset
- *   score_mugshot_models → benchmark_vlm_models
- *
+ * v3.0.1: All prompts reference composite tools (place_geo, apply_material, setup_lighting, create_light).
  * Constants moved to octane://constants resource — prompts reference it.
  */
 
@@ -45,44 +31,29 @@ export function registerPrompts(server: McpServer) {
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Set up a basic Octane scene from scratch. Follow these steps exactly:
+            text: `Set up a basic Octane scene from scratch.
 
-1. **Create Render Target (RT)**
-   - create_node("NT_RENDERTARGET")
-   - This auto-creates camera (pin 0), kernel (pin 6), and other internal children
+1. **Place geometry** — place_geo handles RT creation, geo wiring, and registration automatically:
+   - Primitive: place_geo(type:"primitive", shape:"sphere", position:{x:0,y:1,z:0}, role:"hero")
+   - Mesh: analyze_geo(obj_path) first, then place_geo(type:"mesh", obj_path, role:"hero")
+   - Creates RT + geo group on first call. Subsequent calls reuse the existing RT.
 
-2. **DOF is auto-disabled** on new RTs (aperture set to 0). For loaded/old RTs, check aperture:
-   - RT → pin 0 (camera) → pin 14 (aperture child) → set_attribute(child, 185, 9, 0.0)
+2. **Apply material** — suggest_material(surface_type) → apply_material(material_handle, ...recipe):
+   - suggest_material("gold") → returns roughness, metallic, specular, IOR, albedo
+   - apply_material(material_handle, albedo:{x:1,y:0.77,z:0.34}, roughness:0.15, metallic:1)
+   - Skip albedo with skip_albedo:true if mesh has .mtl textures
 
-3. **Set Camera Position**
-   - set_camera with position=[0, 2, -5], target=[0, 0, 0], up=[0, 1, 0]
+3. **Frame camera** — fit_camera(framing_mode:"subjects") after every geo add
 
-4. **Create Geometry Chain**
-   - create_node("NT_GEO_GROUP") → geo group
-   - create_connected("NT_GEO_PLACEMENT", geo_group_handle, pin_index=0)
-   - create_connected("NT_GEO_OBJECT", placement_handle, pin_name="geometry")
-   - connect_nodes(target=RT, pin_index=3, source=geo_group) — wires geometry to RT
+4. **Render & verify** — start_render() → save_render(path) → check output
+   - All white → missing geometry connections (check RT pin 3)
+   - Blurry → DOF on (set aperture to 0 on camera child pin 14)
 
-5. **Create Basic Material** (optional but recommended)
-   - create_connected("NT_MAT_UNIVERSAL", mesh_handle, pin_index=1)
-   - NOTE: NT_GEO_OBJECT uses pin 1 for material (pin 0 is primitive enum). NT_GEO_MESH uses pin 0.
+5. **Environment** — for quick setup, the daylight env auto-created by RT is sufficient.
+   For HDRI: create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1) + image texture.
 
-6. **Add Environment Lighting**
-   - create_connected("NT_ENV_DAYLIGHT", RT_handle, pin_index=1) — or NT_ENV_TEXTURE
-
-7. **Set Emission Efficiency** (defaults to 0.025 = 40x dim)
-   - For any emissive material: set attribute to 1.0
-
-8. **Render & Verify**
-   - start_render(RT_handle)
-   - save_render("path/to/output.png")
-   - Check render: if all white → missing connections; if blurry → DOF still on
-
-KEY VALUES — query octane://constants for full reference:
-- RT pins: camera=0, environment=1, geometry=3, film=4, kernel=6
-- Transforms: A_TRANSLATION=172, A_ROTATION=137 (degrees!), A_SCALE=139 (all AT_FLOAT3=11)
-- A_VALUE=185, A_FILENAME=34
-- Material → NT_GEO_MESH (pin 0) or NT_GEO_OBJECT (pin 1)`,
+Query octane://constants for attribute IDs and type codes.
+Query octane://docs/reference/3 for RT pin layout.`,
           },
         },
       ],
@@ -107,36 +78,30 @@ KEY VALUES — query octane://constants for full reference:
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Add a material to an existing mesh node. Follow these steps:
+            text: `Add a PBR material to an existing mesh.
 
-1. **Create Universal Material**
-   - create_connected("NT_MAT_UNIVERSAL", mesh_handle, pin_index=0)  # NT_GEO_MESH
-   - For NT_GEO_OBJECT use pin_index=1 (pin 0 is the primitive enum)
-   - This creates the material AND connects it to the mesh's material pin
+## Quick path (recommended)
+1. suggest_material(surface_type) → returns PBR recipe (roughness, metallic, specular, IOR, albedo)
+2. apply_material(material_handle, ...recipe values) → applies all properties in one call
+   - Set skip_albedo:true if mesh has .mtl textures (preserves existing texture colors)
+   - Call with surface_type:"list" to see all 30+ available types (gold, glass, moss, marble, etc.)
 
-2. **Set Material Properties** (via texture nodes on material pins)
-   - Diffuse color: create_connected("NT_TEX_RGB", material_handle, pin_name="diffuse")
-     → set_attribute(rgb_handle, 185, type=11, value=[R, G, B]) where RGB are 0.0-1.0
-   - Roughness: create_connected("NT_TEX_FLOAT", material_handle, pin_name="roughness")
-     → set_attribute(float_handle, 185, type=9, value=0.5) where 0=mirror, 1=diffuse
-   - Specular: create_connected("NT_TEX_FLOAT", material_handle, pin_name="specular")
-     → set_attribute(float_handle, 185, type=9, value=0.5)
+## Manual path (when you need fine control)
+1. Create: create_connected("NT_MAT_UNIVERSAL", mesh_handle, pin_index=0) for NT_GEO_MESH, pin_index=1 for NT_GEO_OBJECT
+2. Set properties via pin children:
+   - Pin 2 (albedo): read_pin_value → set_attribute(child, 185, AT_FLOAT3=11, {x,y,z})
+   - Pin 4 (metallic): read_pin_value → set_attribute(child, 185, AT_FLOAT=9, value)
+   - Pin 6 (specular): same pattern
+   - Pin 8 (roughness): same pattern
+   - Pin 12 (IOR): same pattern
+   Query octane://pin-layout/NT_MAT_UNIVERSAL for all 52 pins.
 
-3. **Image Textures** (instead of flat colors)
-   - create_connected("NT_TEX_IMAGE", material_handle, pin_name="diffuse")
-   - set_attribute(image_handle, attribute_id=34, type=14, value="C:/path/to/texture.png")
+## Image textures
+   create_connected("NT_TEX_IMAGE", material_handle, pin_name="albedo")
+   set_attribute(image_handle, 34, AT_STRING=14, "C:/path/to/texture.png")
 
-4. **Verify**
-   - get_node_info(material_handle, connected_only=true) → check pins have connections
-   - start_render → check material appears correctly
-
-COMMON MATERIAL TYPES:
-- NT_MAT_UNIVERSAL — PBR material (most common)
-- NT_MAT_TOON — toon/cel shading
-- NT_MAT_SPECULAR — specular workflow
-- NT_MAT_MIX — blend two materials
-
-For PBR surface presets, use suggest_material(surface_type) for SEGA-driven values.`,
+## Verify
+   start_render → save_render → check material appears correctly`,
           },
         },
       ],
@@ -155,47 +120,24 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Build a complete lit object in an Octane scene. This combines geometry, material, placement, and lighting.
+            text: `Build a complete lit object in an Octane scene.
 
-1. **Plan the Frame First**
-   - Decide camera position, object position, and lighting before creating nodes
-   - Know where everything goes — don't improvise positions
+1. **Place geometry** — place_geo handles RT, wiring, and registration:
+   - Primitive: place_geo(type:"primitive", shape:"sphere", position:{x:0,y:1,z:0}, role:"hero", material:{albedo:{x:0.8,y:0.2,z:0.1}, roughness:0.3, metallic:0.0})
+   - Mesh: analyze_geo(obj_path) first, then place_geo(type:"mesh", obj_path, role:"hero")
+   - Ground: place_geo(type:"primitive", shape:"plane", scale:{x:5,y:1,z:5}, role:"ground")
 
-2. **Create Mesh + Set Primitive**
-   - create_node("NT_GEO_OBJECT") → mesh_handle (defaults to Box)
-   - To change primitive: get_node_info(mesh) → pin 0 has enum child
-   - set_attribute(enum_child_handle, 185, AT_INT=3, value=primitiveType)
-   - Primitives: read octane://primitive-types for the full enum (23 types). Common: 1=Box, 15=Plane, 20=Sphere, 22=Torus
+2. **Apply material** — suggest_material → apply_material:
+   - suggest_material("marble") → recipe with roughness, metallic, specular, IOR, albedo
+   - apply_material(material_handle, ...recipe values)
 
-3. **Create & Connect Material**
-   - create_connected("NT_MAT_UNIVERSAL", mesh_handle, pin_index=1)  # pin 0 is primitive enum
-   - Set diffuse, roughness, specular via texture nodes (see add-material prompt)
+3. **Set up lighting** — setup_lighting creates a full 3-point rig in one call:
+   - setup_lighting(mood:"dramatic") → key + fill + rim lights, dims environment
+   - For individual lights: create_light(type:"emissive", position:{...}, power:10, temperature:5500)
 
-4. **Create Placement + Transform**
-   - create_node("NT_GEO_PLACEMENT") → placement_handle
-   - connect_nodes(target=placement, pin_name="geometry", source=mesh)
-   - Transforms on placement handle (see octane://constants for IDs):
-     set_attribute(placement, A_TRANSLATION=172, AT_FLOAT3=11, value={x, y, z})
-     set_attribute(placement, A_ROTATION=137, AT_FLOAT3=11, value={rx, ry, rz}) — DEGREES!
-     set_attribute(placement, A_SCALE=139, AT_FLOAT3=11, value={sx, sy, sz})
+4. **Frame camera** — fit_camera(framing_mode:"subjects") after every geo add
 
-5. **Wire to Render Target**
-   - Create or find geo group: create_node("NT_GEO_GROUP")
-   - connect_nodes(target=geo_group, pin_index=0, source=placement)
-   - connect_nodes(target=RT, pin_index=3, source=geo_group) — geometry pin
-
-6. **Add Lighting**
-   - Daylight: create_connected("NT_ENV_DAYLIGHT", RT_handle, pin_index=1)
-   - Texture env: create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1)
-     → connect HDRI image to environment's texture pin
-   - Emissive: set emission on material (remember efficiency defaults to 0.025!)
-
-7. **Position Camera**
-   - fit_camera() for automatic framing, or set_camera(position, target, up) for manual
-   - Camera distance ≈ 2-3x object size
-
-8. **Render & Verify**
-   - start_render → save_render → check output
+5. **Render & verify** — start_render() → save_render(path) → check output
    - Render after EVERY object, not in batch`,
           },
         },
@@ -292,11 +234,11 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
   // ── NEW PROMPTS ───────────────────────────────────────────────────
 
   server.registerPrompt(
-    'dress-workflow',
+    'ad-workflow',
     {
-      title: 'DRESS Workflow',
+      title: 'AD Workflow',
       description:
-        'Complete DRESS scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules.',
+        'Complete AD scene build pipeline from concept to beauty render. Phases 0→4 with gates, tool sequences, and hard rules.',
       argsSchema: {
         concept_image_path: z.string().optional().describe('Path to concept art PNG'),
         spec_name: z.string().optional().describe('Composition spec name'),
@@ -308,14 +250,14 @@ For PBR surface presets, use suggest_material(surface_type) for SEGA-driven valu
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `DRESS Workflow — Complete scene build from concept to beauty render.
+            text: `AD Workflow — Complete scene build from concept to beauty render.
 
 ## Activate
 Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
 
-## Pre-Phase — CLEAR (start fresh)
+## Pre-Phase — CLEAR (start fresh, MANDATORY)
 0. reset_ad(confirm: true) → clear stale AD state from any previous scene
-0b. reset_project() → clear Octane scene (if rebuilding)
+0b. reset_project() → clear Octane scene. **ALWAYS run this before a new build — stale geometry will corrupt your scene.**
 
 ## Phase 0 — PLAN (no Octane calls yet)
 1. analyze_reference(concept_art_path) → extract composition data
@@ -329,7 +271,7 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
    - Creates .mesh_info.json sidecar with orientation/scale/offset
    - MUST run before place_geo. No exceptions.
    - Do NOT pass source_endpoint — always run full VLM mugshot verification.
-   - While meshes generate (~3 min), build scene infrastructure (RT, kernel, env)
+   - **PARALLEL WORK:** Hunyuan-3D takes ~3 min. While waiting, build scene infrastructure (RT, env, floor, pedestal primitives). Do NOT wait idle.
 5b. Generate HDRI via OTOY Studio: flux-pro/new with equirectangular panorama prompt
    - Save to aigenerated/{scene}/assets/hdri_{scene}.png
    - Apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
@@ -350,7 +292,11 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
     Add 1-3 supporting elements based on answers.
 13. critique_render(render_path, spec_name, reference_image_path=concept_art)
     **CLAY GATE (enforced mechanically): composition_match >= 3 = pass.**
-    Sonnet knows it's clay — grades composition/framing only, ignores materials/lighting.
+    Sonnet is instructed to grade SPATIAL LAYOUT ONLY in clay mode:
+    - Only scores whether the right shapes are present in the right positions
+    - Does NOT penalize for missing materials, darkness, reflections, lighting, or mood
+    - missing_elements should only list missing geometry, never material properties
+    - lighting_match, material_match, mood_match, and depth_match are always 3 (neutral) in clay
     When passed, framing_verified is set automatically. Response tells you to proceed.
     If failed: fix geometry/framing, re-render IN CLAY, critique again. Do NOT turn off clay.
 
@@ -362,7 +308,7 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
 - No infinite floor planes (scale <= 3x scene width)
 - reference_image_path is MANDATORY for critique
 
-## Phase 2 — DRESS (materials + lighting)
+## Phase 2 — STYLE (materials + lighting)
 14. set_clay_mode(0) → materials visible
 15. setup_lighting(mood) → creates full 3-point rig (key+fill+rim) + dims env in ONE call
     - Reads SEGA intent automatically for temperatures and ratios
@@ -370,9 +316,9 @@ Call get_art_direction_state(build_mode:"dress") to enable AD with phased gates.
     - For additional lights (accents, practicals, glowing objects): use create_light()
     - For env adjustments: use set_daylight(power, turbidity, ...)
 16. suggest_material(type) per surface → returns roughness/metallic/specular/ior/albedo
-    **YOU MUST APPLY THE VALUES:**
-    - For EACH material: read_pin_value to get child handles → set_attribute with recipe values
-    - Do NOT override albedo if mesh has .mtl textures
+    **Apply with apply_material(material_handle, ...recipe values):**
+    - apply_material(mat_handle, roughness:0.15, metallic:1, specular:1, ior:1.5, albedo:{x:1,y:0.77,z:0.34})
+    - Set skip_albedo:true if mesh has .mtl textures
 17. Second creative review: "Does the lighting tell a story?"
 
 ### Phase 2 Rules:
@@ -462,9 +408,7 @@ Query octane://sega/presets for available SEGA presets.`,
 - Scale: analyze_geo estimates real-world height. Override with target_height if wrong.
 - Always check the render — orientation issues are common with new mesh sources.
 
-## PREFER place_geo over import_geo:
-- place_geo: reads sidecar, wires to RT, registers in placement state (PREFERRED)
-- import_geo: raw import, no sidecar, no wiring — only for manual control`,
+Always use place_geo — it reads the sidecar, wires to RT, and registers in placement state automatically.`,
           },
         },
       ],
@@ -484,50 +428,34 @@ Query octane://sega/presets for available SEGA presets.`,
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Set up scene lighting with HDRI environment and 3-point key/fill/rim.
+            text: `Set up scene lighting with environment and 3-point key/fill/rim.
 
-## Prerequisites
-- Geometry must be placed and framed (Phase 1 complete)
-- SEGA intent should be set (set_artistic_intent) — drives suggest_lighting values
+## Quick path (recommended)
+1. set_artistic_intent(preset:"dramatic") → initializes SEGA mood (drives lighting values)
+2. setup_lighting(mood:"dramatic") → creates full 3-point rig (key+fill+rim) in ONE call
+   - Reads SEGA intent for temperatures and ratios automatically
+   - Subject bounds auto-read from placement state
+   - Also dims environment to match the mood
+   - Returns all 3 light handles for fine-tuning
 
-## 1. Set Mood via SEGA (if not already done)
-   set_artistic_intent(preset:"dramatic"|"ethereal"|"studio"|"noir"|"golden_hour"|"moonlit"|...)
-   Query octane://sega/presets for full list with descriptions.
+## Individual lights
+   create_light(type:"emissive", position:{x:2,y:3,z:1}, power:10, temperature:5500)
+   - For accent lights, practicals, glowing objects
+   - Pass material_handle to add emission to an existing object
 
-## 2. Get Lighting Recipe
-   suggest_lighting(mood, subject_bounds_min, subject_bounds_max, camera_position)
-   Returns: positions, colors (Kelvin), power values, key:fill:rim ratios
+## HDRI environment
+   create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1)
+   set_attribute(env_handle, 34, AT_STRING=14, "path/to/hdri.hdr")
+   HDRI prompt: "360 degree equirectangular panorama, [scene], HDR, seamless"
 
-## 3. Create HDRI Environment
-   - create_connected("NT_ENV_TEXTURE", RT_handle, pin_index=1)
-   - Load HDRI: set_attribute(env_handle, A_FILENAME=34, AT_STRING=14, "path/to/hdri.hdr")
-   - Power: set via power child node (default is fine for real HDRIs)
-   - Real HDRIs: gamma 1.0, power ~1.0. Source: Poly Haven or AI-generated.
-   - HDRI prompt pattern: "360 degree equirectangular panorama, [scene], HDR, seamless"
+## Daylight adjustments
+   set_daylight(power:0.3, turbidity:3, north_offset:45)
 
-## 4. Create Area Lights (from recipe)
-   For each light in the recipe:
-   - create_node("NT_GEO_OBJECT") → set primitive to Plane (15)
-   - Add emissive material: create_connected("NT_MAT_UNIVERSAL", light_mesh, pin_index=1)
-   - Set emission: connect blackbody or RGB texture to emission pin
-   - **CRITICAL: Set emission efficiency to 1.0** (default 0.025 = 40x dim!)
-   - Position each light per recipe coordinates
-   - Wire through placement → geo group → RT
-
-## Blackbody Temperature Guide
-   1800K=candle, 2700K=tungsten, 3200K=halogen, 4100K=moonlight,
-   5500K=daylight, 6500K=overcast, 10000K=blue sky
-
-## Key:Fill Ratios
-   - 2:1 = flat/broadcast (even lighting)
-   - 4:1 = natural (standard film)
-   - 8:1 = dramatic (hard shadows)
-   - 16:1+ = noir (extreme contrast)
-
-## Environment as Lighting
-   - Env fill only (power 1-2): supplements area lights
-   - Env as primary (power 3-5): for floating objects, product shots
-   - Real HDRI provides natural light bounce without area lights`,
+## Reference
+   Blackbody: 1800K=candle, 2700K=tungsten, 5500K=daylight, 6500K=overcast
+   Key:Fill: 2:1=flat, 4:1=natural, 8:1=dramatic, 16:1+=noir
+   Query octane://sega/presets for all mood presets.
+   Query octane://docs/creative/1 for full lighting guide.`,
           },
         },
       ],
@@ -561,6 +489,7 @@ Query octane://sega/presets for available SEGA presets.`,
 ## C2. evaluate_semantics(render_path)
    → Pixel analysis measures gap vs SEGA target vector
    → Returns gap dimensions + correction suggestions
+   → **Skip on iteration 1** — gross issues dominate, mood fine-tuning premature. Run from iteration 2+.
    → Only useful AFTER framing is correct
 
 ## C3. Read the render image yourself (Read tool on the saved PNG)

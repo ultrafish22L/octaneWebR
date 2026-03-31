@@ -27,9 +27,11 @@ export interface CritiqueStatsEntry {
   };
   comparison?: {
     grade: string;
-    mood_match: number;
-    density_match: number;
     composition_match: number;
+    lighting_match: number;
+    material_match: number;
+    mood_match: number;
+    depth_match: number;
     missing_elements: string[];
     top_fixes: string[];
   };
@@ -85,9 +87,11 @@ export function appendCritiqueStats(
     if (options?.comparison) {
       entry.comparison = {
         grade: options.comparison.grade,
-        mood_match: options.comparison.mood_match,
-        density_match: options.comparison.density_match,
         composition_match: options.comparison.composition_match,
+        lighting_match: options.comparison.lighting_match,
+        material_match: options.comparison.material_match,
+        mood_match: options.comparison.mood_match,
+        depth_match: options.comparison.depth_match,
         missing_elements: options.comparison.missing_elements,
         top_fixes: options.comparison.top_fixes,
       };

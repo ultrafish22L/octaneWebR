@@ -1,6 +1,6 @@
 # Octane MCP User Guide
 
-Control Octane Render from AI agents. **78 active tools, 4 disabled** (LiveDB). Build scenes, set materials, position cameras, and render — all through natural language. v2.4.5.
+Control Octane Render from AI agents. **84 active tools**. Build scenes, set materials, position cameras, and render — all through natural language. v3.0.1.
 
 ## What Is This?
 

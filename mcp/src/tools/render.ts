@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import path from 'path';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { ArtDirectionState } from '../ArtDirectionState';
 import { jsonResult, errorResult, validateFilePath, OBJ_API_NODE } from './utils';
 
 // Maps format name to Octane's imageSaveFormat enum
@@ -21,7 +22,11 @@ const FORMAT_MAP: Record<string, number> = {
   JPG: 13,
 };
 
-export function registerRenderTools(server: McpServer, client: OctaneMcpClient) {
+export function registerRenderTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  artState?: ArtDirectionState
+) {
   server.registerTool(
     'start_render',
     {
@@ -146,6 +151,7 @@ export function registerRenderTools(server: McpServer, client: OctaneMcpClient) 
           },
           120_000
         );
+        artState?.setCachedRenderPath(savePath);
         return jsonResult({ success: true, path: savePath, format });
       } catch (error: any) {
         return errorResult(error);

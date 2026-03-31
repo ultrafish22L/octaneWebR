@@ -455,7 +455,7 @@ export function registerResources(
     'octane://workflow/phases',
     {
       description:
-        'DRESS workflow phases (0 → 4) with required tools, gates, and progression rules. Query to understand phase order and which tools belong to which phase.',
+        'AD workflow phases (0 → 4) with required tools, gates, and progression rules. Query to understand phase order and which tools belong to which phase.',
     },
     async () => ({
       contents: [
@@ -508,7 +508,7 @@ export function registerResources(
                 },
                 {
                   phase: '2',
-                  name: 'Dress',
+                  name: 'Style',
                   description: 'Materials + lighting. Clay mode OFF.',
                   tools: [
                     'set_clay_mode',

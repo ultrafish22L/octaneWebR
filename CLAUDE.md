@@ -1,4 +1,4 @@
-## v2.4.6 (MCP_BUILD 72)
+## v3.0.1 (MCP_BUILD 73)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 
@@ -25,7 +25,7 @@ If >1 instance: kill ALL (`taskkill //F //IM octaneServGrpc.exe`), verify ports 
 | Task                  | Action                                          | If stuck, read                    |
 | --------------------- | ----------------------------------------------- | --------------------------------- |
 | **New scene build**   | `reset_ad(confirm:true)` then `reset_project()` | Clears AD state + Octane scene    |
-| **Build a scene**     | `getPrompt("dress-workflow")`                   | `BUILD.md` §3 (DRESS phases)      |
+| **Build a scene**     | `getPrompt("ad-workflow")`                      | `BUILD.md` §3 (AD phases)         |
 | **Import a mesh**     | `getPrompt("mesh-pipeline")`                    | `BUILD.md` Pre-Phase + §5         |
 | **Set up lighting**   | `setup_lighting(mood)` — ONE call, SEGA-aware   | `CREATIVE.md` §1 (temps, ratios)  |
 | **Create one light**  | `create_light(type, position, temp, power)`     | `REFERENCE.md` §7 (emission pins) |
@@ -78,9 +78,12 @@ These are hard constraints that apply regardless of which prompt you're followin
 4. **`set_camera` is Phase 4 ONLY** — wrong framing = wrong geometry
 5. **Visual verify EVERY change** — `save_render` + `preview_screenshot`
 6. **Primitives via `place_geo`** — ground planes, backdrops, pedestals → `place_geo(type:"primitive", shape:"box")`. Never run `analyze_geo` on a flat quad.
-7. **MCP restart = `taskkill //F //IM node.exe`** — MCP is a Claude project-level server. Kill ALL node.exe, wait 3s, call any MCP tool → Claude auto-restarts with fresh tool discovery. Never start MCP manually.
+7. **MCP restart = `taskkill //F //IM node.exe`** — MCP is a Claude project-level server. Kill ALL node.exe, wait 3s, call any MCP tool → Claude auto-restarts with fresh tool discovery. Never start MCP manually. **⛔ NEVER skip a test because a tool is missing — that means MCP is stale. Kill, restart, verify, then test.**
 8. **HDRI from concept art** — any art scene with concept art → generate equirectangular HDRI via OTOY Studio, apply with sphere projection.
 9. **Orchestrator grade is MANDATORY** — at critique step C3, state your own A-F grade explicitly. Not optional.
+10. **`reset_project()` before every new scene build** — clears Octane scene. Stale geometry from previous sessions will corrupt your build.
+11. **OTOY Studio for ALL asset generation** — concept art, mesh concepts, HDRIs, and image-to-3D meshes. Never download from external sites.
+12. **Work during mesh generation** — Hunyuan-3D takes ~3 min. Build scene infrastructure (RT, env, floor, primitives) in parallel. Don't wait idle.
 
 ## Build & Debug
 

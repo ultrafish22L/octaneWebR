@@ -809,7 +809,17 @@ export function registerArtDirectionTools(
         try {
           const clayResult = await client.callMethod('ApiRenderEngine', 'clayMode', {});
           const clayMode = clayResult?.result ?? clayResult?.mode ?? clayResult;
-          isClayMode = clayMode !== 0;
+          // clayMode can be number (0/1/2) or string ("CLAY_MODE_NONE"/"CLAY_MODE_GREY"/"CLAY_MODE_COLOR")
+          isClayMode = clayMode !== 0 && clayMode !== 'CLAY_MODE_NONE';
+          const clayModeNum =
+            typeof clayMode === 'number'
+              ? clayMode
+              : clayMode === 'CLAY_MODE_GREY'
+                ? 1
+                : clayMode === 'CLAY_MODE_COLOR'
+                  ? 2
+                  : 0;
+          artState.setCachedClay(clayModeNum);
           if (clayMode === 0 && !framingVerified) {
             warnings.push(
               '⛔ CLAY MODE OFF before framing_verified. This is a Phase 1 composition check — clay mode MUST be ON. Materials and lighting distract from framing assessment. Call set_clay_mode(2) (color clay), re-render, then critique again. Only turn off clay AFTER this critique passes framing ≥ 3.'
@@ -830,10 +840,7 @@ export function registerArtDirectionTools(
         const conceptPath = params.reference_image_path || spec.referenceImagePath;
         let comparisonResult: import('../vision/index').ComparisonCritiqueResult | null = null;
         if (conceptPath && fs.existsSync(path.resolve(conceptPath))) {
-          const currentPhase = artState.isActive ? artState.getWorkflowStatus().phase : undefined;
-          // Clay mode overrides phase for prompt — tell Sonnet it's clay regardless of AD mode
-          const promptPhase = isClayMode ? 1 : currentPhase;
-          const comparisonPrompt = buildComparisonCritiquePrompt(spec, promptPhase);
+          const comparisonPrompt = buildComparisonCritiquePrompt(artState.context);
           try {
             comparisonResult = await visionCompare(resolved, conceptPath, comparisonPrompt);
           } catch (visError: any) {
@@ -877,10 +884,10 @@ export function registerArtDirectionTools(
             passed,
             scores: {
               framing: comparisonResult.composition_match,
-              depth: comparisonResult.density_match,
+              depth: comparisonResult.depth_match,
               composition: comparisonResult.composition_match,
-              lighting: comparisonResult.mood_match,
-              placement: comparisonResult.density_match,
+              lighting: comparisonResult.lighting_match,
+              placement: comparisonResult.material_match,
             },
             corrections: comparisonResult.top_fixes.map((fix, i) => ({
               target: 'scene',
@@ -889,9 +896,11 @@ export function registerArtDirectionTools(
             })),
             comparison: {
               grade: comparisonResult.grade,
-              mood_match: comparisonResult.mood_match,
-              density_match: comparisonResult.density_match,
               composition_match: comparisonResult.composition_match,
+              lighting_match: comparisonResult.lighting_match,
+              material_match: comparisonResult.material_match,
+              mood_match: comparisonResult.mood_match,
+              depth_match: comparisonResult.depth_match,
               missing_elements: comparisonResult.missing_elements,
               top_fixes: comparisonResult.top_fixes,
               notes: comparisonResult.notes,
@@ -939,9 +948,11 @@ export function registerArtDirectionTools(
                 latency_ms: comparisonResult.latency_ms,
                 // Sonnet assessment
                 grade: comparisonResult.grade,
-                mood_match: comparisonResult.mood_match,
-                density_match: comparisonResult.density_match,
                 composition_match: comparisonResult.composition_match,
+                lighting_match: comparisonResult.lighting_match,
+                material_match: comparisonResult.material_match,
+                mood_match: comparisonResult.mood_match,
+                depth_match: comparisonResult.depth_match,
                 missing_elements: comparisonResult.missing_elements?.slice(0, 5),
                 top_fixes: comparisonResult.top_fixes?.slice(0, 3),
                 notes: comparisonResult.notes?.slice(0, 200),

@@ -10,6 +10,9 @@
  * - Fully testable without Octane.
  */
 
+import type { SemanticState } from './sega/SemanticState';
+import type { ScenePlacementState } from './ScenePlacementState';
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface Vec3 {
@@ -85,9 +88,11 @@ export interface CritiqueScores {
 /** Sonnet concept-vs-render comparison scores */
 export interface ComparisonScores {
   grade: string; // A-F
-  mood_match: number; // 1-5
-  density_match: number; // 1-5
   composition_match: number; // 1-5
+  lighting_match: number; // 1-5
+  material_match: number; // 1-5
+  mood_match: number; // 1-5
+  depth_match: number; // 1-5
   missing_elements: string[];
   top_fixes: string[];
   notes: string;
@@ -114,6 +119,46 @@ export interface CritiqueRecord {
   orchestrator?: OrchestratorAssessment;
   renderPath: string;
   timestamp: number;
+}
+
+// ── Unified AD Context ──────────────────────────────────────────────
+
+/** Complete snapshot of all AD state — read from artState.context by any tool. */
+export interface AdContext {
+  // Build state
+  buildMode: BuildMode;
+  adActive: boolean;
+  phase: number;
+  completedSteps: string[];
+
+  // Current spec
+  specName: string | null;
+  description: string | null;
+  objects: Array<{ id: string; role: string }>;
+  focalPoint: string | null;
+  lightingMood: string | null;
+
+  // Iteration state
+  iteration: number;
+  previousGrade: string | null;
+  previousFixes: string[];
+  stagnating: boolean;
+  exhausted: boolean;
+
+  // Scene state (cached by tools)
+  isClay: boolean;
+  clayMode: number;
+
+  // SEGA intent (from attached SemanticState)
+  segaIntent: Record<string, number>;
+  segaActiveDimensions: string[];
+
+  // Placement (from attached ScenePlacementState)
+  placedObjects: Array<{
+    name: string;
+    role: string;
+    position: Vec3;
+  }>;
 }
 
 // ── State class ──────────────────────────────────────────────────────
@@ -154,7 +199,7 @@ export const AD_STEPS = [
   'fit_camera',
   'register_scene_object',
   'framing_verified', // gate: visual confirm all objects framed
-  // Phase 2 — Dress
+  // Phase 2 — Style
   'set_artistic_intent',
   'suggest_lighting',
   'suggest_material',
@@ -263,6 +308,82 @@ export class ArtDirectionState {
   private _stepNotes = new Map<AdStep, string>(); // quality/status annotations per step
   private _lastCalibration: CachedCalibration | null = null;
   private _lastCalibrationPath: string | null = null;
+
+  // ── Attached state refs (set once via attachStates) ─────────────
+  private _segaState: SemanticState | null = null;
+  private _placementState: ScenePlacementState | null = null;
+
+  // ── Cached runtime values (updated by tools as side effects) ────
+  private _clayMode = 0;
+  private _lastRenderPath: string | null = null;
+
+  /** Attach external state refs. Call once after all states constructed. */
+  attachStates(sega: SemanticState, placement: ScenePlacementState): void {
+    this._segaState = sega;
+    this._placementState = placement;
+  }
+
+  // ── Cached value setters (called by tool handlers) ──────────────
+
+  setCachedClay(mode: number): void {
+    this._clayMode = mode;
+  }
+  setCachedRenderPath(path: string): void {
+    this._lastRenderPath = path;
+  }
+
+  // ── Unified context snapshot ────────────────────────────────────
+
+  /** Complete AD context — call from any tool via artState.context. */
+  get context(): AdContext {
+    // Find the primary spec (first one, usually only one)
+    const specName = this.specs.size > 0 ? (this.specs.keys().next().value ?? null) : null;
+    const spec = specName ? (this.specs.get(specName) ?? null) : null;
+
+    // Previous critique data
+    const records = specName ? (this.history.get(specName) ?? []) : [];
+    const lastRecord = records.length > 0 ? records[records.length - 1] : null;
+
+    // SEGA from attached state
+    const segaIntent = this._segaState?.getGlobal() ?? {};
+    const segaActiveDimensions = this._segaState?.getActiveDimensions() ?? [];
+
+    // Placement from attached state
+    const placedObjects = (this._placementState?.getEntries() ?? []).map(e => ({
+      name: e.name,
+      role: e.role,
+      position: e.position,
+    }));
+
+    const workflow = this._mode === 'active' ? this.getWorkflowStatus() : null;
+
+    return {
+      buildMode: this._buildMode,
+      adActive: this._mode === 'active',
+      phase: workflow?.phase ?? 0,
+      completedSteps: workflow?.completed ?? [],
+
+      specName: specName ?? null,
+      description: spec?.description ?? null,
+      objects: (spec?.objects ?? []).map(o => ({ id: o.id, role: o.role })),
+      focalPoint: spec?.focalPoint ?? null,
+      lightingMood: spec?.lightingMood ?? null,
+
+      iteration: specName ? this.getIterationCount(specName) : 0,
+      previousGrade: lastRecord?.comparison?.grade ?? null,
+      previousFixes: lastRecord?.comparison?.top_fixes?.slice(0, 3) ?? [],
+      stagnating: specName ? this.isStagnating(specName) : false,
+      exhausted: specName ? this.isExhausted(specName) : false,
+
+      isClay: this._clayMode > 0,
+      clayMode: this._clayMode,
+
+      segaIntent,
+      segaActiveDimensions,
+
+      placedObjects,
+    };
+  }
 
   // ── AD mode ───────────────────────────────────────────────────────
 
@@ -503,8 +624,11 @@ export class ArtDirectionState {
     this._handleMap.clear();
     this._completedSteps.clear();
     this._stepNotes.clear();
+    this._clayMode = 0;
+    this._lastRenderPath = null;
     // specs PRESERVED — they're planning data, not scene data
     // mode PRESERVED — user toggles it explicitly
+    // state refs PRESERVED — they have their own clear()
   }
 
   /** Full clear — only on explicit user request or new project */
@@ -515,7 +639,10 @@ export class ArtDirectionState {
     this._completedSteps.clear();
     this._stepNotes.clear();
     this._buildMode = null;
+    this._clayMode = 0;
+    this._lastRenderPath = null;
     // mode persists across clear — user toggles it explicitly
+    // state refs PRESERVED — they have their own clear()
   }
 
   /** Summary for get_art_direction_state tool */

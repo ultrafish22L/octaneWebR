@@ -148,6 +148,8 @@ async function main() {
   const segaState = new SemanticState();
   // ScenePlacementState — shared between camera and art direction tools
   const placementState = new ScenePlacementState();
+  // Attach external states to artState for unified context access
+  artState.attachStates(segaState, placementState);
   client.onClear(() => {
     artState.clearScene(); // preserve composition specs + mode
     segaState.clearScene(); // preserve global intent vector
@@ -158,13 +160,13 @@ async function main() {
   registerInfoTools(server, client, cache);
   registerProjectTools(server, client, cache);
   registerCameraTools(server, client, placementState, artState);
-  registerRenderTools(server, client);
+  registerRenderTools(server, client, artState);
   registerSceneTools(server, client, cache);
   registerNodeTools(server, client, cache);
   registerAttributeTools(server, client);
   registerWebappTools(server);
   registerImportTools(server, client, cache, artState, placementState);
-  registerRenderControlTools(server, client);
+  registerRenderControlTools(server, client, artState);
   registerStatsTools(server, client);
   // registerMaterialDbTools(server, client); // disabled — Octane API bug
   registerAnimationTools(server, client);

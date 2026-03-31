@@ -4,6 +4,52 @@ All notable changes to octaneWebR.
 
 ---
 
+## [3.0.1] - 2026-03-31
+
+### Added
+
+- **Unified AD Context** — `artState.context` provides a complete snapshot of all AD state (build mode, SEGA intent, placement, iteration history, clay mode) for any tool. Single source of truth.
+- **Build modes on ArtDirectionState** — `BuildMode` type (shop/dress/show/null) with `setBuildMode()`. AD flag auto-set per mode defaults (SHOP=off, DRESS/SHOW=on). Manual override with `setMode()`.
+- **`apply_material` tool** — applies PBR recipe (roughness, metallic, specular, IOR, albedo) to material node in one call. Replaces 12-call `read_pin_value` + `set_attribute` dance.
+- **Full PBR texture pipeline** — GLB→OBJ conversion now extracts albedo, metallic, roughness, and normal maps from glTF PBR materials. All maps auto-wired to correct NT_MAT_UNIVERSAL pins.
+- **`octane://ad/mode` resource** — returns current build mode, AD flag, and mode descriptions.
+- **`octane://docs/{file}/{section}` resources** — on-demand access to BUILD.md, REFERENCE.md, CREATIVE.md, TESTING.md sections by § number. Replaces loading full doc files.
+- **Context-aware VLM critique prompts** — `buildComparisonCritiquePrompt(ctx)` uses AdContext for phase-appropriate scoring. Clay mode prompt has explicit rules preventing material/lighting penalties. Phase 2+ includes SEGA mood target, iteration history, stagnation warnings.
+- **New scoring fields** — `lighting_match`, `material_match`, `depth_match` replace ambiguous `density_match` in critique responses.
+- **5 new material types** — marble, marble_dark, concrete, ceramic, plaster added to suggest_material database.
+
+### Changed
+
+- **Phase tags renamed** — `[DRESS Phase N]` → `[AD Phase N]`. Phase tags are advisory (when AD is active), not hard constraints. No tag = always available.
+- **`[All phases]` removed** — 10 tools had redundant `[All phases]` tags. Removed — no tag means unrestricted.
+- **`dress-workflow` prompt → `ad-workflow`** — workflow name decoupled from build mode name.
+- **Phase 2 name** — "Dress" → "Style" to avoid confusion with DRESS build mode.
+- **`save_render_passes` merged** — `save_render_passes` + `save_render_passes_exr` merged into single tool with `multi_layer: bool` param.
+- **`import_geo` demoted** — no longer exposed as MCP tool. `place_geo` handles all geometry placement.
+- **`get_art_direction_state` enhanced** — new `build_mode` param sets SHOP/DRESS/SHOW with auto AD flag. Description leads with mode toggle.
+- **`critique_render` compacted** — verbose debug blocks (raw prompt, raw response) now conditional on `verbose: bool` param (default false). `top_fixes` capped to 3, `notes` to 200 chars.
+- **Stale prompts updated** — setup-scene, add-material, build-lit-object, setup-lighting, mesh-pipeline, critique-loop, ad-workflow all updated to reference composite tools (place_geo, apply_material, setup_lighting, create_light).
+- **`suggest_material` instruction** — now directs to `apply_material` instead of manual pin wiring.
+
+### Fixed
+
+- **MAT_PIN constants swapped** — roughness (pin 4→8) and metallic (pin 9→4) were mapped to wrong NT_MAT_UNIVERSAL pins. Fixed + expanded to include specular(6), IOR(12), coating(19), sheen(26), emission(44).
+- **GLB binary parse in place_geo** — passing `.glb` path now auto-resolves to converted OBJ from analyze_geo sidecar directory.
+- **MTL path detection** — parses OBJ `mtllib` directive instead of guessing `basename.mtl`. Fixes trimesh exports that use `material.mtl`.
+- **Texture fallback contamination** — diagnostic images (mugshots, check renders, hero shots) no longer picked up as textures. Mugshots moved to `mugshots/` subfolder.
+- **Always wire textures explicitly** — Octane gRPC OBJ loader does NOT process MTL `map_Kd`. Textures now always created and connected manually.
+- **Light panel scale** — `setup_lighting` scale now relative to subject size (8% of extent, clamped 0.02-0.2) instead of fixed 0.3.
+- **`setup_lighting` bounds fallback** — falls back to `getSceneBounds` when placement state is empty (e.g., after MCP restart).
+- **Material DB annotations** — `browse_material_db`, `search_materials`, `preview_material`, `download_material` migrated to `registerTool` with proper MCP annotations.
+
+### Documentation
+
+- **CLAUDE.md rules 10-12** — `reset_project()` before new builds, OTOY Studio for all assets, parallel work during mesh generation.
+- **Never-skip-stale-MCP rule** — added to TESTING.md, CLAUDE.md, BUILD.md. Tool missing = stale MCP = restart, never defer.
+- **BUILD.md clay critique rules** — explicit VLM scoring guidance for clay mode (spatial layout only, no material/lighting penalties).
+- **serv TODO** — added `saveRenderPasses1`, `saveRenderPassesMultiExr1`, `importFromFile` (OBJ+MTL) as unimplemented RPCs.
+- **`[Debug]` tag** — added to 4 profiling tools (profile_start/end/report/reset).
+
 ## [2.4.6] - 2026-03-30
 
 ### Added

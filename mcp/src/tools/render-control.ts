@@ -5,9 +5,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { OctaneMcpClient } from '../OctaneMcpClient';
+import { ArtDirectionState } from '../ArtDirectionState';
 import { jsonResult, errorResult } from './utils';
 
-export function registerRenderControlTools(server: McpServer, client: OctaneMcpClient) {
+export function registerRenderControlTools(
+  server: McpServer,
+  client: OctaneMcpClient,
+  artState?: ArtDirectionState
+) {
   // Render region removed — viewport UI interaction, not MCP-useful.
   // Also pick_point crashes Octane when render region is active.
 
@@ -27,6 +32,7 @@ export function registerRenderControlTools(server: McpServer, client: OctaneMcpC
     async ({ mode }) => {
       try {
         await client.callMethod('ApiRenderEngine', 'setClayMode', { mode });
+        artState?.setCachedClay(mode);
         return jsonResult({
           success: true,
           clay_mode: mode,
