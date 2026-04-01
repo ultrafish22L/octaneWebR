@@ -269,6 +269,17 @@ export class OctaneMcpClient {
   // Tracks nodes, connections, and children for scene awareness.
   readonly sceneCache = new SceneCache();
 
+  // Session-level geo_group affinity — cached so all place_geo calls share one geo_group.
+  // Cleared on load/reset/crash via clearRootGraphCache().
+  private _sessionGeoGroup: { geoGroup: number; rtHandle: number } | null = null;
+
+  get sessionGeoGroup(): { geoGroup: number; rtHandle: number } | null {
+    return this._sessionGeoGroup;
+  }
+  set sessionGeoGroup(value: { geoGroup: number; rtHandle: number } | null) {
+    this._sessionGeoGroup = value;
+  }
+
   // Lifecycle callbacks — fired on clearRootGraphCache (load/reset/crash).
   // Used to clear ArtDirectionState and other session-scoped state.
   private _onClearCallbacks: Array<() => void> = [];
@@ -463,6 +474,7 @@ export class OctaneMcpClient {
   /** Clear all session caches (call on load_project / reset_project / crash) */
   clearRootGraphCache(): void {
     this.rootGraphHandle = null;
+    this._sessionGeoGroup = null;
     this.sceneCache.clear();
     this.clearDynamicCache();
     this.sessionInfo = { deviceNames: new Map() };

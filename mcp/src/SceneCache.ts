@@ -103,6 +103,15 @@ export class SceneCache {
     return this.nodes.size;
   }
 
+  /** Find all cached nodes matching a type name (e.g. 'NT_GEO_GROUP'). */
+  findByTypeName(typeName: string): Array<{ handle: number; name: string }> {
+    const result: Array<{ handle: number; name: string }> = [];
+    for (const [handle, node] of this.nodes) {
+      if (node.typeName === typeName) result.push({ handle, name: node.name });
+    }
+    return result;
+  }
+
   // ── Connection operations ────────────────────────────────────────
 
   private connKey(targetHandle: number, pinIndex: number): string {

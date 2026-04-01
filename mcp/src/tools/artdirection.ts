@@ -1085,6 +1085,21 @@ export function registerArtDirectionTools(
       const existingHistory = artState.getHistory(params.spec_name);
       const alreadyRecorded = existingHistory.some(h => h.iteration === params.iteration);
 
+      // Validate passed against VLM verdict — reject force-pass when Sonnet said fail
+      if (params.passed && alreadyRecorded) {
+        const lastVLM = existingHistory
+          .slice()
+          .reverse()
+          .find(h => (h as any).comparison && h.iteration === params.iteration);
+        if (lastVLM && !lastVLM.passed) {
+          const grade = (lastVLM as any).comparison?.grade ?? 'unknown';
+          return errorResult(
+            `commit_scores: passed=true REJECTED. score_render (VLM) scored iteration ${params.iteration} as NOT PASSED (grade: ${grade}). ` +
+              `Fix the issues and call score_render again — do not override VLM verdicts.`
+          );
+        }
+      }
+
       if (!alreadyRecorded) {
         const record: ScoreRecord = {
           iteration: params.iteration,
@@ -1222,8 +1237,8 @@ export function registerArtDirectionTools(
     {
       title: 'Reset Art Direction',
       description:
-        'Clear all AD state (specs, SEGA vector, scores, placement DB) for a fresh build. ' +
-        'Does NOT touch the Octane scene — pair with reset_project for full reset.',
+        'Clear AD runtime state (scores, placement DB, SEGA vector) for a fresh build. ' +
+        'Composition specs (plan_layout) are PRESERVED. Does NOT touch the Octane scene.',
       inputSchema: {
         confirm: z.boolean().describe('Must be true to confirm reset'),
       },
@@ -1235,15 +1250,17 @@ export function registerArtDirectionTools(
           error: 'Pass confirm: true to reset all AD state.',
         });
       }
-      artState.clear();
+      // Cascade through clearRootGraphCache → onClear callbacks:
+      // artState.clearScene() (preserves specs), segaState.clearScene(), placementState.clear(), sessionGeoGroup=null
+      client.clearRootGraphCache();
+      // Full SEGA clear — intent IS reset for "fresh build"
       if (segaState) segaState.clear();
-      placement.clear();
       return jsonResult({
         success: true,
         message:
-          'AD state cleared: specs, SEGA vector, scores, placement DB all reset. Ready for a fresh build.',
+          'AD state cleared: SEGA vector, scores, placement DB all reset. Composition specs preserved. Ready for a fresh build.',
         cleared: {
-          specs: true,
+          specs: false,
           sega_vector: !!segaState,
           scores: true,
           placement: true,
