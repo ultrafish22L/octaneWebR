@@ -411,6 +411,17 @@ export function registerCameraTools(
           }
         }
 
+        // Null/NaN guard — corrupted bounds from failed set_attribute or stale placement DB
+        const hasNullBounds = [bMin.x, bMin.y, bMin.z, bMax.x, bMax.y, bMax.z].some(
+          v => v === null || v === undefined || Number.isNaN(v)
+        );
+        if (hasNullBounds) {
+          return errorResult(
+            `Bounding box has null/NaN values (min=${JSON.stringify(bMin)}, max=${JSON.stringify(bMax)}). ` +
+              `Re-register objects with register_object or use explicit bbox_min/bbox_max.`
+          );
+        }
+
         // Degenerate check — zero-size bbox
         const sx = bMax.x - bMin.x;
         const sy = bMax.y - bMin.y;

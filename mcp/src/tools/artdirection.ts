@@ -1098,6 +1098,14 @@ export function registerArtDirectionTools(
         artState.addScore(params.spec_name, record);
       }
 
+      // Set framing_verified if framing score passes threshold (mirrors score_render clay gate logic)
+      if (params.passed && params.scores.framing >= 3 && !artState.isStepDone('framing_verified')) {
+        artState.completeStep(
+          'framing_verified',
+          `commit_scores: framing=${params.scores.framing}, passed=${params.passed}`
+        );
+      }
+
       const history = artState.getHistory(params.spec_name);
       const scoreHistory = history.map(h => ({
         iteration: h.iteration,

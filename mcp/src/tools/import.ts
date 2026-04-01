@@ -3010,8 +3010,11 @@ export function registerImportTools(
             y: sidecarRot.y + rotation.y,
             z: sidecarRot.z + rotation.z,
           };
-          const scaleOverride = typeof scale === 'number' && scale !== 1 ? scale : undefined;
-          const scaleFactor = scaleOverride ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+          const sidecarScale = suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+          const userScale =
+            typeof scale === 'number' ? scale : typeof scale === 'object' ? scale.x : 1;
+          // User scale multiplies sidecar scale (user=1 means "use sidecar as-is")
+          const scaleFactor = userScale * sidecarScale;
           const posOverride =
             position.x !== 0 || position.y !== 0 || position.z !== 0 ? position : undefined;
           const yOffset = posOverride?.y ?? suggestion.ground_offset_y ?? suggestion.y_offset ?? 0;

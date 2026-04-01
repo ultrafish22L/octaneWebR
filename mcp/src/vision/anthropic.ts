@@ -62,19 +62,47 @@ export async function callAnthropicVision(
   mcpLog(`VISION/anthropic: calling ${model} with ${images.length} image(s)`, 'info');
   const startMs = Date.now();
 
-  const resp = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'x-api-key': options.apiKey,
-      'anthropic-version': API_VERSION,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const MAX_RETRIES = 3;
+  const RETRYABLE_STATUSES = [500, 502, 503, 529];
+  let resp: Response | undefined;
+  let lastError = '';
 
-  if (!resp.ok) {
-    const errorText = await resp.text();
-    throw new Error(`Anthropic API ${resp.status}: ${errorText}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+      mcpLog(
+        `VISION/anthropic: retry ${attempt}/${MAX_RETRIES} after ${delayMs}ms (last: ${lastError})`,
+        'warn'
+      );
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+
+    resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'x-api-key': options.apiKey,
+        'anthropic-version': API_VERSION,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.ok) break;
+
+    lastError = `${resp.status}`;
+    if (!RETRYABLE_STATUSES.includes(resp.status)) {
+      const errorText = await resp.text();
+      throw new Error(`Anthropic API ${resp.status}: ${errorText}`);
+    }
+
+    if (attempt === MAX_RETRIES) {
+      const errorText = await resp.text();
+      throw new Error(`Anthropic API ${resp.status} after ${MAX_RETRIES} retries: ${errorText}`);
+    }
+  }
+
+  if (!resp || !resp.ok) {
+    throw new Error(`Anthropic API failed after ${MAX_RETRIES} retries: ${lastError}`);
   }
 
   const data = await resp.json();
