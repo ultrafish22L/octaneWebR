@@ -2894,7 +2894,7 @@ export function registerImportTools(
     {
       title: 'Place Geometry',
       description:
-        '[Phase 1] Place primitives or meshes. Wires to geo group on active RT, auto-registers. After: analyze_geo (meshes only). Then: fit_camera. See octane://docs/reference/1.',
+        '[Phase 1] Place primitives or meshes. Wires to geo group on active RT, auto-registers. After: analyze_geo (meshes only). Then: fit_camera. See octane://docs/reference/1. ⚠️ Mesh placement requires an active render target — call start_render(render_target_handle) first if no RT is active (e.g. after MCP restart or in a freshly built scene before first render). Primitive placement does not have this requirement.',
       inputSchema: {
         type: z
           .enum(['primitive', 'mesh'])
@@ -3085,6 +3085,8 @@ export function registerImportTools(
                 position: pos,
                 rotation: rot,
                 scale: scaleVec,
+                localMin,
+                localMax,
                 boundsWorld: computeWorldAABB(localMin, localMax, pos, rot, scaleVec),
               });
               mcpLog(`place_geo(mesh): registered "${derivedName}" as ${role}`, 'info');
@@ -3208,6 +3210,8 @@ export function registerImportTools(
               position,
               rotation,
               scale: scaleVec,
+              localMin: { x: -0.5, y: -0.5, z: -0.5 },
+              localMax: { x: 0.5, y: 0.5, z: 0.5 },
               boundsWorld: computeWorldAABB(
                 { x: -0.5, y: -0.5, z: -0.5 },
                 { x: 0.5, y: 0.5, z: 0.5 },

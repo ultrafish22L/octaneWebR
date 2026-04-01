@@ -1238,13 +1238,22 @@ export function registerArtDirectionTools(
       title: 'Reset Art Direction',
       description:
         'Clear AD runtime state (scores, placement DB, SEGA vector) for a fresh build. ' +
-        'Composition specs (plan_layout) are PRESERVED. Does NOT touch the Octane scene.',
+        'Composition specs (plan_layout) are PRESERVED by default. ' +
+        'Pass clear_specs:true on scene transitions to also wipe specs + calibration — ' +
+        'REQUIRED between scenes to prevent score_render using stale expected-objects from previous scene.',
       inputSchema: {
         confirm: z.boolean().describe('Must be true to confirm reset'),
+        clear_specs: z
+          .boolean()
+          .optional()
+          .describe(
+            'Also clear composition specs and calibration cache. Use on scene transitions ' +
+              '(after save_project, before next reset_project). Prevents cross-scene spec contamination.'
+          ),
       },
       annotations: { destructiveHint: true },
     },
-    async ({ confirm }) => {
+    async ({ confirm, clear_specs }) => {
       if (!confirm) {
         return jsonResult({
           error: 'Pass confirm: true to reset all AD state.',
@@ -1255,12 +1264,16 @@ export function registerArtDirectionTools(
       client.clearRootGraphCache();
       // Full SEGA clear — intent IS reset for "fresh build"
       if (segaState) segaState.clear();
+      // Scene transition: wipe specs + calibration to prevent cross-scene contamination
+      if (clear_specs) artState.clearSpecs();
       return jsonResult({
         success: true,
-        message:
-          'AD state cleared: SEGA vector, scores, placement DB all reset. Composition specs preserved. Ready for a fresh build.',
+        message: clear_specs
+          ? 'AD state fully cleared: specs, calibration, scores, placement DB, SEGA vector all reset. Clean slate for new scene.'
+          : 'AD state cleared: SEGA vector, scores, placement DB all reset. Composition specs preserved. Ready for a fresh build.',
         cleared: {
-          specs: false,
+          specs: !!clear_specs,
+          calibration: !!clear_specs,
           sega_vector: !!segaState,
           scores: true,
           placement: true,
@@ -1520,6 +1533,8 @@ export function registerArtDirectionTools(
           position: params.position,
           rotation: params.rotation,
           scale: params.scale,
+          localMin,
+          localMax,
           boundsWorld,
           meshInfo,
         };

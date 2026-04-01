@@ -433,11 +433,7 @@ export function registerCameraTools(
           );
         }
 
-        // Tighten margin for hero-only framing
-        // BUG: 0.15 cap is too aggressive for tall/narrow meshes — crops tops.
-        // Compounded by refreshFromOctane re-centering asymmetric bounds (see ScenePlacementState.ts).
-        // TODO: raise to 0.3 or remove cap after fixing refreshFromOctane bounds.
-        const effectiveMargin = framing_mode === 'hero' ? Math.min(margin, 0.15) : margin;
+        const effectiveMargin = margin;
 
         // Query actual film resolution for correct aspect ratio
         let aspectRatio = 2; // fallback if query fails

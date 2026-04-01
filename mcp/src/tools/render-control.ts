@@ -22,7 +22,7 @@ export function registerRenderControlTools(
     {
       title: 'Clay Mode',
       description:
-        'Toggle clay rendering for scene layout verification. When AD is active: mode 2 ON for Phase 1, OFF at Phase 2 start. Modes: 0=none (normal), 1=grey clay, 2=color clay.',
+        'Set clay mode: 0=off (normal render), 1=grey clay, 2=color clay. Omit mode to read current value. When AD is active: set mode 2 for Phase 1, set mode 0 at Phase 2 start.',
       inputSchema: {
         mode: z
           .number()
