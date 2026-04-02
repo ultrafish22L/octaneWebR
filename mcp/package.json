@@ -1,6 +1,6 @@
 {
   "name": "octane-mcp-server",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "MCP server exposing Octane gRPC API to AI agents",
   "main": "dist/index.js",
   "scripts": {

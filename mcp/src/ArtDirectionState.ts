@@ -671,6 +671,8 @@ export class ArtDirectionState {
   getSummary(): {
     build_mode: BuildMode;
     ad_active: boolean;
+    ad_mode: AdMode;
+    workflow: WorkflowStatus | undefined;
     specs: string[];
     scores: Record<
       string,

@@ -17,8 +17,9 @@ files:
   - grpc-constants.js
 
 extraResources:
-  # octaneGrpcSE runtime (exe + Octane SDK DLLs + data) from dev/bin/
-  - from: ../bin/
+  # octaneGrpcSE runtime (exe + Octane SDK DLLs + data) from dev/bin/{version}/
+  # BIN_VERSION is set by build.bat or defaults to package.json version
+  - from: ../bin/${env.BIN_VERSION}
     to: octane-server/
     filter:
       - octaneGrpcSE.exe
@@ -29,6 +30,8 @@ extraResources:
       - "*.json"
       - "*.exe"
       - "!octaneServGrpc.exe"
+      - "!octaneWebR.exe"
+      - "!octaneWebR Setup.exe"
   # Proto files for gRPC client
   - from: ../octaneServGrpc/proto
     to: server/proto

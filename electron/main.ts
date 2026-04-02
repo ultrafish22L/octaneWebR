@@ -8,7 +8,7 @@
  *             serves built static files, and handles all API routes.
  */
 
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawnOctaneServer, OctaneServerHandle } from './octane-process';
@@ -132,6 +132,9 @@ async function createWindow(): Promise<void> {
     proxyServer = instance;
     serverPort = instance.port;
   }
+
+  // Remove Electron's default application menu — the app has its own in-page menu
+  Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
     width: 1920,
