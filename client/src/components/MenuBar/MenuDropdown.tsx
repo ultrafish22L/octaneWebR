@@ -12,6 +12,8 @@ interface MenuDropdownProps {
   onItemClick: (action: MenuAction, data?: string) => void | Promise<void>;
   onClose: () => void;
   isSubmenu?: boolean;
+  /** Called when mouse enters this submenu — lets parent cancel its close timer */
+  onSubmenuMouseEnter?: () => void;
 }
 
 export function MenuDropdown({
@@ -20,6 +22,7 @@ export function MenuDropdown({
   onItemClick,
   onClose,
   isSubmenu = false,
+  onSubmenuMouseEnter,
 }: MenuDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
@@ -33,18 +36,21 @@ export function MenuDropdown({
     const rect = anchorElement.getBoundingClientRect();
     const dropdown = dropdownRef.current;
 
-    // Position dropdown below menu item
     dropdown.style.position = 'fixed';
-    dropdown.style.left = `${rect.left}px`;
-    dropdown.style.top = `${rect.bottom}px`;
-    dropdown.style.zIndex = '10000';
     dropdown.style.backgroundColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--bg-primary')
       .trim();
 
     if (isSubmenu) {
-      // Position submenu to the right of parent item
+      // Position submenu to the right of parent item, aligned at top
+      dropdown.style.left = `${rect.right}px`;
+      dropdown.style.top = `${rect.top}px`;
       dropdown.style.zIndex = '10001';
+    } else {
+      // Position dropdown below menu button
+      dropdown.style.left = `${rect.left}px`;
+      dropdown.style.top = `${rect.bottom}px`;
+      dropdown.style.zIndex = '10000';
     }
 
     // Adjust if dropdown would go off-screen
@@ -109,11 +115,19 @@ export function MenuDropdown({
   }, []);
 
   const handleItemMouseLeave = useCallback(() => {
-    // Delay hiding submenu to allow mouse movement
+    // Delay hiding submenu to allow diagonal mouse movement toward it
     submenuTimer.current = window.setTimeout(() => {
       setActiveSubmenu(null);
       setSubmenuAnchor(null);
-    }, 100);
+    }, 300);
+  }, []);
+
+  // Called when mouse enters a child submenu — cancel our close timer
+  const handleChildSubmenuEnter = useCallback(() => {
+    if (submenuTimer.current) {
+      clearTimeout(submenuTimer.current);
+      submenuTimer.current = null;
+    }
   }, []);
 
   const renderMenuItem = (item: MenuItem, index: number) => {
@@ -150,7 +164,11 @@ export function MenuDropdown({
 
   return (
     <>
-      <div ref={dropdownRef} className={`context-menu menu-dropdown ${isSubmenu ? 'submenu' : ''}`}>
+      <div
+        ref={dropdownRef}
+        className={`context-menu menu-dropdown ${isSubmenu ? 'submenu' : ''}`}
+        onMouseEnter={onSubmenuMouseEnter}
+      >
         {items.map((item, index) => renderMenuItem(item, index))}
       </div>
 
@@ -162,6 +180,7 @@ export function MenuDropdown({
           onItemClick={onItemClick}
           onClose={onClose}
           isSubmenu={true}
+          onSubmenuMouseEnter={handleChildSubmenuEnter}
         />
       )}
     </>

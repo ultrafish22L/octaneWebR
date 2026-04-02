@@ -411,6 +411,17 @@ export function registerCameraTools(
           }
         }
 
+        // Null/NaN guard — corrupted bounds from failed set_attribute or stale placement DB
+        const hasNullBounds = [bMin.x, bMin.y, bMin.z, bMax.x, bMax.y, bMax.z].some(
+          v => v === null || v === undefined || Number.isNaN(v)
+        );
+        if (hasNullBounds) {
+          return errorResult(
+            `Bounding box has null/NaN values (min=${JSON.stringify(bMin)}, max=${JSON.stringify(bMax)}). ` +
+              `Re-register objects with register_object or use explicit bbox_min/bbox_max.`
+          );
+        }
+
         // Degenerate check — zero-size bbox
         const sx = bMax.x - bMin.x;
         const sy = bMax.y - bMin.y;
@@ -422,11 +433,7 @@ export function registerCameraTools(
           );
         }
 
-        // Tighten margin for hero-only framing
-        // BUG: 0.15 cap is too aggressive for tall/narrow meshes — crops tops.
-        // Compounded by refreshFromOctane re-centering asymmetric bounds (see ScenePlacementState.ts).
-        // TODO: raise to 0.3 or remove cap after fixing refreshFromOctane bounds.
-        const effectiveMargin = framing_mode === 'hero' ? Math.min(margin, 0.15) : margin;
+        const effectiveMargin = margin;
 
         // Query actual film resolution for correct aspect ratio
         let aspectRatio = 2; // fallback if query fails

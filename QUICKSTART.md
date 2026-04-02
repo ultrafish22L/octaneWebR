@@ -1,14 +1,47 @@
 # Quick Start
 
-**OctaneWebR** is a browser UI and AI scene builder for Octane Render. The browser provides a scene outliner, node graph editor, parameter inspector, and live render viewport. The MCP server gives Claude 65 tools to build scenes through natural language.
+**OctaneWebR** is a browser UI and AI scene builder for Octane Render. The browser provides a scene outliner, node graph editor, parameter inspector, and live render viewport. The MCP server gives Claude 65+ tools to build scenes through natural language.
 
-## Prerequisites
+## Applications
+
+The build produces three executables in `bin/{version}/`:
+
+| Executable             | What it is                                                                                                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **octaneServGrpc.exe** | Standalone GPU render engine. C++ gRPC server embedding the Octane Render SDK — no separate octane.exe needed. Listens on port 51022 with 96 proto services.                                  |
+| **octaneWebR.exe**     | Electron client. Hosts the React/TypeScript browser UI (scene outliner, node graph, inspector, live viewport) and the MCP server for AI scene building. Connects to octaneServGrpc over gRPC. |
+| **octaneGrpcSE.exe**   | Integrated build — octaneServGrpc + octaneWebR bundled into a single executable. Launches the gRPC server and the Electron UI together.                                                       |
+
+## Launch (prebuilt binaries)
+
+**Option A — Integrated (simplest)**
+
+```
+octaneGrpcSE.exe
+```
+
+Everything starts together. Skip to [Verify](#verify).
+
+**Option B — Separate processes**
+
+```bash
+# 1. Start the render server
+octaneServGrpc.exe
+# Wait ~5s for gRPC on port 51022
+
+# 2. Start the client
+octaneWebR.exe
+```
+
+## Launch (from source)
+
+### Prerequisites
 
 - **octaneServGrpc** running on port 51022 (see `../octaneServGrpc/QUICKSTART.md`)
 - Node.js 18+
 - Claude Code or Claude Desktop (for AI scene building)
 
-## Install & Build
+### Install & Build
 
 ```bash
 npm install && cd mcp && npm install && cd ..    # install dependencies
@@ -17,7 +50,7 @@ cd mcp && npm run build && cd ..                 # build MCP server (esbuild, 10
 
 > **Never use `tsc` for MCP builds** — it OOMs. Always use `npm run build` (esbuild).
 
-## Launch
+### Start
 
 Order matters — gRPC server must be running first.
 

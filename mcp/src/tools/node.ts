@@ -882,6 +882,38 @@ export function registerNodeTools(
     async () => {
       try {
         const rootHandle = await client.getRootNodeGraph();
+
+        // Pre-pass: disconnect dead nodes from geo_group movable pins.
+        // Octane's deleteUnconnectedItems doesn't traverse geo_group movable pins,
+        // so deleted meshes leave orphan placement/material/texture nodes still wired.
+        try {
+          const geoGroups = client.sceneCache.findByTypeName('NT_GEO_GROUP');
+          for (const gg of geoGroups) {
+            const pins = await enumeratePins(client, gg.handle);
+            for (const pin of pins) {
+              if (pin.connectedHandle) {
+                try {
+                  await client.callMethod('ApiNode', 'name', {
+                    objectPtr: { handle: String(pin.connectedHandle), type: OBJ_API_NODE },
+                  });
+                } catch {
+                  // Connected node is dead — disconnect this pin
+                  mcpLog(
+                    `cleanup_orphans: disconnecting dead node ${pin.connectedHandle} from geo_group ${gg.handle} pin ${pin.index}`,
+                    'warn'
+                  );
+                  await client.callMethod('ApiNode', 'disconnectFromIx', {
+                    objectPtr: { handle: String(gg.handle), type: OBJ_API_NODE },
+                    pinIx: pin.index,
+                  });
+                }
+              }
+            }
+          }
+        } catch (preCleanErr: any) {
+          mcpLog(`cleanup_orphans: geo_group pre-clean failed: ${preCleanErr.message}`, 'warn');
+        }
+
         await client.callMethod('ApiItem', 'deleteUnconnectedItems', {
           objectPtr: { handle: String(rootHandle), type: OBJ_API_NODE_GRAPH },
         });

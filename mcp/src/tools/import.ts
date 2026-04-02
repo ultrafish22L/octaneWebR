@@ -2807,41 +2807,38 @@ export function registerImportTools(
     EMISSION: 44,
   } as const;
 
-  // Session-level geo_group affinity: once a geo_group is found/created,
-  // reuse it for all subsequent place_geo calls. Prevents divergence when
-  // heavy SDK operations (mesh loading) change the active RT mid-session.
-  let sessionGeoGroup: { geoGroup: number; rtHandle: number } | null = null;
+  // Session-level geo_group affinity now lives on client (cleared by clearRootGraphCache).
 
   /** Find or create a geo group on the active RT.
-   *  Caches result so all place_geo calls in a session share one geo_group. */
+   *  Caches result on client.sessionGeoGroup so all place_geo calls share one geo_group. */
   async function findOrCreateGeoGroup(
     geoGroupOverride?: number
   ): Promise<{ geoGroup: number; rtHandle: number }> {
     if (geoGroupOverride) return { geoGroup: geoGroupOverride, rtHandle: 0 };
 
     // Reuse session-level geo_group if still valid (node exists and is connected)
-    if (sessionGeoGroup) {
+    if (client.sessionGeoGroup) {
       try {
         const info = await client.callMethod('ApiNode', 'connectedNodeIx', {
-          objectPtr: { handle: String(sessionGeoGroup.rtHandle), type: OBJ_API_NODE },
+          objectPtr: { handle: String(client.sessionGeoGroup.rtHandle), type: OBJ_API_NODE },
           pinIx: 3,
           enterWrapperNode: true,
         });
         const connHandle = extractHandle(info);
-        if (connHandle === sessionGeoGroup.geoGroup) {
-          return sessionGeoGroup;
+        if (connHandle === client.sessionGeoGroup.geoGroup) {
+          return client.sessionGeoGroup;
         }
         mcpLog(
-          `place_geo: cached geo_group ${sessionGeoGroup.geoGroup} stale (RT pin 3 now ${connHandle}), re-resolving`,
+          `place_geo: cached geo_group ${client.sessionGeoGroup.geoGroup} stale (RT pin 3 now ${connHandle}), re-resolving`,
           'warn'
         );
       } catch {
         mcpLog(
-          `place_geo: cached geo_group ${sessionGeoGroup.geoGroup} invalid, re-resolving`,
+          `place_geo: cached geo_group ${client.sessionGeoGroup.geoGroup} invalid, re-resolving`,
           'warn'
         );
       }
-      sessionGeoGroup = null;
+      client.sessionGeoGroup = null;
     }
 
     const activeRt = await client.callMethod('ApiRenderEngine', 'getRenderTargetNode', {});
@@ -2850,14 +2847,14 @@ export function registerImportTools(
       const pins = await enumeratePins(client, activeRtHandle);
       const geoPin = pins.find(p => p.index === 3);
       if (geoPin?.connectedHandle) {
-        sessionGeoGroup = { geoGroup: geoPin.connectedHandle, rtHandle: activeRtHandle };
-        return sessionGeoGroup;
+        client.sessionGeoGroup = { geoGroup: geoPin.connectedHandle, rtHandle: activeRtHandle };
+        return client.sessionGeoGroup;
       }
       const geoGroup = await createNodeRaw(client, MUGSHOT_TYPES.GEO_GROUP);
       await connectRaw(client, activeRtHandle, geoGroup, 3);
       mcpLog(`place_geo: created geo group ${geoGroup} on existing RT ${activeRtHandle}`, 'info');
-      sessionGeoGroup = { geoGroup, rtHandle: activeRtHandle };
-      return sessionGeoGroup;
+      client.sessionGeoGroup = { geoGroup, rtHandle: activeRtHandle };
+      return client.sessionGeoGroup;
     }
 
     const rtHandle = await createNodeRaw(client, MUGSHOT_TYPES.RT);
@@ -2876,8 +2873,8 @@ export function registerImportTools(
       targetNode: { handle: String(rtHandle), type: OBJ_API_NODE },
     });
     mcpLog(`place_geo: created new RT ${rtHandle} with geo group ${geoGroup}`, 'info');
-    sessionGeoGroup = { geoGroup, rtHandle };
-    return sessionGeoGroup;
+    client.sessionGeoGroup = { geoGroup, rtHandle };
+    return client.sessionGeoGroup;
   }
 
   /** Wire a node to geo group, continue rendering. */
@@ -2897,7 +2894,7 @@ export function registerImportTools(
     {
       title: 'Place Geometry',
       description:
-        '[Phase 1] Place primitives or meshes. Wires to geo group on active RT, auto-registers. After: analyze_geo (meshes only). Then: fit_camera. See octane://docs/reference/1.',
+        '[Phase 1] Place primitives or meshes. Wires to geo group on active RT, auto-registers. After: analyze_geo (meshes only). Then: fit_camera. See octane://docs/reference/1. ⚠️ Mesh placement requires an active render target — call start_render(render_target_handle) first if no RT is active (e.g. after MCP restart or in a freshly built scene before first render). Primitive placement does not have this requirement.',
       inputSchema: {
         type: z
           .enum(['primitive', 'mesh'])
@@ -3010,8 +3007,11 @@ export function registerImportTools(
             y: sidecarRot.y + rotation.y,
             z: sidecarRot.z + rotation.z,
           };
-          const scaleOverride = typeof scale === 'number' && scale !== 1 ? scale : undefined;
-          const scaleFactor = scaleOverride ?? suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+          const sidecarScale = suggestion.scale_factor ?? suggestion.scale?.x ?? 1;
+          const userScale =
+            typeof scale === 'number' ? scale : typeof scale === 'object' ? scale.x : 1;
+          // User scale multiplies sidecar scale (user=1 means "use sidecar as-is")
+          const scaleFactor = userScale * sidecarScale;
           const posOverride =
             position.x !== 0 || position.y !== 0 || position.z !== 0 ? position : undefined;
           const yOffset = posOverride?.y ?? suggestion.ground_offset_y ?? suggestion.y_offset ?? 0;
@@ -3085,6 +3085,8 @@ export function registerImportTools(
                 position: pos,
                 rotation: rot,
                 scale: scaleVec,
+                localMin,
+                localMax,
                 boundsWorld: computeWorldAABB(localMin, localMax, pos, rot, scaleVec),
               });
               mcpLog(`place_geo(mesh): registered "${derivedName}" as ${role}`, 'info');
@@ -3208,6 +3210,8 @@ export function registerImportTools(
               position,
               rotation,
               scale: scaleVec,
+              localMin: { x: -0.5, y: -0.5, z: -0.5 },
+              localMax: { x: 0.5, y: 0.5, z: 0.5 },
               boundsWorld: computeWorldAABB(
                 { x: -0.5, y: -0.5, z: -0.5 },
                 { x: 0.5, y: 0.5, z: 0.5 },

@@ -4,6 +4,22 @@ All notable changes to octaneWebR.
 
 ---
 
+## [3.1.2] - 2026-04-02
+
+### Changed
+
+- **Electron menu removed** — `Menu.setApplicationMenu(null)` removes the native Electron menu bar; the app uses its own in-page menu.
+- **Submenu hover fix** — File > Recent projects submenu no longer disappears during diagonal mouse movement. Added `onSubmenuMouseEnter` callback so child submenus cancel the parent's close timer, and increased close delay from 100ms to 300ms.
+- **Submenu positioning** — Submenus now open to the right of the parent item (at `rect.right, rect.top`) instead of overlapping below.
+
+### Added
+
+- **Integrated Electron build** — `build.bat` now produces both `octaneWebR.exe` (client-only) and `octaneGrpcSE.exe` (integrated server + client). The integrated build bundles `octaneGrpcSE` server inside the Electron app resources.
+- **`electron:build:integrated`** — new npm script that sets `BIN_VERSION` env var and builds with `electron-builder.integrated.yml`.
+- **`electron:copy-bin:integrated`** — renames integrated output from `octaneWebR` to `octaneGrpcSE` in `bin/{version}/`.
+
+---
+
 ## [3.1.1] - 2026-03-31
 
 ### Changed

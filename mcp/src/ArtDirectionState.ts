@@ -544,6 +544,14 @@ export class ArtDirectionState {
     return [...this.specs.keys()];
   }
 
+  /** Clear all composition specs — call on explicit scene transition (reset_ad with clear_specs:true). */
+  clearSpecs(): void {
+    this.specs.clear();
+    this.history.clear();
+    this._lastCalibration = null;
+    this._lastCalibrationPath = null;
+  }
+
   // ── Score history ────────────────────────────────────────────
 
   addScore(specName: string, record: ScoreRecord): void {
@@ -633,6 +641,11 @@ export class ArtDirectionState {
     this._stepNotes.clear();
     this._clayMode = 0;
     this._lastRenderPath = null;
+    // ⚠️ Calibration is per-scene — MUST clear to prevent cross-scene spec contamination.
+    // If stale calibration survives into a new scene, score_render uses the old scene's
+    // expected-objects list and reports wrong missing_elements (e.g. s01 skull/fruit in s02).
+    this._lastCalibration = null;
+    this._lastCalibrationPath = null;
     // specs PRESERVED — they're planning data, not scene data
     // mode PRESERVED — user toggles it explicitly
     // state refs PRESERVED — they have their own clear()
@@ -648,6 +661,8 @@ export class ArtDirectionState {
     this._buildMode = null;
     this._clayMode = 0;
     this._lastRenderPath = null;
+    this._lastCalibration = null;
+    this._lastCalibrationPath = null;
     // mode persists across clear — user toggles it explicitly
     // state refs PRESERVED — they have their own clear()
   }
@@ -656,6 +671,8 @@ export class ArtDirectionState {
   getSummary(): {
     build_mode: BuildMode;
     ad_active: boolean;
+    ad_mode: AdMode;
+    workflow: WorkflowStatus | undefined;
     specs: string[];
     scores: Record<
       string,

@@ -1085,6 +1085,21 @@ export function registerArtDirectionTools(
       const existingHistory = artState.getHistory(params.spec_name);
       const alreadyRecorded = existingHistory.some(h => h.iteration === params.iteration);
 
+      // Validate passed against VLM verdict — reject force-pass when Sonnet said fail
+      if (params.passed && alreadyRecorded) {
+        const lastVLM = existingHistory
+          .slice()
+          .reverse()
+          .find(h => (h as any).comparison && h.iteration === params.iteration);
+        if (lastVLM && !lastVLM.passed) {
+          const grade = (lastVLM as any).comparison?.grade ?? 'unknown';
+          return errorResult(
+            `commit_scores: passed=true REJECTED. score_render (VLM) scored iteration ${params.iteration} as NOT PASSED (grade: ${grade}). ` +
+              `Fix the issues and call score_render again — do not override VLM verdicts.`
+          );
+        }
+      }
+
       if (!alreadyRecorded) {
         const record: ScoreRecord = {
           iteration: params.iteration,
@@ -1096,6 +1111,14 @@ export function registerArtDirectionTools(
           timestamp: Date.now(),
         };
         artState.addScore(params.spec_name, record);
+      }
+
+      // Set framing_verified if framing score passes threshold (mirrors score_render clay gate logic)
+      if (params.passed && params.scores.framing >= 3 && !artState.isStepDone('framing_verified')) {
+        artState.completeStep(
+          'framing_verified',
+          `commit_scores: framing=${params.scores.framing}, passed=${params.passed}`
+        );
       }
 
       const history = artState.getHistory(params.spec_name);
@@ -1214,28 +1237,43 @@ export function registerArtDirectionTools(
     {
       title: 'Reset Art Direction',
       description:
-        'Clear all AD state (specs, SEGA vector, scores, placement DB) for a fresh build. ' +
-        'Does NOT touch the Octane scene — pair with reset_project for full reset.',
+        'Clear AD runtime state (scores, placement DB, SEGA vector) for a fresh build. ' +
+        'Composition specs (plan_layout) are PRESERVED by default. ' +
+        'Pass clear_specs:true on scene transitions to also wipe specs + calibration — ' +
+        'REQUIRED between scenes to prevent score_render using stale expected-objects from previous scene.',
       inputSchema: {
         confirm: z.boolean().describe('Must be true to confirm reset'),
+        clear_specs: z
+          .boolean()
+          .optional()
+          .describe(
+            'Also clear composition specs and calibration cache. Use on scene transitions ' +
+              '(after save_project, before next reset_project). Prevents cross-scene spec contamination.'
+          ),
       },
       annotations: { destructiveHint: true },
     },
-    async ({ confirm }) => {
+    async ({ confirm, clear_specs }) => {
       if (!confirm) {
         return jsonResult({
           error: 'Pass confirm: true to reset all AD state.',
         });
       }
-      artState.clear();
+      // Cascade through clearRootGraphCache → onClear callbacks:
+      // artState.clearScene() (preserves specs), segaState.clearScene(), placementState.clear(), sessionGeoGroup=null
+      client.clearRootGraphCache();
+      // Full SEGA clear — intent IS reset for "fresh build"
       if (segaState) segaState.clear();
-      placement.clear();
+      // Scene transition: wipe specs + calibration to prevent cross-scene contamination
+      if (clear_specs) artState.clearSpecs();
       return jsonResult({
         success: true,
-        message:
-          'AD state cleared: specs, SEGA vector, scores, placement DB all reset. Ready for a fresh build.',
+        message: clear_specs
+          ? 'AD state fully cleared: specs, calibration, scores, placement DB, SEGA vector all reset. Clean slate for new scene.'
+          : 'AD state cleared: SEGA vector, scores, placement DB all reset. Composition specs preserved. Ready for a fresh build.',
         cleared: {
-          specs: true,
+          specs: !!clear_specs,
+          calibration: !!clear_specs,
           sega_vector: !!segaState,
           scores: true,
           placement: true,
@@ -1495,6 +1533,8 @@ export function registerArtDirectionTools(
           position: params.position,
           rotation: params.rotation,
           scale: params.scale,
+          localMin,
+          localMax,
           boundsWorld,
           meshInfo,
         };

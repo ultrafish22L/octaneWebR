@@ -50,11 +50,19 @@ Hunyuan World produces actual panoramic projections from a single image — $0.1
 
 ### Image-to-3D (hero meshes)
 
+Two endpoints — prefer text-to-3D when you don't have a clean isolated-object image:
+
 ```bash
-# Hunyuan-3D v3.1 Pro — best quality + PBR
+# Text-to-3D — no image needed, most reliable
+POST /r2/otoy-studio/hunyuan-3d/v3.1/pro/text-to-3d
+{ "prompt": "...", "enable_pbr": true }
+
+# Image-to-3D — requires clean isolated object on white background
 POST /r2/otoy-studio/hunyuan-3d/v3.1/pro/image-to-3d
 { "input_image_url": "...", "enable_pbr": true }
 ```
+
+**⚠️ SIGNED URL EXPIRY (image-to-3D):** Pass the `input_image_url` immediately after obtaining it. Signed S3 URLs expire — if you store the URL and submit later, the job will silently "complete" in ~15s (correct time is ~170s) and the result endpoint returns `"error code: 502"` (not valid JSON). **Detection heuristic: if `inference_time < 60s`, the job failed — fall back to text-to-3D.**
 
 **⚠️ STATUS URL GOTCHA:** The submit response contains `status_url` and `response_url`. These use a DIFFERENT path than the submit endpoint:
 
@@ -128,7 +136,7 @@ curl -s "https://storage.otoy.ai/docs/{endpoint-id}/llms.txt"
     → save hdri.png → apply via NT_ENV_TEXTURE + NT_TEX_IMAGE with SPHERE PROJECTION
 2.  analyze_reference (Octane MCP) — extract composition
 3.  Mesh concepts — REST flux-pro/new (square_hd, white bg, isolated, no pedestal)
-4.  Image-to-3D — REST hunyuan-3d/v3.1/pro/image-to-3d → download GLB (NOT OBJ)
+4.  3D mesh — REST hunyuan-3d/v3.1/pro/text-to-3d (preferred) OR image-to-3d (pass URL immediately) → download GLB (NOT OBJ)
 5.  analyze_geo (Octane MCP, .glb path) → orientation check (GLB is Z-up, needs rotation)
 6.  place_geo (Octane MCP, .glb path) → place in scene with embedded PBR textures
 ```

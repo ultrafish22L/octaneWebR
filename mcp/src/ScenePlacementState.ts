@@ -30,6 +30,10 @@ export interface ScenePlacementEntry {
   scale: Vec3;
   /** World-space axis-aligned bounding box (after transform) */
   boundsWorld: AABB;
+  /** Local-space mesh bounds (before transform). Stored so refreshFromOctane can recompute
+   *  boundsWorld correctly via computeWorldAABB when position/scale change. */
+  localMin?: Vec3;
+  localMax?: Vec3;
   /** Mesh analysis from analyze_geo sidecar, if available */
   meshInfo?: {
     category: string;
@@ -324,40 +328,46 @@ export class ScenePlacementState {
           invisible.add(entry.handle);
         }
         if (live.position && live.scale) {
-          // Recompute boundsWorld from live transform + original extents
-          // BUG: This re-centers extents at position (position ± halfExtent), destroying
-          // the asymmetric AABB that computeWorldAABB correctly computed for rotated meshes.
-          // For meshes with non-centered geometry (e.g., Z-up lantern with bounds Z=[-1.148, 0],
-          // rotated 90° X so base is at position and mesh extends UPWARD), this shifts the
-          // top bound down by half the height, causing fit_camera(hero) to crop the top.
-          // FIX: Store localMin/localMax + rotation on entry, recompute via computeWorldAABB.
-          // Or: store center-to-position offset and preserve it during refresh.
-          const oldExt = {
-            x: entry.boundsWorld.max.x - entry.boundsWorld.min.x,
-            y: entry.boundsWorld.max.y - entry.boundsWorld.min.y,
-            z: entry.boundsWorld.max.z - entry.boundsWorld.min.z,
-          };
-          // Scale ratio: new scale / old scale (avoid div by zero)
-          const sx = live.scale.x / (entry.scale.x || 1);
-          const sy = live.scale.y / (entry.scale.y || 1);
-          const sz = live.scale.z / (entry.scale.z || 1);
-          const halfX = (oldExt.x * sx) / 2;
-          const halfY = (oldExt.y * sy) / 2;
-          const halfZ = (oldExt.z * sz) / 2;
           entry.position = live.position;
           entry.scale = live.scale;
-          entry.boundsWorld = {
-            min: {
-              x: live.position.x - halfX,
-              y: live.position.y - halfY,
-              z: live.position.z - halfZ,
-            },
-            max: {
-              x: live.position.x + halfX,
-              y: live.position.y + halfY,
-              z: live.position.z + halfZ,
-            },
-          };
+          if (entry.localMin && entry.localMax) {
+            // Recompute using stored local bounds + current rotation — preserves asymmetric AABBs
+            // (e.g. Z-up meshes rotated 90° X whose geometry extends entirely above the origin).
+            entry.boundsWorld = computeWorldAABBLocal(
+              entry.localMin,
+              entry.localMax,
+              live.position,
+              entry.rotation,
+              live.scale
+            );
+          } else {
+            // Fallback for entries registered without localMin/localMax (legacy / manual).
+            // Approximation: centered symmetric AABB scaled by ratio. Asymmetric meshes
+            // will still be wrong here, but this path should rarely occur going forward.
+            const oldExt = {
+              x: entry.boundsWorld.max.x - entry.boundsWorld.min.x,
+              y: entry.boundsWorld.max.y - entry.boundsWorld.min.y,
+              z: entry.boundsWorld.max.z - entry.boundsWorld.min.z,
+            };
+            const sx = live.scale.x / (entry.scale.x || 1);
+            const sy = live.scale.y / (entry.scale.y || 1);
+            const sz = live.scale.z / (entry.scale.z || 1);
+            const halfX = (oldExt.x * sx) / 2;
+            const halfY = (oldExt.y * sy) / 2;
+            const halfZ = (oldExt.z * sz) / 2;
+            entry.boundsWorld = {
+              min: {
+                x: live.position.x - halfX,
+                y: live.position.y - halfY,
+                z: live.position.z - halfZ,
+              },
+              max: {
+                x: live.position.x + halfX,
+                y: live.position.y + halfY,
+                z: live.position.z + halfZ,
+              },
+            };
+          }
         }
       } catch {
         dead.push(entry.handle);
@@ -389,6 +399,58 @@ export class ScenePlacementState {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
+
+/**
+ * Compute world-space AABB from local bounds + placement transform (pure math, no deps).
+ * Mirrors computeWorldAABB in tools/pin-utils.ts — kept here to avoid pulling in gRPC deps.
+ */
+function computeWorldAABBLocal(
+  localMin: Vec3,
+  localMax: Vec3,
+  position: Vec3,
+  rotationDeg: Vec3,
+  scale: Vec3
+): AABB {
+  const sMin = { x: localMin.x * scale.x, y: localMin.y * scale.y, z: localMin.z * scale.z };
+  const sMax = { x: localMax.x * scale.x, y: localMax.y * scale.y, z: localMax.z * scale.z };
+  const rx = (rotationDeg.x * Math.PI) / 180;
+  const ry = (rotationDeg.y * Math.PI) / 180;
+  const rz = (rotationDeg.z * Math.PI) / 180;
+  const cx = Math.cos(rx),
+    sx = Math.sin(rx);
+  const cy = Math.cos(ry),
+    sy = Math.sin(ry);
+  const cz = Math.cos(rz),
+    sz = Math.sin(rz);
+  const R = [
+    [cy * cz, sx * sy * cz - cx * sz, cx * sy * cz + sx * sz],
+    [cy * sz, sx * sy * sz + cx * cz, cx * sy * sz - sx * cz],
+    [-sy, sx * cy, cx * cy],
+  ];
+  const corners = [
+    { x: sMin.x, y: sMin.y, z: sMin.z },
+    { x: sMax.x, y: sMin.y, z: sMin.z },
+    { x: sMin.x, y: sMax.y, z: sMin.z },
+    { x: sMax.x, y: sMax.y, z: sMin.z },
+    { x: sMin.x, y: sMin.y, z: sMax.z },
+    { x: sMax.x, y: sMin.y, z: sMax.z },
+    { x: sMin.x, y: sMax.y, z: sMax.z },
+    { x: sMax.x, y: sMax.y, z: sMax.z },
+  ];
+  let rMin = { x: Infinity, y: Infinity, z: Infinity };
+  let rMax = { x: -Infinity, y: -Infinity, z: -Infinity };
+  for (const c of corners) {
+    const px = R[0][0] * c.x + R[0][1] * c.y + R[0][2] * c.z;
+    const py = R[1][0] * c.x + R[1][1] * c.y + R[1][2] * c.z;
+    const pz = R[2][0] * c.x + R[2][1] * c.y + R[2][2] * c.z;
+    rMin = { x: Math.min(rMin.x, px), y: Math.min(rMin.y, py), z: Math.min(rMin.z, pz) };
+    rMax = { x: Math.max(rMax.x, px), y: Math.max(rMax.y, py), z: Math.max(rMax.z, pz) };
+  }
+  return {
+    min: { x: position.x + rMin.x, y: position.y + rMin.y, z: position.z + rMin.z },
+    max: { x: position.x + rMax.x, y: position.y + rMax.y, z: position.z + rMax.z },
+  };
+}
 
 function vec3Distance(a: Vec3, b: Vec3): number {
   const dx = a.x - b.x;
