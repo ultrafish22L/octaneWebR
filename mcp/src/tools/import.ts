@@ -883,7 +883,9 @@ function burnLabel(
 
 // ── Mugshot scoreboard for configuration mode ────────────────────────
 
-const SCOREBOARD_PATH = path.resolve(__dirname, '../../data/mugshot_scoreboard.json');
+const SCOREBOARD_PATH = process.env.OCTANE_MCP_CACHE_DIR
+  ? path.join(process.env.OCTANE_MCP_CACHE_DIR, 'mugshot_scoreboard.json')
+  : path.resolve(__dirname, '../../data/mugshot_scoreboard.json');
 // Anthropic models use direct Claude API. Sonnet best for spatial reasoning.
 const AVAILABLE_VLM_MODELS = ['claude-sonnet'];
 

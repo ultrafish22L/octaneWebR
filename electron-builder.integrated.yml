@@ -31,7 +31,6 @@ extraResources:
       - "*.exe"
       - "!octaneServGrpc.exe"
       - "!octaneWebR.exe"
-      - "!octaneWebR Setup.exe"
   # Proto files for gRPC client
   - from: ../octaneServGrpc/proto
     to: server/proto
@@ -47,10 +46,5 @@ extraResources:
 
 win:
   target:
-    - nsis
     - portable
   icon: build/icon.ico
-
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true

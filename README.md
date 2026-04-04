@@ -1,4 +1,4 @@
-# OctaneWebR v3.1.2
+# OctaneWebR
 
 A browser-based UI for Octane Render Studio, built with React and TypeScript. OctaneWebR communicates with Octane through its gRPC LiveLink API, providing a scene outliner, node graph editor, parameter inspector, and live render viewport — all running in the browser.
 
@@ -137,7 +137,7 @@ octaneWebR/
 | `OCTANE_PORT`       | `51022`     | Octane gRPC port                                                                         |
 | `WORKER_1`          | `43929`     | Dev server port                                                                          |
 | `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address (use `127.0.0.1` on untrusted networks)                             |
-| `OCTANE_FILE_ROOTS` | `~`         | Comma-separated dirs MCP/UI can read/write (scenes, renders, meshes). `*` = unrestricted |
+| `OCTANE_FILE_ROOTS` | `cwd`       | Comma-separated dirs MCP/UI can read/write (scenes, renders, meshes). `*` = unrestricted |
 | `GRPC_DEBUG_LOG`    | `1`         | Log mutating gRPC calls to `log_grpc.log` (set `0` to disable)                           |
 
 ## Development

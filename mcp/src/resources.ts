@@ -64,8 +64,9 @@ function parseDocSections(filePath: string): Map<string, DocSection> {
   return sections;
 }
 
-// Resolve docs path relative to this file's location (mcp/src/ → ../../docs/mcp/)
-const DOCS_DIR = path.resolve(__dirname, '..', '..', 'docs', 'mcp');
+// Resolve docs path: env var override for standalone/SEA builds, else relative to source tree
+const DOCS_DIR =
+  process.env.OCTANE_MCP_DOCS_DIR || path.resolve(__dirname, '..', '..', 'docs', 'mcp');
 
 /** Known doc files with their short aliases */
 const DOC_FILES: Record<string, string> = {

@@ -17,7 +17,9 @@ import type {
   TransformObjectPtrParams,
 } from './types/GrpcClientTypes';
 
-export const MCP_LOG_PATH = path.resolve(__dirname, '../../log_mcp.log');
+export const MCP_LOG_PATH = process.env.OCTANE_MCP_LOG_DIR
+  ? path.join(process.env.OCTANE_MCP_LOG_DIR, 'log_mcp.log')
+  : path.resolve(__dirname, '../../log_mcp.log');
 
 // Log levels (lowest → highest):
 //   verbose — per-gRPC-call REQ/RES + timings, cache mutations, health skips (firehose)

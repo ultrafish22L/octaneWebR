@@ -4,13 +4,14 @@
 
 ## Applications
 
-The build produces three executables in `bin/{version}/`:
+The build produces four executables in `bin/{version}/`:
 
 | Executable             | What it is                                                                                                                                                                                    |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **octaneServGrpc.exe** | Standalone GPU render engine. C++ gRPC server embedding the Octane Render SDK — no separate octane.exe needed. Listens on port 51022 with 96 proto services.                                  |
 | **octaneWebR.exe**     | Electron client. Hosts the React/TypeScript browser UI (scene outliner, node graph, inspector, live viewport) and the MCP server for AI scene building. Connects to octaneServGrpc over gRPC. |
 | **octaneGrpcSE.exe**   | Integrated build — octaneServGrpc + octaneWebR bundled into a single executable. Launches the gRPC server and the Electron UI together.                                                       |
+| **octaneServMcp.exe**  | Standalone MCP server. Self-contained Node.js SEA — no Node.js install required. Proto files, API cache, and docs are embedded. Produces `log_mcp.log` and `log_grpc.log` next to the exe.    |
 
 ## Launch (prebuilt binaries)
 
@@ -20,18 +21,46 @@ The build produces three executables in `bin/{version}/`:
 octaneGrpcSE.exe
 ```
 
-Everything starts together. Skip to [Verify](#verify).
+Everything starts together. Skip to [AI Scene Building](#ai-scene-building-mcp).
 
-**Option B — Separate processes**
+**Option B — Separate processes (any start order)**
 
 ```bash
-# 1. Start the render server
-octaneServGrpc.exe
-# Wait ~5s for gRPC on port 51022
-
-# 2. Start the client
-octaneWebR.exe
+octaneServGrpc.exe              # GPU render server (tray app, port 51022)
+octaneWebR.exe                  # Browser UI (optional — for visual preview)
 ```
+
+These can start in any order. The UI shows "disconnected" until the server is ready, then reconnects automatically. GPU initialization takes 10-30 seconds.
+
+## AI Scene Building (MCP)
+
+Create a `.mcp.json` in your working directory (next to the exes, or wherever you launch Claude Code):
+
+```json
+{
+  "mcpServers": {
+    "octane": {
+      "command": "./octaneServMcp.exe"
+    }
+  }
+}
+```
+
+Open Claude Code in that directory. It reads `.mcp.json` and auto-starts the MCP server. Claude discovers all 65+ tools automatically. No Node.js install required.
+
+Log files (`log_mcp.log`, `log_grpc.log`) are written next to `octaneServMcp.exe`.
+
+### Optional: browser preview
+
+Run `octaneWebR.exe` alongside to watch the scene build in real-time. The browser provides a scene outliner, node graph, parameter inspector, and live render viewport.
+
+### Try it
+
+```
+"Create a red metallic sphere on a white floor with dramatic lighting"
+```
+
+Claude creates geometry, sets materials, positions the camera, lights the scene, and renders — showing you each step.
 
 ## Launch (from source)
 
@@ -72,23 +101,36 @@ Open **http://localhost:43929** in your browser.
 2. Render viewport shows a live image
 3. Select a node — inspector shows properties
 
-## AI Scene Building (MCP)
+## Build
 
-Open Claude Code in the `octaneWebR` directory. It reads `.mcp.json` and connects automatically.
+```bash
+# Full rebuild (C++ servers + Electron app + MCP exe)
+build.bat
 
-Try: `"Create a blue metallic sphere on a white floor, lit by sunset daylight"`
+# Individual targets
+build.bat grpc              # C++ servers only
+build.bat electron          # Electron app only
+build.bat mcp               # MCP standalone exe only
 
-Claude creates nodes, sets materials, positions the camera, and renders — while you watch in the browser.
+# Demo SDK builds
+build.bat --demo            # all targets with demo SDK
+build.bat grpc --demo       # C++ servers with demo SDK
+```
 
-## Environment Variables
+Output goes to `bin/{version}/` (or `bin/{version}_DEMO/` for demo builds).
 
-| Variable            | Default     | Purpose                                           |
-| ------------------- | ----------- | ------------------------------------------------- |
-| `OCTANE_HOST`       | `127.0.0.1` | gRPC host                                         |
-| `OCTANE_PORT`       | `51022`     | gRPC port                                         |
-| `WORKER_1`          | `43929`     | Web UI port                                       |
-| `OCTANE_FILE_ROOTS` | `~`         | Dirs MCP/UI can read/write (`*` = unrestricted)   |
-| `GRPC_DEBUG_LOG`    | `1`         | Log gRPC calls to `log_grpc.log` (`0` to disable) |
+## Environment Variables (optional)
+
+No env vars are required for default usage. These are available for advanced configuration:
+
+| Variable            | Default     | Purpose                                                   |
+| ------------------- | ----------- | --------------------------------------------------------- |
+| `OCTANE_HOST`       | `127.0.0.1` | gRPC host                                                 |
+| `OCTANE_PORT`       | `51022`     | gRPC port                                                 |
+| `WORKER_1`          | `43929`     | Web UI port                                               |
+| `OCTANE_FILE_ROOTS` | `cwd`       | Dirs MCP/UI can read/write (`*` = unrestricted)           |
+| `GRPC_DEBUG_LOG`    | `1`         | Log gRPC calls to `log_grpc.log` (`0` to disable)         |
+| `ANTHROPIC_API_KEY` | —           | Required only for VLM scoring (score_render, analyze_geo) |
 
 ## Next Steps
 

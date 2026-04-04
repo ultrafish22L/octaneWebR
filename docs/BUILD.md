@@ -48,7 +48,7 @@ Known issue: `log_grpc.log` writes to `__dirname` which is inside the read-only 
 | `OCTANE_PORT`       | `51022`     | gRPC port                                         |
 | `WORKER_1`          | `43929`     | Dev server port                                   |
 | `OCTANE_BIND_HOST`  | `0.0.0.0`   | Network bind address                              |
-| `OCTANE_FILE_ROOTS` | `~`         | Dirs MCP/UI can read/write (`*` = unrestricted)   |
+| `OCTANE_FILE_ROOTS` | `cwd`       | Dirs MCP/UI can read/write (`*` = unrestricted)   |
 | `GRPC_DEBUG_LOG`    | `1`         | Log gRPC calls to `log_grpc.log` (`0` to disable) |
 
 ## Logging

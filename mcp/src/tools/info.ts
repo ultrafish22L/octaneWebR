@@ -5,11 +5,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import fs from 'fs';
-import path from 'path';
-
-// Read MCP server version from package.json at startup
-const mcpPkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
-const MCP_SERVER_VERSION: string = mcpPkg.version || 'unknown';
+// Injected at build time by esbuild define (build-standalone.mjs).
+// Falls back to 'unknown' only if the define is missing (e.g. running raw ts via tsx).
+declare const __MCP_VERSION__: string;
+const MCP_SERVER_VERSION: string =
+  typeof __MCP_VERSION__ !== 'undefined' ? __MCP_VERSION__ : 'unknown';
 
 // Build number — increment on every code change to verify running code matches build.
 // Check with get_octane_version() → mcp_build field.

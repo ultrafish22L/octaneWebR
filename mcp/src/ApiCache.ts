@@ -11,7 +11,9 @@ import fs from 'fs';
 import { mcpLog } from './OctaneMcpClient';
 import path from 'path';
 
-const CACHE_PATH = path.resolve(__dirname, '../data/octane-api-cache.json');
+const CACHE_PATH = process.env.OCTANE_MCP_CACHE_DIR
+  ? path.join(process.env.OCTANE_MCP_CACHE_DIR, 'octane-api-cache.json')
+  : path.resolve(__dirname, '../data/octane-api-cache.json');
 
 export interface CachedPinInfo {
   index: number;

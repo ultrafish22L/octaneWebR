@@ -8,9 +8,10 @@ import path from 'path';
 
 /**
  * Default root for OCTANE_FILE_ROOTS when the env var is unset.
- * Uses the user's home directory as a reasonable cross-platform default.
+ * Resolves CWD at startup to an absolute path so it's stable even if
+ * something later changes the working directory.
  */
-const DEFAULT_FILE_ROOT = process.env.HOME || process.env.USERPROFILE || '.';
+const DEFAULT_FILE_ROOT = path.resolve(process.cwd());
 
 /**
  * Validate a file path against OCTANE_FILE_ROOTS.

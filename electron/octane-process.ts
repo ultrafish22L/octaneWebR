@@ -7,7 +7,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as readline from 'readline';
 
-const READY_TIMEOUT_MS = 30_000;
+const READY_TIMEOUT_MS = 120_000; // GPU init can take 60s+
 const KILL_GRACE_MS = 5_000;
 
 export interface OctaneServerHandle {

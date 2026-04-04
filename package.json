@@ -1,6 +1,6 @@
 {
   "name": "octaneweb-react",
-  "version": "3.1.2",
+  "version": "3.1.3",
   "description": "OctaneWeb ported to React TypeScript with Node.js gRPC",
   "main": "dist/electron/main.js",
   "scripts": {
@@ -118,15 +118,11 @@
     ],
     "win": {
       "target": [
-        "nsis",
         "portable"
       ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}.${ext}",
       "executableName": "octaneWebR"
-    },
-    "nsis": {
-      "artifactName": "${productName} Setup.${ext}"
     },
     "portable": {
       "artifactName": "${productName}.${ext}"

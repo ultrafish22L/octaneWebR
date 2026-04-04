@@ -1,4 +1,4 @@
-## v3.1.2 (MCP_BUILD 75)
+## (MCP_BUILD 75)
 
 Known issues: Connection LED false-green when offline, LiveDB disabled.
 

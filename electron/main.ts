@@ -86,9 +86,15 @@ async function createWindow(): Promise<void> {
       console.log(`[Electron] octaneServGrpc ready on port ${octaneServer.port}`);
       process.env.OCTANE_PORT = String(octaneServer.port);
     } catch (err: any) {
+      const msg = String(err.message || err);
+      const isPortInUse =
+        (msg.includes('port') && msg.includes('in use')) || msg.includes('exited before ready');
       dialog.showErrorBox(
         'Octane Server Error',
-        `Failed to start integrated Octane server:\n${err.message}`
+        isPortInUse
+          ? `Port 51022 is already in use — octaneServGrpc may already be running.\n\n` +
+              `Use octaneWebR.exe (client-only) instead of octaneGrpcSE.exe when running a separate server.`
+          : `Failed to start integrated Octane server:\n${msg}`
       );
       app.quit();
       return;
@@ -121,16 +127,25 @@ async function createWindow(): Promise<void> {
 
     const staticDir = path.join(appRoot, 'dist/client');
 
-    const instance = await startGrpcProxyServer({
-      port: 43930,
-      protoBasePath: protoServerPath,
-      apiCachePath,
-      staticDir,
-      dxAddon,
-    });
+    try {
+      const instance = await startGrpcProxyServer({
+        port: 43930,
+        protoBasePath: protoServerPath,
+        apiCachePath,
+        staticDir,
+        dxAddon,
+      });
 
-    proxyServer = instance;
-    serverPort = instance.port;
+      proxyServer = instance;
+      serverPort = instance.port;
+    } catch (err: any) {
+      // gRPC proxy failed (octaneServGrpc may not be running yet).
+      // Continue to UI — health endpoint will show disconnected state.
+      console.error(`[Electron] gRPC proxy failed to start: ${err.message}`);
+      console.error(
+        '[Electron] UI will launch but show disconnected until octaneServGrpc is running.'
+      );
+    }
   }
 
   // Remove Electron's default application menu — the app has its own in-page menu
